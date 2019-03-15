@@ -7,20 +7,21 @@ GSZUtil uploads data to Google Cloud Storage from a z/OS batch job.
 
 ## Pre-Requisites
 
-[IBM SDK for z/OS, Java Technology Edition, Version 8](https://developer.ibm.com/javasdk/support/zos/)
-[SBT](https://www.scala-sbt.org/download.html)
+* [IBM SDK for z/OS, Java Technology Edition, Version 8](https://developer.ibm.com/javasdk/support/zos/)
+* [SBT](https://www.scala-sbt.org/download.html)
 
 
 ## Installation
 
-1. Install the IBM JDK to `/opt/zjdk`
-2. `cd` to the repository root
-3. modify [Credentials](src/main/scala/com/google/cloud/gszutil/Credentials.scala) and add your service account json key contents.
-3. run `sbt assembly` to build an assembly jar
-4. `sftp` the assembly jar to z/OS `<HLQ>.JZOS.LOADLIB` in [JVMPRC86](JVMPRC86.txt)
-5. convert PROC and JCL files (`JVMPRC86`, `JVMJCL86`) to EBCDIC and `sftp` to z/OS
-6. edit `JVMPRC86` and set source DSN and destination bucket
-6. submit `JVMJCL86` as an MVS job
+1. Extract IBM JDK to `/opt/zjdk` or similar
+2. Modify [build.sbt](build.sbt) with the path to `jzos.jar`
+3. Modify [Credentials](src/main/scala/com/google/cloud/gszutil/Credentials.scala) and add your service account email and private key PEM copied from JSON keyfile.
+3. Run `sbt assembly` from the repository root to build an assembly jar
+4. Copy the assembly jar to the z/OS library `<HLQ>.JZOS.LOADLIB` specified in [GSZUTIL.PRC](GSZUTIL.PRC)
+5. Convert PROC and JCL files (`GSZUTIL.PRC`, `GSZUTIL.JCL`) to EBCDIC with `iconv -t EBCDICUS -f UTF-8`
+6. Copy PROC and JCL files to z/OS with `sftp`
+6. edit `GSZUTIL.PRC` and set source DSN and destination bucket
+6. submit `GSZUTIL.JCL` as an MVS job
 
 
 ## Encoding Conversion
@@ -28,16 +29,17 @@ GSZUtil uploads data to Google Cloud Storage from a z/OS batch job.
 The examples below demonstrate conversion between EBCDIC and UTF-8.
 
 
-## EBCDIC to UTF-8
+### Convert EBCDIC to UTF-8
 
 ```sh
-iconv -f EBCDICUS -t UTF-8 JVMJCL86 | tr '\205' '\n' | tr -d '\302' | tr -cd '\11\12\15\40-\176' > JVMJCL86.txt
+iconv -f EBCDICUS -t UTF-8 GSZUTILPRC | tr '\205' '\n' | tr -d '\302' | tr -cd '\11\12\15\40-\176' > GSZUTIL.PRC
+iconv -f EBCDICUS -t UTF-8 GSZUTILJCL | tr '\205' '\n' | tr -d '\302' | tr -cd '\11\12\15\40-\176' > GSZUTIL.JCL
 ```
 
-## UTF-8 to EBCDIC
+### Convert UTF-8 to EBCDIC
 
 ```sh
-iconv -t EBCDICUS -f UTF-8 JVMJCL86.txt > JVMJCL86
+iconv -t EBCDICUS -f UTF-8 GSZUTIL.PRC > GSZUTILPRC
 ```
 
 ## Disclaimer

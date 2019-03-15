@@ -16,6 +16,8 @@
 package com.google.cloud.gszutil
 
 import java.io.InputStream
+
+import com.google.cloud.gszutil.GSXML.{PrivateKeyCredentialProvider, getClient}
 import com.ibm.jzos.ZFileConstants.FLAG_DISP_SHR
 import com.ibm.jzos.{RecordReader, ZFile}
 
@@ -37,14 +39,14 @@ object GSZUtil {
     }
 
     import Credentials._
-    val credential = GSXML.PrivateKeyCredentialProvider(privateKeyId, privateKeyPem, serviceAccountId)
-    val gcs = GSXML.getClient(credential)
+    val credential = PrivateKeyCredentialProvider(privateKeyPem, serviceAccountId)
+    val gcs = getClient(credential)
 
     gcs.putObject(bucket, path, dsnInputStream(dsn))
   }
 
   def readDSN(dsn: String): RecordReader = {
-    val in = ZFile.getSlashSlashQuotedDSN(dsn, true)
+    val in = ZFile.getSlashSlashQuotedDSN(dsn, false)
     RecordReader.newReader(in, FLAG_DISP_SHR)
   }
 

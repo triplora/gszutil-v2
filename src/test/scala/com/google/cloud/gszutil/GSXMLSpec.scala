@@ -17,19 +17,19 @@ package com.google.cloud.gszutil
 
 import java.io.{File, FileInputStream}
 
-import com.google.cloud.gszutil.GSXML.getClient
+import com.google.cloud.gszutil.GSXML.{PrivateKeyCredentialProvider, getClient}
 import org.scalatest.FlatSpec
 
 import scala.collection.JavaConverters._
 
 class GSXMLSpec extends FlatSpec {
   "GSXML" should "upload" in {
-    val bucket = "kms-demo1"
-    val file = "JVMJCL86.txt"
+    val bucket = "mybucket"
+    val file = "GSZUTIL.JCL"
     val key = "xmltest"
 
     import Credentials._
-    val cred = GSXML.PrivateKeyCredentialProvider(privateKeyId, privateKeyPem, serviceAccountId)
+    val cred = PrivateKeyCredentialProvider(privateKeyPem, serviceAccountId)
 
     val gcs = getClient(cred)
     val list = gcs.listBucketRecursive(bucket, maxKeys = 2)

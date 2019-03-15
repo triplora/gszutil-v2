@@ -47,11 +47,10 @@ object GSXML {
       GoogleCredential.getApplicationDefault.createScoped(StorageScope)
   }
 
-  case class PrivateKeyCredentialProvider(privateKeyId: String, privateKeyPem: String, serviceAccountId: String) extends CredentialProvider {
+  case class PrivateKeyCredentialProvider(privateKeyPem: String, serviceAccountId: String) extends CredentialProvider {
     def getCredential: GoogleCredential = {
       GoogleCredential.getApplicationDefault().toBuilder
         .setServiceAccountId(serviceAccountId)
-        .setServiceAccountPrivateKeyId(privateKeyId)
         .setServiceAccountPrivateKey(keyFromPem(privateKeyPem))
         .setServiceAccountScopes(StorageScope)
         .setTokenServerEncodedUrl(TokenURI)
