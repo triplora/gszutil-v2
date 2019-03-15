@@ -1,0 +1,37 @@
+//********************************************************************
+//* Licensed Materials - Property of IBM
+//* 5655-DGH
+//* Copyright IBM Corp. 1997, 2015
+//* STATUS = HJVB800
+//*
+//* Stored procedure for executing the JZOS Java Batch Launcher
+//*
+//* Tailor the proc your installation:
+//* If the PDSE containing the JVMLDMxx module is not in your
+//* LNKLST, uncomment the STEPLIB statement and update the DSN to
+//* refer to the PDSE
+//*
+//*******************************************************************
+//JVMPRC86 PROC JAVACLS=com.google.cloud.gszutil.GSZUtil,
+//   ARGS=cp <DSN> gs://<BUCKET>/<KEY>,
+//*  LIBRARY='<HLQ>.JZOS.LOADLIB',       < STEPLIB FOR JVMLDM module
+//   VERSION='86',                       < JVMLDM version: 86
+//   LOGLVL='+I',
+//   REGSIZE='0M',                       < EXECUTION REGION SIZE
+//   LEPARM=''
+//JAVAJVM  EXEC PGM=JVMLDM&VERSION,REGION=&REGSIZE,
+//   PARM='&LEPARM/&LOGLVL &JAVACLS &ARGS'
+//* STEPLIB  DD DSN=&LIBRARY,DISP=SHR
+//SYSPRINT DD SYSOUT=*          < System stdout
+//SYSOUT   DD SYSOUT=*          < System stderr
+//STDOUT   DD SYSOUT=*          < Java System.out
+//STDERR   DD SYSOUT=*          < Java System.err
+//CEEDUMP  DD SYSOUT=*
+//ABNLIGNR DD DUMMY
+//*
+//*The following DDs can/should be present in the calling JCL
+//*
+//*STDIN   DD                   < OPTIONAL - Java System.in
+//*STDENV  DD                   < REQUIRED - JVM Environment script
+//*MAINARGS DD                  < OPTIONAL - Alt. method to supply args
+// PEND
