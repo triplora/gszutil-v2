@@ -18,9 +18,10 @@
 //* 1.) Modify the Job card per your installation's requirements
 //* 2.) Modify the PROCLIB card to point to this PDS
 //* 3.) edit JAVA_HOME to point the location of the SDK
-//* 4.) edit APP_HOME to point the location of your app (if any)
-//* 5.) Modify the CLASSPATH as required to point to your Java code
-//* 6.) Modify JAVACLS and ARGS to launch desired Java class
+//* 4.) edit APP_JAR to point the location of the application jar
+//* 5.) edit APP_HOME to point the location of your app (if any)
+//* 6.) Modify the CLASSPATH as required to point to your Java code
+//* 7.) Modify JAVACLS and ARGS to launch desired Java class
 //*
 //*******************************************************************
 //JAVA EXEC PROC=JVMPRC86,
@@ -31,6 +32,7 @@
 # Variables must be exported to be seen by the launcher.
 
 . /etc/profile
+export APP_JAR=/path/to/jar
 export JAVA_HOME=/usr/lpp/java/J8.0_64
 
 export PATH=/bin:"${JAVA_HOME}"/bin
@@ -44,11 +46,12 @@ export LIBPATH="$LIBPATH":
 # Customize your CLASSPATH here
 APP_HOME=$JAVA_HOME
 CLASSPATH=$APP_HOME:"${JAVA_HOME}"/lib:"${JAVA_HOME}"/lib/ext
+CLASSPATH="$CLASSPATH":"${APP_JAR}"
 
 # Add Application required jars to end of CLASSPATH
 for i in "${APP_HOME}"/*.jar; do
     CLASSPATH="$CLASSPATH":"$i"
-    done
+done
 export CLASSPATH="$CLASSPATH":
 
 # Set JZOS specific options
