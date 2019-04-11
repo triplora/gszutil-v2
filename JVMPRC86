@@ -20,8 +20,8 @@
 //* refer to the PDSE
 //*
 //*******************************************************************
-//JVMPRC86 PROC JAVACLS=com.google.cloud.gszutil.GSZUtil,
-//   ARGS=cp <DSN> gs://<BUCKET>/<KEY>,
+//JVMPRC86 PROC JAVACLS=,
+//   ARGS=,
 //*  LIBRARY='<HLQ>.JZOS.LOADLIB',       < STEPLIB FOR JVMLDM module
 //   VERSION='86',                       < JVMLDM version: 86
 //   LOGLVL='+I',
