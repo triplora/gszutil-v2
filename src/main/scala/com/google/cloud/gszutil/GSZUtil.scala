@@ -17,37 +17,65 @@ package com.google.cloud.gszutil
 
 import java.io.InputStream
 
-import com.google.cloud.gszutil.GSXML.{PrivateKeyCredentialProvider, getClient}
-import com.ibm.jzos.ZFileConstants.FLAG_DISP_SHR
-import com.ibm.jzos.{RecordReader, ZFile}
+import com.google.cloud.gszutil.GSXML.{DefaultCredentialProvider, PrivateKeyCredentialProvider, getClient}
+import com.ibm.jzos.{RecordReader, ZFile, ZFileConstants}
 
-import scala.util.Try
+import scala.util.{Success, Try}
 
 object GSZUtil {
+  case class Config(dsn: String = "",
+                    dest: String = "",
+                    mode: String = "")
 
-  def usage(): Unit = {
-    val msg = s"Usage: ${this.getClass.getSimpleName} cp <src> gs://<bucket>/<path>"
-    System.err.println(msg)
-    System.exit(1)
-  }
-
-  def main(args: Array[String]): Unit = {
-    val dsn = args(1)
-    val (bucket, path) = Try(parseUri(args(2))).getOrElse(("",""))
-    if (args(0) != "cp" || bucket == "" || path == "" || dsn == "") {
-      usage()
+  val Parser: scopt.OptionParser[Config] =
+    new scopt.OptionParser[Config]("GSZUtil") {
+      head("GSZUtil", "0.1")
+      cmd("cp")
+        .action{(_, c) => c.copy(mode = "cp")}
+        .text("cp is a command.")
+        .children(
+          arg[String]("dsn")
+            .required()
+            .action{(x, c) => c.copy(dsn = x)}
+            .text("dsn is the file to be copied"),
+          arg[String]("dest")
+            .required()
+            .action{(x, c) =>
+              c.copy(dest = x)
+            }
+            .validate{x =>
+              Try(parseUri(x)) match {
+                case Success((bucket, path)) if bucket.length > 2 && path.nonEmpty =>
+                  success
+                case _ =>
+                  failure(s"'$x' is not a valid GCS path")
+              }
+            }
+            .text("dest is the destination path gs://bucket/path")
+        )
     }
 
-    import Credentials._
-    val credential = PrivateKeyCredentialProvider(privateKeyPem, serviceAccountId)
-    val gcs = getClient(credential)
+  def main(args: Array[String]): Unit = {
+    Parser.parse(args, Config()) match {
+      case Some(config) =>
+        run(config)
+      case _ =>
+        System.out.println(s"Invalid args: ${args.mkString(" ")}")
+    }
+  }
 
-    gcs.putObject(bucket, path, dsnInputStream(dsn))
+  def run(config: Config): Unit = {
+    val gcs = Try(getClient(DefaultCredentialProvider))
+      .getOrElse(getClient(PrivateKeyCredentialProvider(Credentials.privateKeyPem, Credentials.serviceAccountId)))
+
+    val (bucket, path) = parseUri(config.dest)
+    val data = dsnInputStream(config.dsn)
+    gcs.putObject(bucket, path, data)
   }
 
   def readDSN(dsn: String): RecordReader = {
     val in = ZFile.getSlashSlashQuotedDSN(dsn, false)
-    RecordReader.newReader(in, FLAG_DISP_SHR)
+    RecordReader.newReader(in, ZFileConstants.FLAG_DISP_SHR)
   }
 
   def dsnInputStream(dsn: String): InputStream = {
@@ -76,6 +104,4 @@ object GSZUtil {
       (bucket, path)
     }
   }
-
-
 }

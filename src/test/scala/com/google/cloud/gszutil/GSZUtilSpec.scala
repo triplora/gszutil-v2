@@ -24,4 +24,13 @@ class GSZUtilSpec extends FlatSpec {
     assert(bucket == "bucket")
     assert(path == "path/to/object")
   }
+
+  it should "parse args" in {
+    val args = "cp DATASET.RECORD gs://bucket/DATASET.RECORD".split(" ")
+    val parsed = GSZUtil.Parser.parse(args, GSZUtil.Config())
+    assert(parsed.isDefined)
+    assert(parsed.get.dest == "gs://bucket/DATASET.RECORD")
+    assert(parsed.get.dsn == "DATASET.RECORD")
+    assert(parsed.get.mode == "cp")
+  }
 }

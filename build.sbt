@@ -15,6 +15,7 @@ libraryDependencies ++= Seq(
   "com.google.guava" % "guava" % "27.0.1-jre",
   "org.apache.avro" % "avro" % "1.8.2",
   "com.fasterxml.jackson.dataformat" % "jackson-dataformat-xml" % "2.9.8",
+  "com.github.scopt" %% "scopt" % "3.7.1",
   "com.ibm.jzos" % "jzos" % "1.0" % Provided from s"file://$jzosPath",
   "org.scalatest" %% "scalatest" % "3.0.5" % Test
 ) 

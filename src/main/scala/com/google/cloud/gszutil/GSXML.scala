@@ -43,6 +43,10 @@ object GSXML {
     def getCredential: GoogleCredential
   }
 
+  object DefaultCredentialProvider extends CredentialProvider {
+    override def getCredential: GoogleCredential = GoogleCredential.getApplicationDefault
+  }
+
   case class PrivateKeyCredentialProvider(privateKeyPem: String, serviceAccountId: String) extends CredentialProvider {
     def getCredential: GoogleCredential = new GoogleCredential.Builder()
       .setTransport(Utils.getDefaultTransport)
