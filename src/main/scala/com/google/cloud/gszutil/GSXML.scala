@@ -26,6 +26,7 @@ import com.fasterxml.jackson.databind.DeserializationFeature
 import com.fasterxml.jackson.dataformat.xml.XmlMapper
 import com.google.api.client.googleapis.auth.oauth2.GoogleCredential
 import com.google.api.client.googleapis.javanet.GoogleNetHttpTransport
+import com.google.api.client.googleapis.util.Utils
 import com.google.api.client.http._
 import com.google.api.client.util.{PemReader, SecurityUtils}
 import com.google.cloud.gszutil.GSXMLModel.ListBucketResult
@@ -43,15 +44,14 @@ object GSXML {
   }
 
   case class PrivateKeyCredentialProvider(privateKeyPem: String, serviceAccountId: String) extends CredentialProvider {
-    def getCredential: GoogleCredential = {
-      GoogleCredential.getApplicationDefault()
-        .toBuilder
-        .setServiceAccountId(serviceAccountId)
-        .setServiceAccountPrivateKey(keyFromPem(privateKeyPem))
-        .setServiceAccountScopes(StorageScope)
-        .setTokenServerEncodedUrl(TokenURI)
-        .build()
-    }
+    def getCredential: GoogleCredential = new GoogleCredential.Builder()
+      .setTransport(Utils.getDefaultTransport)
+      .setJsonFactory(Utils.getDefaultJsonFactory)
+      .setServiceAccountId(serviceAccountId)
+      .setServiceAccountPrivateKey(keyFromPem(privateKeyPem))
+      .setServiceAccountScopes(StorageScope)
+      .setTokenServerEncodedUrl(TokenURI)
+      .build()
   }
 
   class HttpResponseByteSource(response: HttpResponse) extends ByteSource {
