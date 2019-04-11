@@ -42,11 +42,6 @@ object GSXML {
     def getCredential: GoogleCredential
   }
 
-  object DefaultCredentialProvider extends CredentialProvider {
-    override def getCredential: GoogleCredential =
-      GoogleCredential.getApplicationDefault.createScoped(StorageScope)
-  }
-
   case class PrivateKeyCredentialProvider(privateKeyPem: String, serviceAccountId: String) extends CredentialProvider {
     def getCredential: GoogleCredential = {
       GoogleCredential.getApplicationDefault()
@@ -66,7 +61,7 @@ object GSXML {
   @transient
   private var client: XMLStorage = _
 
-  def getClient(credential: CredentialProvider = DefaultCredentialProvider, storageEndpoint: String = StorageEndpoint): XMLStorage = {
+  def getClient(credential: CredentialProvider, storageEndpoint: String = StorageEndpoint): XMLStorage = {
     if (client == null) {
       client = XMLStorage(credential, storageEndpoint)
       client
