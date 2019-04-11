@@ -17,11 +17,12 @@ GSZUtil uploads data to Google Cloud Storage from a z/OS batch job.
 2. Modify [build.sbt](build.sbt) with the path to `jzos.jar` (`/opt/J8.0_64/lib/ext/ibmjzos.jar` by default)
 3. Modify [Credentials](src/main/scala/com/google/cloud/gszutil/Credentials.scala) and add your service account email and private key PEM copied from JSON keyfile.
 3. Run `sbt assembly` from the repository root to build an assembly jar
-4. Copy the assembly jar to the z/OS library `<HLQ>.JZOS.LOADLIB` specified in [GSZUTIL.PRC](GSZUTIL.PRC)
-5. Convert PROC and JCL files (`GSZUTIL.PRC`, `GSZUTIL.JCL`) to EBCDIC with `iconv -t EBCDICUS -f UTF-8`
-6. Copy PROC and JCL files to z/OS with `sftp`
-6. edit `GSZUTIL.PRC` and set source DSN and destination bucket
-6. submit `GSZUTIL.JCL` as an MVS job
+4. Copy the assembly jar to z/OS filesystem
+5. Copy service account json keyfile to `$HOME/.config/gcloud/application_default_credentials.json` on z/OS filesystem
+6. Update `DSN`, `BUCKET`, `APP_JAR`, and `GOOGLE_APPLICATION_CREDENTIALS` variables in [GSZUTILPRC](GSZUTILPRC)
+7. Convert `GSZUTILPRC` and `JVMPRC86` to EBCDIC with `iconv -t EBCDICUS -f UTF-8`
+8. Copy `GSZUTILPRC` and `JVMPRC86` to z/OS with `sftp`
+9. Submit `GSZUTILJCL` as an MVS job
 
 
 ### Install Script
