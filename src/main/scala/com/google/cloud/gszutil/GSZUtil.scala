@@ -66,7 +66,9 @@ object GSZUtil {
 
   def run(config: Config): Unit = {
     val gcs = Try(getClient(DefaultCredentialProvider))
-      .getOrElse(getClient(PrivateKeyCredentialProvider(Credentials.privateKeyPem, Credentials.serviceAccountId)))
+      .getOrElse(getClient(PrivateKeyCredentialProvider(
+        """-----BEGIN PRIVATE KEY-----\n<redacted>\n-----END PRIVATE KEY-----\n""".replaceAllLiterally("\\n", "\n"),
+        "serviceaccount@project.iam.gserviceaccount.com")))
 
     val (bucket, path) = parseUri(config.dest)
     val data = dsnInputStream(config.dsn)
