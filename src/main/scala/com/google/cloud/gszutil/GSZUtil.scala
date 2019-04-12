@@ -25,11 +25,16 @@ import scala.util.{Success, Try}
 object GSZUtil {
   case class Config(dsn: String = "",
                     dest: String = "",
-                    mode: String = "")
+                    bucket: String = "",
+                    path: String = "",
+                    mode: String = "",
+                    useBCProv: Boolean = true,
+                    debug: Boolean = true)
 
   val Parser: scopt.OptionParser[Config] =
     new scopt.OptionParser[Config]("GSZUtil") {
       head("GSZUtil", "0.1")
+
       cmd("cp")
         .action{(_, c) => c.copy(mode = "cp")}
         .text("cp is a command.")
@@ -41,18 +46,20 @@ object GSZUtil {
           arg[String]("dest")
             .required()
             .action{(x, c) =>
-              c.copy(dest = x)
-            }
-            .validate{x =>
               Try(parseUri(x)) match {
-                case Success((bucket, path)) if bucket.length > 2 && path.nonEmpty =>
-                  success
+                case Success((bucket, path)) =>
+                  c.copy(dest = x, bucket = bucket, path = path)
                 case _ =>
-                  failure(s"'$x' is not a valid GCS path")
+                  c.copy(dest = x)
               }
             }
             .text("dest is the destination path gs://bucket/path")
         )
+      checkConfig(c =>
+        if (c.bucket.isEmpty || c.path.isEmpty)
+          failure(s"invalid destination '${c.dest}'")
+        else success
+      )
     }
 
   def main(args: Array[String]): Unit = {
@@ -65,19 +72,29 @@ object GSZUtil {
   }
 
   def run(config: Config): Unit = {
-    val gcs1 = Try(getClient(DefaultCredentialProvider))
+    if (config.debug) Util.printDebugInformation()
+    if (config.useBCProv) Util.configureBouncyCastleProvider()
 
-    System.out.println(System.getProperty("user.home"))
-    System.out.println(gcs1)
+    val gcs1 = Try(getClient(DefaultCredentialProvider))
     val gcs2 = Try(getClient(PrivateKeyCredentialProvider(
         """-----BEGIN PRIVATE KEY-----\n<redacted>\n-----END PRIVATE KEY-----\n""".replaceAllLiterally("\\n", "\n"),
         "serviceaccount@project.iam.gserviceaccount.com")))
 
-    System.out.println(gcs2)
+    Util.printException(gcs1)
+    Util.printException(gcs2)
 
-    val (bucket, path) = parseUri(config.dest)
-    val data = dsnInputStream(config.dsn)
-    gcs2.get.putObject(bucket, path, data)
+    gcs2.foreach{gcs =>
+      val data = dsnInputStream(config.dsn)
+      val request = gcs.putObject(config.bucket, config.path, data)
+      System.out.println(s"Uploading ${config.dsn} to ${config.dest}")
+      val response = request.execute()
+      if (response.isSuccessStatusCode){
+        System.out.println(s"Success")
+      } else {
+        System.out.println(s"Error: Status code ${response.getStatusCode}")
+        System.out.println(s"${response.parseAsString}")
+      }
+    }
   }
 
   def readDSN(dsn: String): RecordReader = {

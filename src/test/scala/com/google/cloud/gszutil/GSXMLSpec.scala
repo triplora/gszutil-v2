@@ -17,7 +17,6 @@ package com.google.cloud.gszutil
 
 import java.io.{File, FileInputStream}
 
-import com.google.cloud.gszutil.GSXML.{PrivateKeyCredentialProvider, getClient}
 import org.scalatest.FlatSpec
 
 import scala.collection.JavaConverters._
@@ -28,10 +27,7 @@ class GSXMLSpec extends FlatSpec {
     val file = "GSZUTIL.JCL"
     val key = "xmltest"
 
-    import Credentials._
-    val cred = PrivateKeyCredentialProvider(privateKeyPem, serviceAccountId)
-
-    val gcs = getClient(cred)
+    val gcs = GSXML.getClient(GSXML.DefaultCredentialProvider)
     val list = gcs.listBucketRecursive(bucket, maxKeys = 2)
     val keys = list.flatMap(_.Contents.asScala.map(_.Key))
     assert(keys.nonEmpty)
