@@ -65,14 +65,19 @@ object GSZUtil {
   }
 
   def run(config: Config): Unit = {
-    val gcs = Try(getClient(DefaultCredentialProvider))
-      .getOrElse(getClient(PrivateKeyCredentialProvider(
+    val gcs1 = Try(getClient(DefaultCredentialProvider))
+
+    System.out.println(System.getProperty("user.home"))
+    System.out.println(gcs1)
+    val gcs2 = Try(getClient(PrivateKeyCredentialProvider(
         """-----BEGIN PRIVATE KEY-----\n<redacted>\n-----END PRIVATE KEY-----\n""".replaceAllLiterally("\\n", "\n"),
         "serviceaccount@project.iam.gserviceaccount.com")))
 
+    System.out.println(gcs2)
+
     val (bucket, path) = parseUri(config.dest)
     val data = dsnInputStream(config.dsn)
-    gcs.putObject(bucket, path, data)
+    gcs2.get.putObject(bucket, path, data)
   }
 
   def readDSN(dsn: String): RecordReader = {
