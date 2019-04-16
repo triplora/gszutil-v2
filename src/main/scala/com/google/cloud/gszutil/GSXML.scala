@@ -44,7 +44,11 @@ object GSXML {
   }
 
   object DefaultCredentialProvider extends CredentialProvider {
-    override def getCredential: GoogleCredential = GoogleCredential.getApplicationDefault
+    override def getCredential: GoogleCredential =
+      GoogleCredential.fromStream(
+        GSZUtil.readUtf8(sys.env("GOOGLE_APPLICATION_CREDENTIALS")),
+        Utils.getDefaultTransport,
+        Utils.getDefaultJsonFactory)
   }
 
   case class PrivateKeyCredentialProvider(privateKeyPem: String, serviceAccountId: String) extends CredentialProvider {

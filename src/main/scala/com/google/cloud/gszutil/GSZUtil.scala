@@ -15,10 +15,12 @@
  */
 package com.google.cloud.gszutil
 
-import java.io.InputStream
+import java.io.{ByteArrayInputStream, InputStream}
 
 import com.google.cloud.gszutil.GSXML.{DefaultCredentialProvider, PrivateKeyCredentialProvider, getClient}
-import com.ibm.jzos.{RecordReader, ZFile, ZFileConstants}
+import com.google.common.base.Charsets
+import com.google.common.io.CharStreams
+import com.ibm.jzos.{FileFactory, RecordReader, ZFile, ZFileConstants}
 
 import scala.util.{Success, Try}
 
@@ -95,6 +97,12 @@ object GSZUtil {
         System.out.println(s"${response.parseAsString}")
       }
     }
+  }
+
+  def readUtf8(path: String): InputStream = {
+    val reader = FileFactory.newBufferedReader(path, "UTF-8")
+    val bytes = CharStreams.toString(reader).getBytes(Charsets.UTF_8)
+    new ByteArrayInputStream(bytes)
   }
 
   def readDSN(dsn: String): RecordReader = {
