@@ -35,12 +35,13 @@ object Util {
     Security.insertProviderAt(new org.bouncycastle.jce.provider.BouncyCastleProvider(), 1)
 
     Security.getProviders.foreach{p =>
-      System.out.println(s"\n\n${p.getName}\t${p.getInfo}")
-      p.getServices.asScala.toArray
+      System.out.println(s"${p.getName}\t${p.getInfo}")
+      val services = p.getServices.asScala.toArray
         .map{x => s"\t${x.getType}\t${x.getAlgorithm}\t${x.getClassName}"}
         .sorted
         .mkString("\n")
-        .foreach(System.out.println)
+      System.out.println(services)
+      System.out.println("\n\n\n")
     }
   }
 
@@ -48,6 +49,7 @@ object Util {
     x match {
       case Failure(exception) =>
         System.err.println(exception.getMessage)
+        exception.printStackTrace(System.err)
       case _ =>
     }
   }

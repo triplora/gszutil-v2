@@ -38,15 +38,24 @@ object GSXML {
   val StorageEndpoint = "https://storage.googleapis.com/"
   val TokenURI = "https://oauth2.googleapis.com/token"
   val ContentType = "application/octet-stream"
+  val CredentialsVariable = "GCREDS"
 
   trait CredentialProvider {
     def getCredential: GoogleCredential
   }
 
+  class FileCredentialProvider(path: String) extends CredentialProvider {
+    override def getCredential: GoogleCredential =
+      GoogleCredential.fromStream(
+        GSZUtil.readUtf8(path),
+        Utils.getDefaultTransport,
+        Utils.getDefaultJsonFactory)
+  }
+
   object DefaultCredentialProvider extends CredentialProvider {
     override def getCredential: GoogleCredential =
       GoogleCredential.fromStream(
-        GSZUtil.readUtf8(sys.env("GOOGLE_APPLICATION_CREDENTIALS")),
+        GSZUtil.readUtf8(sys.env(CredentialsVariable)),
         Utils.getDefaultTransport,
         Utils.getDefaultJsonFactory)
   }

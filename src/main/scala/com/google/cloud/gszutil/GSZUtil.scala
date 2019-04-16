@@ -17,7 +17,7 @@ package com.google.cloud.gszutil
 
 import java.io.{ByteArrayInputStream, InputStream}
 
-import com.google.cloud.gszutil.GSXML.{DefaultCredentialProvider, PrivateKeyCredentialProvider, getClient}
+import com.google.cloud.gszutil.GSXML.{DefaultCredentialProvider, FileCredentialProvider, PrivateKeyCredentialProvider, getClient}
 import com.google.common.base.Charsets
 import com.google.common.io.CharStreams
 import com.ibm.jzos.{FileFactory, RecordReader, ZFile, ZFileConstants}
@@ -27,6 +27,7 @@ import scala.util.{Success, Try}
 object GSZUtil {
   case class Config(dsn: String = "",
                     dest: String = "",
+                    keyfile: String = "",
                     bucket: String = "",
                     path: String = "",
                     mode: String = "",
@@ -55,7 +56,11 @@ object GSZUtil {
                   c.copy(dest = x)
               }
             }
-            .text("dest is the destination path gs://bucket/path")
+            .text("dest is the destination path gs://bucket/path"),
+          arg[String]("keyfile")
+            .required()
+            .action{(x, c) => c.copy(keyfile = x)}
+            .text("path to json credentials keyfile")
         )
       checkConfig(c =>
         if (c.bucket.isEmpty || c.path.isEmpty)
@@ -77,15 +82,25 @@ object GSZUtil {
     if (config.debug) Util.printDebugInformation()
     if (config.useBCProv) Util.configureBouncyCastleProvider()
 
+    val gcs0 = Try(getClient(new FileCredentialProvider(config.keyfile)))
     val gcs1 = Try(getClient(DefaultCredentialProvider))
     val gcs2 = Try(getClient(PrivateKeyCredentialProvider(
         """-----BEGIN PRIVATE KEY-----\n<redacted>\n-----END PRIVATE KEY-----\n""".replaceAllLiterally("\\n", "\n"),
         "serviceaccount@project.iam.gserviceaccount.com")))
 
+    System.out.println("\n\nFileCredentialProvider")
+    Util.printException(gcs0)
+
+    System.out.println("\n\nDefaultCredentialProvider")
     Util.printException(gcs1)
+
+    System.out.println("\n\nPrivateKeyCredentialProvider")
     Util.printException(gcs2)
 
-    gcs1.orElse(gcs2).foreach{gcs =>
+    gcs0
+      .orElse(gcs1)
+      .orElse(gcs2)
+      .foreach{gcs =>
       val data = dsnInputStream(config.dsn)
       val request = gcs.putObject(config.bucket, config.path, data)
       System.out.println(s"Uploading ${config.dsn} to ${config.dest}")

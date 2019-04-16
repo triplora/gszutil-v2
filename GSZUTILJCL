@@ -17,8 +17,8 @@
 //* Instructions:
 //* 1.) Set DSN to point to source file
 //* 2.) Set BUCKET to target GCS Bucket
-//* 3.) Set APP_JAR to point the location of the application jar
-//* 4.) Set GOOGLE_APPLICATION_CREDENTIALS to point
+//* 3.) Set APP_JAR to path of the application jar
+//* 4.) Set GCREDS to path of service account credentials keyfile
 //* 5.) Set JAVA_HOME to point the location of the IBM JZOS SDK (JVM)
 //*
 //*******************************************************************
@@ -27,12 +27,12 @@
 //STDENV DD *
 
 . /etc/profile
-export DSN="<File to be Copied>"
-export BUCKET="<GCS Bucket Name>"
-export APP_JAR="path/to/GSZUtil.jar"
-export GOOGLE_APPLICATION_CREDENTIALS="path/to/keyfile.json"
+export DSN=""     # File to be Copied
+export BUCKET=""  # GCS Bucket Name
+export APP_JAR="" # path/to/GSZUtil.jar
+export GCREDS=""  # path/to/keyfile.json
 
-export JZOS_MAIN_ARGS="cp $DSN gs://$BUCKET/$DSN"
+export JZOS_MAIN_ARGS="cp $DSN gs://$BUCKET/$DSN $GCREDS"
 
 export JAVA_HOME=/usr/lpp/java/J8.0_64
 export PATH="/bin:${JAVA_HOME}/bin"
