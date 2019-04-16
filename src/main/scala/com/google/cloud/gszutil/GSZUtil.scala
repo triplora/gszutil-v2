@@ -85,7 +85,7 @@ object GSZUtil {
     Util.printException(gcs1)
     Util.printException(gcs2)
 
-    gcs2.foreach{gcs =>
+    gcs1.orElse(gcs2).foreach{gcs =>
       val data = dsnInputStream(config.dsn)
       val request = gcs.putObject(config.bucket, config.path, data)
       System.out.println(s"Uploading ${config.dsn} to ${config.dest}")
