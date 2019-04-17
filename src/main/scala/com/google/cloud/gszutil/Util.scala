@@ -32,7 +32,7 @@ import com.google.api.client.util.{PemReader, SecurityUtils}
 import com.google.cloud.gszutil.GSXML.CredentialProvider
 import com.google.cloud.gszutil.KeyFileProto.KeyFile
 
-import scala.util.{Failure, Try}
+import scala.util.{Failure, Random, Try}
 
 object Util {
   def parseUri(gsUri: String): (String,String) = {
@@ -104,8 +104,7 @@ object Util {
       .build()
   }
 
-  def readPbCredentials(bytes: Array[Byte]): GoogleCredential = {
-    val keyFile = KeyFile.parseFrom(bytes)
+  def readPbCredentials(keyFile: KeyFile): GoogleCredential = {
     new GoogleCredential.Builder()
       .setTransport(Utils.getDefaultTransport)
       .setJsonFactory(Utils.getDefaultJsonFactory)
@@ -139,13 +138,39 @@ object Util {
     }
   }
 
-  case class PBCredentialProvider(pb: Array[Byte]) extends CredentialProvider {
+  case class KeyFileCredentialProvider(keyFile: KeyFile) extends CredentialProvider {
     override def getCredential: Credential =
-      readPbCredentials(pb)
+      readPbCredentials(keyFile)
   }
 
   case class AccessTokenCredentialProvider(token: String) extends CredentialProvider {
     override def getCredential: Credential =
       accessTokenCredentials(token)
+  }
+
+  class RandomInputStream(size: Long) extends InputStream {
+    private val rand = new Random()
+    private val byte: Array[Byte] = new Array[Byte](0x00.toByte)
+    private var bytesRead: Long = 0
+    private val limit: Long = size
+
+    override def read(): Int = {
+      if (bytesRead >= limit) -1
+      else {
+        rand.nextBytes(byte)
+        bytesRead += 1
+        byte(0)
+      }
+    }
+
+    override def read(b: Array[Byte], off: Int, len: Int): Int = {
+      if (bytesRead >= limit) -1
+      else {
+        val buf = new Array[Byte](len)
+        rand.nextBytes(buf)
+        System.arraycopy(buf, 0, b, off, len)
+        len
+      }
+    }
   }
 }

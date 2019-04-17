@@ -15,12 +15,14 @@
  */
 package com.google.cloud.gszutil
 
-import java.nio.file.Paths
+import java.io.{ByteArrayInputStream, InputStream}
+import java.nio.charset.StandardCharsets
+import java.nio.file.{Files, Paths}
 import java.util.logging.{Level, Logger}
 
-import com.google.cloud.gszutil.GSXML.XMLStorage
+import com.google.cloud.gszutil.GSXML.{CredentialProvider, XMLStorage}
 import com.google.cloud.gszutil.KeyFileProto.KeyFile
-import com.google.cloud.gszutil.Util.{AccessTokenCredentialProvider, PBCredentialProvider}
+import com.google.cloud.gszutil.Util.{AccessTokenCredentialProvider, KeyFileCredentialProvider, RandomInputStream}
 import com.google.common.io.Resources
 
 import scala.util.{Success, Try}
@@ -59,14 +61,13 @@ object GSZUtil {
             }
             .text("destination path (gs://bucket/path)"),
           arg[String]("keyfile")
-            .required()
             .action{(x, c) => c.copy(keyfile = x)}
             .text("path to keyfile.pb")
         )
       checkConfig(c =>
         if (c.destBucket.isEmpty || c.destPath.isEmpty)
           failure(s"invalid destination '${c.dest}'")
-        else if (!Paths.get(c.keyfile).toFile.exists())
+        else if (c.keyfile.nonEmpty && !Paths.get(c.keyfile).toFile.exists())
           failure(s"keyfile '${c.keyfile}' doesn't exist")
         else success
       )
@@ -91,16 +92,29 @@ object GSZUtil {
     } else Util.configureLogging(Level.INFO)
     if (config.useBCProv) Util.configureBouncyCastleProvider()
 
-    val tokenPb = KeyFile.parseFrom(Resources.toByteArray(Resources.getResource("wmt-accesstoken.pb")))
-    val cp = AccessTokenCredentialProvider(tokenPb.getAccessToken)
-    //val gcs = XMLStorage(PBCredentialProvider(Util.readNio(config.keyfile)))
+    val keyFile: KeyFile = Try{
+      KeyFile.parseFrom(Resources.toByteArray(Resources.getResource("keyfile.pb")))
+    }.getOrElse(KeyFile.parseFrom(Util.readNio(config.keyfile)))
+
+    val cp: CredentialProvider = if (keyFile.getAccessToken.nonEmpty) {
+      AccessTokenCredentialProvider(keyFile.getAccessToken)
+    } else {
+      KeyFileCredentialProvider(keyFile)
+    }
     val gcs = XMLStorage(cp)
 
-    logger.info(s"Uploading ${config.dsn} to ${config.dest}")
+    System.out.println(s"Uploading 100MB of random data for speed test")
+    put(gcs, new RandomInputStream(100000000), config.destBucket, "test_data_100MB")
+
+    System.out.println(s"Uploading ${config.dsn} to ${config.dest}")
+    put(gcs, ZReader.read(config.dsn), config.destBucket, config.destPath)
+  }
+
+  def put(gcs: XMLStorage, in: InputStream, bucket: String, path: String): Unit = {
     val request = gcs.putObject(
-      bucket = config.destBucket,
-      key = config.destPath,
-      inputStream = ZReader.read(config.dsn))
+      bucket = bucket,
+      key = path,
+      inputStream = in)
 
     val startTime = System.currentTimeMillis()
     val response = request.execute()

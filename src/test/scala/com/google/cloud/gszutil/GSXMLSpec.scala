@@ -21,7 +21,7 @@ import java.nio.file.{Files, Paths}
 
 import com.google.cloud.gszutil.GSXML.XMLStorage
 import com.google.cloud.gszutil.KeyFileProto.KeyFile
-import com.google.cloud.gszutil.Util.{AccessTokenCredentialProvider, PBCredentialProvider}
+import com.google.cloud.gszutil.Util.{AccessTokenCredentialProvider, KeyFileCredentialProvider}
 import com.google.common.io.Resources
 import org.scalatest.{BeforeAndAfterAll, FlatSpec}
 
@@ -49,24 +49,22 @@ class GSXMLSpec extends FlatSpec with BeforeAndAfterAll {
   }
 
   it should "write keyfile to pb" in {
-    val keyFile = Util.convertJson(new ByteArrayInputStream(Resources.toByteArray(Resources.getResource("wmt-keyfile.json"))))
-    Files.write(Paths.get("wmt-keyfile.pb"), keyFile.toByteArray)
+    val keyFile = Util.convertJson(new ByteArrayInputStream(Resources.toByteArray(Resources.getResource("keyfile.json"))))
 
-    val cp = PBCredentialProvider(keyFile.toByteArray)
+    val cp = KeyFileCredentialProvider(keyFile)
     val cred = cp.getCredential
     cred.refreshToken()
     val token = cred.getAccessToken
     System.out.println(token)
     val withToken = keyFile.toBuilder.setAccessToken(token).build()
 
-    Files.write(Paths.get("wmt-accesstoken.pb"), withToken.toByteArray)
+    Files.write(Paths.get("src/main/resources/keyfile.pb"), withToken.toByteArray)
   }
 
   "GSXML" should "upload" in {
     val bucket = sys.env("BUCKET")
-    val pb = readPb
-
-    val cp = PBCredentialProvider(pb.toByteArray)
+    val keyFile = readPb
+    val cp = KeyFileCredentialProvider(keyFile)
     val cred = cp.getCredential
     cred.refreshToken()
     val token = cred.getAccessToken

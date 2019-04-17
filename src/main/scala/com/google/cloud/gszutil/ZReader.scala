@@ -21,8 +21,9 @@ import com.ibm.jzos.{RecordReader, ZFile, ZFileConstants}
 
 object ZReader {
   def read(dsn: String): InputStream = {
-    val in = ZFile.getSlashSlashQuotedDSN(dsn, false)
-    val reader = RecordReader.newReader(in, ZFileConstants.FLAG_DISP_SHR)
+    val slashQuotedDSN = ZFile.getSlashSlashQuotedDSN(dsn, false)
+    System.out.println(s"Reading $slashQuotedDSN")
+    val reader = RecordReader.newReader(slashQuotedDSN, ZFileConstants.FLAG_DISP_SHR)
     new RecordReaderInputStream(reader)
   }
 
