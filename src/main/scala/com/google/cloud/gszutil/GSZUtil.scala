@@ -19,7 +19,9 @@ import java.nio.file.Paths
 import java.util.logging.{Level, Logger}
 
 import com.google.cloud.gszutil.GSXML.XMLStorage
-import com.google.cloud.gszutil.Util.JSONCredentialProvider
+import com.google.cloud.gszutil.KeyFileProto.KeyFile
+import com.google.cloud.gszutil.Util.{AccessTokenCredentialProvider, PBCredentialProvider}
+import com.google.common.io.Resources
 
 import scala.util.{Success, Try}
 
@@ -59,7 +61,7 @@ object GSZUtil {
           arg[String]("keyfile")
             .required()
             .action{(x, c) => c.copy(keyfile = x)}
-            .text("path to json credentials keyfile")
+            .text("path to keyfile.pb")
         )
       checkConfig(c =>
         if (c.destBucket.isEmpty || c.destPath.isEmpty)
@@ -73,6 +75,7 @@ object GSZUtil {
   private val logger: Logger = Logger.getLogger(this.getClass.getSimpleName.stripSuffix("$"))
 
   def main(args: Array[String]): Unit = {
+    System.out.println(s"Running with args: ${args.mkString(" ")}")
     Parser.parse(args, Config()) match {
       case Some(config) =>
         run(config)
@@ -88,7 +91,10 @@ object GSZUtil {
     } else Util.configureLogging(Level.INFO)
     if (config.useBCProv) Util.configureBouncyCastleProvider()
 
-    val gcs = XMLStorage(JSONCredentialProvider(Util.readNio(config.keyfile)))
+    val tokenPb = KeyFile.parseFrom(Resources.toByteArray(Resources.getResource("wmt-accesstoken.pb")))
+    val cp = AccessTokenCredentialProvider(tokenPb.getAccessToken)
+    //val gcs = XMLStorage(PBCredentialProvider(Util.readNio(config.keyfile)))
+    val gcs = XMLStorage(cp)
 
     logger.info(s"Uploading ${config.dsn} to ${config.dest}")
     val request = gcs.putObject(

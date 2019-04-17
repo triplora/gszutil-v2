@@ -11,7 +11,9 @@ val jzosPath = "/opt/J8.0_64/lib/ext/ibmjzos.jar"
 val exGuava = ExclusionRule(organization = "com.google.guava")
 
 libraryDependencies ++= Seq(
-  "com.google.api-client" % "google-api-client" % "1.27.0" excludeAll exGuava,
+  "com.google.api-client" % "google-api-client" % "1.28.0" excludeAll exGuava,
+  "com.google.protobuf" % "protobuf-java" % "3.7.1",
+  "com.google.protobuf" % "protobuf-java-util" % "3.7.1",
   "com.google.guava" % "guava" % "27.0.1-jre",
   "org.apache.avro" % "avro" % "1.8.2",
   "com.fasterxml.jackson.dataformat" % "jackson-dataformat-xml" % "2.9.8",

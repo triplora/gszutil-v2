@@ -21,7 +21,7 @@ import java.nio.charset.StandardCharsets
 
 import com.fasterxml.jackson.databind.DeserializationFeature
 import com.fasterxml.jackson.dataformat.xml.XmlMapper
-import com.google.api.client.googleapis.auth.oauth2.GoogleCredential
+import com.google.api.client.auth.oauth2.Credential
 import com.google.api.client.googleapis.javanet.GoogleNetHttpTransport
 import com.google.api.client.http._
 import com.google.cloud.gszutil.GSXMLModel.ListBucketResult
@@ -33,7 +33,7 @@ object GSXML {
   val ContentType = "application/octet-stream"
 
   trait CredentialProvider {
-    def getCredential: GoogleCredential
+    def getCredential: Credential
   }
 
   private class HttpResponseByteSource(response: HttpResponse) extends ByteSource {

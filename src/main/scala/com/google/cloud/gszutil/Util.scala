@@ -23,12 +23,14 @@ import java.security.{PrivateKey, Security}
 import java.util.Collections
 import java.util.logging.{ConsoleHandler, Level, Logger}
 
-import com.google.api.client.googleapis.auth.oauth2.GoogleCredential
+import com.google.api.client.auth.oauth2.{BearerToken, Credential}
+import com.google.api.client.googleapis.auth.oauth2.{GoogleCredential, GoogleOAuthConstants}
 import com.google.api.client.googleapis.util.Utils
 import com.google.api.client.http.HttpTransport
 import com.google.api.client.json.JsonObjectParser
 import com.google.api.client.util.{PemReader, SecurityUtils}
 import com.google.cloud.gszutil.GSXML.CredentialProvider
+import com.google.cloud.gszutil.KeyFileProto.KeyFile
 
 import scala.util.{Failure, Try}
 
@@ -68,8 +70,8 @@ object Util {
 
   val StorageScope: java.util.Collection[String] = Collections.singleton("https://www.googleapis.com/auth/devstorage.read_write")
 
-  def readNio(path: String): String = {
-    new String(Files.readAllBytes(Paths.get(path)), StandardCharsets.UTF_8)
+  def readNio(path: String): Array[Byte] = {
+    Files.readAllBytes(Paths.get(path))
   }
 
   def readCredentials(json: InputStream): GoogleCredential = {
@@ -84,6 +86,42 @@ object Util {
       .setTokenServerEncodedUrl(parsed.getTokenUri)
       .setServiceAccountProjectId(parsed.getProjectId)
       .build()
+  }
+
+  def convertJson(json: InputStream): KeyFile = {
+    val parsed = new JsonObjectParser(Utils.getDefaultJsonFactory).parseAndClose(json, StandardCharsets.UTF_8, classOf[ServiceAccountCredential])
+    KeyFile.newBuilder()
+      .setType(parsed.getKeyType)
+      .setProjectId(parsed.getProjectId)
+      .setPrivateKeyId(parsed.getPrivateKeyId)
+      .setPrivateKey(parsed.getPrivateKeyPem)
+      .setClientEmail(parsed.getClientEmail)
+      .setClientId(parsed.getClientId)
+      .setAuthUri(parsed.getAuthUri)
+      .setTokenUri(parsed.getTokenUri)
+      .setAuthProviderX509CertUrl(parsed.getAuthProviderX509CertUrl)
+      .setClientX509CertUrl(parsed.getClientX509CertUrl)
+      .build()
+  }
+
+  def readPbCredentials(bytes: Array[Byte]): GoogleCredential = {
+    val keyFile = KeyFile.parseFrom(bytes)
+    new GoogleCredential.Builder()
+      .setTransport(Utils.getDefaultTransport)
+      .setJsonFactory(Utils.getDefaultJsonFactory)
+      .setServiceAccountId(keyFile.getClientEmail)
+      .setServiceAccountScopes(StorageScope)
+      .setServiceAccountPrivateKey(privateKey(keyFile.getPrivateKey))
+      .setServiceAccountPrivateKeyId(keyFile.getPrivateKeyId)
+      .setTokenServerEncodedUrl(keyFile.getTokenUri)
+      .setServiceAccountProjectId(keyFile.getProjectId)
+      .build()
+  }
+
+  def accessTokenCredentials(token: String): Credential = {
+    val cred = new Credential(BearerToken.authorizationHeaderAccessMethod())
+    cred.setAccessToken(token)
+    cred
   }
 
   def privateKey(privateKeyPem: String): PrivateKey = {
@@ -101,8 +139,13 @@ object Util {
     }
   }
 
-  case class JSONCredentialProvider(json: String) extends CredentialProvider {
-    override def getCredential: GoogleCredential =
-      readCredentials(new ByteArrayInputStream(json.getBytes(StandardCharsets.UTF_8)))
+  case class PBCredentialProvider(pb: Array[Byte]) extends CredentialProvider {
+    override def getCredential: Credential =
+      readPbCredentials(pb)
+  }
+
+  case class AccessTokenCredentialProvider(token: String) extends CredentialProvider {
+    override def getCredential: Credential =
+      accessTokenCredentials(token)
   }
 }
