@@ -15,22 +15,31 @@
  */
 package com.google.cloud.gszutil
 
+import com.google.common.io.Resources
 import org.scalatest.FlatSpec
 
 class GSZUtilSpec extends FlatSpec {
   "GSZUtil" should "parse gs path" in {
     val gsUri = "gs://bucket/path/to/object"
-    val (bucket,path) = GSZUtil.parseUri(gsUri)
+    val (bucket,path) = Util.parseUri(gsUri)
     assert(bucket == "bucket")
     assert(path == "path/to/object")
   }
 
   it should "parse args" in {
-    val args = "cp DATASET.RECORD gs://bucket/DATASET.RECORD".split(" ")
+    val keyfilePath = Resources.getResource("keyfile.json").getPath
+    val args = s"cp DATASET.RECORD gs://bucket/DATASET.RECORD $keyfilePath".split(" ")
     val parsed = GSZUtil.Parser.parse(args, GSZUtil.Config())
     assert(parsed.isDefined)
+    assert(parsed.get.mode == "cp")
     assert(parsed.get.dest == "gs://bucket/DATASET.RECORD")
     assert(parsed.get.dsn == "DATASET.RECORD")
-    assert(parsed.get.mode == "cp")
+    assert(parsed.get.keyfile == keyfilePath)
+  }
+
+  it should "require args" in {
+    val args = "cp DATASET.RECORD gs://bucket/DATASET.RECORD".split(" ")
+    val parsed = GSZUtil.Parser.parse(args, GSZUtil.Config())
+    assert(parsed.isEmpty)
   }
 }

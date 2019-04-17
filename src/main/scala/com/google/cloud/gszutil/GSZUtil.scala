@@ -15,12 +15,11 @@
  */
 package com.google.cloud.gszutil
 
-import java.io.{ByteArrayInputStream, InputStream}
+import java.nio.file.Paths
+import java.util.logging.{Level, Logger}
 
-import com.google.cloud.gszutil.GSXML.{DefaultCredentialProvider, FileCredentialProvider, PrivateKeyCredentialProvider, getClient}
-import com.google.common.base.Charsets
-import com.google.common.io.CharStreams
-import com.ibm.jzos.{FileFactory, RecordReader, ZFile, ZFileConstants}
+import com.google.cloud.gszutil.GSXML.XMLStorage
+import com.google.cloud.gszutil.Util.JSONCredentialProvider
 
 import scala.util.{Success, Try}
 
@@ -28,8 +27,8 @@ object GSZUtil {
   case class Config(dsn: String = "",
                     dest: String = "",
                     keyfile: String = "",
-                    bucket: String = "",
-                    path: String = "",
+                    destBucket: String = "",
+                    destPath: String = "",
                     mode: String = "",
                     useBCProv: Boolean = true,
                     debug: Boolean = true)
@@ -40,34 +39,38 @@ object GSZUtil {
 
       cmd("cp")
         .action{(_, c) => c.copy(mode = "cp")}
-        .text("cp is a command.")
+        .text("GSZUtil cp copies a zOS dataset to GCS")
         .children(
           arg[String]("dsn")
             .required()
             .action{(x, c) => c.copy(dsn = x)}
-            .text("dsn is the file to be copied"),
+            .text("record to be copied"),
           arg[String]("dest")
             .required()
             .action{(x, c) =>
-              Try(parseUri(x)) match {
+              Try(Util.parseUri(x)) match {
                 case Success((bucket, path)) =>
-                  c.copy(dest = x, bucket = bucket, path = path)
+                  c.copy(dest = x, destBucket = bucket, destPath = path)
                 case _ =>
                   c.copy(dest = x)
               }
             }
-            .text("dest is the destination path gs://bucket/path"),
+            .text("destination path (gs://bucket/path)"),
           arg[String]("keyfile")
             .required()
             .action{(x, c) => c.copy(keyfile = x)}
             .text("path to json credentials keyfile")
         )
       checkConfig(c =>
-        if (c.bucket.isEmpty || c.path.isEmpty)
+        if (c.destBucket.isEmpty || c.destPath.isEmpty)
           failure(s"invalid destination '${c.dest}'")
+        else if (!Paths.get(c.keyfile).toFile.exists())
+          failure(s"keyfile '${c.keyfile}' doesn't exist")
         else success
       )
     }
+
+  private val logger: Logger = Logger.getLogger(this.getClass.getSimpleName.stripSuffix("$"))
 
   def main(args: Array[String]): Unit = {
     Parser.parse(args, Config()) match {
@@ -79,76 +82,29 @@ object GSZUtil {
   }
 
   def run(config: Config): Unit = {
-    if (config.debug) Util.printDebugInformation()
+    if (config.debug) {
+      Util.printDebugInformation()
+      Util.configureLogging()
+    } else Util.configureLogging(Level.INFO)
     if (config.useBCProv) Util.configureBouncyCastleProvider()
 
-    val gcs0 = Try(getClient(new FileCredentialProvider(config.keyfile)))
-    val gcs1 = Try(getClient(DefaultCredentialProvider))
-    val gcs2 = Try(getClient(PrivateKeyCredentialProvider(
-        """-----BEGIN PRIVATE KEY-----\n<redacted>\n-----END PRIVATE KEY-----\n""".replaceAllLiterally("\\n", "\n"),
-        "serviceaccount@project.iam.gserviceaccount.com")))
+    val gcs = XMLStorage(JSONCredentialProvider(Util.readNio(config.keyfile)))
 
-    System.out.println("\n\nFileCredentialProvider")
-    Util.printException(gcs0)
+    logger.info(s"Uploading ${config.dsn} to ${config.dest}")
+    val request = gcs.putObject(
+      bucket = config.destBucket,
+      key = config.destPath,
+      inputStream = ZReader.read(config.dsn))
 
-    System.out.println("\n\nDefaultCredentialProvider")
-    Util.printException(gcs1)
+    val startTime = System.currentTimeMillis()
+    val response = request.execute()
+    val endTime = System.currentTimeMillis()
+    val duration = (endTime - startTime) / 1000L
 
-    System.out.println("\n\nPrivateKeyCredentialProvider")
-    Util.printException(gcs2)
-
-    gcs0
-      .orElse(gcs1)
-      .orElse(gcs2)
-      .foreach{gcs =>
-      val data = dsnInputStream(config.dsn)
-      val request = gcs.putObject(config.bucket, config.path, data)
-      System.out.println(s"Uploading ${config.dsn} to ${config.dest}")
-      val response = request.execute()
-      if (response.isSuccessStatusCode){
-        System.out.println(s"Success")
-      } else {
-        System.out.println(s"Error: Status code ${response.getStatusCode}")
-        System.out.println(s"${response.parseAsString}")
-      }
-    }
-  }
-
-  def readUtf8(path: String): InputStream = {
-    val reader = FileFactory.newBufferedReader(path, "UTF-8")
-    val bytes = CharStreams.toString(reader).getBytes(Charsets.UTF_8)
-    new ByteArrayInputStream(bytes)
-  }
-
-  def readDSN(dsn: String): RecordReader = {
-    val in = ZFile.getSlashSlashQuotedDSN(dsn, false)
-    RecordReader.newReader(in, ZFileConstants.FLAG_DISP_SHR)
-  }
-
-  def dsnInputStream(dsn: String): InputStream = {
-    new RecordReaderInputStream(readDSN(dsn))
-  }
-
-  class RecordReaderInputStream(in: RecordReader) extends InputStream {
-    private val byte = new Array[Byte](1)
-    override def read(): Int = {
-      in.read(byte)
-      byte(0)
-    }
-
-    override def read(b: Array[Byte], off: Int, len: Int): Int = {
-      in.read(b, off, len)
-    }
-  }
-
-  def parseUri(gsUri: String): (String,String) = {
-    if (gsUri.substring(0, 5) != "gs://") {
-      ("", "")
+    if (response.isSuccessStatusCode){
+      logger.info(s"Success ($duration seconds)")
     } else {
-      val dest = gsUri.substring(5, gsUri.length)
-      val bucket = dest.substring(0, dest.indexOf('/'))
-      val path = dest.substring(dest.indexOf('/')+1, dest.length)
-      (bucket, path)
+      logger.warning(s"Error: Status code ${response.getStatusCode}\n${response.parseAsString}")
     }
   }
 }

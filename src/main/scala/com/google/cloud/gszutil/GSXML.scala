@@ -18,71 +18,26 @@ package com.google.cloud.gszutil
 import java.io._
 import java.net.URLEncoder
 import java.nio.charset.StandardCharsets
-import java.security.PrivateKey
-import java.security.spec.PKCS8EncodedKeySpec
-import java.util.Collections
 
 import com.fasterxml.jackson.databind.DeserializationFeature
 import com.fasterxml.jackson.dataformat.xml.XmlMapper
 import com.google.api.client.googleapis.auth.oauth2.GoogleCredential
 import com.google.api.client.googleapis.javanet.GoogleNetHttpTransport
-import com.google.api.client.googleapis.util.Utils
 import com.google.api.client.http._
-import com.google.api.client.util.{PemReader, SecurityUtils}
 import com.google.cloud.gszutil.GSXMLModel.ListBucketResult
 import com.google.common.io.ByteSource
 
 
 object GSXML {
-  val StorageScope: java.util.Collection[String] = Collections.singleton("https://www.googleapis.com/auth/devstorage.read_write")
   val StorageEndpoint = "https://storage.googleapis.com/"
-  val TokenURI = "https://oauth2.googleapis.com/token"
   val ContentType = "application/octet-stream"
-  val CredentialsVariable = "GCREDS"
 
   trait CredentialProvider {
     def getCredential: GoogleCredential
   }
 
-  class FileCredentialProvider(path: String) extends CredentialProvider {
-    override def getCredential: GoogleCredential =
-      GoogleCredential.fromStream(
-        GSZUtil.readUtf8(path),
-        Utils.getDefaultTransport,
-        Utils.getDefaultJsonFactory)
-  }
-
-  object DefaultCredentialProvider extends CredentialProvider {
-    override def getCredential: GoogleCredential =
-      GoogleCredential.fromStream(
-        GSZUtil.readUtf8(sys.env(CredentialsVariable)),
-        Utils.getDefaultTransport,
-        Utils.getDefaultJsonFactory)
-  }
-
-  case class PrivateKeyCredentialProvider(privateKeyPem: String, serviceAccountId: String) extends CredentialProvider {
-    def getCredential: GoogleCredential = new GoogleCredential.Builder()
-      .setTransport(Utils.getDefaultTransport)
-      .setJsonFactory(Utils.getDefaultJsonFactory)
-      .setServiceAccountId(serviceAccountId)
-      .setServiceAccountPrivateKey(keyFromPem(privateKeyPem))
-      .setServiceAccountScopes(StorageScope)
-      .setTokenServerEncodedUrl(TokenURI)
-      .build()
-  }
-
-  class HttpResponseByteSource(response: HttpResponse) extends ByteSource {
+  private class HttpResponseByteSource(response: HttpResponse) extends ByteSource {
     override def openStream(): InputStream = response.getContent
-  }
-
-  @transient
-  private var client: XMLStorage = _
-
-  def getClient(credential: CredentialProvider, storageEndpoint: String = StorageEndpoint): XMLStorage = {
-    if (client == null) {
-      client = XMLStorage(credential, storageEndpoint)
-      client
-    } else client
   }
 
   class ListBucketResultIterator(gcs: XMLStorage, bucket: String, marker: String = "", maxKeys: Int = 1000, prefix: String = "", delimiter: String = "/") extends Iterator[ListBucketResult] {
@@ -126,7 +81,7 @@ object GSXML {
     }
   }
 
-  case class XMLStorage(credential: CredentialProvider, endpoint: String) {
+  case class XMLStorage(credential: CredentialProvider, endpoint: String = StorageEndpoint) {
     @transient private val requestFactory = GoogleNetHttpTransport.newTrustedTransport.createRequestFactory(credential.getCredential)
     @transient val xmlMapper: XmlMapper = {
       val mapper = new XmlMapper
@@ -150,15 +105,8 @@ object GSXML {
     }
   }
 
-  def readString(response: HttpResponse): String =
+  private def readString(response: HttpResponse): String =
     new HttpResponseByteSource(response)
       .asCharSource(StandardCharsets.UTF_8)
       .read()
-
-  def keyFromPem(pem: String): PrivateKey = {
-    val pemBytes = PemReader.readFirstSectionAndClose(new StringReader(pem), "PRIVATE KEY")
-      .getBase64DecodedBytes
-    val keySpec = new PKCS8EncodedKeySpec(pemBytes)
-    SecurityUtils.getRsaKeyFactory.generatePrivate(keySpec)
-  }
 }

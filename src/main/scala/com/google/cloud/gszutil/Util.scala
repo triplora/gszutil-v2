@@ -15,11 +15,35 @@
  */
 package com.google.cloud.gszutil
 
-import java.security.Security
+import java.io.{ByteArrayInputStream, InputStream, StringReader}
+import java.nio.charset.StandardCharsets
+import java.nio.file.{Files, Paths}
+import java.security.spec.PKCS8EncodedKeySpec
+import java.security.{PrivateKey, Security}
+import java.util.Collections
+import java.util.logging.{ConsoleHandler, Level, Logger}
+
+import com.google.api.client.googleapis.auth.oauth2.GoogleCredential
+import com.google.api.client.googleapis.util.Utils
+import com.google.api.client.http.HttpTransport
+import com.google.api.client.json.JsonObjectParser
+import com.google.api.client.util.{PemReader, SecurityUtils}
+import com.google.cloud.gszutil.GSXML.CredentialProvider
 
 import scala.util.{Failure, Try}
 
 object Util {
+  def parseUri(gsUri: String): (String,String) = {
+    if (gsUri.substring(0, 5) != "gs://") {
+      ("", "")
+    } else {
+      val dest = gsUri.substring(5, gsUri.length)
+      val bucket = dest.substring(0, dest.indexOf('/'))
+      val path = dest.substring(dest.indexOf('/')+1, dest.length)
+      (bucket, path)
+    }
+  }
+
   def printDebugInformation(): Unit = {
     import scala.collection.JavaConverters._
     System.out.println("\n\nSystem Properties:")
@@ -31,18 +55,41 @@ object Util {
   }
 
   def configureBouncyCastleProvider(): Unit = {
-    import scala.collection.JavaConverters._
     Security.insertProviderAt(new org.bouncycastle.jce.provider.BouncyCastleProvider(), 1)
+  }
 
-    Security.getProviders.foreach{p =>
-      System.out.println(s"${p.getName}\t${p.getInfo}")
-      val services = p.getServices.asScala.toArray
-        .map{x => s"\t${x.getType}\t${x.getAlgorithm}\t${x.getClassName}"}
-        .sorted
-        .mkString("\n")
-      System.out.println(services)
-      System.out.println("\n\n\n")
-    }
+  def configureLogging(level: Level = Level.ALL): Unit = {
+    val logHandler = new ConsoleHandler
+    logHandler.setLevel(level)
+    val httpLogger = Logger.getLogger(classOf[HttpTransport].getName)
+    httpLogger.setLevel(level)
+    httpLogger.addHandler(logHandler)
+  }
+
+  val StorageScope: java.util.Collection[String] = Collections.singleton("https://www.googleapis.com/auth/devstorage.read_write")
+
+  def readNio(path: String): String = {
+    new String(Files.readAllBytes(Paths.get(path)), StandardCharsets.UTF_8)
+  }
+
+  def readCredentials(json: InputStream): GoogleCredential = {
+    val parsed = new JsonObjectParser(Utils.getDefaultJsonFactory).parseAndClose(json, StandardCharsets.UTF_8, classOf[ServiceAccountCredential])
+    new GoogleCredential.Builder()
+      .setTransport(Utils.getDefaultTransport)
+      .setJsonFactory(Utils.getDefaultJsonFactory)
+      .setServiceAccountId(parsed.getClientEmail)
+      .setServiceAccountScopes(StorageScope)
+      .setServiceAccountPrivateKey(privateKey(parsed.getPrivateKeyPem))
+      .setServiceAccountPrivateKeyId(parsed.getPrivateKeyId)
+      .setTokenServerEncodedUrl(parsed.getTokenUri)
+      .setServiceAccountProjectId(parsed.getProjectId)
+      .build()
+  }
+
+  def privateKey(privateKeyPem: String): PrivateKey = {
+    SecurityUtils.getRsaKeyFactory.generatePrivate(new PKCS8EncodedKeySpec(PemReader
+      .readFirstSectionAndClose(new StringReader(privateKeyPem), "PRIVATE KEY")
+      .getBase64DecodedBytes))
   }
 
   def printException[T](x: Try[T]): Unit = {
@@ -52,5 +99,10 @@ object Util {
         exception.printStackTrace(System.err)
       case _ =>
     }
+  }
+
+  case class JSONCredentialProvider(json: String) extends CredentialProvider {
+    override def getCredential: GoogleCredential =
+      readCredentials(new ByteArrayInputStream(json.getBytes(StandardCharsets.UTF_8)))
   }
 }
