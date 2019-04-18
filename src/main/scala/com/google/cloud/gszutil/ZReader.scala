@@ -17,13 +17,15 @@ package com.google.cloud.gszutil
 
 import java.io.InputStream
 
-import com.ibm.jzos.{RecordReader, ZFile, ZFileConstants}
+import com.ibm.jzos.{RecordReader, ZFile}
 
 object ZReader {
-  def read(dsn: String): InputStream = {
-    val slashQuotedDSN = ZFile.getSlashSlashQuotedDSN(dsn, false)
-    System.out.println(s"Reading $slashQuotedDSN")
-    val reader = RecordReader.newReader(slashQuotedDSN, ZFileConstants.FLAG_DISP_SHR)
+  def readDD(ddName: String): InputStream = {
+    if (!ZFile.ddExists(ddName))
+      throw new RuntimeException(s"DD $ddName does not exist")
+
+    val reader = RecordReader.newReaderForDD(ddName)
+    System.out.println(s"Reading DD $ddName ${reader.getDsn}")
     new RecordReaderInputStream(reader)
   }
 

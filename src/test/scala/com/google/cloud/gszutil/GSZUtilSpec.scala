@@ -33,7 +33,7 @@ class GSZUtilSpec extends FlatSpec {
     assert(parsed.isDefined)
     assert(parsed.get.mode == "cp")
     assert(parsed.get.dest == "gs://bucket/DATASET.RECORD")
-    assert(parsed.get.dsn == "DATASET.RECORD")
+    assert(parsed.get.inDD == "DATASET.RECORD")
     assert(parsed.get.keyfile == keyfilePath)
   }
 

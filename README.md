@@ -82,6 +82,33 @@ iconv -f EBCDICUS -t UTF-8 GSZUTILJCL | tr '\205' '\n' | tr -d '\302' | tr -cd '
 iconv -t EBCDICUS -f UTF-8 GSZUTIL.PRC > GSZUTILPRC
 ```
 
+## Documentation
+
+[Data Set Names](https://www.ibm.com/support/knowledgecenter/en/SSLTBW_2.3.0/com.ibm.zos.v2r3.idad400/name.htm)
+
+A data set name can be from one to a series of twenty-two joined name segments. Each name segment represents a level of qualification.
+
+Each name segment (qualifier) is 1 to 8 characters, the first of which must be alphabetic (A to Z) or national (# @ $). The remaining seven characters are either alphabetic, numeric (0 - 9), national, a hyphen (-). Name segments are separated by a period (.).
+
+Data set names must not exceed 44 characters, including all name segments and periods.
+
+A low-level qualifier GxxxxVyy, in which xxxx and yy are numbers is used for names of generation data sets.
+
+
+[Working with Data Sets](https://www.ibm.com/support/knowledgecenter/en/SSLTBW_2.3.0/com.ibm.zos.v2r3.idad400/ch1.htm)
+
+
+[Direct Access Storage Device Architecture](https://www.ibm.com/support/knowledgecenter/en/SSLTBW_2.3.0/com.ibm.zos.v2r3.idad400/dasda.htm#dasda)
+
+[DD Statement](https://www.ibm.com/support/knowledgecenter/en/SSLTBW_2.3.0/com.ibm.zos.v2r3.ieab600/ddst.htm)
+
+DD statement (data definition) is used to describe a data set and specify input and output resources. [more info](https://www.ibm.com/support/knowledgecenter/zosbasics/com.ibm.zos.zjcl/zjclc_jclDDstmt.htm)
+
+The [DSNAME](https://www.ibm.com/support/knowledgecenter/en/SSLTBW_2.3.0/com.ibm.zos.v2r3.ieab600/xdddsn.htm) parameter specifies a data set name for input or output.
+
+The [*](https://www.ibm.com/support/knowledgecenter/en/SSLTBW_2.3.0/com.ibm.zos.v2r3.ieab600/xddaster.htm) parameter begins an in-stream data set. Terminated with `/*` or `//`. 
+
+
 ## Disclaimer
 
 This is not an official Google product.

@@ -15,7 +15,7 @@
  */
 package com.google.cloud.gszutil
 
-import java.io.{ByteArrayInputStream, InputStream, StringReader}
+import java.io.{InputStream, StringReader}
 import java.nio.charset.StandardCharsets
 import java.nio.file.{Files, Paths}
 import java.security.spec.PKCS8EncodedKeySpec
@@ -24,7 +24,7 @@ import java.util.Collections
 import java.util.logging.{ConsoleHandler, Level, Logger}
 
 import com.google.api.client.auth.oauth2.{BearerToken, Credential}
-import com.google.api.client.googleapis.auth.oauth2.{GoogleCredential, GoogleOAuthConstants}
+import com.google.api.client.googleapis.auth.oauth2.GoogleCredential
 import com.google.api.client.googleapis.util.Utils
 import com.google.api.client.http.HttpTransport
 import com.google.api.client.json.JsonObjectParser
@@ -60,9 +60,11 @@ object Util {
     Security.insertProviderAt(new org.bouncycastle.jce.provider.BouncyCastleProvider(), 1)
   }
 
-  def configureLogging(level: Level = Level.ALL): Unit = {
+  def configureLogging(level: Level = Level.INFO): Unit = {
     val logHandler = new ConsoleHandler
     logHandler.setLevel(level)
+    val logger = Logger.getLogger("GSZUtil")
+    logger.addHandler(logHandler)
     val httpLogger = Logger.getLogger(classOf[HttpTransport].getName)
     httpLogger.setLevel(level)
     httpLogger.addHandler(logHandler)

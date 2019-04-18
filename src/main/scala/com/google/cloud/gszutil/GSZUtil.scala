@@ -15,9 +15,8 @@
  */
 package com.google.cloud.gszutil
 
-import java.io.{ByteArrayInputStream, InputStream}
-import java.nio.charset.StandardCharsets
-import java.nio.file.{Files, Paths}
+import java.io.InputStream
+import java.nio.file.Paths
 import java.util.logging.{Level, Logger}
 
 import com.google.cloud.gszutil.GSXML.{CredentialProvider, XMLStorage}
@@ -28,14 +27,14 @@ import com.google.common.io.Resources
 import scala.util.{Success, Try}
 
 object GSZUtil {
-  case class Config(dsn: String = "",
+  case class Config(inDD: String = "",
                     dest: String = "",
                     keyfile: String = "",
                     destBucket: String = "",
                     destPath: String = "",
                     mode: String = "",
                     useBCProv: Boolean = true,
-                    debug: Boolean = true)
+                    debug: Boolean = false)
 
   val Parser: scopt.OptionParser[Config] =
     new scopt.OptionParser[Config]("GSZUtil") {
@@ -45,10 +44,10 @@ object GSZUtil {
         .action{(_, c) => c.copy(mode = "cp")}
         .text("GSZUtil cp copies a zOS dataset to GCS")
         .children(
-          arg[String]("dsn")
+          arg[String]("inDD")
             .required()
-            .action{(x, c) => c.copy(dsn = x)}
-            .text("record to be copied"),
+            .action{(x, c) => c.copy(inDD = x)}
+            .text("DD for input DSN to be copied"),
           arg[String]("dest")
             .required()
             .action{(x, c) =>
@@ -73,23 +72,25 @@ object GSZUtil {
       )
     }
 
-  private val logger: Logger = Logger.getLogger(this.getClass.getSimpleName.stripSuffix("$"))
+  private val logger: Logger = Logger.getLogger("GSZUtil")
 
   def main(args: Array[String]): Unit = {
-    System.out.println(s"Running with args: ${args.mkString(" ")}")
+    Util.configureLogging()
+    logger.info(s"Running with args: ${args.mkString(" ")}")
     Parser.parse(args, Config()) match {
       case Some(config) =>
         run(config)
+        logger.info("Finished")
       case _ =>
-        System.out.println(s"Invalid args: ${args.mkString(" ")}")
+        System.err.println(s"Invalid args: ${args.mkString(" ")}")
     }
   }
 
   def run(config: Config): Unit = {
     if (config.debug) {
       Util.printDebugInformation()
-      Util.configureLogging()
-    } else Util.configureLogging(Level.INFO)
+      Util.configureLogging(Level.ALL)
+    }
     if (config.useBCProv) Util.configureBouncyCastleProvider()
 
     val keyFile: KeyFile = Try{
@@ -106,8 +107,8 @@ object GSZUtil {
     System.out.println(s"Uploading 100MB of random data for speed test")
     put(gcs, new RandomInputStream(100000000), config.destBucket, "test_data_100MB")
 
-    System.out.println(s"Uploading ${config.dsn} to ${config.dest}")
-    put(gcs, ZReader.read(config.dsn), config.destBucket, config.destPath)
+    System.out.println(s"Uploading ${config.inDD} to ${config.dest}")
+    put(gcs, ZReader.readDD(config.inDD), config.destBucket, config.destPath)
   }
 
   def put(gcs: XMLStorage, in: InputStream, bucket: String, path: String): Unit = {
@@ -119,12 +120,12 @@ object GSZUtil {
     val startTime = System.currentTimeMillis()
     val response = request.execute()
     val endTime = System.currentTimeMillis()
-    val duration = (endTime - startTime) / 1000L
 
     if (response.isSuccessStatusCode){
-      logger.info(s"Success ($duration seconds)")
+      val duration = (endTime - startTime) / 1000L
+      System.out.println(s"Success ($duration seconds)")
     } else {
-      logger.warning(s"Error: Status code ${response.getStatusCode}\n${response.parseAsString}")
+      System.out.println(s"Error: Status code ${response.getStatusCode}\n${response.parseAsString}")
     }
   }
 }

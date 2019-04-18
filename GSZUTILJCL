@@ -24,21 +24,30 @@
 //*******************************************************************
 //JAVA EXEC PROC=JVMPRC86,
 // JAVACLS='com.google.cloud.gszutil.GSZUtil'
+//INFILE DD DSNAME=LIB.NAME.DATA,DISP=SHR
 //STDENV DD *
 
 . /etc/profile
-export DSN=""     # File to be Copied
 export BUCKET=""  # GCS Bucket Name
+export KEY=""     # GCS Path
 export APP_JAR="" # path/to/GSZUtil.jar
+export DEP_JAR="" # path/to/GSZUtilDeps.jar
 export GCREDS=""  # path/to/keyfile.json
 
-export JZOS_MAIN_ARGS="cp $DSN gs://$BUCKET/$DSN $GCREDS"
+export JZOS_MAIN_ARGS="cp INFILE gs://$BUCKET/$KEY $GCREDS"
 
 export JAVA_HOME=/usr/lpp/java/J8.0_64
-export PATH="/bin:${JAVA_HOME}/bin"
-export LIBPATH="/lib:/usr/lib:${JAVA_HOME}/bin:${JAVA_HOME}/lib/s390x:${JAVA_HOME}/lib/s390x/j9vm:${JAVA_HOME}/bin/classic:"
+export PATH="/bin:${JAVA_HOME}/bin:"
 
-export CLASSPATH="$APP_JAR:${JAVA_HOME}/lib:${JAVA_HOME}/lib/ext"
+LIBPATH="/lib:/usr/lib:${JAVA_HOME}/bin"
+LIBPATH="$LIBPATH:${JAVA_HOME}/lib/s390x"
+LIBPATH="$LIBPATH:${JAVA_HOME}/lib/s390x/j9vm"
+LIBPATH="$LIBPATH:${JAVA_HOME}/bin/classic:"
+export LIBPATH
+
+CLASSPATH="$APP_JAR:$DEP_JAR"
+CLASSPATH="$CLASSPATH:${JAVA_HOME}/lib:${JAVA_HOME}/lib/ext:"
+export CLASSPATH
 
 export IBM_JAVA_OPTIONS="-Xms256m -Xmx256m "
 
