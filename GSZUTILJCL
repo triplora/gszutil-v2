@@ -29,12 +29,12 @@
 
 . /etc/profile
 export BUCKET=""  # GCS Bucket Name
-export KEY=""     # GCS Path
+export DESTOBJ="" # GCS Path
 export APP_JAR="" # path/to/GSZUtil.jar
 export DEP_JAR="" # path/to/GSZUtilDeps.jar
-export GCREDS=""  # path/to/keyfile.json
+export GCREDS=""  # path/to/keyfile.pb
 
-export JZOS_MAIN_ARGS="cp INFILE gs://$BUCKET/$KEY $GCREDS"
+export JZOS_MAIN_ARGS="cp INFILE gs://$BUCKET/$DESTOBJ $GCREDS"
 
 export JAVA_HOME=/usr/lpp/java/J8.0_64
 export PATH="/bin:${JAVA_HOME}/bin:"

@@ -21,7 +21,7 @@ import java.util.logging.{Level, Logger}
 
 import com.google.cloud.gszutil.GSXML.{CredentialProvider, XMLStorage}
 import com.google.cloud.gszutil.KeyFileProto.KeyFile
-import com.google.cloud.gszutil.Util.{AccessTokenCredentialProvider, KeyFileCredentialProvider, RandomInputStream}
+import com.google.cloud.gszutil.Util.{AccessTokenCredentialProvider, KeyFileCredentialProvider}
 import com.google.common.io.Resources
 
 import scala.util.{Success, Try}
@@ -97,15 +97,13 @@ object GSZUtil {
       KeyFile.parseFrom(Resources.toByteArray(Resources.getResource("keyfile.pb")))
     }.getOrElse(KeyFile.parseFrom(Util.readNio(config.keyfile)))
 
-    val cp: CredentialProvider = if (keyFile.getAccessToken.nonEmpty) {
-      AccessTokenCredentialProvider(keyFile.getAccessToken)
-    } else {
-      KeyFileCredentialProvider(keyFile)
-    }
+    val cp: CredentialProvider = Util
+      .validate(KeyFileCredentialProvider(keyFile))
+      .getOrElse(AccessTokenCredentialProvider(keyFile.getAccessToken))
     val gcs = XMLStorage(cp)
 
-    System.out.println(s"Uploading 100MB of random data for speed test")
-    put(gcs, new RandomInputStream(100000000), config.destBucket, "test_data_100MB")
+    //System.out.println(s"Uploading 100MB of random data for speed test")
+    //put(gcs, new RandomInputStream(100000000), config.destBucket, "test_data_100MB")
 
     System.out.println(s"Uploading ${config.inDD} to ${config.dest}")
     put(gcs, ZReader.readDD(config.inDD), config.destBucket, config.destPath)

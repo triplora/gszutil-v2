@@ -76,8 +76,18 @@ object Util {
     Files.readAllBytes(Paths.get(path))
   }
 
+  def parseJson(json: InputStream): ServiceAccountCredential = {
+    new JsonObjectParser(Utils.getDefaultJsonFactory).parseAndClose(json, StandardCharsets.UTF_8, classOf[ServiceAccountCredential])
+  }
+
+  def validate(c: CredentialProvider): Option[CredentialProvider] = {
+    if (c.getCredential.refreshToken())
+      Option(c)
+    else None
+  }
+
   def readCredentials(json: InputStream): GoogleCredential = {
-    val parsed = new JsonObjectParser(Utils.getDefaultJsonFactory).parseAndClose(json, StandardCharsets.UTF_8, classOf[ServiceAccountCredential])
+    val parsed = parseJson(json)
     new GoogleCredential.Builder()
       .setTransport(Utils.getDefaultTransport)
       .setJsonFactory(Utils.getDefaultJsonFactory)
@@ -91,7 +101,7 @@ object Util {
   }
 
   def convertJson(json: InputStream): KeyFile = {
-    val parsed = new JsonObjectParser(Utils.getDefaultJsonFactory).parseAndClose(json, StandardCharsets.UTF_8, classOf[ServiceAccountCredential])
+    val parsed = parseJson(json)
     KeyFile.newBuilder()
       .setType(parsed.getKeyType)
       .setProjectId(parsed.getProjectId)
