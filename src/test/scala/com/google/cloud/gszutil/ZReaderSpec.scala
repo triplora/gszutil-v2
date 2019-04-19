@@ -26,10 +26,10 @@ class ZReaderSpec extends FlatSpec {
 
   "ZReader" should "transcode EBCDIC" in {
     val test = (0 until 65536).map{x => s"test $x\nABCD\tXYZ\n1234"}.mkString("\n")
-    val in = test.getBytes(ZReader.EBCDIC)
+    val in = test.getBytes(ZReader.getDefaultCharset)
     val expected = test.getBytes(StandardCharsets.UTF_8).toSeq
 
-    val is = new RecordReaderInputStream(new TestRecordReader(in, 2048), 65536)
+    val is = new RecordReaderInputStream(new TestRecordReader(in, 135), 65536)
     val got = readAllBytes(is).toSeq
     val n = got.length
     assert(is.getBytesIn == expected.length)

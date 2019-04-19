@@ -19,14 +19,28 @@ import java.io.InputStream
 import java.nio.charset._
 import java.nio.{ByteBuffer, CharBuffer}
 
-import com.ibm.jzos.{RecordReader, ZFile}
+import com.ibm.jzos.{RecordReader, ZFile, ZUtil}
+
+import scala.util.Try
 
 object ZReader {
+  final val CP1047: Charset = Charset.forName("CP1047")
+
+  def getDefaultCharset: Charset =
+    Try(Charset.forName(ZUtil.getDefaultPlatformEncoding))
+      .getOrElse(CP1047)
+
   trait TRecordReader {
     def read(buf: Array[Byte]): Int
     def read(buf: Array[Byte], off: Int, len: Int): Int
     def close(): Unit
     def getLrecl: Int
+  }
+
+  class InputStreamCloser(is: InputStream) extends Thread {
+    override def run(): Unit = {
+      is.close()
+    }
   }
 
   class WrappedRecordReader(r: RecordReader) extends TRecordReader {
@@ -44,13 +58,13 @@ object ZReader {
 
     val reader = RecordReader.newReaderForDD(ddName)
     reader.setAutoFree(true)
-    System.out.println(s"Reading DD $ddName ${reader.getDsn} with record format ${reader.getRecfm} BLKSIZE ${reader.getBlksize} LRECL ${reader.getLrecl}")
-    new RecordReaderInputStream(new WrappedRecordReader(reader), 65536)
+    System.out.println(s"Reading DD $ddName ${reader.getDsn} with record format ${reader.getRecfm} BLKSIZE ${reader.getBlksize} LRECL ${reader.getLrecl} with default system encoding ${ZUtil.getDefaultPlatformEncoding}")
+    val is = new RecordReaderInputStream(new WrappedRecordReader(reader), 65536)
+    Runtime.getRuntime.addShutdownHook(new InputStreamCloser(is))
+    is
   }
 
-  final val EBCDIC: Charset = Charset.forName("IBM1047")
-
-  private def newDecoder(): CharsetDecoder = EBCDIC.newDecoder
+  private def newDecoder(): CharsetDecoder = getDefaultCharset.newDecoder
     .onMalformedInput(CodingErrorAction.REPORT)
     .onUnmappableCharacter(CodingErrorAction.REPORT)
 
@@ -119,6 +133,7 @@ object ZReader {
 
     override def close(): Unit = {
       System.out.println(s"Read $bytesIn bytes from RecordReader and output $bytesOut bytes")
+      reader.close()
       super.close()
     }
   }

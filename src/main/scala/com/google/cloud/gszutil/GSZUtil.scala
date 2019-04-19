@@ -19,7 +19,7 @@ import java.io.InputStream
 import java.nio.file.Paths
 import java.util.logging.{Level, Logger}
 
-import com.google.cloud.gszutil.GSXML.{CredentialProvider, XMLStorage}
+import com.google.cloud.gszutil.GSXML.XMLStorage
 import com.google.cloud.gszutil.KeyFileProto.KeyFile
 import com.google.cloud.gszutil.Util.{AccessTokenCredentialProvider, KeyFileCredentialProvider}
 import com.google.common.io.Resources
@@ -97,16 +97,15 @@ object GSZUtil {
       KeyFile.parseFrom(Resources.toByteArray(Resources.getResource("keyfile.pb")))
     }.getOrElse(KeyFile.parseFrom(Util.readNio(config.keyfile)))
 
-    val cp: CredentialProvider = Util
-      .validate(KeyFileCredentialProvider(keyFile))
-      .getOrElse(AccessTokenCredentialProvider(keyFile.getAccessToken))
-    val gcs = XMLStorage(cp)
+    val cp = Util.validate(KeyFileCredentialProvider(keyFile))
+    if (cp.isDefined) System.out.println("Using KeyFileCredentialProvider")
 
-    //System.out.println(s"Uploading 100MB of random data for speed test")
-    //put(gcs, new RandomInputStream(100000000), config.destBucket, "test_data_100MB")
+    val gcs = XMLStorage(cp
+      .getOrElse(AccessTokenCredentialProvider(keyFile.getAccessToken)))
 
     System.out.println(s"Uploading ${config.inDD} to ${config.dest}")
     put(gcs, ZReader.readDD(config.inDD), config.destBucket, config.destPath)
+    System.out.println(s"Upload Finished")
   }
 
   def put(gcs: XMLStorage, in: InputStream, bucket: String, path: String): Unit = {
@@ -125,5 +124,6 @@ object GSZUtil {
     } else {
       System.out.println(s"Error: Status code ${response.getStatusCode}\n${response.parseAsString}")
     }
+    in.close()
   }
 }
