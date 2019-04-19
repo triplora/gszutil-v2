@@ -66,7 +66,7 @@ sbt assembly
 
 ## Encoding Conversion
 
-The examples below demonstrate conversion between EBCDIC and UTF-8.
+The examples below demonstrate conversion between [EBCDIC](https://www.ibm.com/support/knowledgecenter/zosbasics/com.ibm.zos.zappldev/zappldev_14.htm) and UTF-8.
 
 
 ### Convert EBCDIC to UTF-8
