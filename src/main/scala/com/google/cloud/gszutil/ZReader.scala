@@ -19,16 +19,10 @@ import java.io.InputStream
 import java.nio.charset._
 import java.nio.{ByteBuffer, CharBuffer}
 
-import com.ibm.jzos.{RecordReader, ZFile, ZUtil}
-
-import scala.util.Try
 
 object ZReader {
   final val CP1047: Charset = Charset.forName("CP1047")
-
-  def getDefaultCharset: Charset =
-    Try(Charset.forName(ZUtil.getDefaultPlatformEncoding))
-      .getOrElse(CP1047)
+  final val UTF8: Charset = StandardCharsets.UTF_8
 
   trait TRecordReader {
     def read(buf: Array[Byte]): Int
@@ -43,48 +37,131 @@ object ZReader {
     }
   }
 
-  class WrappedRecordReader(r: RecordReader) extends TRecordReader {
-    override def read(buf: Array[Byte]): Int =
-      r.read(buf)
-    override def read(buf: Array[Byte], off: Int, len: Int): Int =
-      r.read(buf, off, len)
-    override def close(): Unit = r.close()
-    override def getLrecl: Int = r.getLrecl
-  }
-
   def readDD(ddName: String): InputStream = {
-    if (!ZFile.ddExists(ddName))
-      throw new RuntimeException(s"DD $ddName does not exist")
-
-    val reader = RecordReader.newReaderForDD(ddName)
-    reader.setAutoFree(true)
-    System.out.println(s"Reading DD $ddName ${reader.getDsn} with record format ${reader.getRecfm} BLKSIZE ${reader.getBlksize} LRECL ${reader.getLrecl} with default system encoding ${ZUtil.getDefaultPlatformEncoding}")
-    val is = new RecordReaderInputStream(new WrappedRecordReader(reader), 65536)
+    val rr = ZOS.readDD(ddName)
+    val is = new TranscoderInputStream(rr,65536, srcCharset = CP1047, destCharset = UTF8)
     Runtime.getRuntime.addShutdownHook(new InputStreamCloser(is))
     is
   }
 
-  private def newDecoder(): CharsetDecoder = getDefaultCharset.newDecoder
-    .onMalformedInput(CodingErrorAction.REPORT)
-    .onUnmappableCharacter(CodingErrorAction.REPORT)
+  /** Iterator for Binary MVS Data Set
+    *
+    * @param reader
+    */
+  class ByteIterator(reader: TRecordReader) extends Iterator[Array[Byte]] {
+    private val data: Array[Byte] = new Array[Byte](reader.getLrecl)
+    private val in: ByteBuffer = ByteBuffer.allocate(reader.getLrecl)
+    private var endOfInput = fill()
+    private var bytesIn: Long = 0
+    private var bytesWaiting: Int = 0
 
-  private def newEncoder(): CharsetEncoder = StandardCharsets.UTF_8.newEncoder
-    .onMalformedInput(CodingErrorAction.REPORT)
-    .onUnmappableCharacter(CodingErrorAction.REPORT)
+    private def fill(): Boolean = {
+      bytesWaiting = reader.read(data)
+      if (bytesWaiting < 1) {
+        true
+      } else {
+        bytesIn += bytesWaiting
+        false
+      }
+    }
 
-  class RecordReaderInputStream(reader: TRecordReader, size: Int) extends InputStream {
-    private val decoder = newDecoder()
-    private val encoder = newEncoder()
-    private val lrecl = reader.getLrecl // maximum record length
-    private val data = new Array[Byte](lrecl)
-    private val bufSz = size
-    private val in = ByteBuffer.allocate(bufSz)
-    private val out = {
+    def getBytesIn: Long = bytesIn
+
+    override def hasNext: Boolean = !endOfInput
+
+    override def next(): Array[Byte] = {
+      if (endOfInput)
+        throw new NoSuchElementException("next on empty iterator")
+
+      in.put(data, 0, bytesWaiting)
+      in.flip()
+      val result = new Array[Byte](in.remaining)
+      in.get(result)
+      endOfInput = fill()
+      result
+    }
+  }
+
+  /** Iterator for text MVS Data Set
+    *
+    * @param reader TRecordReader
+    * @param srcCharset input Charset (typically CP1047)
+    * @param trim whether to trim trailing whitespace from each record
+    */
+  class RecordIterator(reader: TRecordReader, srcCharset: Charset, trim: Boolean) extends Iterator[String] {
+    private val data: Array[Byte] = new Array[Byte](reader.getLrecl)
+    private val in: ByteBuffer = ByteBuffer.allocate(reader.getLrecl)
+    private val cb: CharBuffer = CharBuffer.allocate(reader.getLrecl)
+    private var endOfInput = fill()
+    private var bytesIn: Long = 0
+    private var bytesWaiting: Int = 0
+
+    private def fill(): Boolean = {
+      bytesWaiting = reader.read(data)
+      if (bytesWaiting < 1) {
+        true
+      } else {
+        bytesIn += bytesWaiting
+        false
+      }
+    }
+
+    private val decoder: CharsetDecoder = srcCharset.newDecoder
+      .onMalformedInput(CodingErrorAction.REPORT)
+      .onUnmappableCharacter(CodingErrorAction.REPORT)
+
+    def getBytesIn: Long = bytesIn
+
+    override def hasNext: Boolean = !endOfInput
+
+    override def next(): String = {
+      if (endOfInput)
+        throw new NoSuchElementException("next on empty iterator")
+
+      in.put(data, 0, bytesWaiting)
+      in.flip()
+      decoder.decode(in, cb, endOfInput)
+      cb.flip()
+      in.clear()
+
+      if (trim) {
+        var i = cb.limit - 1
+        while (i >= cb.position && Character.isWhitespace(cb.get(i))) {
+          i -= 1
+        }
+        cb.limit(i+1)
+      }
+      val result = cb.toString
+      cb.clear()
+      endOfInput = fill()
+      result
+    }
+  }
+
+  /** Transcodes records
+    *
+    * @param reader input RecordReader
+    * @param size buffer size
+    * @param srcCharset input Charset (typically CP1047)
+    * @param destCharset output Charset (typically UTF8)
+    */
+  class TranscoderInputStream(reader: TRecordReader, size: Int, srcCharset: Charset, destCharset: Charset) extends InputStream {
+    private val decoder: CharsetDecoder = srcCharset.newDecoder
+      .onMalformedInput(CodingErrorAction.REPORT)
+      .onUnmappableCharacter(CodingErrorAction.REPORT)
+    private val encoder: CharsetEncoder = destCharset.newEncoder()
+      .onMalformedInput(CodingErrorAction.REPORT)
+      .onUnmappableCharacter(CodingErrorAction.REPORT)
+    private val lrecl: Int = reader.getLrecl // maximum record length
+    private val data: Array[Byte] = new Array[Byte](lrecl)
+    private val bufSz: Int = size
+    private val in: ByteBuffer = ByteBuffer.allocate(bufSz)
+    private val out: ByteBuffer = {
       val b = ByteBuffer.allocate(bufSz)
       b.flip()
       b
     }
-    private val cb = CharBuffer.allocate(bufSz)
+    private val cb: CharBuffer = CharBuffer.allocate(bufSz)
     private var endOfInput = false
     private var endOfOutput = false
     private var bytesIn: Long = 0

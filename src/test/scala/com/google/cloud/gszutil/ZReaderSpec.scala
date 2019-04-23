@@ -2,8 +2,9 @@ package com.google.cloud.gszutil
 
 import java.io.InputStream
 import java.nio.charset.StandardCharsets
+import java.nio.file.{Files, Paths}
 
-import com.google.cloud.gszutil.ZReader.RecordReaderInputStream
+import com.google.cloud.gszutil.ZReader.{RecordIterator, TranscoderInputStream}
 import org.scalatest.FlatSpec
 
 import scala.collection.mutable.ArrayBuffer
@@ -26,10 +27,14 @@ class ZReaderSpec extends FlatSpec {
 
   "ZReader" should "transcode EBCDIC" in {
     val test = (0 until 65536).map{x => s"test $x\nABCD\tXYZ\n1234"}.mkString("\n")
-    val in = test.getBytes(ZReader.getDefaultCharset)
+    val in = test.getBytes(ZReader.CP1047)
     val expected = test.getBytes(StandardCharsets.UTF_8).toSeq
 
-    val is = new RecordReaderInputStream(new TestRecordReader(in, 135), 65536)
+    val is = new TranscoderInputStream(
+      reader = new TestRecordReader(in, 135),
+      size = 65536,
+      srcCharset = ZReader.CP1047,
+      destCharset = ZReader.UTF8)
     val got = readAllBytes(is).toSeq
     val n = got.length
     assert(is.getBytesIn == expected.length)
