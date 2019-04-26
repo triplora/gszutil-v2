@@ -12,6 +12,7 @@ val exGuava = ExclusionRule(organization = "com.google.guava")
 
 libraryDependencies ++= Seq(
   "com.google.api-client" % "google-api-client" % "1.28.0" excludeAll exGuava,
+  "com.google.cloud" % "google-cloud-bigquery" % "1.71.0" excludeAll exGuava,
   "com.google.protobuf" % "protobuf-java" % "3.7.1",
   "com.google.protobuf" % "protobuf-java-util" % "3.7.1",
   "com.google.guava" % "guava" % "27.0.1-jre",
