@@ -15,15 +15,30 @@
  */
 package com.google.cloud.gszutil
 
+import java.io.ByteArrayInputStream
+
 import com.google.api.gax.rpc.FixedHeaderProvider
 import com.google.cloud.RetryOption
 import com.google.cloud.bigquery.JobInfo.{CreateDisposition, WriteDisposition}
 import com.google.cloud.bigquery._
-import com.google.cloud.gszutil.GSXML.CredentialProvider
+import com.google.cloud.gszutil.GSXML.{CredentialProvider, XMLStorage}
 import org.threeten.bp.Duration
 
 object BQLoad {
   def run(c: Config, cp: CredentialProvider): Unit = {
+    val gcs: XMLStorage = XMLStorage(cp)
+
+    System.out.println(s"Writing avro file to gs://${c.bq.bucket}/${c.bq.prefix}")
+    val is = new ByteArrayInputStream(AvroWriter.create(10))
+    val request = gcs.putObject(c.bq.bucket, c.bq.prefix, is, AvroWriter
+      .AvroContentType)
+    val response = request.execute()
+    if (response.isSuccessStatusCode)
+      System.out.println(s"Successfully wrote gs://${c.bq.bucket}/${c.bq.prefix}")
+    else
+      System.out.println(s"Failed to write gs://${c.bq.bucket}/${c.bq.prefix} (${response.getStatusCode} ${response.getStatusMessage})\n${response.parseAsString}")
+    is.close()
+
     val bq: BigQuery = BigQueryOptions.newBuilder()
       .setLocation(c.bq.location)
       .setCredentials(cp.getCredentials)
@@ -36,6 +51,7 @@ object BQLoad {
 
     val jobConf = LoadJobConfiguration
       .newBuilder(TableId.of(c.bq.project, c.bq.dataset, c.bq.table), sourceUri)
+      .setFormatOptions(FormatOptions.avro())
       .setAutodetect(true)
       .setWriteDisposition(WriteDisposition.WRITE_TRUNCATE)
       .setCreateDisposition(CreateDisposition.CREATE_IF_NEEDED)

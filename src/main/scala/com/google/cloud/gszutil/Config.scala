@@ -98,7 +98,7 @@ object Config {
         )
 
       checkConfig(c =>
-        if (c.destBucket.isEmpty || c.destPath.isEmpty)
+        if (c.mode == "cp" && (c.destBucket.isEmpty || c.destPath.isEmpty))
           failure(s"invalid destination '${c.dest}'")
         else if (c.keyfile.nonEmpty && !Paths.get(c.keyfile).toFile.exists())
           failure(s"keyfile '${c.keyfile}' doesn't exist")

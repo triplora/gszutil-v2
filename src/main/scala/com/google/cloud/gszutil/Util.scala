@@ -31,7 +31,7 @@ import com.google.api.client.http.HttpTransport
 import com.google.api.client.json.JsonObjectParser
 import com.google.api.client.util.{PemReader, SecurityUtils}
 import com.google.auth.Credentials
-import com.google.auth.oauth2.{AccessToken, GoogleCredentials}
+import com.google.auth.oauth2.{AccessToken, GSZCredentials, GoogleCredentials}
 import com.google.cloud.gszutil.GSXML.CredentialProvider
 import com.google.cloud.gszutil.KeyFileProto.KeyFile
 
@@ -132,12 +132,6 @@ object Util {
       .build()
   }
 
-  def readPbCredentials1(keyFile: KeyFile): GoogleCredentials = {
-    GoogleCredentials.newBuilder()
-      .setAccessToken(new AccessToken(readPbCredentials(keyFile).getAccessToken, Date.from(Instant.ofEpochMilli(System.currentTimeMillis() + 1000*60*60))))
-      .build()
-  }
-
   def accessTokenCredentials(token: String): Credential = {
     val cred = new Credential(BearerToken.authorizationHeaderAccessMethod())
     cred.setAccessToken(token)
@@ -145,9 +139,7 @@ object Util {
   }
 
   def accessTokenCredentials1(token: String): Credentials = {
-    GoogleCredentials.newBuilder()
-      .setAccessToken(new AccessToken(token, Date.from(Instant.ofEpochMilli(System.currentTimeMillis() + 1000*60*60))))
-      .build()
+    new GoogleCredentials(new AccessToken(token, Date.from(Instant.ofEpochMilli(System.currentTimeMillis() + 1000*60*60))))
   }
 
   def privateKey(privateKeyPem: String): PrivateKey = {
@@ -170,7 +162,7 @@ object Util {
       readPbCredentials(keyFile)
 
     override def getCredentials: Credentials =
-      readPbCredentials1(keyFile)
+      GSZCredentials.fromKeyFile(keyFile)
   }
 
   case class AccessTokenCredentialProvider(token: String) extends CredentialProvider {
