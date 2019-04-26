@@ -42,7 +42,7 @@ object AvroWriter {
     for (_ <- 0 until n) {
       val record = new GenericData.Record(schema)
       record.put("date", System.currentTimeMillis() * 1000L)
-      record.put("id", r.nextInt(1000))
+      record.put("id", r.nextLong())
       record.put("description", r.nextString(10))
       record.put("value", r.nextDouble())
       w.write(record, encoder)

@@ -16,20 +16,26 @@
 package com.google.cloud.gszutil
 
 import java.io.ByteArrayInputStream
+import java.nio.ByteBuffer
 
 import com.google.api.gax.rpc.FixedHeaderProvider
 import com.google.cloud.RetryOption
 import com.google.cloud.bigquery.JobInfo.{CreateDisposition, WriteDisposition}
 import com.google.cloud.bigquery._
 import com.google.cloud.gszutil.GSXML.{CredentialProvider, XMLStorage}
+import com.google.cloud.storage.{BlobInfo, Storage, StorageOptions}
 import org.threeten.bp.Duration
+
+import scala.util.Try
 
 object BQLoad {
   def run(c: Config, cp: CredentialProvider): Unit = {
     val gcs: XMLStorage = XMLStorage(cp)
 
+    val data = AvroWriter.create(10)
+
     System.out.println(s"Writing avro file to gs://${c.bq.bucket}/${c.bq.prefix}")
-    val is = new ByteArrayInputStream(AvroWriter.create(10))
+    val is = new ByteArrayInputStream(data)
     val request = gcs.putObject(c.bq.bucket, c.bq.prefix, is, AvroWriter
       .AvroContentType)
     val response = request.execute()
@@ -38,6 +44,27 @@ object BQLoad {
     else
       System.out.println(s"Failed to write gs://${c.bq.bucket}/${c.bq.prefix} (${response.getStatusCode} ${response.getStatusMessage})\n${response.parseAsString}")
     is.close()
+
+    val gcs2: Storage = StorageOptions.newBuilder()
+      .setHeaderProvider(FixedHeaderProvider.create("Host", "www.googleapis.com"))
+      .setHost("https://restricted.googleapis.com")
+      .setProjectId(c.bq.project)
+      .build()
+      .getService
+
+    val write2 = Try {
+      val w = gcs2.writer(BlobInfo.newBuilder(c.bq.bucket, c.bq.prefix + "_2").build())
+      w.write(ByteBuffer.wrap(data))
+      w.close()
+    }
+
+    Util.printException(write2)
+
+    val write3 = Try {
+      OrcWriter.run(c, cp)
+    }
+
+    Util.printException(write3)
 
     val bq: BigQuery = BigQueryOptions.newBuilder()
       .setLocation(c.bq.location)
@@ -48,10 +75,16 @@ object BQLoad {
       .getService
 
     val sourceUri = s"gs://${c.bq.bucket}/${c.bq.prefix}"
+    load(bq, c.bq.table, c, sourceUri, FormatOptions.avro())
+    load(bq, c.bq.table+"_orc", c, sourceUri+".orc", FormatOptions.orc())
+    load(bq, c.bq.table+"_parquet", c, sourceUri+".parquet", FormatOptions.parquet())
+  }
+
+  def load(bq: BigQuery, table: String, c: Config, sourceUri: String, formatOptions: FormatOptions) = {
 
     val jobConf = LoadJobConfiguration
-      .newBuilder(TableId.of(c.bq.project, c.bq.dataset, c.bq.table), sourceUri)
-      .setFormatOptions(FormatOptions.avro())
+      .newBuilder(TableId.of(c.bq.project, c.bq.dataset, table), sourceUri)
+      .setFormatOptions(formatOptions)
       .setAutodetect(true)
       .setWriteDisposition(WriteDisposition.WRITE_TRUNCATE)
       .setCreateDisposition(CreateDisposition.CREATE_IF_NEEDED)
