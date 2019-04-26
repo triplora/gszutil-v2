@@ -27,6 +27,12 @@ libraryDependencies ++= Seq(
 mainClass in assembly := Some("com.google.cloud.gszutil.GSZUtil")
 
 assemblyJarName in assembly := "gszutil.jar"
+assemblyJarName in assemblyPackageDependency := "gszutil.dep.jar"
 
 // Don't run tests during assembly
 test in assembly := Seq()
+
+assemblyMergeStrategy in assembly := {
+  case PathList("META-INF", _) => MergeStrategy.discard
+  case _ => MergeStrategy.first
+}
