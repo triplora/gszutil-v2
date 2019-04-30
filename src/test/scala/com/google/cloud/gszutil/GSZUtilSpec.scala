@@ -29,7 +29,7 @@ class GSZUtilSpec extends FlatSpec {
   it should "parse args" in {
     val keyfilePath = Resources.getResource("keyfile.json").getPath
     val args = s"cp DATASET.RECORD gs://bucket/DATASET.RECORD $keyfilePath".split(" ")
-    val parsed = GSZUtil.Parser.parse(args, GSZUtil.Config())
+    val parsed = Config.Parser.parse(args, Config())
     assert(parsed.isDefined)
     assert(parsed.get.mode == "cp")
     assert(parsed.get.dest == "gs://bucket/DATASET.RECORD")
@@ -39,7 +39,7 @@ class GSZUtilSpec extends FlatSpec {
 
   it should "require args" in {
     val args = "cp DATASET.RECORD gs://bucket/DATASET.RECORD".split(" ")
-    val parsed = GSZUtil.Parser.parse(args, GSZUtil.Config())
+    val parsed = Config.Parser.parse(args, Config())
     assert(parsed.isEmpty)
   }
 }

@@ -52,20 +52,24 @@ object BQLoad {
       .build()
       .getService
 
+    val testfile2 = c.bq.prefix + "_jsonapi"
+    System.out.println(s"Writing to $testfile2")
     val write2 = Try {
-      val w = gcs2.writer(BlobInfo.newBuilder(c.bq.bucket, c.bq.prefix + "_2").build())
+      val w = gcs2.writer(BlobInfo.newBuilder(c.bq.bucket, testfile2).build())
       w.write(ByteBuffer.wrap(data))
       w.close()
     }
 
     Util.printException(write2)
 
+    System.out.println(s"Writing ORC")
     val write3 = Try {
       OrcWriter.run(c, cp)
     }
 
     Util.printException(write3)
 
+    System.out.println(s"Creating BigQuery client")
     val bq: BigQuery = BigQueryOptions.newBuilder()
       .setLocation(c.bq.location)
       .setCredentials(cp.getCredentials)
@@ -74,9 +78,13 @@ object BQLoad {
       .build()
       .getService
 
+    System.out.println(s"Loading Avro")
     val sourceUri = s"gs://${c.bq.bucket}/${c.bq.prefix}"
     load(bq, c.bq.table, c, sourceUri, FormatOptions.avro())
+    System.out.println(s"Loading ORC")
     load(bq, c.bq.table+"_orc", c, sourceUri+".orc", FormatOptions.orc())
+
+    System.out.println(s"Loading Parquet")
     load(bq, c.bq.table+"_parquet", c, sourceUri+".parquet", FormatOptions.parquet())
   }
 
@@ -104,5 +112,13 @@ object BQLoad {
 
     val jobStatus = job.getStatus
     System.out.println(s"Job returned with JobStatus::\n$jobStatus")
+  }
+
+  def isValidTableName(s: String): Boolean = {
+    s.length <= 1024 && s.matches("[a-zA-Z0-9_]")
+  }
+
+  def isValidDatasetName(s: String): Boolean = {
+    s.length <= 1024 && s.matches("[a-zA-Z0-9_]")
   }
 }

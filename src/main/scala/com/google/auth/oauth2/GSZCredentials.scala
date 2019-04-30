@@ -1,9 +1,6 @@
 package com.google.auth.oauth2
 
 import java.net.URI
-import java.util.Collections
-
-import com.google.api.client.http.javanet.NetHttpTransport
 import com.google.cloud.gszutil.KeyFileProto.KeyFile
 import com.google.common.collect.ImmutableList
 

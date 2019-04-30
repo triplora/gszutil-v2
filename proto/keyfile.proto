@@ -31,4 +31,7 @@ message KeyFile {
     string auth_provider_x509_cert_url = 9;
     string client_x509_cert_url = 10;
     string access_token = 11;
+    string client_secret = 12;
+    string refresh_token = 13;
+    string expiration_time = 14;
 }

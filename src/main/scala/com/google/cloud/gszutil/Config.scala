@@ -58,10 +58,18 @@ object Config {
           arg[String]("bqDataset")
             .required()
             .action{(x, c) => c.copy(bq = c.bq.copy(dataset = x))}
+            .validate{x =>
+              if (BQLoad.isValidDatasetName(x)) success
+              else failure(s"'$x' is not a valid dataset name")
+            }
             .text("BigQuery Dataset name"),
           arg[String]("bqTable")
             .required()
             .action{(x, c) => c.copy(bq = c.bq.copy(table = x))}
+            .validate{x =>
+              if (BQLoad.isValidTableName(x)) success
+              else failure(s"'$x' is not a valid dataset name")
+            }
             .text("BigQuery Table name"),
           arg[String]("bucket")
             .required()

@@ -15,8 +15,7 @@ object OrcWriter {
   }
 
   def run(config: Config, cp: CredentialProvider): Unit = {
-    DNSCache("www.googleapis.com",
-      Seq("199.36.153.4","199.36.153.5","199.36.153.6","199.36.153.7"))
+    //DNSCache("www.googleapis.com", Seq("199.36.153.4","199.36.153.5","199.36.153.6","199.36.153.7"))
 
     val resolved: Set[String] = InetAddress.getAllByName("www.googleapis.com")
       .map(_.getHostAddress).toSet
@@ -24,6 +23,8 @@ object OrcWriter {
 
     if (resolved != expected) {
       System.err.println(s"Unexpected IPs resolved for www.googleapis.com: $resolved")
+    } else {
+      System.out.println(s"resolved www.googleapis.com ${resolved.mkString(", ")}")
     }
 
     val spark = SparkSession.builder()
