@@ -69,18 +69,19 @@ object Decoding {
     }
   }
 
-  class FloatDecoder extends Decoder[Float] {
-    private val bytes = new Array[Byte](6)
+  class FloatDecoder extends Decoder[BigDecimal] {
+    private val intDecoder = new IntDecoder
+    private val shortDecoder = new ShortDecoder
 
-    override def apply(src: ByteBuffer): Float = {
-      src.get(bytes)
-      // TODO add float decoder
-      0.18f
+    override def apply(src: ByteBuffer): BigDecimal = {
+      val s = intDecoder(src).toLong * 100
+      val p = shortDecoder(src).toLong
+      BigDecimal(s + p, 2)
     }
   }
 
   trait DataSet[T]{
-    protected val LRECL: Int
+    val LRECL: Int
     def read(array: Array[Byte]): T
     def read(buf: ByteBuffer): T
     def read(records: Iterator[Array[Byte]]): Iterator[T]
