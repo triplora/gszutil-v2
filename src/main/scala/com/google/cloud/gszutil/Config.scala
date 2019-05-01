@@ -18,6 +18,7 @@ package com.google.cloud.gszutil
 import java.nio.file.Paths
 
 import com.google.cloud.gszutil.Config.BigQueryConfig
+import com.google.cloud.pso.BQLoad
 
 import scala.util.{Success, Try}
 
@@ -59,7 +60,7 @@ object Config {
             .required()
             .action{(x, c) => c.copy(bq = c.bq.copy(dataset = x))}
             .validate{x =>
-              if (BQLoad.isValidDatasetName(x)) success
+              if (BQLoad.isValidBigQueryName(x)) success
               else failure(s"'$x' is not a valid dataset name")
             }
             .text("BigQuery Dataset name"),
@@ -67,7 +68,7 @@ object Config {
             .required()
             .action{(x, c) => c.copy(bq = c.bq.copy(table = x))}
             .validate{x =>
-              if (BQLoad.isValidTableName(x)) success
+              if (BQLoad.isValidBigQueryName(x)) success
               else failure(s"'$x' is not a valid dataset name")
             }
             .text("BigQuery Table name"),

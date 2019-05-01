@@ -45,6 +45,8 @@ object GSZUtil {
 
     if (config.useBCProv)
       Util.configureBouncyCastleProvider()
+
+    System.setProperty("java.net.preferIPv4Stack" , "true")
   }
 
   def run(config: Config): Try[Unit] = Try{
@@ -63,7 +65,6 @@ object GSZUtil {
 
     if (config.mode == "cp")
       GCSPut.run(config, cp)
-    else if (config.mode == "load")
-      BQLoad.run(config, cp)
+    //else if (config.mode == "load") BQLoad.run(config, cp)
   }
 }

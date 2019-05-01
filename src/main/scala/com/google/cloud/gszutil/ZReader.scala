@@ -44,6 +44,10 @@ object ZReader {
     is
   }
 
+  def readRecords(ddName: String): Iterator[Array[Byte]] = {
+    new ByteIterator(ZOS.readDD(ddName))
+  }
+
   /** Iterator for Binary MVS Data Set
     *
     * @param reader
