@@ -24,7 +24,7 @@ import com.fasterxml.jackson.dataformat.xml.XmlMapper
 import com.google.api.client.auth.oauth2.Credential
 import com.google.api.client.googleapis.javanet.GoogleNetHttpTransport
 import com.google.api.client.http._
-import com.google.auth.Credentials
+import com.google.auth.oauth2.GoogleCredentials
 import com.google.cloud.gszutil.GSXMLModel.ListBucketResult
 import com.google.common.io.ByteSource
 
@@ -35,7 +35,7 @@ object GSXML {
 
   trait CredentialProvider {
     def getCredential: Credential
-    def getCredentials: Credentials
+    def getCredentials: GoogleCredentials
   }
 
   private class HttpResponseByteSource(response: HttpResponse) extends ByteSource {

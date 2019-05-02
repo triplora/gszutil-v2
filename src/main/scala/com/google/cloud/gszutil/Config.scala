@@ -23,76 +23,82 @@ import com.google.cloud.pso.BQLoad
 import scala.util.{Success, Try}
 
 final case class Config(
-  inDD: String = "",
-  dest: String = "",
-  keyfile: String = "",
-  destBucket: String = "",
-  destPath: String = "",
-  mode: String = "",
-  useBCProv: Boolean = true,
-  debug: Boolean = false,
-  bq: BigQueryConfig = BigQueryConfig())
+                         inDD: String = "INFILE",
+                         dest: String = "",
+                         keyfile: String = "",
+                         destBucket: String = "",
+                         destPath: String = "",
+                         mode: String = "",
+                         useBCProv: Boolean = true,
+                         debug: Boolean = false,
+                         bq: BigQueryConfig = BigQueryConfig())
 
 object Config {
+
   final case class BigQueryConfig(
-    project: String = "",
-    dataset: String = "",
-    table: String = "",
-    bucket: String = "",
-    prefix: String = "",
-    location: String = "US")
+                                   project: String = "",
+                                   dataset: String = "",
+                                   table: String = "",
+                                   bucket: String = "",
+                                   prefix: String = "",
+                                   location: String = "US")
 
   def parse(args: Array[String]): Option[Config] = Parser.parse(args, Config())
 
   final val Parser: scopt.OptionParser[Config] =
     new scopt.OptionParser[Config]("GSZUtil") {
+
       head("GSZUtil", "0.1.1")
 
       cmd("load")
-        .action{(_, c) => c.copy(mode = "load")}
+        .action { (_, c) => c.copy(mode = "load") }
+
         .text("loads a BigQuery Table")
+
         .children(
           arg[String]("bqProject")
             .required()
-            .action{(x, c) => c.copy(bq = c.bq.copy(project = x))}
+            .action { (x, c) => c.copy(bq = c.bq.copy(project = x)) }
             .text("BigQuery Project ID"),
+
           arg[String]("bqDataset")
             .required()
-            .action{(x, c) => c.copy(bq = c.bq.copy(dataset = x))}
-            .validate{x =>
+            .action { (x, c) => c.copy(bq = c.bq.copy(dataset = x)) }
+            .validate { x =>
               if (BQLoad.isValidBigQueryName(x)) success
               else failure(s"'$x' is not a valid dataset name")
             }
             .text("BigQuery Dataset name"),
+
           arg[String]("bqTable")
             .required()
-            .action{(x, c) => c.copy(bq = c.bq.copy(table = x))}
-            .validate{x =>
+            .action { (x, c) => c.copy(bq = c.bq.copy(table = x)) }
+            .validate { x =>
               if (BQLoad.isValidBigQueryName(x)) success
               else failure(s"'$x' is not a valid dataset name")
             }
             .text("BigQuery Table name"),
+
           arg[String]("bucket")
             .required()
-            .action{(x, c) => c.copy(bq = c.bq.copy(bucket = x))}
+            .action { (x, c) => c.copy(bq = c.bq.copy(bucket = x)) }
             .text("GCS bucket of source"),
+
           arg[String]("prefix")
             .required()
-            .action{(x, c) => c.copy(bq = c.bq.copy(prefix = x))}
+            .action { (x, c) => c.copy(bq = c.bq.copy(prefix = x)) }
             .text("GCS prefix of source")
         )
 
       cmd("cp")
-        .action{(_, c) => c.copy(mode = "cp")}
+        .action { (_, c) => c.copy(mode = "cp") }
+
         .text("GSZUtil cp copies a zOS dataset to GCS")
+
         .children(
-          arg[String]("inDD")
-            .required()
-            .action{(x, c) => c.copy(inDD = x)}
-            .text("DD for input DSN to be copied"),
           arg[String]("dest")
             .required()
-            .action{(x, c) =>
+            .action { (x, c) =>
               Try(Util.parseUri(x)) match {
                 case Success((bucket, path)) =>
                   c.copy(dest = x, destBucket = bucket, destPath = path)
@@ -101,8 +107,9 @@ object Config {
               }
             }
             .text("destination path (gs://bucket/path)"),
+
           arg[String]("keyfile")
-            .action{(x, c) => c.copy(keyfile = x)}
+            .action { (x, c) => c.copy(keyfile = x) }
             .text("path to keyfile.pb")
         )
 

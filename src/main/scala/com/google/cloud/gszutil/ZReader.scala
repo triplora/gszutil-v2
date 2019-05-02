@@ -19,15 +19,42 @@ import java.io.InputStream
 import java.nio.charset._
 import java.nio.{ByteBuffer, CharBuffer}
 
+import scala.util.Try
+
 
 object ZReader {
   final val CP1047: Charset = Charset.forName("CP1047")
   final val UTF8: Charset = StandardCharsets.UTF_8
 
+
   trait TRecordReader {
+
+    /** Read a record from the dataset into a buffer.
+      *
+      * @param buf - the byte array into which the bytes will be read
+      * @return the number of bytes read, -1 if EOF encountered.
+      */
     def read(buf: Array[Byte]): Int
+
+    /** Read a record from the dataset into a buffer.
+      *
+      * @param buf the byte array into which the bytes will be read
+      * @param off the offset, inclusive in buf to start reading bytes
+      * @param len the number of bytes to read
+      * @return the number of bytes read, -1 if EOF encountered.
+      */
     def read(buf: Array[Byte], off: Int, len: Int): Int
+
+    /** Close the reader and underlying native file.
+      * This will also free the associated DD if getAutoFree() is true.
+      * Must be issued by the same thread as the factory method.
+      */
     def close(): Unit
+
+    /** LRECL is the maximum record length for variable length files.
+      *
+      * @return
+      */
     def getLrecl: Int
   }
 
@@ -54,35 +81,25 @@ object ZReader {
     */
   class ByteIterator(reader: TRecordReader) extends Iterator[Array[Byte]] {
     private val data: Array[Byte] = new Array[Byte](reader.getLrecl)
-    private val in: ByteBuffer = ByteBuffer.allocate(reader.getLrecl)
-    private var endOfInput = fill()
+    private var hasRemaining = true
     private var bytesIn: Long = 0
-    private var bytesWaiting: Int = 0
-
-    private def fill(): Boolean = {
-      bytesWaiting = reader.read(data)
-      if (bytesWaiting < 1) {
-        true
-      } else {
-        bytesIn += bytesWaiting
-        false
-      }
-    }
 
     def getBytesIn: Long = bytesIn
 
-    override def hasNext: Boolean = !endOfInput
+    override def hasNext: Boolean = hasRemaining
 
     override def next(): Array[Byte] = {
-      if (endOfInput)
+      if (!hasRemaining)
         throw new NoSuchElementException("next on empty iterator")
-
-      in.put(data, 0, bytesWaiting)
-      in.flip()
-      val result = new Array[Byte](in.remaining)
-      in.get(result)
-      endOfInput = fill()
-      result
+      val n = Try(reader.read(data)).getOrElse(-1)
+      if (n == reader.getLrecl) {
+        bytesIn += n
+        data
+      } else {
+        reader.close()
+        hasRemaining = false
+        Array.empty[Byte]
+      }
     }
   }
 

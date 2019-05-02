@@ -15,19 +15,23 @@
  */
 package com.google.cloud.gszutil
 
-import java.io.ByteArrayOutputStream
+import java.io.{ByteArrayOutputStream, InputStream, OutputStream}
+import java.nio.ByteBuffer
 
-import org.apache.avro.{LogicalTypes, Schema, SchemaBuilder}
-import org.apache.avro.generic.GenericData
-import org.apache.avro.generic.GenericDatumWriter
-import org.apache.avro.generic.GenericRecord
-import org.apache.avro.io.EncoderFactory
+import org.apache.avro.generic.{GenericData, GenericDatumWriter, GenericRecord}
+import org.apache.avro.io.{DatumWriter, EncoderFactory}
+import org.apache.avro.{Conversions, LogicalTypes, Schema, SchemaBuilder}
 
 import scala.util.Random
 
 
 object AvroWriter {
   val AvroContentType = "avro/binary"
+  val decimalType = LogicalTypes.decimal(9,2)
+  val toDecimal = new Conversions.DecimalConversion()
+  val bytesSchema = Schema.create(Schema.Type.BYTES)
+  def convertDecimal(x: BigDecimal): ByteBuffer =
+    toDecimal.toBytes(x.bigDecimal, null, decimalType)
 
   def buildSchema(): Schema = {
     val dateType = LogicalTypes.timestampMillis().addToSchema(Schema.create(Schema.Type.LONG))
@@ -64,4 +68,44 @@ object AvroWriter {
     }
     outStream.toByteArray
   }
+
+  class ByteBufferOutputStream(private val buf: ByteBuffer) extends OutputStream {
+    override def write(b: Array[Byte], off: Int, len: Int): Unit = {
+      buf.put(b, off, len)
+    }
+
+    override def write(b: Int): Unit =
+      buf.put(b.toByte)
+  }
+
+  class AvroPipe(records: Iterator[GenericData.Record], w: DatumWriter[GenericRecord], size: Int) extends InputStream {
+    private val buf = ByteBuffer.allocate(size)
+    private val os = new ByteBufferOutputStream(buf)
+    private val encoder = EncoderFactory.get().directBinaryEncoder(os, null)
+
+    override def read(): Int = throw new NotImplementedError()
+
+    override def read(b: Array[Byte], off: Int, len: Int): Int = {
+      // fill the buffer
+      while (buf.remaining > size / 2 && records.hasNext) {
+        w.write(records.next(), encoder)
+      }
+      encoder.flush()
+      // prepare to read
+      buf.compact()
+
+      val n = math.min(len, buf.remaining)
+      if (n > 0) {
+        // read from buffer
+        buf.get(b, off, n)
+        // prepare to write
+        buf.flip()
+        n
+      } else {
+        if (records.hasNext) n
+        else -1
+      }
+    }
+  }
+
 }

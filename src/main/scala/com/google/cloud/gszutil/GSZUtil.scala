@@ -65,6 +65,6 @@ object GSZUtil {
 
     if (config.mode == "cp")
       GCSPut.run(config, cp)
-    //else if (config.mode == "load") BQLoad.run(config, cp)
+    else if (config.mode == "load") Util.printException(Try(com.google.cloud.pso.BQLoad.run(config, cp)))
   }
 }

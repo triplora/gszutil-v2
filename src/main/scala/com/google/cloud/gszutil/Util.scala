@@ -21,8 +21,8 @@ import java.nio.file.{Files, Paths}
 import java.security.spec.PKCS8EncodedKeySpec
 import java.security.{PrivateKey, Security}
 import java.time.Instant
-import java.util.{Collections, Date}
 import java.util.logging.{ConsoleHandler, Level, Logger}
+import java.util.{Collections, Date}
 
 import com.google.api.client.auth.oauth2.{BearerToken, Credential}
 import com.google.api.client.googleapis.auth.oauth2.GoogleCredential
@@ -30,7 +30,6 @@ import com.google.api.client.googleapis.util.Utils
 import com.google.api.client.http.HttpTransport
 import com.google.api.client.json.JsonObjectParser
 import com.google.api.client.util.{PemReader, SecurityUtils}
-import com.google.auth.Credentials
 import com.google.auth.oauth2.{AccessToken, GSZCredentials, GoogleCredentials}
 import com.google.cloud.gszutil.GSXML.CredentialProvider
 import com.google.cloud.gszutil.KeyFileProto.KeyFile
@@ -138,7 +137,7 @@ object Util {
     cred
   }
 
-  def accessTokenCredentials1(token: String): Credentials = {
+  def accessTokenCredentials1(token: String): GoogleCredentials = {
     new GoogleCredentials(new AccessToken(token, Date.from(Instant.ofEpochMilli(System.currentTimeMillis() + 1000*60*60))))
   }
 
@@ -161,14 +160,14 @@ object Util {
     override def getCredential: Credential =
       readPbCredentials(keyFile)
 
-    override def getCredentials: Credentials =
+    override def getCredentials: GoogleCredentials =
       GSZCredentials.fromKeyFile(keyFile)
   }
 
   case class AccessTokenCredentialProvider(token: String) extends CredentialProvider {
     override def getCredential: Credential =
       accessTokenCredentials(token)
-    override def getCredentials: Credentials =
+    override def getCredentials: GoogleCredentials =
       accessTokenCredentials1(token)
   }
 

@@ -35,7 +35,6 @@ export DEP_JAR="" # path/to/GSZUtilDeps.jar
 export GCREDS=""  # path/to/keyfile.pb
 export JZOS_MAIN_ARGS="cp INFILE gs://$BUCKET/$DESTOBJ $GCREDS"
 
-export SPARK_USER="spark"
 export JAVA_HOME=/usr/lpp/java/J8.0_64
 export PATH="/bin:${JAVA_HOME}/bin:"
 
@@ -49,6 +48,8 @@ CLASSPATH="$APP_JAR:$DEP_JAR"
 CLASSPATH="$CLASSPATH:${JAVA_HOME}/lib:${JAVA_HOME}/lib/ext:"
 export CLASSPATH
 
-export IBM_JAVA_OPTIONS="-Xms256m -Xmx256m "
+export SPARK_USER="spark"
+IJO="-Djava.net.preferIPv4Stack=true"
+export IBM_JAVA_OPTIONS="-Xms256m -Xmx256m $IJO"
 
 //
