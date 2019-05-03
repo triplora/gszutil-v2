@@ -105,6 +105,11 @@ object GSXML {
       val content = new InputStreamContent(contentType, inputStream)
       requestFactory.buildPutRequest(new GenericUrl(uri), content)
     }
+
+    def getObject(bucket: String, key: String): HttpRequest = {
+      val uri = endpoint + URLEncoder.encode(bucket + "/" + key, "UTF-8")
+      requestFactory.buildGetRequest(new GenericUrl(uri))
+    }
   }
 
   private def readString(response: HttpResponse): String =

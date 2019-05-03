@@ -17,8 +17,6 @@ package com.google.cloud.gszutil
 
 import java.nio.{ByteBuffer, CharBuffer}
 
-import org.apache.spark.sql.Row
-
 
 object Decoding {
   def uint(b: Byte): Int = {
@@ -101,11 +99,13 @@ object Decoding {
     }
   }
 
-  class NumericDecoder_9_2 extends Decoder[BigDecimal] {
-    private val decoder = new LongDecoder6
+  class NumericDecoder(val precision: Int = 9, val scale: Int = 2) extends Decoder[BigDecimal] {
+    private val size: Int = ((precision + scale) / 2) + 1
+    private val bytes: Array[Byte] = new Array[Byte](size)
 
     override def apply(src: ByteBuffer): BigDecimal = {
-      BigDecimal(decoder(src), 2)
+      src.get(bytes)
+      BigDecimal(PackedDecimal.unpack(bytes), scale)
     }
   }
 

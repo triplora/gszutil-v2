@@ -21,11 +21,9 @@ libraryDependencies ++= Seq(
   "com.google.cloud" % "google-cloud-storage" % "1.71.0",
   "org.apache.spark" %% "spark-core" % "2.4.2",
   "org.apache.spark" %% "spark-sql" % "2.4.2",
-  "org.apache.spark" %% "spark-avro" % "2.4.2",
   "com.google.cloud.bigdataoss" % "gcs-connector" % "hadoop2-1.9.16",
   "com.google.protobuf" % "protobuf-java" % "3.7.1",
   "com.google.protobuf" % "protobuf-java-util" % "3.7.1",
-  "org.apache.avro" % "avro" % "1.8.2",
   "com.github.scopt" %% "scopt" % "3.7.1",
   "org.bouncycastle" % "bcprov-jdk15on" % "1.61",
   "org.scalatest" %% "scalatest" % "3.0.5" % Test
@@ -48,3 +46,5 @@ assemblyMergeStrategy in assembly := {
   case PathList("META-INF", _) => MergeStrategy.discard
   case _ => MergeStrategy.first
 }
+
+publishMavenStyle := false

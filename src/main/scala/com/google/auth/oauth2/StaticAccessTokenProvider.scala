@@ -6,14 +6,13 @@ import org.apache.hadoop.conf.Configuration
 import org.apache.spark.SparkConf
 
 object StaticAccessTokenProvider {
-  val Config = "fs.gs.auth.access.token.provider.impl"
-  val ClassName = "com.google.auth.oauth2.StaticAccessTokenProvider"
   protected var Instance: CredentialProvider = _
   protected val expired = new AccessTokenProvider.AccessToken("", -1L)
   def setCredentialProvider(cp: CredentialProvider): Unit =
     Instance = cp
   def sparkConf(c: SparkConf = new SparkConf()): SparkConf =
-    c.set(Config, ClassName)
+    c.set("fs.gs.auth.access.token.provider.impl", "com.google.auth.oauth2.StaticAccessTokenProvider")
+      .set("fs.gs.impl","com.google.cloud.hadoop.fs.gcs.GoogleHadoopFileSystem")
 }
 
 class StaticAccessTokenProvider extends AccessTokenProvider {

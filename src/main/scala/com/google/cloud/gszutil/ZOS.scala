@@ -38,7 +38,6 @@ object ZOS {
       throw new RuntimeException(s"DD $ddName does not exist")
 
     val reader = RecordReader.newReaderForDD(ddName)
-    reader.setAutoFree(true)
     System.out.println(s"Reading DD $ddName ${reader.getDsn} with record format ${reader.getRecfm} BLKSIZE ${reader.getBlksize} LRECL ${reader.getLrecl} with default system encoding ${ZUtil.getDefaultPlatformEncoding}")
     new WrappedRecordReader(reader)
   }

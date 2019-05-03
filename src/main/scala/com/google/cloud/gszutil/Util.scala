@@ -16,6 +16,8 @@
 package com.google.cloud.gszutil
 
 import java.io.{InputStream, StringReader}
+import java.nio.ByteBuffer
+import java.nio.channels.{ReadableByteChannel, WritableByteChannel}
 import java.nio.charset.StandardCharsets
 import java.nio.file.{Files, Paths}
 import java.security.spec.PKCS8EncodedKeySpec
@@ -34,7 +36,7 @@ import com.google.auth.oauth2.{AccessToken, GSZCredentials, GoogleCredentials}
 import com.google.cloud.gszutil.GSXML.CredentialProvider
 import com.google.cloud.gszutil.KeyFileProto.KeyFile
 
-import scala.util.{Failure, Random, Try}
+import scala.util.{Failure, Try}
 
 object Util {
   def parseUri(gsUri: String): (String,String) = {
@@ -171,29 +173,14 @@ object Util {
       accessTokenCredentials1(token)
   }
 
-  class RandomInputStream(size: Long) extends InputStream {
-    private val rand = new Random()
-    private val byte: Array[Byte] = new Array[Byte](0x00.toByte)
-    private var bytesRead: Long = 0
-    private val limit: Long = size
-
-    override def read(): Int = {
-      if (bytesRead >= limit) -1
-      else {
-        rand.nextBytes(byte)
-        bytesRead += 1
-        byte(0)
-      }
+  def transfer(rc: ReadableByteChannel, wc: WritableByteChannel, chunkSize: Int = 4096): Unit = {
+    val buf = ByteBuffer.allocate(chunkSize)
+    while (rc.read(buf) > -1) {
+      buf.flip()
+      wc.write(buf)
+      buf.clear()
     }
-
-    override def read(b: Array[Byte], off: Int, len: Int): Int = {
-      if (bytesRead >= limit) -1
-      else {
-        val buf = new Array[Byte](len)
-        rand.nextBytes(buf)
-        System.arraycopy(buf, 0, b, off, len)
-        len
-      }
-    }
+    rc.close()
+    wc.close()
   }
 }

@@ -24,6 +24,8 @@ import scala.util.{Success, Try}
 
 final case class Config(
                          inDD: String = "INFILE",
+                         srcBucket: String = "",
+                         srcPath: String = "",
                          dest: String = "",
                          keyfile: String = "",
                          destBucket: String = "",
@@ -106,11 +108,32 @@ object Config {
                   c.copy(dest = x)
               }
             }
-            .text("destination path (gs://bucket/path)"),
+            .text("destination path (gs://bucket/path)")
+        )
 
-          arg[String]("keyfile")
-            .action { (x, c) => c.copy(keyfile = x) }
-            .text("path to keyfile.pb")
+
+      cmd("get")
+        .action { (_, c) => c.copy(mode = "get") }
+
+        .text("download a GCS object to UNIX filesystem")
+
+        .children(
+          arg[String]("source")
+            .required()
+            .action { (x, c) =>
+              Try(Util.parseUri(x)) match {
+                case Success((bucket, path)) =>
+                  c.copy(srcBucket = bucket, srcPath = path)
+                case _ =>
+                  c
+              }
+            }
+            .text("source path (/path/to/file)"),
+
+          arg[String]("dest")
+            .required()
+            .action { (x, c) => c.copy(destPath = x)}
+            .text("destination path (gs://bucket/path)")
         )
 
       checkConfig(c =>

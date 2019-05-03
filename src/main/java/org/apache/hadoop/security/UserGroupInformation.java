@@ -1693,7 +1693,7 @@ public class UserGroupInformation {
 
     private void logPrivilegedAction(Subject subject, Object action) {
         if (LOG.isDebugEnabled()) {
-            // would be nice if action included a descriptive toString()
+            // would be nice if action included a descriptive hexValue()
             String where = new Throwable().getStackTrace()[2].toString();
             LOG.debug("PrivilegedAction as:"+this+" from:"+where);
         }

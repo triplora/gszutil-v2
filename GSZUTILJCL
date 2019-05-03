@@ -49,6 +49,7 @@ CLASSPATH="$CLASSPATH:${JAVA_HOME}/lib:${JAVA_HOME}/lib/ext:"
 export CLASSPATH
 
 export SPARK_USER="spark"
+export HADOOP_USER_NAME="spark"
 IJO="-Djava.net.preferIPv4Stack=true"
 export IBM_JAVA_OPTIONS="-Xms256m -Xmx256m $IJO"
 
