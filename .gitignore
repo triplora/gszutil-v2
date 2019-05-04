@@ -11,5 +11,3 @@ logs/*
 target
 *.json
 *.pb
-src/main/scala/com/google/cloud/pso
-src/test/scala/com/google/cloud/pso
