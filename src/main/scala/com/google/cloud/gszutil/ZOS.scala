@@ -31,6 +31,7 @@ object ZOS {
       r.read(buf, off, len)
     override def close(): Unit = r.close()
     override def getLrecl: Int = r.getLrecl
+    override def getBlksize: Int = r.getBlksize
   }
 
   def readDD(ddName: String): TRecordReader = {

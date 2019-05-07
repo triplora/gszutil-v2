@@ -20,9 +20,12 @@ import com.google.auth.oauth2.StaticAccessTokenProvider
 import com.google.cloud.RetryOption
 import com.google.cloud.bigquery.JobInfo.{CreateDisposition, WriteDisposition}
 import com.google.cloud.bigquery._
-import com.google.cloud.gszutil.Config
+import com.google.cloud.gszutil.{Config, Util}
+import com.google.cloud.gszutil.Decoding.CopyBook
 import com.google.cloud.gszutil.GSXML.CredentialProvider
-import org.apache.spark.sql.{SaveMode, SparkSession}
+import org.apache.spark.network.protocol.Encoders
+import org.apache.spark.sql.catalyst.encoders.RowEncoder
+import org.apache.spark.sql.{DataFrame, SaveMode, SparkSession}
 import org.threeten.bp.Duration
 
 
@@ -38,12 +41,14 @@ object BQLoad {
 
     val orcUri = s"gs://${c.bq.bucket}/${c.bq.prefix}.orc"
 
+    val copyBook = CopyBook(Util.readS("sku_dly_pos.cpy"))
+
     import spark.implicits._
-    val df = spark.sparkContext
+    val df: DataFrame = spark.sparkContext
       .makeRDD(Seq(c.inDD), 1)
       .toDS()
-      .flatMap(SkuDlyPosRec(_))
-      .toDF(SkuDlyPosRec.ColumnNames:_*)
+      .flatMap(copyBook.reader.readDD)(RowEncoder(copyBook.getSchema))
+      .toDF(copyBook.getFieldNames:_*)
 
     System.out.println(s"Writing ORC to $orcUri")
     df.write

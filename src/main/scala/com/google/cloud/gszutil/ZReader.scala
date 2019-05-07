@@ -16,10 +16,9 @@
 package com.google.cloud.gszutil
 
 import java.io.InputStream
+import java.nio.channels.ReadableByteChannel
 import java.nio.charset._
 import java.nio.{ByteBuffer, CharBuffer}
-
-import scala.util.Try
 
 
 object ZReader {
@@ -56,6 +55,12 @@ object ZReader {
       * @return
       */
     def getLrecl: Int
+
+    /** Maximum block size
+      *
+      * @return
+      */
+    def getBlksize: Int
   }
 
   class InputStreamCloser(is: InputStream) extends Thread {
@@ -66,40 +71,70 @@ object ZReader {
 
   def readDD(ddName: String): InputStream = {
     val rr = ZOS.readDD(ddName)
-    val is = new TranscoderInputStream(rr,65536, srcCharset = CP1047, destCharset = UTF8)
+    val is = new TranscoderInputStream(rr, rr.getBlksize, srcCharset = CP1047, destCharset = UTF8)
     Runtime.getRuntime.addShutdownHook(new InputStreamCloser(is))
     is
   }
 
-  def readRecords(ddName: String): Iterator[Array[Byte]] = {
-    new ByteIterator(ZOS.readDD(ddName))
+  def readRecords(ddName: String): Iterator[Array[Byte]] =
+    ByteIterator(ZOS.readDD(ddName))
+
+  class RecordReaderChannel(reader: TRecordReader) extends ReadableByteChannel {
+    private var hasRemaining = true
+    private var open = true
+    private val data: Array[Byte] = new Array[Byte](reader.getBlksize)
+    private val buf: ByteBuffer = ByteBuffer.wrap(data)
+    private var bytesRead: Long = 0
+    buf.position(buf.capacity)
+
+    override def read(dst: ByteBuffer): Int = {
+      if (buf.remaining < dst.capacity){
+        buf.compact()
+        val n = reader.read(data, buf.position, buf.remaining)
+        if (n > 0) {
+          buf.position(buf.position + n)
+          bytesRead += n
+        } else if (n < 0){
+          reader.close()
+          hasRemaining = false
+        }
+        buf.flip()
+      }
+      val n = math.min(buf.remaining, dst.remaining)
+      dst.put(data, buf.position, n)
+      buf.position(buf.position + n)
+      if (hasRemaining || n > 0) {
+        n
+      } else {
+        close()
+        -1
+      }
+    }
+
+    override def isOpen: Boolean = open
+
+    override def close(): Unit = open = false
+
+    def getBytesRead: Long = bytesRead
   }
 
   /** Iterator for Binary MVS Data Set
     *
     * @param reader
     */
-  class ByteIterator(reader: TRecordReader) extends Iterator[Array[Byte]] {
-    private val data: Array[Byte] = new Array[Byte](reader.getLrecl)
-    private var hasRemaining = true
-    private var bytesIn: Long = 0
+  case class ByteIterator(private val reader: TRecordReader) extends Iterator[Array[Byte]] {
+    private val rc = new RecordReaderChannel(reader)
+    private val buf: ByteBuffer = ByteBuffer.allocate(reader.getLrecl)
 
-    def getBytesIn: Long = bytesIn
+    def getBytesIn: Long = rc.getBytesRead
 
-    override def hasNext: Boolean = hasRemaining
+    override def hasNext: Boolean = rc.isOpen
 
     override def next(): Array[Byte] = {
-      if (!hasRemaining)
-        throw new NoSuchElementException("next on empty iterator")
-      val n = Try(reader.read(data)).getOrElse(-1)
-      if (n == reader.getLrecl) {
-        bytesIn += n
-        data
-      } else {
-        reader.close()
-        hasRemaining = false
-        Array.empty[Byte]
-      }
+      buf.clear()
+      if (rc.read(buf) == reader.getLrecl) {
+        buf.array()
+      } else null
     }
   }
 

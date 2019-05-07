@@ -38,7 +38,7 @@ object Decoding {
 
   trait Decoder[T] {
     val size: Int
-    def apply(src: ByteBuffer): T
+    def decode(src: ByteBuffer): T
   }
 
   class CharDecoder extends Decoder[String] {
@@ -46,7 +46,7 @@ object Decoding {
     private val decoder = ZReader.CP1047.newDecoder()
     private val cb = CharBuffer.allocate(size)
 
-    override def apply(src: ByteBuffer): String = {
+    override def decode(src: ByteBuffer): String = {
       cb.clear()
       decoder.decode(src, cb, true)
       new String(Array(cb.get(0)))
@@ -58,7 +58,7 @@ object Decoding {
     private val decoder = ZReader.CP1047.newDecoder()
     private val cb = CharBuffer.allocate(size)
 
-    override def apply(src: ByteBuffer): String = {
+    override def decode(src: ByteBuffer): String = {
       cb.clear()
       decoder.decode(src, cb, true)
       cb.toString
@@ -69,7 +69,7 @@ object Decoding {
     override val size: Int = 2
     private val bytes = new Array[Byte](size)
 
-    override def apply(src: ByteBuffer): Short = {
+    override def decode(src: ByteBuffer): Short = {
       src.get(bytes)
       ((bytes(0) << 8) |
         (bytes(1) & 255)).toShort
@@ -80,7 +80,7 @@ object Decoding {
     override val size: Int = 4
     private val bytes = new Array[Byte](size)
 
-    override def apply(src: ByteBuffer): Int = {
+    override def decode(src: ByteBuffer): Int = {
       src.get(bytes)
       (bytes(0) << 24) |
         ((bytes(1) & 255) << 16) |
@@ -93,7 +93,7 @@ object Decoding {
     override val size: Int = 8
     private val bytes = new Array[Byte](size)
 
-    override def apply(src: ByteBuffer): Long = {
+    override def decode(src: ByteBuffer): Long = {
       src.get(bytes)
       ((bytes(0) & 255L) << 56) |
         ((bytes(1) & 255L) << 48) |
@@ -110,7 +110,7 @@ object Decoding {
     override val size: Int = 6
     private val bytes = new Array[Byte](size)
 
-    override def apply(src: ByteBuffer): Long = {
+    override def decode(src: ByteBuffer): Long = {
       src.get(bytes)
       ((bytes(0) & 255L) << 40) |
         ((bytes(1) & 255L) << 32) |
@@ -125,7 +125,7 @@ object Decoding {
     override val size: Int = ((precision + scale) / 2) + 1
     private val bytes: Array[Byte] = new Array[Byte](size)
 
-    override def apply(src: ByteBuffer): BigDecimal = {
+    override def decode(src: ByteBuffer): BigDecimal = {
       src.get(bytes)
       BigDecimal(PackedDecimal.unpack(bytes), scale)
     }
@@ -161,35 +161,27 @@ object Decoding {
 
     def lrecl: Int = getDecoders.foldLeft(0){(a,b) => a + b.size}
 
-    def reader(): DataSet[Row] = GenericReader(lrecl, getDecoders.toArray)
+    def reader: RowReader = RowReader(getDecoders.toArray)
   }
 
-  case class GenericReader(lrecl: Int, private val decoders: Array[Decoder[_]]) extends DataSet[Row] {
-    override val LRECL: Int = lrecl
-    override val buf: ByteBuffer = ByteBuffer.allocate(LRECL)
+  case class RowReader(private val decoders: Array[Decoder[_]]) {
+    val lRecl: Int = decoders.foldLeft(0){_ + _.size}
+    val buf: ByteBuffer = ByteBuffer.allocate(lRecl)
 
-    override def read(buf: ByteBuffer): Row =
-      new GenericRow(decoders.map(_(buf)))
-  }
-
-  trait DataSet[T] {
-    val LRECL: Int
-    val buf: ByteBuffer
-
-    def read(array: Array[Byte]): T = {
+    def read(array: Array[Byte]): Row = {
       buf.clear()
       buf.put(array)
       buf.flip()
       read(buf)
     }
 
-    def read(buf: ByteBuffer): T
+    def read(buf: ByteBuffer): Row =
+      new GenericRow(decoders.map(_.decode(buf)))
 
-    def read(records: Iterator[Array[Byte]]): Iterator[T] = {
-      records.takeWhile(_.length == LRECL).map(read)
-    }
+    def read(records: Iterator[Array[Byte]]): Iterator[Row] =
+      records.takeWhile(_ != null).map(read)
 
-    def readDD(ddName: String): Iterator[T] =
+    def readDD(ddName: String): Iterator[Row] =
       read(ZReader.readRecords(ddName))
   }
 
@@ -247,15 +239,15 @@ object Decoding {
   case class CopyBookField(name: String, typ: PIC) extends CopyBookLine
   case class Occurs(n: Int) extends CopyBookLine
 
-  val titleRegex = """^(\d{1,2})\s+[A-Z0-9- ]*\.$""".r
-  val fieldRegex = """^(\d{1,2})\s+[A-Z0-9- ]*(PIC.*)$""".r
+  val titleRegex = """^\d{1,2}\s+([A-Z0-9- ]*)\.$""".r
+  val fieldRegex = """^\d{1,2}\s+([A-Z0-9- ]*)(PIC.*)$""".r
   val occursRegex = """^OCCURS (\d{1,2}) TIMES.$""".r
 
   def parseCopyBookLine(s: String): Option[CopyBookLine] = {
     val f = s.takeWhile(_ != '*').trim
     f match {
       case fieldRegex(name, typ) =>
-        Option(CopyBookField(name, typeMap(typ)))
+        Option(CopyBookField(name.trim, typeMap(typ)))
       case titleRegex(name) =>
         Option(CopyBookTitle(name))
       case occursRegex(n) if n.forall(Character.isDigit) =>

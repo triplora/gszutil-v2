@@ -1,37 +1,73 @@
 package com.google.cloud.gszutil
 
-import java.io.InputStream
+import java.io.{ByteArrayOutputStream, InputStream}
+import java.nio.ByteBuffer
+import java.nio.channels.{Channels, ReadableByteChannel, WritableByteChannel}
 import java.nio.charset.StandardCharsets
-import java.nio.file.{Files, Paths}
 
-import com.google.cloud.gszutil.ZReader.{RecordIterator, TranscoderInputStream}
+import com.google.cloud.gszutil.ZReader.{ByteIterator, RecordReaderChannel, TranscoderInputStream}
+import com.google.common.hash.Hashing
+import com.google.common.io.BaseEncoding
 import org.scalatest.FlatSpec
+import org.zeromq.codec.Z85
 
-import scala.collection.mutable.ArrayBuffer
+import scala.util.Random
 
 class ZReaderSpec extends FlatSpec {
-  def readAllBytes(is: InputStream): Array[Byte] = {
-    val b = ArrayBuffer.empty[Byte]
-    val buf = new Array[Byte](1024)
-    var n = 0
-    while (n > -1) {
-      n = is.read(buf)
-      if (n == buf.length)
-        b ++= buf
-      else if (n > 0)
-        b ++= buf.slice(0,n)
+  def transfer(in: ReadableByteChannel, out: WritableByteChannel) = {
+    val buf = ByteBuffer.allocate(4096)
+    while (in.read(buf) >= 0){
+      buf.flip()
+      out.write(buf)
+      buf.compact()
     }
-    val r = b.result().toArray
-    r
+  }
+
+  def readAllBytes(is: InputStream): Array[Byte] =
+    readAllBytes(Channels.newChannel(is))
+
+  def readAllBytes(in: ReadableByteChannel): Array[Byte] = {
+    val os = new ByteArrayOutputStream()
+    val out = Channels.newChannel(os)
+    transfer(in, out)
+    os.toByteArray
+  }
+
+  def randBytes(len: Int) = {
+    val bytes = new Array[Byte](65536)
+    Random.nextBytes(bytes)
+    bytes
+  }
+
+  def randString(len: Int): String =
+    Z85.Z85Encoder(randBytes(len))
+
+  "RecordReader" should "read" in {
+    val testBytes = randString(100000).getBytes(StandardCharsets.UTF_8)
+    val reader = new TestRecordReader(testBytes, 135, 135 * 10)
+    val readBytes = readAllBytes(new RecordReaderChannel(reader))
+    assert(readBytes.length == testBytes.length)
+    val matches = Hashing.sha256().hashBytes(testBytes).toString == Hashing.sha256().hashBytes(readBytes).toString
+    assert(matches)
+  }
+
+  "ByteIterator" should "read" in {
+    val testBytes = randString(100000).getBytes(StandardCharsets.UTF_8)
+    val reader = new TestRecordReader(testBytes, 135, 135 * 10)
+    val it = ByteIterator(reader)
+    assert(it.hasNext)
+    val row = it.next()
+    assert(row.length == 135)
+    assert(row.toSeq == testBytes.slice(0,135).toSeq)
   }
 
   "ZReader" should "transcode EBCDIC" in {
-    val test = (0 until 65536).map{x => s"test $x\nABCD\tXYZ\n1234"}.mkString("\n")
+    val test = randString(1000000)
     val in = test.getBytes(ZReader.CP1047)
     val expected = test.getBytes(StandardCharsets.UTF_8).toSeq
 
     val is = new TranscoderInputStream(
-      reader = new TestRecordReader(in, 135),
+      reader = new TestRecordReader(in, 135, 135 * 10),
       size = 65536,
       srcCharset = ZReader.CP1047,
       destCharset = ZReader.UTF8)

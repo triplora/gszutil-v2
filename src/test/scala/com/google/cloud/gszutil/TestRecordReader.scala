@@ -4,22 +4,22 @@ import java.nio.ByteBuffer
 
 import com.google.cloud.gszutil.ZReader.TRecordReader
 
-class TestRecordReader(bytes: Array[Byte], lrecl: Int) extends TRecordReader {
-  private val buf: ByteBuffer = ByteBuffer.wrap(bytes)
-  private val lreclValue: Int = lrecl
+class TestRecordReader(srcBytes: Array[Byte], lRecl: Int, blkSize: Int) extends TRecordReader {
+  private val buf = ByteBuffer.wrap(srcBytes)
+  private var open = true
 
   override def read(bytes: Array[Byte]): Int =
     read(bytes, 0, bytes.length)
 
   override def read(bytes: Array[Byte], off: Int, len: Int): Int = {
-    if (buf.hasRemaining) {
-      val nBytes = math.min(buf.remaining, len)
-      buf.get(bytes, off, nBytes)
-      nBytes
+    if (buf.hasRemaining){
+      val n = math.min(buf.remaining, len)
+      buf.get(bytes, off, n)
+      n
     } else -1
   }
 
-  override def close(): Unit = {}
-
-  override def getLrecl: Int = lreclValue
+  override def close(): Unit = open = false
+  override def getLrecl: Int = lRecl
+  override def getBlksize: Int = blkSize
 }

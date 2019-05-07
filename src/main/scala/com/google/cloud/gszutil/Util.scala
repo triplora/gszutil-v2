@@ -35,6 +35,8 @@ import com.google.api.client.util.{PemReader, SecurityUtils}
 import com.google.auth.oauth2.{AccessToken, GSZCredentials, GoogleCredentials}
 import com.google.cloud.gszutil.GSXML.CredentialProvider
 import com.google.cloud.gszutil.KeyFileProto.KeyFile
+import com.google.common.io.Resources
+import org.apache.commons.io.Charsets
 
 import scala.util.{Failure, Try}
 
@@ -182,5 +184,13 @@ object Util {
     }
     rc.close()
     wc.close()
+  }
+
+  def readS(x: String): String = {
+    new String(Resources.toByteArray(Resources.getResource(x).toURI.toURL), Charsets.UTF_8)
+  }
+
+  def readB(x: String): Array[Byte] = {
+    Resources.toByteArray(Resources.getResource(x).toURI.toURL)
   }
 }

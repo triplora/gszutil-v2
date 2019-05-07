@@ -13,7 +13,7 @@ class BinSpec extends FlatSpec {
     val buf = ByteBuffer.allocate(56)
     buf.put(data)
     buf.flip()
-    val x = decoder(buf)
+    val x = decoder.decode(buf)
     assert(x == 5260)
   }
 
@@ -23,7 +23,7 @@ class BinSpec extends FlatSpec {
     buf.put(data)
     buf.flip()
     val decoder = new IntDecoder4
-    val x = decoder(buf)
+    val x = decoder.decode(buf)
     assert(x == 11802921)
   }
 
@@ -43,7 +43,7 @@ class BinSpec extends FlatSpec {
     buf.put(data)
     buf.flip()
     val decoder = new NumericDecoder
-    val x = decoder(buf)
+    val x = decoder.decode(buf)
     assert(x == BigDecimal(128L,2))
   }
 }
