@@ -21,10 +21,7 @@ import com.google.cloud.RetryOption
 import com.google.cloud.bigquery.JobInfo.{CreateDisposition, WriteDisposition}
 import com.google.cloud.bigquery._
 import com.google.cloud.gszutil.{Config, Util}
-import com.google.cloud.gszutil.Decoding.CopyBook
 import com.google.cloud.gszutil.GSXML.CredentialProvider
-import org.apache.spark.network.protocol.Encoders
-import org.apache.spark.sql.catalyst.encoders.RowEncoder
 import org.apache.spark.sql.{DataFrame, SaveMode, SparkSession}
 import org.threeten.bp.Duration
 
@@ -41,21 +38,18 @@ object BQLoad {
 
     val orcUri = s"gs://${c.bq.bucket}/${c.bq.prefix}.orc"
 
-    val copyBook = CopyBook(Util.readS("sku_dly_pos.cpy"))
-
-    import spark.implicits._
-    val df: DataFrame = spark.sparkContext
-      .makeRDD(Seq(c.inDD), 1)
-      .toDS()
-      .flatMap(copyBook.reader.readDD)(RowEncoder(copyBook.getSchema))
-      .toDF(copyBook.getFieldNames:_*)
+    val df: DataFrame = spark.read
+      .format("zfile")
+      .option("copybook", Util.readS("sku_dly_pos.cpy"))
+      .load(c.inDD)
 
     System.out.println(s"Writing ORC to $orcUri")
     df.write
-      .mode(SaveMode.Overwrite)
+      .format("orc")
       .option("orc.compress", "none")
       .option("orc.stripe.size", "100000000")
-      .orc(orcUri)
+      .mode(SaveMode.Overwrite)
+      .save(orcUri)
     System.out.println(s"Finished Writing ORC")
 
     System.out.println(s"Creating BigQuery client")

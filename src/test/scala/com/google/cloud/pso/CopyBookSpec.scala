@@ -19,8 +19,8 @@ class CopyBookSpec extends FlatSpec {
   it should "read" in {
     val copyBook = CopyBook(Util.readS("test1.cpy"))
     val reader = copyBook.reader
-    val bytes = ByteIterator(new TestRecordReader(Util.readB("test.bin"), copyBook.lrecl, copyBook.lrecl*10))
-    val rows = reader.read(bytes).toArray
+    val bytes = ByteIterator(new TestRecordReader(Util.readB("test.bin"), copyBook.lRecl, copyBook.lRecl*10))
+    val rows = reader.readInternal(bytes).toArray
     assert(rows.nonEmpty)
     System.out.println(rows.map(_.toString).mkString("\n"))
   }

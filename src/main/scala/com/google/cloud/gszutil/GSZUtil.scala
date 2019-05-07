@@ -40,6 +40,7 @@ object GSZUtil {
   }
 
   def init(config: Config): Unit = {
+    Util.configureLogging()
     if (config.debug)
       Util.printDebugInformation()
 

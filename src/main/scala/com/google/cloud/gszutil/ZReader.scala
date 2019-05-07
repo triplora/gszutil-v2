@@ -79,16 +79,48 @@ object ZReader {
   def readRecords(ddName: String): Iterator[Array[Byte]] =
     ByteIterator(ZOS.readDD(ddName))
 
+  class RecordAIterator(reader: TRecordReader) extends Iterator[(Array[Byte],Int)] {
+    private val lrecl = reader.getLrecl
+    private var hasRemaining = true
+    private val data: Array[Byte] = new Array[Byte](reader.getBlksize)
+    private val buf: ByteBuffer = ByteBuffer.wrap(data)
+    private var bytesRead: Long = 0
+    buf.position(buf.capacity) // initial buffer state = empty
+
+    override def hasNext: Boolean = buf.remaining >= lrecl || hasRemaining
+
+    override def next(): (Array[Byte],Int) = {
+      if (buf.remaining < lrecl && hasRemaining){
+        buf.compact()
+        val n = reader.read(data, buf.position, buf.remaining)
+        if (n > 0) {
+          buf.position(buf.position + n)
+          bytesRead += n
+        } else if (n < 0){
+          reader.close()
+          hasRemaining = false
+        }
+        buf.flip()
+      }
+      if (buf.remaining >= lrecl) {
+        val r = (data,buf.position)
+        buf.position(buf.position + lrecl)
+        r
+      } else
+        null
+    }
+  }
+
   class RecordReaderChannel(reader: TRecordReader) extends ReadableByteChannel {
     private var hasRemaining = true
     private var open = true
     private val data: Array[Byte] = new Array[Byte](reader.getBlksize)
     private val buf: ByteBuffer = ByteBuffer.wrap(data)
     private var bytesRead: Long = 0
-    buf.position(buf.capacity)
+    buf.position(buf.capacity) // initial buffer state = empty
 
     override def read(dst: ByteBuffer): Int = {
-      if (buf.remaining < dst.capacity){
+      if (buf.remaining < dst.capacity && hasRemaining){
         buf.compact()
         val n = reader.read(data, buf.position, buf.remaining)
         if (n > 0) {

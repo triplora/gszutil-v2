@@ -17,8 +17,10 @@ package com.google.cloud.gszutil
 
 import java.nio.{ByteBuffer, CharBuffer}
 
+import com.ibm.jzos.fields.{BinaryAsIntField, BinaryAsLongField, PackedDecimalAsBigDecimalField}
 import org.apache.spark.sql.Row
-import org.apache.spark.sql.catalyst.expressions.GenericRow
+import org.apache.spark.sql.catalyst.expressions.{GenericRow, SpecificInternalRow}
+import org.apache.spark.sql.execution.datasources.zfile.ZRowReader
 import org.apache.spark.sql.types.{DataType, DecimalType, IntegerType, StringType, StructField, StructType}
 
 
@@ -39,17 +41,24 @@ object Decoding {
   trait Decoder[T] {
     val size: Int
     def decode(src: ByteBuffer): T
+    def decodeInternal(src: ByteBuffer, row: SpecificInternalRow, i: Int): Unit = row.update(i, decode(src))
+    def get(a: Array[Byte], off: Int): T
   }
 
   class CharDecoder extends Decoder[String] {
     override val size: Int = 1
     private val decoder = ZReader.CP1047.newDecoder()
     private val cb = CharBuffer.allocate(size)
+    private val field = new com.ibm.jzos.fields.StringField(0,1)
 
     override def decode(src: ByteBuffer): String = {
       cb.clear()
       decoder.decode(src, cb, true)
       new String(Array(cb.get(0)))
+    }
+
+    override def get(a: Array[Byte], off: Int): String = {
+      field.getString(a, off)
     }
   }
 
@@ -57,67 +66,75 @@ object Decoding {
     override val size: Int = n
     private val decoder = ZReader.CP1047.newDecoder()
     private val cb = CharBuffer.allocate(size)
+    private val field = new com.ibm.jzos.fields.StringField(0,n)
 
     override def decode(src: ByteBuffer): String = {
       cb.clear()
       decoder.decode(src, cb, true)
       cb.toString
     }
+
+    override def get(a: Array[Byte], off: Int): String =
+      field.getString(a, off)
   }
 
-  class IntDecoder2 extends Decoder[Short] {
+  class IntDecoder2 extends Decoder[Int] {
     override val size: Int = 2
-    private val bytes = new Array[Byte](size)
-
-    override def decode(src: ByteBuffer): Short = {
-      src.get(bytes)
-      ((bytes(0) << 8) |
-        (bytes(1) & 255)).toShort
+    private val field = new BinaryAsIntField(0, size, true)
+    override def decode(src: ByteBuffer): Int = {
+      (src.get() << 8) |
+        (src.get() & 255)
     }
+
+    override def get(a: Array[Byte], off: Int): Int =
+      field.getInt(a, off)
   }
 
   class IntDecoder4 extends Decoder[Int] {
     override val size: Int = 4
-    private val bytes = new Array[Byte](size)
+    private val field = new BinaryAsIntField(0, size, true)
 
+    override def get(a: Array[Byte], off: Int): Int =
+      field.getInt(a, off)
     override def decode(src: ByteBuffer): Int = {
-      src.get(bytes)
-      (bytes(0) << 24) |
-        ((bytes(1) & 255) << 16) |
-        ((bytes(2) & 255) << 8) |
-        (bytes(3) & 255)
+      (src.get() << 24) |
+        ((src.get() & 255) << 16) |
+        ((src.get() & 255) << 8) |
+        (src.get() & 255)
     }
   }
 
   class LongDecoder8 extends Decoder[Long] {
     override val size: Int = 8
-    private val bytes = new Array[Byte](size)
+    private val field = new BinaryAsLongField(0, size, true)
+
+    override def get(a: Array[Byte], off: Int): Long =
+      field.getLong(a, off)
 
     override def decode(src: ByteBuffer): Long = {
-      src.get(bytes)
-      ((bytes(0) & 255L) << 56) |
-        ((bytes(1) & 255L) << 48) |
-        ((bytes(2) & 255L) << 40) |
-        ((bytes(3) & 255L) << 32) |
-        ((bytes(4) & 255L) << 24) |
-        ((bytes(5) & 255L) << 16) |
-        ((bytes(6) & 255L) << 8) |
-        (bytes(7) & 255L)
+      ((src.get() & 255L) << 56) |
+        ((src.get() & 255L) << 48) |
+        ((src.get() & 255L) << 40) |
+        ((src.get() & 255L) << 32) |
+        ((src.get() & 255L) << 24) |
+        ((src.get() & 255L) << 16) |
+        ((src.get() & 255L) << 8) |
+        (src.get() & 255L)
     }
   }
 
   class LongDecoder6 extends Decoder[Long] {
     override val size: Int = 6
-    private val bytes = new Array[Byte](size)
-
+    private val field = new BinaryAsLongField(0, size, true)
+    override def get(a: Array[Byte], off: Int): Long =
+      field.getLong(a, off)
     override def decode(src: ByteBuffer): Long = {
-      src.get(bytes)
-      ((bytes(0) & 255L) << 40) |
-        ((bytes(1) & 255L) << 32) |
-        ((bytes(2) & 255L) << 24) |
-        ((bytes(3) & 255L) << 16) |
-        ((bytes(4) & 255L) << 8) |
-        (bytes(5) & 255L)
+      ((src.get & 255L) << 40) |
+        ((src.get & 255L) << 32) |
+        ((src.get & 255L) << 24) |
+        ((src.get & 255L) << 16) |
+        ((src.get & 255L) << 8) |
+        (src.get & 255L)
     }
   }
 
@@ -125,20 +142,20 @@ object Decoding {
     override val size: Int = ((precision + scale) / 2) + 1
     private val bytes: Array[Byte] = new Array[Byte](size)
 
+    private val field = new PackedDecimalAsBigDecimalField(0, precision, scale, true)
+
+    override def get(a: Array[Byte], off: Int): BigDecimal =
+      field.getBigDecimal(a, off)
+
     override def decode(src: ByteBuffer): BigDecimal = {
       src.get(bytes)
       BigDecimal(PackedDecimal.unpack(bytes), scale)
     }
   }
 
-  object CopyBook {
-    def apply(s: String): CopyBook = {
-      val lines = s.lines.flatMap(parseCopyBookLine).toSeq
-      CopyBook(lines)
-    }
-  }
+  case class CopyBook(raw: String) {
+    private lazy val lines = raw.lines.flatMap(parseCopyBookLine).toSeq
 
-  case class CopyBook(lines: Seq[CopyBookLine]) {
     def getSchema: StructType =
       StructType(lines.flatMap{
         case CopyBookField(name, pic) =>
@@ -159,30 +176,9 @@ object Decoding {
         case _ => None
       }
 
-    def lrecl: Int = getDecoders.foldLeft(0){(a,b) => a + b.size}
+    def lRecl: Int = getDecoders.foldLeft(0){ (a, b) => a + b.size}
 
-    def reader: RowReader = RowReader(getDecoders.toArray)
-  }
-
-  case class RowReader(private val decoders: Array[Decoder[_]]) {
-    val lRecl: Int = decoders.foldLeft(0){_ + _.size}
-    val buf: ByteBuffer = ByteBuffer.allocate(lRecl)
-
-    def read(array: Array[Byte]): Row = {
-      buf.clear()
-      buf.put(array)
-      buf.flip()
-      read(buf)
-    }
-
-    def read(buf: ByteBuffer): Row =
-      new GenericRow(decoders.map(_.decode(buf)))
-
-    def read(records: Iterator[Array[Byte]]): Iterator[Row] =
-      records.takeWhile(_ != null).map(read)
-
-    def readDD(ddName: String): Iterator[Row] =
-      read(ZReader.readRecords(ddName))
+    def reader: ZRowReader = new ZRowReader(this)
   }
 
   sealed trait PIC {
@@ -190,7 +186,7 @@ object Decoding {
     def getDataType: DataType
   }
   case object PicInt2 extends PIC {
-    override def getDecoder: Decoder[Short] = new IntDecoder2
+    override def getDecoder: Decoder[Int] = new IntDecoder2
     override def getDataType: DataType = IntegerType
   }
   case object PicInt4 extends PIC {

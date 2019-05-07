@@ -23,13 +23,11 @@ import java.nio.file.{Files, Paths}
 import java.security.spec.PKCS8EncodedKeySpec
 import java.security.{PrivateKey, Security}
 import java.time.Instant
-import java.util.logging.{ConsoleHandler, Level, Logger}
 import java.util.{Collections, Date}
 
 import com.google.api.client.auth.oauth2.{BearerToken, Credential}
 import com.google.api.client.googleapis.auth.oauth2.GoogleCredential
 import com.google.api.client.googleapis.util.Utils
-import com.google.api.client.http.HttpTransport
 import com.google.api.client.json.JsonObjectParser
 import com.google.api.client.util.{PemReader, SecurityUtils}
 import com.google.auth.oauth2.{AccessToken, GSZCredentials, GoogleCredentials}
@@ -66,14 +64,27 @@ object Util {
     Security.insertProviderAt(new org.bouncycastle.jce.provider.BouncyCastleProvider(), 1)
   }
 
-  def configureLogging(level: Level = Level.INFO): Unit = {
-    val logHandler = new ConsoleHandler
-    logHandler.setLevel(level)
-    val logger = Logger.getLogger("GSZUtil")
-    logger.addHandler(logHandler)
-    val httpLogger = Logger.getLogger(classOf[HttpTransport].getName)
-    httpLogger.setLevel(level)
-    httpLogger.addHandler(logHandler)
+  def configureLogger(logger: org.apache.log4j.Logger, level: org.apache.log4j.Level, appender: org.apache.log4j.Appender): org.apache.log4j.Logger = {
+    logger.setLevel(level)
+    logger.addAppender(appender)
+    logger
+  }
+
+  def configureLogging(): Unit = {
+    import org.apache.log4j.Logger.{getLogger,getRootLogger}
+    import org.apache.log4j.Level.{WARN,DEBUG}
+    val layout = new org.apache.log4j.PatternLayout("%d{ISO8601} [%t] %-5p %c %x - %m%n")
+    val consoleAppender = new org.apache.log4j.ConsoleAppender(layout)
+
+    configureLogger(getRootLogger, WARN, consoleAppender)
+
+    Seq(
+      "org.apache.http",
+      "org.apache.orc",
+      "com.google.cloud.gszutil"
+    ).foreach{name =>
+      configureLogger(getLogger(name), DEBUG, consoleAppender)
+    }
   }
 
   val StorageScope: java.util.Collection[String] = Collections.singleton("https://www.googleapis.com/auth/devstorage.read_write")
