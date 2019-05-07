@@ -49,6 +49,7 @@ object BQLoad {
     df.write
       .mode(SaveMode.Overwrite)
       .option("orc.compress", "none")
+      .option("orc.stripe.size", "100000000")
       .orc(orcUri)
     System.out.println(s"Finished Writing ORC")
 

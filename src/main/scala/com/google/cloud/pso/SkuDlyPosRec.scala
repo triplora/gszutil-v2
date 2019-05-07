@@ -3,7 +3,6 @@ package com.google.cloud.pso
 import java.nio.ByteBuffer
 
 import com.google.cloud.gszutil.Decoding._
-import com.google.cloud.gszutil.ZReader
 
 case class SkuDlyPosRec(
                          STORE_NBR: Short,
@@ -33,25 +32,12 @@ object SkuDlyPosRec {
 
   class Reader extends DataSet[SkuDlyPosRec] {
     override val LRECL = 56
-    private val buf = ByteBuffer.allocate(LRECL)
+    override val buf: ByteBuffer = ByteBuffer.allocate(LRECL)
 
     private val int = new IntDecoder4
     private val short = new IntDecoder2
     private val char = new CharDecoder
     private val float = new NumericDecoder
-
-    override def readDD(ddName: String): Iterator[SkuDlyPosRec] =
-      read(ZReader.readRecords(ddName))
-
-    override def read(array: Array[Byte]): SkuDlyPosRec = {
-      buf.clear()
-      buf.put(array)
-      buf.flip()
-      read(buf)
-    }
-
-    override def read(records: Iterator[Array[Byte]]): Iterator[SkuDlyPosRec] =
-      records.takeWhile(_.length == LRECL).map(read)
 
     override def read(buf: ByteBuffer): SkuDlyPosRec =
       SkuDlyPosRec(
