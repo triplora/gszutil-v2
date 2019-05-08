@@ -36,18 +36,21 @@ public class PackedDecimal {
     }
 
     public static long unpack(byte[] bytes) {
+        return unpack(bytes, 0, bytes.length);
+    }
+
+    public static long unpack(byte[] bytes, int off, int len) {
         Preconditions.checkNotNull(bytes);
         Preconditions.checkArgument(bytes.length > 0);
-        int n = bytes.length;
         long x = 0;
-        for (int i = 0; i < n - 1; i++) {
+        for (int i = off; i < off + len - 1; i++) {
             x += uint(bytes[i]) >>> 4;
             x *= 10L;
             x += uint(bytes[i]) & 0xF;
             x *= 10L;
         }
-        x += uint(bytes[n-1]) >>> 4;
-        int sign = uint(bytes[n-1]) & 0xF ;
+        x += uint(bytes[off + len - 1]) >>> 4;
+        int sign = uint(bytes[off + len - 1]) & 0xF ;
         if (sign == 0xD) { x *= -1L; }
         else if (sign == 0xC) { /*positive*/ }
         else if (sign == 0xF) { /*unsigned*/ }

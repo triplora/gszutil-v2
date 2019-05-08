@@ -5,7 +5,8 @@ import java.nio.ByteBuffer
 import java.nio.channels.{Channels, ReadableByteChannel, WritableByteChannel}
 import java.nio.charset.StandardCharsets
 
-import com.google.cloud.gszutil.ZReader.{ByteIterator, RecordReaderChannel, TranscoderInputStream}
+import com.google.cloud.gszutil.ZReader.{ByteIterator, RecordReaderChannel, TranscoderInputStream, ZIterator}
+import com.google.cloud.gszutil.io.ByteArrayRecordReader
 import com.google.common.hash.Hashing
 import com.google.common.io.BaseEncoding
 import org.scalatest.FlatSpec
@@ -33,8 +34,8 @@ class ZReaderSpec extends FlatSpec {
     os.toByteArray
   }
 
-  def randBytes(len: Int) = {
-    val bytes = new Array[Byte](65536)
+  def randBytes(len: Int): Array[Byte] = {
+    val bytes = new Array[Byte](len)
     Random.nextBytes(bytes)
     bytes
   }
@@ -44,21 +45,26 @@ class ZReaderSpec extends FlatSpec {
 
   "RecordReader" should "read" in {
     val testBytes = randString(100000).getBytes(StandardCharsets.UTF_8)
-    val reader = new TestRecordReader(testBytes, 135, 135 * 10)
+    val reader = new ByteArrayRecordReader(testBytes, 135, 135 * 10)
     val readBytes = readAllBytes(new RecordReaderChannel(reader))
     assert(readBytes.length == testBytes.length)
     val matches = Hashing.sha256().hashBytes(testBytes).toString == Hashing.sha256().hashBytes(readBytes).toString
     assert(matches)
   }
 
-  "ByteIterator" should "read" in {
-    val testBytes = randString(100000).getBytes(StandardCharsets.UTF_8)
-    val reader = new TestRecordReader(testBytes, 135, 135 * 10)
-    val it = ByteIterator(reader)
-    assert(it.hasNext)
-    val row = it.next()
-    assert(row.length == 135)
-    assert(row.toSeq == testBytes.slice(0,135).toSeq)
+  "ZIterator" should "read" in {
+    val lrecl = 135
+    val blkSize = lrecl*10
+    val testBytes = randString(blkSize*2).getBytes(StandardCharsets.UTF_8)//.slice(0, blkSize*4)
+
+    def read() = new ZIterator(new ByteArrayRecordReader(testBytes, lrecl, blkSize))
+
+    val records = read()
+    records.zip(testBytes.grouped(lrecl)).foreach{x =>
+      val l = x._1._1.slice(x._1._2, x._1._2 + lrecl)
+      val r = x._2
+      assert(l.sameElements(r))
+    }
   }
 
   "ZReader" should "transcode EBCDIC" in {
@@ -67,7 +73,7 @@ class ZReaderSpec extends FlatSpec {
     val expected = test.getBytes(StandardCharsets.UTF_8).toSeq
 
     val is = new TranscoderInputStream(
-      reader = new TestRecordReader(in, 135, 135 * 10),
+      reader = new ByteArrayRecordReader(in, 135, 135 * 10),
       size = 65536,
       srcCharset = ZReader.CP1047,
       destCharset = ZReader.UTF8)

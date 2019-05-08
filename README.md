@@ -109,6 +109,31 @@ The [DSNAME](https://www.ibm.com/support/knowledgecenter/en/SSLTBW_2.3.0/com.ibm
 The [*](https://www.ibm.com/support/knowledgecenter/en/SSLTBW_2.3.0/com.ibm.zos.v2r3.ieab600/xddaster.htm) parameter begins an in-stream data set. Terminated with `/*` or `//`. 
 
 
+### Example Help Text
+
+```
+GSZUtil 0.1.1
+Usage: GSZUtil [load|cp|get] [options] <args>...
+
+  --help                   prints this usage text
+Command: load bqProject bqDataset bqTable bucket prefix
+loads a BigQuery Table
+  bqProject                BigQuery Project ID
+  bqDataset                BigQuery Dataset name
+  bqTable                  BigQuery Table name
+  bucket                   GCS bucket of source
+  prefix                   GCS prefix of source
+Command: cp dest
+GSZUtil cp copies a zOS dataset to GCS
+  dest                     destination path (gs://bucket/path)
+Command: get source dest
+download a GCS object to UNIX filesystem
+  source                   source path (/path/to/file)
+  dest                     destination path (gs://bucket/path)
+
+```
+
+
 ## Disclaimer
 
 This is not an official Google product.

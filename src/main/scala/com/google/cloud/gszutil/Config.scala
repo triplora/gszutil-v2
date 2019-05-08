@@ -52,6 +52,8 @@ object Config {
 
       head("GSZUtil", "0.1.1")
 
+      help("help").text("prints this usage text")
+
       cmd("load")
         .action { (_, c) => c.copy(mode = "load") }
 

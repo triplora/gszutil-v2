@@ -35,6 +35,9 @@ import com.google.cloud.gszutil.GSXML.CredentialProvider
 import com.google.cloud.gszutil.KeyFileProto.KeyFile
 import com.google.common.io.Resources
 import org.apache.commons.io.Charsets
+import org.apache.hadoop.mapred.TaskLog.LogName
+import org.apache.log4j.{Level, Logger}
+import org.apache.spark.sql.types.StructType
 
 import scala.util.{Failure, Try}
 
@@ -64,6 +67,42 @@ object Util {
     Security.insertProviderAt(new org.bouncycastle.jce.provider.BouncyCastleProvider(), 1)
   }
 
+  val layout = new org.apache.log4j.PatternLayout("%d{ISO8601} [%t] %-5p %c %x - %m%n")
+  val consoleAppender = new org.apache.log4j.ConsoleAppender(layout)
+
+  trait Logging {
+    @transient
+    protected lazy val logger: Logger = newLogger(this.getClass.getCanonicalName.stripSuffix("$"))
+  }
+
+  def schemaDiff(a: StructType, b: StructType) = {
+    a.fields.zip(b.fields)
+      .filterNot(x => x._1.name == x._2.name)
+      .toSeq
+  }
+
+  trait DebugLogging {
+    @transient
+    protected lazy val logger: Logger = newLogger(this.getClass.getCanonicalName.stripSuffix("$"), Level.DEBUG)
+  }
+
+  def setDebug(logName: String): Unit = setLvl(logName, Level.DEBUG)
+
+  def setWarn(logName: String): Unit = setLvl(logName, Level.WARN)
+
+  def setOff(logName: String): Unit = setLvl(logName, Level.OFF)
+
+  def setLvl(logName: String, level: Level): Unit = {
+    val logger = org.apache.log4j.Logger.getLogger(logName)
+    configureLogger(logger, level, consoleAppender)
+  }
+
+  def newLogger(name: String, level: Level = Level.INFO): org.apache.log4j.Logger = {
+      val logger = org.apache.log4j.Logger.getLogger(name)
+      configureLogger(logger, level, consoleAppender)
+      logger
+  }
+
   def configureLogger(logger: org.apache.log4j.Logger, level: org.apache.log4j.Level, appender: org.apache.log4j.Appender): org.apache.log4j.Logger = {
     logger.setLevel(level)
     logger.addAppender(appender)
@@ -73,8 +112,6 @@ object Util {
   def configureLogging(): Unit = {
     import org.apache.log4j.Logger.{getLogger,getRootLogger}
     import org.apache.log4j.Level.{WARN,DEBUG}
-    val layout = new org.apache.log4j.PatternLayout("%d{ISO8601} [%t] %-5p %c %x - %m%n")
-    val consoleAppender = new org.apache.log4j.ConsoleAppender(layout)
 
     configureLogger(getRootLogger, WARN, consoleAppender)
 

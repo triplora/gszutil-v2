@@ -36,19 +36,19 @@ class GSXMLSpec extends FlatSpec with BeforeAndAfterAll {
     Util.configureLogging()
   }
 
-  "bouncy castle" should "create private key" in {
+  "bouncy castle" should "create private key" ignore {
     val credential = Util.readCredentials(new ByteArrayInputStream(readKeyfile.getBytes(StandardCharsets.UTF_8)))
     assert(credential.refreshToken())
     System.out.println(credential.getRefreshToken)
   }
 
-  "Util" should "convert keyfile" in {
+  "Util" should "convert keyfile" ignore {
     val keyFile = readPb
     System.out.println(keyFile.getClientEmail)
     System.out.println(keyFile.getPrivateKey)
   }
 
-  it should "write keyfile to pb" in {
+  it should "write keyfile to pb" ignore {
     val keyFile = Util.convertJson(new ByteArrayInputStream(Resources.toByteArray(Resources.getResource("keyfile.json"))))
 
     val cp = KeyFileCredentialProvider(keyFile)
@@ -61,7 +61,7 @@ class GSXMLSpec extends FlatSpec with BeforeAndAfterAll {
     Files.write(Paths.get("src/main/resources/keyfile.pb"), withToken.toByteArray)
   }
 
-  "GSXML" should "upload" in {
+  "GSXML" should "upload" ignore {
     val bucket = sys.env("BUCKET")
     val keyFile = readPb
     val cp = KeyFileCredentialProvider(keyFile)

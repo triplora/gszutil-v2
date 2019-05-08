@@ -16,9 +16,11 @@
 package com.google.cloud.gszutil
 
 import java.io.InputStream
-import java.nio.channels.ReadableByteChannel
+import java.nio.channels.{Channels, ReadableByteChannel}
 import java.nio.charset._
 import java.nio.{ByteBuffer, CharBuffer}
+
+import scala.annotation.tailrec
 
 
 object ZReader {
@@ -54,67 +56,117 @@ object ZReader {
       *
       * @return
       */
-    def getLrecl: Int
+    val lRecl: Int
 
     /** Maximum block size
       *
       * @return
       */
-    def getBlksize: Int
+    val blkSize: Int
   }
 
-  class InputStreamCloser(is: InputStream) extends Thread {
-    override def run(): Unit = {
-      is.close()
-    }
+  object ZIterator {
+    def apply(reader: TRecordReader): ZIterator = new ZIterator(reader)
   }
 
-  def readDD(ddName: String): InputStream = {
-    val rr = ZOS.readDD(ddName)
-    val is = new TranscoderInputStream(rr, rr.getBlksize, srcCharset = CP1047, destCharset = UTF8)
-    Runtime.getRuntime.addShutdownHook(new InputStreamCloser(is))
-    is
-  }
-
-  def readRecords(ddName: String): Iterator[Array[Byte]] =
-    ByteIterator(ZOS.readDD(ddName))
-
-  class RecordAIterator(reader: TRecordReader) extends Iterator[(Array[Byte],Int)] {
-    private val lrecl = reader.getLrecl
+  class ZIterator(private val reader: TRecordReader) extends Iterator[(Array[Byte],Int)] {
+    private lazy val logger = Util.newLogger("com.google.cloud.gszutil.ZIterator")
+    private val lrecl = reader.lRecl
     private var hasRemaining = true
-    private val data: Array[Byte] = new Array[Byte](reader.getBlksize)
+    private val data: Array[Byte] = new Array[Byte](reader.blkSize)
     private val buf: ByteBuffer = ByteBuffer.wrap(data)
     private var bytesRead: Long = 0
     buf.position(buf.capacity) // initial buffer state = empty
+    fill()
+
+    def readData(): Int = {
+      if (buf.position == buf.capacity){
+        buf.clear
+      } else if (buf.position < buf.limit) {
+        logger.warn(s"compacting $buf")
+        buf.compact
+      }
+
+      val requested = buf.remaining
+      if (requested <= 0){
+        logger.error(s"buf.remaining == ${buf.remaining}")
+        requested
+      } else {
+        if (requested < buf.capacity){
+          logger.warn(s"incomplete read $buf")
+        }
+        val nBytesRead = reader.read(data, buf.position, requested)
+        if (nBytesRead > 0) {
+          buf.position(buf.position + nBytesRead)
+          bytesRead += nBytesRead
+        } else {
+          logger.warn("didn't read any bytes")
+        }
+        buf.flip()
+        nBytesRead
+      }
+    }
+
+    def close(): Unit = {
+      reader.close()
+      hasRemaining = false
+    }
+
+    @tailrec
+    private def fill(tries: Int = 0, limit: Int = 10, wait: Long = 0): Int = {
+      if (!hasRemaining) {
+        logger.warn("attempted to fill with no data remaining")
+        return -1
+      }
+      val n = readData()
+      if (n == buf.capacity) {
+        logger.debug(s"read $n bytes into $buf")
+        n
+      } else if (n == -1) {
+        logger.info("reader returned -1")
+        close()
+        -1
+      } else if (tries > limit) {
+        logger.error("retry limit reached")
+        close()
+        -1
+      } else {
+        if (wait > 0){
+          logger.warn(s"waiting $wait ms for input")
+          Thread.sleep(wait)
+        }
+        fill(tries = tries + 1, wait = tries * 500L)
+      }
+    }
 
     override def hasNext: Boolean = buf.remaining >= lrecl || hasRemaining
 
     override def next(): (Array[Byte],Int) = {
-      if (buf.remaining < lrecl && hasRemaining){
-        buf.compact()
-        val n = reader.read(data, buf.position, buf.remaining)
-        if (n > 0) {
-          buf.position(buf.position + n)
-          bytesRead += n
-        } else if (n < 0){
-          reader.close()
-          hasRemaining = false
-        }
-        buf.flip()
+      if (!buf.hasRemaining) {
+        val n = fill()
+        if (n <= 0)
+          logger.warn(s"fill() returned $n")
       }
       if (buf.remaining >= lrecl) {
-        val r = (data,buf.position)
-        buf.position(buf.position + lrecl)
+        val off = buf.position
+        val r = (data, off)
+        buf.position(off + lrecl)
+        logger.debug(s"returning offset = $off")
         r
-      } else
+      } else {
+        if (buf.hasRemaining){
+          logger.warn(s"discarded ${buf.remaining} bytes")
+        }
+        logger.warn(s"buffer empty, returning null")
         null
+      }
     }
   }
 
   class RecordReaderChannel(reader: TRecordReader) extends ReadableByteChannel {
     private var hasRemaining = true
     private var open = true
-    private val data: Array[Byte] = new Array[Byte](reader.getBlksize)
+    private val data: Array[Byte] = new Array[Byte](reader.blkSize)
     private val buf: ByteBuffer = ByteBuffer.wrap(data)
     private var bytesRead: Long = 0
     buf.position(buf.capacity) // initial buffer state = empty
@@ -144,9 +196,7 @@ object ZReader {
     }
 
     override def isOpen: Boolean = open
-
     override def close(): Unit = open = false
-
     def getBytesRead: Long = bytesRead
   }
 
@@ -156,15 +206,12 @@ object ZReader {
     */
   case class ByteIterator(private val reader: TRecordReader) extends Iterator[Array[Byte]] {
     private val rc = new RecordReaderChannel(reader)
-    private val buf: ByteBuffer = ByteBuffer.allocate(reader.getLrecl)
-
+    private val buf: ByteBuffer = ByteBuffer.allocate(reader.lRecl)
     def getBytesIn: Long = rc.getBytesRead
-
     override def hasNext: Boolean = rc.isOpen
-
     override def next(): Array[Byte] = {
       buf.clear()
-      if (rc.read(buf) == reader.getLrecl) {
+      if (rc.read(buf) == reader.lRecl) {
         buf.array()
       } else null
     }
@@ -177,9 +224,9 @@ object ZReader {
     * @param trim whether to trim trailing whitespace from each record
     */
   class RecordIterator(reader: TRecordReader, srcCharset: Charset, trim: Boolean) extends Iterator[String] {
-    private val data: Array[Byte] = new Array[Byte](reader.getLrecl)
-    private val in: ByteBuffer = ByteBuffer.allocate(reader.getLrecl)
-    private val cb: CharBuffer = CharBuffer.allocate(reader.getLrecl)
+    private val data: Array[Byte] = new Array[Byte](reader.lRecl)
+    private val in: ByteBuffer = ByteBuffer.allocate(reader.lRecl)
+    private val cb: CharBuffer = CharBuffer.allocate(reader.lRecl)
     private var endOfInput = fill()
     private var bytesIn: Long = 0
     private var bytesWaiting: Int = 0
@@ -199,9 +246,7 @@ object ZReader {
       .onUnmappableCharacter(CodingErrorAction.REPORT)
 
     def getBytesIn: Long = bytesIn
-
     override def hasNext: Boolean = !endOfInput
-
     override def next(): String = {
       if (endOfInput)
         throw new NoSuchElementException("next on empty iterator")
@@ -240,7 +285,7 @@ object ZReader {
     private val encoder: CharsetEncoder = destCharset.newEncoder()
       .onMalformedInput(CodingErrorAction.REPORT)
       .onUnmappableCharacter(CodingErrorAction.REPORT)
-    private val lrecl: Int = reader.getLrecl // maximum record length
+    private val lrecl: Int = reader.lRecl // maximum record length
     private val data: Array[Byte] = new Array[Byte](lrecl)
     private val bufSz: Int = size
     private val in: ByteBuffer = ByteBuffer.allocate(bufSz)
@@ -281,9 +326,7 @@ object ZReader {
 
     def getBytesIn: Long = bytesIn
     def getBytesOut: Long = bytesOut
-
-    override def read(): Int = throw new NotImplementedError()
-
+    override def read(): Int = throw new UnsupportedOperationException()
     override def read(b: Array[Byte], off: Int, len: Int): Int = {
       if (out.remaining < len) fill()
 
@@ -301,5 +344,10 @@ object ZReader {
       reader.close()
       super.close()
     }
+  }
+
+  object ZInputStream{
+    def apply(dd: String): InputStream =
+      Channels.newInputStream(new RecordReaderChannel(ZOS.readDD(dd)))
   }
 }

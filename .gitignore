@@ -11,3 +11,6 @@ logs/*
 target
 *.json
 *.pb
+*.bin
+*.cpy
+tmp

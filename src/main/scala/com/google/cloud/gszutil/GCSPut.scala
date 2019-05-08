@@ -18,12 +18,13 @@ package com.google.cloud.gszutil
 import java.io.InputStream
 
 import com.google.cloud.gszutil.GSXML.{CredentialProvider, XMLStorage}
+import com.google.cloud.gszutil.ZReader.ZInputStream
 
 object GCSPut {
   def run(config: Config, cp: CredentialProvider): Unit = {
     val gcs = XMLStorage(cp)
     System.out.println(s"Uploading ${config.inDD} to ${config.dest}")
-    put(gcs, ZReader.readDD(config.inDD), config.destBucket, config.destPath)
+    put(gcs, ZInputStream(config.inDD), config.destBucket, config.destPath)
     System.out.println(s"Upload Finished")
   }
 

@@ -24,14 +24,19 @@ import com.ibm.jzos.{RecordReader, ZFile, ZUtil}
 object ZOS {
   def getDefaultCharset: Charset = Charset.forName(ZUtil.getDefaultPlatformEncoding)
 
+  class RecordReaderCloser(r: RecordReader) extends Thread { override def run(): Unit = r.close() }
+
   class WrappedRecordReader(r: RecordReader) extends TRecordReader {
+    // Ensure that reader is closed if job is killed
+    Runtime.getRuntime.addShutdownHook(new RecordReaderCloser(r))
+
     override def read(buf: Array[Byte]): Int =
       r.read(buf)
     override def read(buf: Array[Byte], off: Int, len: Int): Int =
       r.read(buf, off, len)
     override def close(): Unit = r.close()
-    override def getLrecl: Int = r.getLrecl
-    override def getBlksize: Int = r.getBlksize
+    override val lRecl: Int = r.getLrecl
+    override val blkSize: Int = r.getBlksize
   }
 
   def readDD(ddName: String): TRecordReader = {

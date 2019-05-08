@@ -20,8 +20,10 @@ import com.google.auth.oauth2.StaticAccessTokenProvider
 import com.google.cloud.RetryOption
 import com.google.cloud.bigquery.JobInfo.{CreateDisposition, WriteDisposition}
 import com.google.cloud.bigquery._
+import com.google.cloud.gszutil.Decoding.CopyBook
 import com.google.cloud.gszutil.{Config, Util}
 import com.google.cloud.gszutil.GSXML.CredentialProvider
+import com.google.cloud.hadoop.fs.zfile.ZFileSystem
 import org.apache.spark.sql.{DataFrame, SaveMode, SparkSession}
 import org.threeten.bp.Duration
 
@@ -33,21 +35,22 @@ object BQLoad {
     val spark = SparkSession.builder()
       .master("local[1]")
       .appName("GSZUtil")
-      .config(StaticAccessTokenProvider.sparkConf())
+      .config(ZFileSystem.addToSparkConf(StaticAccessTokenProvider.sparkConf()))
       .getOrCreate()
 
     val orcUri = s"gs://${c.bq.bucket}/${c.bq.prefix}.orc"
 
+    val copyBook = CopyBook(Util.readS("sku_dly_pos.cpy"))
     val df: DataFrame = spark.read
       .format("zfile")
+      .schema(copyBook.getSchema)
       .option("copybook", Util.readS("sku_dly_pos.cpy"))
-      .load(c.inDD)
+      .load("zfile://" + c.inDD)
 
     System.out.println(s"Writing ORC to $orcUri")
     df.write
       .format("orc")
       .option("orc.compress", "none")
-      .option("orc.stripe.size", "100000000")
       .mode(SaveMode.Overwrite)
       .save(orcUri)
     System.out.println(s"Finished Writing ORC")
