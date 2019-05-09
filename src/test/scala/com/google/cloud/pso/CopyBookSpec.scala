@@ -1,10 +1,9 @@
 package com.google.cloud.pso
 
 import com.google.cloud.gszutil.Decoding.CopyBook
-import com.google.cloud.gszutil.Util.Logging
 import com.google.cloud.gszutil.Util
-import com.google.cloud.gszutil.ZReader.ZIterator
-import com.google.cloud.gszutil.io.ByteArrayRecordReader
+import com.google.cloud.gszutil.Util.Logging
+import com.google.cloud.gszutil.io.{ByteArrayRecordReader, ZIterator}
 import org.scalatest.FlatSpec
 
 class CopyBookSpec extends FlatSpec with Logging {
@@ -21,9 +20,17 @@ class CopyBookSpec extends FlatSpec with Logging {
 
   it should "read" in {
     val copyBook = CopyBook(Util.readS("test1.cpy"))
-    def records = new ZIterator(new ByteArrayRecordReader(Util.readB("test.bin"), copyBook.lRecl, copyBook.lRecl*10))
-    assert(records.length == 17)
-    val rows = copyBook.reader.readA(records).toArray
-    System.out.println(rows.map(_.toString).mkString("\n"))
+    val reader = new ByteArrayRecordReader(Util.readB("test.bin"), copyBook.lRecl, copyBook.lRecl*10)
+    val (data,offset) = ZIterator(reader)
+    val offset1 = offset.toArray
+    var n = 0
+    val rows = copyBook.reader.readA(data, offset1.iterator)
+        .foldLeft(new StringBuilder){(a,b) =>
+          n += 1
+          a.append(b.toString)
+            .append("\n")
+        }
+    System.out.println(rows)
+    assert(n == 17)
   }
 }

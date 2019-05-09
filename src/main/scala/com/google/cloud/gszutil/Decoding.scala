@@ -15,19 +15,32 @@
  */
 package com.google.cloud.gszutil
 
-import java.nio.{ByteBuffer, CharBuffer}
+import java.nio.ByteBuffer
+import java.nio.charset.Charset
 
+import com.google.cloud.gszutil.io.ZRowReader
 import com.google.common.base.Charsets
-import com.ibm.jzos.fields.{BinaryAsIntField, BinaryAsLongField, StringField}
+import com.ibm.jzos.fields.{BinaryAsIntField, BinaryAsLongField}
 import org.apache.spark.sql.catalyst.expressions.SpecificInternalRow
-import org.apache.spark.sql.execution.datasources.zfile.ZRowReader
-import org.apache.spark.sql.types.{DataType, DecimalType, IntegerType, LongType, StringType, StructField, StructType}
+import org.apache.spark.sql.types._
 import org.apache.spark.unsafe.types.UTF8String
 
 import scala.collection.mutable.ArrayBuffer
 
 
 object Decoding {
+  final val CP1047: Charset = Charset.forName("CP1047")
+
+  final val EBCDIC: Array[Byte] = {
+    val buf = ByteBuffer.wrap((0 until 256).map(_.toByte).toArray)
+    val cb = CP1047.decode(buf)
+    cb.toString.toCharArray.map(_.toByte)
+  }
+
+  def ebdic2ascii(b: Byte): Byte = {
+    EBCDIC(uint(b))
+  }
+
   def uint(b: Byte): Int = {
     if (b < 0) 256 + b
     else b
@@ -43,51 +56,60 @@ object Decoding {
 
   trait Decoder[T] {
     val size: Int
-    val offset: Int
     val dataType: DataType
     def get(a: Array[Byte], off: Int): T
+
+    /** Read a field into a mutable output builder
+      *
+      * @param a byte array
+      * @param off offset within a to begin reading
+      * @param row mutable output builder
+      * @param i field index
+      */
     def get(a: Array[Byte], off: Int, row: SpecificInternalRow, i: Int): Unit =
       row.update(i, get(a, off))
   }
 
-  case class StringDecoder(override val size: Int, override val offset: Int) extends Decoder[String] {
+  case class StringDecoder(override val size: Int) extends Decoder[String] {
     override val dataType: DataType = StringType
-    private val decoder = ZReader.CP1047.newDecoder()
-    private val cb = CharBuffer.allocate(size)
-    private val buf = ByteBuffer.allocate(size)
+    private val buf = new Array[Byte](size)
     override def get(a: Array[Byte], off: Int): String = {
-      buf.clear()
-      buf.put(a, off, size)
-      buf.flip()
-      cb.clear()
-      decoder.decode(buf, cb, true)
-      cb.toString
+      var i = 0
+      while (i < size){
+        buf(i) = ebdic2ascii(a(off + i))
+        i+=1
+      }
+      new String(buf, Charsets.UTF_8)
     }
 
-    override def get(a: Array[Byte], off: Int, row: SpecificInternalRow, i: Int): Unit =
-      row.update(i, UTF8String.fromBytes(get(a, off).getBytes(Charsets.UTF_8)))
+    override def get(a: Array[Byte], off: Int, row: SpecificInternalRow, i: Int): Unit = {
+      val str = get(a, off)
+      val utf8 = UTF8String.fromString(str)
+      row.update(i, utf8)
+    }
   }
 
-  case class IntDecoder(override val size: Int, override val offset: Int) extends Decoder[Int] {
+  case class IntDecoder(override val size: Int) extends Decoder[Int] {
     override val dataType: DataType = IntegerType
-    private lazy val field = new BinaryAsIntField(offset, size, true)
-
+    private lazy val field = new BinaryAsIntField(0, size, true)
     override def get(a: Array[Byte], off: Int): Int =
       field.getInt(a, off)
   }
 
-  class LongDecoder(override val size: Int, override val offset: Int) extends Decoder[Long] {
+  case class LongDecoder(override val size: Int) extends Decoder[Long] {
     override val dataType: DataType = LongType
-    private lazy val field = new BinaryAsLongField(offset, size, true)
+    private lazy val field = new BinaryAsLongField(0, size, true)
     override def get(a: Array[Byte], off: Int): Long =
       field.getLong(a, off)
   }
 
-  case class DecimalDecoder(precision: Int = 9, scale: Int = 2, override val offset: Int) extends Decoder[BigDecimal] {
+  case class DecimalDecoder(precision: Int, scale: Int) extends Decoder[BigDecimal] {
     override val dataType: DataType = DecimalType(precision, scale)
     override val size: Int = ((precision + scale) / 2) + 1
     override def get(a: Array[Byte], off: Int): BigDecimal =
       BigDecimal(PackedDecimal.unpack(a, off, size), scale)
+    override def get(a: Array[Byte], off: Int, row: SpecificInternalRow, i: Int): Unit =
+      row.update(i, new Decimal().set(get(a, off)))
   }
 
   case class CopyBook(raw: String) {
@@ -109,12 +131,10 @@ object Decoding {
       }
 
     def getDecoders: Seq[Decoder[_]] = {
-      var offset = 0
       val buf = ArrayBuffer.empty[Decoder[_]]
       lines.foreach{
         case CopyBookField(_, pic) =>
-          val decoder = pic.getDecoder(offset)
-          offset += decoder.size
+          val decoder = pic.getDecoder
           buf.append(decoder)
         case _ =>
       }
@@ -127,37 +147,36 @@ object Decoding {
   }
 
   sealed trait PIC {
-    def getDecoder(offset: Int): Decoder[_]
+    def getDecoder: Decoder[_]
     def getDataType: DataType
   }
   case class PicInt(size: Int) extends PIC {
-    override def getDecoder(offset: Int): Decoder[Int] = IntDecoder(size, offset)
+    override def getDecoder: Decoder[Int] = IntDecoder(size)
     override def getDataType: DataType = IntegerType
   }
   case class PicDecimal(p: Int, s: Int) extends PIC {
-    override def getDecoder(offset: Int): Decoder[BigDecimal] = DecimalDecoder(p, s, offset)
+    override def getDecoder: Decoder[BigDecimal] = DecimalDecoder(p, s)
     override def getDataType: DataType = DecimalType(p,s)
   }
   case class PicString(size: Int) extends PIC {
-    override def getDecoder(offset: Int): Decoder[String] = StringDecoder(size, offset)
+    override def getDecoder: Decoder[String] = StringDecoder(size)
     override def getDataType: DataType = StringType
   }
 
   val typeMap: Map[String,PIC] = Map(
     "PIC S9(4) COMP." -> PicInt(2),
-    "PIC S9(4) COMP." -> PicInt(2),
     "PIC S9(9) COMP." -> PicInt(4),
     "PIC S9(9)V9(2) COMP-3." -> PicDecimal(9,2),
     "PIC X." -> PicString(1),
-    "PIC X(08)." -> PicString(8),
+    "PIC X(8)." -> PicString(8),
     "PIC X(16)." -> PicString(16),
     "PIC X(30)." -> PicString(30),
     "PIC X(20)." -> PicString(20),
     "PIC X(2)." -> PicString(20),
     "PIC X(10)." -> PicString(10),
-    "PIC S9(03)   COMP-3." -> PicDecimal(9,3),
-    "PIC S9(07)   COMP-3." -> PicDecimal(9,7),
-    "PIC S9(9)    COMP-3." -> PicDecimal(9,9),
+    "PIC S9(3) COMP-3." -> PicDecimal(9,3),
+    "PIC S9(7) COMP-3." -> PicDecimal(9,7),
+    "PIC S9(9) COMP-3." -> PicDecimal(9,9),
     "PIC S9(9)V99 COMP-3." -> PicDecimal(9,2),
     "PIC S9(6)V99." -> PicDecimal(9,2),
     "PIC S9(13)V99 COMP-3" -> PicDecimal(9,2)
@@ -168,15 +187,18 @@ object Decoding {
   case class CopyBookField(name: String, typ: PIC) extends CopyBookLine
   case class Occurs(n: Int) extends CopyBookLine
 
-  val titleRegex = """^\d{1,2}\s+([A-Z0-9-]*)\.$""".r
-  val fieldRegex = """^\d{1,2}\s+([A-Z0-9-]*)\s*(PIC.*)$""".r
-  val occursRegex = """^OCCURS (\d{1,2}) TIMES.$""".r
+  private val titleRegex = """^\d{1,2}\s+([A-Z0-9-]*)\.$""".r
+  private val fieldRegex = """^\d{1,2}\s+([A-Z0-9-]*)\s*(PIC.*)$""".r
+  private val occursRegex = """^OCCURS (\d{1,2}) TIMES.$""".r
 
   def parseCopyBookLine(s: String): Option[CopyBookLine] = {
     val f = s.takeWhile(_ != '*').trim
     f match {
       case fieldRegex(name, typ) =>
-        Option(CopyBookField(name.trim, typeMap(typ)))
+        val typ1 = typ
+          .replaceFirst("""\s+COMP""", " COMP")
+          .replaceFirst("""\(0""", """\(""")
+        Option(CopyBookField(name.trim, typeMap(typ1)))
       case titleRegex(name) =>
         Option(CopyBookTitle(name))
       case occursRegex(n) if n.forall(Character.isDigit) =>

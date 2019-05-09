@@ -18,7 +18,7 @@ package com.google.cloud.gszutil
 import java.io.InputStream
 
 import com.google.cloud.gszutil.GSXML.{CredentialProvider, XMLStorage}
-import com.google.cloud.gszutil.ZReader.ZInputStream
+import com.google.cloud.gszutil.io.ZInputStream
 
 object GCSPut {
   def run(config: Config, cp: CredentialProvider): Unit = {

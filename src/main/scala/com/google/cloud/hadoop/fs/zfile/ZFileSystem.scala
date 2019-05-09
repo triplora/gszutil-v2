@@ -2,22 +2,20 @@ package com.google.cloud.hadoop.fs.zfile
 
 import java.io.ByteArrayInputStream
 import java.net.URI
-import java.nio.ByteBuffer
 import java.nio.channels.Channels
 
-import com.google.cloud.gszutil.Util.{DebugLogging, Logging}
+import com.google.cloud.gszutil.Util.DebugLogging
 import com.google.cloud.gszutil.ZOS
-import com.google.cloud.gszutil.ZReader.RecordReaderChannel
+import com.google.cloud.gszutil.io.ZChannel
 import com.ibm.jzos.ZFile
-import org.apache.hadoop.fs.permission.FsPermission
 import org.apache.hadoop.fs._
+import org.apache.hadoop.fs.permission.FsPermission
 import org.apache.hadoop.util.Progressable
 import org.apache.spark.SparkConf
 
 object ZFileSystem {
   def addToSparkConf(c: SparkConf = new SparkConf()): SparkConf =
     c.set("fs.zfile.impl","com.google.cloud.hadoop.fs.zfile.ZFileSystem")
-      .set("spark.sql.files.maxRecordsPerFile","1000000")
 }
 
 class ZFileSystem extends FileSystem with DebugLogging {
@@ -48,7 +46,7 @@ class ZFileSystem extends FileSystem with DebugLogging {
     if (System.getProperty("java.vm.vendor").contains("IBM")) {
       logger.debug(s"Opening $f")
       val recordReader = ZOS.readDD(f.getName)
-      val channel = new RecordReaderChannel(recordReader)
+      val channel = new ZChannel(recordReader)
       val inputStream = Channels.newInputStream(channel)
       new FSDataInputStream(inputStream)
     } else {

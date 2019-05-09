@@ -35,7 +35,6 @@ import com.google.cloud.gszutil.GSXML.CredentialProvider
 import com.google.cloud.gszutil.KeyFileProto.KeyFile
 import com.google.common.io.Resources
 import org.apache.commons.io.Charsets
-import org.apache.hadoop.mapred.TaskLog.LogName
 import org.apache.log4j.{Level, Logger}
 import org.apache.spark.sql.types.StructType
 
@@ -110,8 +109,8 @@ object Util {
   }
 
   def configureLogging(): Unit = {
-    import org.apache.log4j.Logger.{getLogger,getRootLogger}
-    import org.apache.log4j.Level.{WARN,DEBUG}
+    import org.apache.log4j.Level.{DEBUG, WARN}
+    import org.apache.log4j.Logger.{getLogger, getRootLogger}
 
     configureLogger(getRootLogger, WARN, consoleAppender)
 

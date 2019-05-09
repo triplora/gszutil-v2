@@ -3,7 +3,6 @@ package com.google.cloud.gszutil.io
 import java.nio.ByteBuffer
 
 import com.google.cloud.gszutil.Util.Logging
-import com.google.cloud.gszutil.ZReader.TRecordReader
 
 class ByteArrayRecordReader(srcBytes: Array[Byte], recordLength: Int, blockSize: Int) extends TRecordReader with Logging {
   private val buf = ByteBuffer.wrap(srcBytes)

@@ -46,8 +46,7 @@ class DataSourceSpec extends FlatSpec with Logging with BeforeAndAfterAll {
     val df = spark.read
       .format("zfile")
       .schema(copyBook.getSchema)
-      .option("inferSchema", false)
-      .option("path", "/INFILE")
+      .option("inferSchema", "false")
       .option("copybook", copyBook.raw)
       .load("zfile://DD/INFILE")
 

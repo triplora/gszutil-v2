@@ -4,9 +4,8 @@ import java.net.URI
 
 import com.google.cloud.gszutil.Decoding.CopyBook
 import com.google.cloud.gszutil.{Util, ZOS}
-import com.google.cloud.gszutil.Util.{DebugLogging, Logging}
-import com.google.cloud.gszutil.ZReader.ZIterator
-import com.google.cloud.gszutil.io.ByteArrayRecordReader
+import com.google.cloud.gszutil.Util.DebugLogging
+import com.google.cloud.gszutil.io.{ByteArrayRecordReader, ZIterator}
 import org.apache.hadoop.conf.Configuration
 import org.apache.hadoop.fs.{FileStatus, Path}
 import org.apache.hadoop.mapreduce.Job
@@ -55,18 +54,14 @@ class ZFileFormat extends FileFormat with DataSourceRegister with Serializable  
       val copyBook = broadcastedCopyBook.value
       val schema = copyBook.getSchema
       val filePath = new Path(new URI(file.filePath))
-      System.out.println(s"reading from ${file.filePath} $filePath")
+      logger.info(s"reading from ${file.filePath} $filePath")
       if (requiredSchema.length == 0 || requiredSchema != schema) {
-        throw new RuntimeException("asdf")
-        System.out.println(s"required schema\n$requiredSchema\n\n$schema")
         Iterator.empty
       } else {
-        System.out.println("asdf123")
-        copyBook.reader.readA(new ZIterator(new ByteArrayRecordReader(Util.readB("imsku.bin"), copyBook.lRecl, copyBook.lRecl * 10)))
-        throw new RuntimeException("asdf")
+        //val (data,offset) = ZIterator(new ByteArrayRecordReader(Util.readB("imsku.bin"), copyBook.lRecl, copyBook.lRecl * 10))
+        //copyBook.reader.readA(data, offset)
 
-        //Iterator.empty
-        //copyBook.reader.readA(filePath.getName)
+        copyBook.reader.readA(filePath.getName)
       }
     }
   }
@@ -85,15 +80,14 @@ class ZFileFormat extends FileFormat with DataSourceRegister with Serializable  
       if (requiredSchema.length == 0 || schemaDiff.nonEmpty) {
         throw new RuntimeException(s"schema mismatch\n${schemaDiff.mkString("\n")}")
       } else {
-        System.out.println("reading from imsku.bin")
         if (System.getProperty("java.vm.vendor").contains("IBM")) {
-          copyBook.reader.readA(ZIterator(ZOS.readDD(filePath.getName)))
+          val (data,offset) = ZIterator(ZOS.readDD(filePath.getName))
+          copyBook.reader.readA(data,offset)
         } else {
-          copyBook.reader.readA(ZIterator(new ByteArrayRecordReader(Util.readB("imsku.bin"), copyBook.lRecl, copyBook.lRecl * 10)))
+          //TODO remove after testing
+          val (data,offset) = ZIterator(new ByteArrayRecordReader(Util.readB("imsku.bin"), copyBook.lRecl, copyBook.lRecl * 10))
+          copyBook.reader.readA(data,offset)
         }
-
-        //Iterator.empty
-        //copyBook.reader.readA(filePath.getName)
       }
     }
   }

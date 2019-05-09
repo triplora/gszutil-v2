@@ -16,14 +16,10 @@
 package com.google.cloud.gszutil
 
 
-import java.nio.charset.Charset
-
-import com.google.cloud.gszutil.ZReader.TRecordReader
+import com.google.cloud.gszutil.io.TRecordReader
 import com.ibm.jzos.{RecordReader, ZFile, ZUtil}
 
 object ZOS {
-  def getDefaultCharset: Charset = Charset.forName(ZUtil.getDefaultPlatformEncoding)
-
   class RecordReaderCloser(r: RecordReader) extends Thread { override def run(): Unit = r.close() }
 
   class WrappedRecordReader(r: RecordReader) extends TRecordReader {
