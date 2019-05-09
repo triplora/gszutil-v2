@@ -76,7 +76,7 @@ object BQLoad extends Logging {
   def run(c: Config, cp: CredentialProvider): Unit = {
     StaticAccessTokenProvider.setCredentialProvider(cp)
     val conf = ZFileSystem.addToSparkConf(StaticAccessTokenProvider.sparkConf())
-      .set("spark.sql.files.maxRecordsPerFile","10000000")
+      .set("spark.sql.files.maxRecordsPerFile","8888888")
     val spark = SparkSession.builder()
       .master("local[1]")
       .appName("GSZUtil")
@@ -85,26 +85,15 @@ object BQLoad extends Logging {
 
     val orcUri = s"gs://${c.bq.bucket}/${c.bq.prefix}.orc"
 
-
-    /*
-    val t0 = System.currentTimeMillis
-    val sha = SHA256(c.inDD)
-    val t1 = System.currentTimeMillis
-    logger.info(s"SHA256=$sha (${t1-t0} ms)")
-
-    val gcs = StorageOptions.newBuilder()
-      .setCredentials(cp.getCredentials)
-      .build().getService
-
-    copy(gcs, c.inDD, c.bq.bucket, c.bq.prefix + ".bin")
-    */
-
-    val copyBook = CopyBook(Util.readS("sku_dly_pos.cpy"))
+    val cpy = "imsku.cpy"
+    val input = "zfile://DD/" + c.inDD
+    System.out.println(s"Reading from $input with copy book $cpy")
+    val copyBook = CopyBook(Util.readS(cpy))
     val df: DataFrame = spark.read
       .format("zfile")
       .schema(copyBook.getSchema)
-      .option("copybook", Util.readS("sku_dly_pos.cpy"))
-      .load("zfile://DD/" + c.inDD)
+      .option("copybook", copyBook.raw)
+      .load(input)
 
     System.out.println(s"Writing ORC to $orcUri")
     df.write
