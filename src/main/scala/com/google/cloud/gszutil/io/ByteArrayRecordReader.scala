@@ -21,6 +21,8 @@ class ByteArrayRecordReader(srcBytes: Array[Byte], recordLength: Int, blockSize:
     } else -1
   }
 
+  override def isOpen: Boolean = open
+
   override def close(): Unit = {
     logger.info(s"close() read $bytesRead bytes")
     open = false

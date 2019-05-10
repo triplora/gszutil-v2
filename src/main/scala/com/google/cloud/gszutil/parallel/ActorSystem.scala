@@ -21,146 +21,185 @@ object ActorSystem {
   sealed trait Message
   case object Available extends Message
   case class Read(dd: String) extends Message
-  case class SendData(worker: ActorRef) extends Message
   case class Batch(data: Array[Byte], limit: Int, partId: Int) extends Message
   case object Finished extends Message
 
-  def start(prefix: String, storage: Storage,
+  def start(prefix: String,
+            storage: Storage,
             nWorkers: Int = 20,
             dd: String = "INFILE",
-            batchSize: Long = 80000000): Unit = {
+            batchSize: Int = 1024,
+            partLen: Long = 80000000): Unit = {
     val inbox = Inbox.create(sys)
-    val master = sys.actorOf(Master.props(nWorkers, dd, prefix, storage, batchSize))
+    val master = sys.actorOf(masterProps(nWorkers, dd, prefix, storage, batchSize, partLen))
     inbox.watch(master)
-    inbox.receive(FiniteDuration.apply(30, TimeUnit.MINUTES)) match {
+    inbox.receive(FiniteDuration(30, TimeUnit.MINUTES)) match {
       case Terminated =>
         sys.terminate()
       case _ =>
     }
   }
 
-  object Reader {
-    def props(a: ActorRef, dd: String): Props = Props(classOf[Reader], a, dd)
+  def readerProps(master: ActorRef, dd: String, batchSize: Int): Props =
+    Props(classOf[Reader], master, dd, batchSize)
+
+  def masterProps(nWorkers: Int, dd: String, prefix: String,
+                  storage: Storage, batchSize: Int, partLen: Long): Props =
+    Props(classOf[Master], nWorkers, dd, prefix,
+      storage, batchSize, partLen)
+
+  def writerProps(parent: ActorRef,
+                  reader: ActorRef,
+                  storage: Storage,
+                  blobInfo: BlobInfo,
+                  partLength: Long): Props =
+    Props(classOf[Writer], parent, reader, storage, blobInfo, partLength)
+
+  def getSuffix(prefix: String, workerId: Int): String =
+    prefix + "_" + f"$workerId%05d"
+
+  def getUri(blobInfo: BlobInfo): String =
+    s"gs://${blobInfo.getBlobId.getBucket}/${blobInfo.getBlobId.getName}"
+
+  def prepareBatch(in: TRecordReader, batchSize: Int, batchId: Int): Batch = {
+    val data = new Array[Byte](in.lRecl * batchSize)
+    val buf = ByteBuffer.wrap(data)
+    while (buf.hasRemaining && in.isOpen){
+      val n = in.read(data, buf.position, buf.remaining)
+      if (n < 0) {
+        in.close()
+      } else {
+        val newPosition = buf.position + n
+        buf.position(newPosition)
+      }
+    }
+    Batch(data, buf.position, batchId)
   }
 
-  class Reader(val master: ActorRef, val dd: String) extends Actor {
+  class Reader(master: ActorRef, dd: String, batchSize: Int) extends Actor {
     private val log = LoggerFactory.getLogger(getClass)
     private lazy val in: TRecordReader = ZOS.readDD(dd)
-    private var hasRemaining = true
     private var partId: Int = -1
+
     override def receive: Receive = {
-      case SendData(worker) =>
+      case Available if in.isOpen =>
         partId += 1
-        val data = new Array[Byte](in.lRecl * 1024)
+        val batch = prepareBatch(in, batchSize, partId)
+        if (batch.limit > 0)
+          sender() ! batch
 
-        val buf = ByteBuffer.wrap(data)
-        while (buf.hasRemaining && hasRemaining){
-          val n = in.read(data, buf.position, buf.remaining)
-          if (n < 0) {
-            hasRemaining = false
-            in.close()
-          } else {
-            val newPosition = buf.position + n
-            buf.position(newPosition)
-          }
-        }
-        if (buf.position > 0)
-          worker ! Batch(data, buf.limit, partId)
-
-        if (!hasRemaining)
-          master ! Finished
-        else
+        if (in.isOpen)
           master ! Available
+        else {
+          context.become(finished)
+          master ! Finished
+        }
 
-      case _ =>
+      case x =>
+        throw new IllegalArgumentException(s"Unable to accept ${x.getClass.getSimpleName} message")
+    }
+
+    def finished: Receive = {
+      case x =>
+        throw new IllegalArgumentException(s"Unable to accept ${x.getClass.getSimpleName} message in finished state")
     }
   }
 
-  object Master{
-    def props(nWorkers: Int, dd: String, prefix: String, storage: Storage, batchSize: Long): Props = Props(classOf[Master], nWorkers, dd, prefix, storage, batchSize)
-  }
-
-  class Master(nWorkers: Int, dd: String, prefix: String, storage: Storage, batchSize: Long) extends Actor {
+  class Master(nWorkers: Int, dd: String, prefix: String, storage: Storage, batchSize: Int, partLen: Long) extends Actor {
     private val log = LoggerFactory.getLogger(getClass)
-    private val workers: mutable.Set[ActorRef] = mutable.Set.empty
-    private val reader: ActorRef = sys.actorOf(Reader.props(self, dd))
+    private val writers: mutable.Set[ActorRef] = mutable.Set.empty
+    private val reader: ActorRef = context.actorOf(readerProps(self, dd, batchSize))
 
-    for (i <- 1 to nWorkers){
-      val id = f"$i%02d"
-      val worker = sys.actorOf(Worker.props(self, storage, prefix, i, batchSize), s"worker$id")
-      workers += worker
-      context.watch(worker)
-      reader ! SendData(worker)
+    private val uri = new URI(prefix)
+
+    private var workerId = 0
+    private var isOpen = true
+
+    def newWorker(): ActorRef = {
+      val idCode = f"$workerId%05d"
+      val blobInfo = BlobInfo.newBuilder(BlobId.of(uri.getAuthority, uri.getPath + s"_$idCode")).build()
+      val writer = context.actorOf(writerProps(self, reader, storage, blobInfo, partLen), s"worker_" + idCode)
+      writers += writer
+      context.watch(writer)
+      workerId += 1
+      writer
     }
+
+    (1 until nWorkers).foreach(_ => newWorker())
 
     def receive: Receive = {
-      case Terminated(worker) =>
-        workers.remove(worker)
-        if (workers.isEmpty) self ! PoisonPill
+      case Available => // Reader is available
+        newWorker()
 
-      case Finished =>
+      case Finished => // Reader finished reading
+        isOpen = false
         sender() ! PoisonPill
-        for (worker <- workers) worker ! Finished
+        writers.foreach(_ ! Finished)
 
-      case Available =>
-        reader ! SendData(sender())
+      case Terminated(writer) =>
+        writers.remove(writer)
+        if (writers.isEmpty && !isOpen)
+          self ! PoisonPill
 
-      case _ =>
+      case x =>
+        throw new IllegalArgumentException(s"Unable to accept ${x.getClass.getSimpleName} message")
     }
   }
 
-  object Worker {
-    def props(parent: ActorRef, storage: Storage, prefix: String, id: Int, batchSize: Long): Props =
-      Props(classOf[Worker], parent, storage, prefix, id, batchSize)
-  }
-
-  class Worker(private val storage: Storage, parent: ActorRef, val prefix: String, id: Int, batchSize: Long) extends Actor {
+  class Writer(parent: ActorRef,
+               reader: ActorRef,
+               storage: Storage,
+               blobInfo: BlobInfo,
+               partLength: Long) extends Actor {
     private val log = LoggerFactory.getLogger(getClass)
+    private var n = 0 // Stop writing when n >= partLength
 
-    def getSuffix(j: Int): String = f"$id%02d" + "-" + f"$j%02d"
+    reader ! Available
 
     def receive: Receive = {
       case batch: Batch =>
-        val suffix = getSuffix(0)
-        val uri = new URI(prefix + suffix)
-        val blobInfo = BlobInfo
-          .newBuilder(BlobId.of(uri.getAuthority, uri.getPath))
-          .build()
         val out = storage.writer(blobInfo)
-        context.become(write(out, 0, 0))
-        self ! batch
+        log.info(s"Started writing to ${getUri(blobInfo)}")
+        write(out, batch)
+        context.become(writing(out))
 
-      case _ =>
+      case x =>
+        throw new IllegalArgumentException(s"Unable to accept ${x.getClass.getSimpleName} message")
     }
 
-    def write(out: WriteChannel, j: Int, n: Long): Receive = {
-      case Batch(data, limit, _) =>
-        val suffix = getSuffix(j)
+    def writing(out: WriteChannel): Receive = {
+      case batch: Batch =>
+        write(out, batch)
+        if (n < partLength)
+          parent ! Available
+        else
+          finish(out)
 
-        val buf = ByteBuffer.wrap(data)
-        buf.limit(limit)
-        while (buf.hasRemaining)
-          out.write(buf)
+      case Finished => // Reader has no more bytes
+        finish(out)
 
-        if (n > batchSize) {
-          out.close()
-          log.info(s"${self.path} Finished writing $limit bytes")
-          val uri = new URI(prefix + suffix)
-          val blobInfo = BlobInfo
-            .newBuilder(BlobId.of(uri.getAuthority, uri.getPath))
-            .build()
-          log.info(s"${self.path} Writing to $uri")
-          val next = storage.writer(blobInfo)
-          context.become(write(next, j + 1, n + limit))
-        }
+      case x =>
+        throw new IllegalArgumentException(s"Unable to accept ${x.getClass.getSimpleName} message in writing state")
+    }
 
-        parent ! Available
+    def finished: Receive = {
+      case x =>
+        throw new RuntimeException(s"Unable to accept ${x.getClass.getSimpleName} message in finished state")
+    }
 
-      case Finished =>
-        out.close()
-        self ! PoisonPill
+    def write(out: WriteChannel, batch: Batch): Unit = {
+      val buf = ByteBuffer.wrap(batch.data)
+      buf.limit(batch.limit)
+      while (buf.hasRemaining)
+        out.write(buf)
+      n += batch.limit
+    }
 
-      case _ =>
+    def finish(out: WriteChannel): Unit = {
+      out.close()
+      log.info(s"${self.path} Finished writing $n bytes to ${getUri(blobInfo)}")
+      context.become(finished)
+      self ! PoisonPill
     }
   }
 }

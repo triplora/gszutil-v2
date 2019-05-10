@@ -24,6 +24,8 @@ trait TRecordReader {
     */
   def close(): Unit
 
+  def isOpen: Boolean
+
   /** LRECL is the maximum record length for variable length files.
     *
     * @return

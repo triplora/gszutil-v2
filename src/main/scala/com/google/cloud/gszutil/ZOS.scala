@@ -25,12 +25,18 @@ object ZOS {
   class WrappedRecordReader(r: RecordReader) extends TRecordReader {
     // Ensure that reader is closed if job is killed
     Runtime.getRuntime.addShutdownHook(new RecordReaderCloser(r))
+    private var open = true
 
     override def read(buf: Array[Byte]): Int =
       r.read(buf)
     override def read(buf: Array[Byte], off: Int, len: Int): Int =
       r.read(buf, off, len)
-    override def close(): Unit = r.close()
+    override def close(): Unit = {
+      r.close()
+      open = false
+    }
+
+    override def isOpen: Boolean = open
     override val lRecl: Int = r.getLrecl
     override val blkSize: Int = r.getBlksize
   }
