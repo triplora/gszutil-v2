@@ -19,6 +19,7 @@ libraryDependencies ++= Seq(
   "com.google.api-client" % "google-api-client" % "1.28.0",
   "com.google.cloud" % "google-cloud-bigquery" % "1.71.0",
   "com.google.cloud" % "google-cloud-storage" % "1.71.0",
+  "com.typesafe.akka" %% "akka-actor" % "2.5.22",
   "org.apache.spark" %% "spark-core" % "2.4.2",
   "org.apache.spark" %% "spark-sql" % "2.4.2",
   "com.google.cloud.bigdataoss" % "gcs-connector" % "hadoop2-1.9.16",

@@ -12,13 +12,16 @@ object ZChannel {
   }
 }
 
-class ZChannel(reader: TRecordReader) extends ReadableByteChannel with Logging {
+class ZChannel(private val reader: TRecordReader) extends ReadableByteChannel with Logging {
   private var hasRemaining = true
   private var open = true
   private val data: Array[Byte] = new Array[Byte](reader.blkSize)
   private val buf: ByteBuffer = ByteBuffer.wrap(data)
   private var bytesRead: Long = 0
   private val t = System.currentTimeMillis()
+  val lrecl = reader.lRecl
+  val blkSize = reader.blkSize
+
   buf.position(buf.capacity) // initial buffer state = empty
 
   override def read(dst: ByteBuffer): Int = {
