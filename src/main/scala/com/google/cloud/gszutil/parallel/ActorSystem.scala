@@ -158,7 +158,7 @@ object ActorSystem {
           self ! PoisonPill
 
       case x =>
-        throw new IllegalArgumentException(s"Unable to accept ${x.getClass.getSimpleName} message")
+        log.error(s"Unable to accept ${x.getClass.getSimpleName} message")
     }
   }
 
@@ -182,7 +182,7 @@ object ActorSystem {
         context.become(writing(out))
 
       case x =>
-        throw new IllegalArgumentException(s"Unable to accept ${x.getClass.getSimpleName} message")
+        log.error(s"Unable to accept ${x.getClass.getSimpleName} message")
     }
 
     def writing(out: WriteChannel): Receive = {
@@ -199,12 +199,12 @@ object ActorSystem {
         finish(out)
 
       case x =>
-        throw new IllegalArgumentException(s"Unable to accept ${x.getClass.getSimpleName} message in writing state")
+        log.error(s"Unable to accept ${x.getClass.getSimpleName} message in writing state")
     }
 
     def finished: Receive = {
       case x =>
-        throw new RuntimeException(s"Unable to accept ${x.getClass.getSimpleName} message in finished state")
+        log.error(s"Unable to accept ${x.getClass.getSimpleName} message in finished state")
     }
 
     def write(out: WriteChannel, batch: Batch): Unit = {
