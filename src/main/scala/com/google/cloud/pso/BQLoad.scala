@@ -27,6 +27,7 @@ import com.google.cloud.gszutil.Decoding.CopyBook
 import com.google.cloud.gszutil.GSXML.CredentialProvider
 import com.google.cloud.gszutil.Util.Logging
 import com.google.cloud.gszutil.io.ZChannel
+import com.google.cloud.gszutil.parallel.ActorSystem
 import com.google.cloud.gszutil.{Config, SHA256, Util}
 import com.google.cloud.hadoop.fs.zfile.ZFileSystem
 import com.google.cloud.storage.{BlobId, BlobInfo, Storage, StorageOptions}
@@ -85,6 +86,12 @@ object BQLoad extends Logging {
 
     val orcUri = s"gs://${c.bq.bucket}/${c.bq.prefix}.orc"
 
+    val storage = StorageOptions.newBuilder().setCredentials(cp.getCredentials).build().getService
+
+    System.out.println(s"Reading from ${c.inDD} $orcUri")
+    ActorSystem.start(orcUri, storage, 20, c.inDD)
+
+    /*
     val cpy = "imsku.cpy"
     val input = "zfile://DD/" + c.inDD
     System.out.println(s"Reading from $input with copy book $cpy")
@@ -114,6 +121,8 @@ object BQLoad extends Logging {
 
     System.out.println(s"Loading ORC")
     load(bq, c.bq.table, c, s"$orcUri/part*")
+
+     */
   }
 
   def load(bq: bigquery.BigQuery, table: String, c: Config, sourceUri: String, formatOptions: bigquery.FormatOptions = bigquery.FormatOptions.orc()): Unit = {
