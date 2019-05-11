@@ -5,7 +5,7 @@ import com.google.cloud.gszutil.ZOS
 import org.apache.spark.sql.catalyst.InternalRow
 import org.apache.spark.sql.catalyst.expressions.SpecificInternalRow
 
-class ZRowReader(private val copyBook: CopyBook) {
+class ZReader(private val copyBook: CopyBook) {
   private val decoders: Array[Decoder[_]] = copyBook.getDecoders.toArray
   private val resultRow = new SpecificInternalRow(copyBook.getSchema)
 

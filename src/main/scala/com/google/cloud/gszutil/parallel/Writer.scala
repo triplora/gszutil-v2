@@ -4,7 +4,7 @@ import java.nio.ByteBuffer
 
 import akka.actor.{Actor, ActorRef, Props}
 import com.google.cloud.WriteChannel
-import com.google.cloud.gszutil.parallel.ActorSystem.{Available, Batch, Empty, Finished, Free, getUri}
+import com.google.cloud.gszutil.parallel.ActorSystem._
 import com.google.cloud.storage.{BlobInfo, Storage}
 import org.slf4j.LoggerFactory
 

@@ -1,6 +1,6 @@
 package com.google.cloud.gszutil.io
 
-trait TRecordReader {
+trait ZRecordReaderT {
 
   /** Read a record from the dataset into a buffer.
     *

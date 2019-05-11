@@ -4,7 +4,7 @@ import java.nio.ByteBuffer
 
 import akka.actor.{Actor, ActorRef, Props}
 import com.google.cloud.gszutil.ZOS
-import com.google.cloud.gszutil.parallel.ActorSystem.{Available, Batch, Empty, Finished, Free}
+import com.google.cloud.gszutil.parallel.ActorSystem._
 import org.slf4j.LoggerFactory
 
 import scala.collection.mutable

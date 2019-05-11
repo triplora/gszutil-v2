@@ -16,13 +16,13 @@
 package com.google.cloud.gszutil
 
 
-import com.google.cloud.gszutil.io.TRecordReader
+import com.google.cloud.gszutil.io.ZRecordReaderT
 import com.ibm.jzos.{RecordReader, ZFile, ZUtil}
 
 object ZOS {
   class RecordReaderCloser(r: RecordReader) extends Thread { override def run(): Unit = r.close() }
 
-  class WrappedRecordReader(r: RecordReader) extends TRecordReader {
+  class WrappedRecordReader(r: RecordReader) extends ZRecordReaderT {
     // Ensure that reader is closed if job is killed
     Runtime.getRuntime.addShutdownHook(new RecordReaderCloser(r))
     private var open = true
@@ -41,7 +41,7 @@ object ZOS {
     override val blkSize: Int = r.getBlksize
   }
 
-  def readDD(ddName: String): TRecordReader = {
+  def readDD(ddName: String): ZRecordReaderT = {
     if (!ZFile.ddExists(ddName))
       throw new RuntimeException(s"DD $ddName does not exist")
 

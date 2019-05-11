@@ -3,9 +3,9 @@ package org.apache.spark.sql.execution.datasources.zfile
 import java.net.URI
 
 import com.google.cloud.gszutil.Decoding.CopyBook
-import com.google.cloud.gszutil.{Util, ZOS}
 import com.google.cloud.gszutil.Util.DebugLogging
-import com.google.cloud.gszutil.io.{ByteArrayRecordReader, ZIterator}
+import com.google.cloud.gszutil.io.{ZDataSet, ZIterator}
+import com.google.cloud.gszutil.{Util, ZOS}
 import org.apache.hadoop.conf.Configuration
 import org.apache.hadoop.fs.{FileStatus, Path}
 import org.apache.hadoop.mapreduce.Job
@@ -85,7 +85,7 @@ class ZFileFormat extends FileFormat with DataSourceRegister with Serializable  
           copyBook.reader.readA(data,offset)
         } else {
           //TODO remove after testing
-          val (data,offset) = ZIterator(new ByteArrayRecordReader(Util.readB("imsku.bin"), copyBook.lRecl, copyBook.lRecl * 10))
+          val (data,offset) = ZIterator(new ZDataSet(Util.readB("imsku.bin"), copyBook.lRecl, copyBook.lRecl * 10))
           copyBook.reader.readA(data,offset)
         }
       }

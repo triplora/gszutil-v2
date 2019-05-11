@@ -15,9 +15,9 @@
  */
 package com.google.cloud.gszutil
 
-import java.io.{InputStream, StringReader}
+import java.io.{ByteArrayOutputStream, InputStream, StringReader}
 import java.nio.ByteBuffer
-import java.nio.channels.{ReadableByteChannel, WritableByteChannel}
+import java.nio.channels.{Channels, ReadableByteChannel, WritableByteChannel}
 import java.nio.charset.StandardCharsets
 import java.nio.file.{Files, Paths}
 import java.security.spec.PKCS8EncodedKeySpec
@@ -37,8 +37,9 @@ import com.google.common.io.Resources
 import org.apache.commons.io.Charsets
 import org.apache.log4j.{Level, Logger}
 import org.apache.spark.sql.types.StructType
+import org.zeromq.codec.Z85
 
-import scala.util.{Failure, Try}
+import scala.util.{Failure, Random, Try}
 
 object Util {
   def parseUri(gsUri: String): (String,String) = {
@@ -240,4 +241,23 @@ object Util {
   def readB(x: String): Array[Byte] = {
     Resources.toByteArray(Resources.getResource(x).toURI.toURL)
   }
+
+  def readAllBytes(is: InputStream): Array[Byte] =
+    readAllBytes(Channels.newChannel(is))
+
+  def readAllBytes(in: ReadableByteChannel): Array[Byte] = {
+    val os = new ByteArrayOutputStream()
+    val out = Channels.newChannel(os)
+    transfer(in, out)
+    os.toByteArray
+  }
+
+  def randBytes(len: Int): Array[Byte] = {
+    val bytes = new Array[Byte](len)
+    Random.nextBytes(bytes)
+    bytes
+  }
+
+  def randString(len: Int): String =
+    Z85.Z85Encoder(randBytes(len))
 }

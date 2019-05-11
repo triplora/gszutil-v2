@@ -18,21 +18,18 @@ package com.google.cloud.pso
 import java.nio.ByteBuffer
 import java.nio.channels.WritableByteChannel
 
-import com.google.api.gax.rpc.FixedHeaderProvider
 import com.google.auth.oauth2.StaticAccessTokenProvider
-import com.google.cloud.RetryOption
+import com.google.cloud.{RetryOption, bigquery}
 import com.google.cloud.bigquery.JobInfo.{CreateDisposition, WriteDisposition}
-import com.google.cloud.bigquery
-import com.google.cloud.gszutil.Decoding.CopyBook
+import com.google.cloud.gszutil.Config
 import com.google.cloud.gszutil.GSXML.CredentialProvider
 import com.google.cloud.gszutil.Util.Logging
 import com.google.cloud.gszutil.io.ZChannel
 import com.google.cloud.gszutil.parallel.ActorSystem
-import com.google.cloud.gszutil.{Config, SHA256, Util}
 import com.google.cloud.hadoop.fs.zfile.ZFileSystem
 import com.google.cloud.storage.{BlobId, BlobInfo, Storage, StorageOptions}
 import com.google.common.hash.Hashing
-import org.apache.spark.sql.{DataFrame, SaveMode, SparkSession}
+import org.apache.spark.sql.SparkSession
 import org.threeten.bp.Duration
 
 

@@ -12,7 +12,7 @@ object ZChannel {
   }
 }
 
-class ZChannel(private val reader: TRecordReader) extends ReadableByteChannel with Logging {
+class ZChannel(private val reader: ZRecordReaderT) extends ReadableByteChannel with Logging {
   private var hasRemaining = true
   private var open = true
   private val data: Array[Byte] = new Array[Byte](reader.blkSize)

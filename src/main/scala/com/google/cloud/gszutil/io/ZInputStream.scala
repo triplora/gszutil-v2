@@ -8,4 +8,7 @@ import com.google.cloud.gszutil.ZOS
 object ZInputStream{
   def apply(dd: String): InputStream =
     Channels.newInputStream(new ZChannel(ZOS.readDD(dd)))
+
+  def apply(reader: ZRecordReaderT): InputStream =
+    Channels.newInputStream(new ZChannel(reader))
 }

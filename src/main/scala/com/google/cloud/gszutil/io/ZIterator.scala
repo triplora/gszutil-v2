@@ -7,14 +7,14 @@ import com.google.cloud.gszutil.Util.Logging
 import scala.annotation.tailrec
 
 object ZIterator {
-  def apply(reader: TRecordReader): (Array[Byte],ZIterator) = {
+  def apply(reader: ZRecordReaderT): (Array[Byte],ZIterator) = {
     val size = reader.blkSize*1000
     val buf = new Array[Byte](size)
     (buf, new ZIterator(reader, buf))
   }
 }
 
-class ZIterator(private val reader: TRecordReader, private val data: Array[Byte]) extends Iterator[Int] with Logging {
+class ZIterator(private val reader: ZRecordReaderT, private val data: Array[Byte]) extends Iterator[Int] with Logging {
   require(data.length % reader.blkSize == 0, "buffer must be a multiple of block size")
   private var bytesRead: Long = 0
   private val lrecl = reader.lRecl

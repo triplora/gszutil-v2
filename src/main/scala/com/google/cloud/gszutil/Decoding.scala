@@ -18,7 +18,7 @@ package com.google.cloud.gszutil
 import java.nio.ByteBuffer
 import java.nio.charset.Charset
 
-import com.google.cloud.gszutil.io.ZRowReader
+import com.google.cloud.gszutil.io.ZReader
 import com.google.common.base.Charsets
 import com.ibm.jzos.fields.{BinaryAsIntField, BinaryAsLongField}
 import org.apache.spark.sql.catalyst.expressions.SpecificInternalRow
@@ -143,7 +143,7 @@ object Decoding {
 
     def lRecl: Int = getDecoders.foldLeft(0){_ + _.size}
 
-    def reader: ZRowReader = new ZRowReader(this)
+    def reader: ZReader = new ZReader(this)
   }
 
   sealed trait PIC {
