@@ -16,16 +16,17 @@ object ActorSystem {
   case class Batch(buf: Array[Byte], limit: Int, partId: Int) extends Message
   case object Finished extends Message
 
-  private val sys = akka.actor.ActorSystem("gszutil")
+  private val log = LoggerFactory.getLogger(getClass)
 
   def start(prefix: String,
             storage: Storage,
             nWorkers: Int = 20,
             dd: String = "INFILE",
             batchSize: Int = 1024,
-            partLen: Long = 12000000,
+            partLen: Long = 32 * 1024 * 1024,
             timeoutMinutes: Int = 30): Unit = {
-    val log = LoggerFactory.getLogger(getClass)
+    log.info(s"initializing actor system")
+    val sys = akka.actor.ActorSystem("gszutil")
     log.info(s"creating master actor")
     val inbox = Inbox.create(sys)
     val master = sys.actorOf(Master.props(nWorkers, dd, prefix, storage, batchSize, partLen))
