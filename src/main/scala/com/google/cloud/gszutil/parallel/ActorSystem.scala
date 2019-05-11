@@ -14,6 +14,8 @@ object ActorSystem {
   case object Start extends Message
   case object Available extends Message
   case class Batch(buf: Array[Byte], limit: Int, partId: Int) extends Message
+  case class Empty(buf: Array[Byte]) extends Message
+  case class Free(buf: Array[Byte]) extends Message
   case object Finished extends Message
 
   private val log = LoggerFactory.getLogger(getClass)
@@ -29,7 +31,7 @@ object ActorSystem {
     val sys = akka.actor.ActorSystem("gszutil")
     log.info(s"creating master actor")
     val inbox = Inbox.create(sys)
-    val master = sys.actorOf(Master.props(nWorkers, dd, prefix, storage, batchSize, partLen))
+    val master = sys.actorOf(Manager.props(nWorkers, dd, prefix, storage, batchSize, partLen))
     inbox.watch(master)
     log.info(s"timeout set to $timeoutMinutes minutes")
     inbox.receive(FiniteDuration.apply(length = timeoutMinutes, unit = TimeUnit.MINUTES)) match {

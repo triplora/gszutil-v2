@@ -4,9 +4,10 @@ import java.nio.ByteBuffer
 
 import akka.actor.{Actor, ActorRef, Props}
 import com.google.cloud.gszutil.ZOS
-import com.google.cloud.gszutil.io.TRecordReader
-import com.google.cloud.gszutil.parallel.ActorSystem.{Available, Batch, Finished}
+import com.google.cloud.gszutil.parallel.ActorSystem.{Available, Batch, Empty, Finished, Free}
 import org.slf4j.LoggerFactory
+
+import scala.collection.mutable
 
 object Reader {
   def props(master: ActorRef, dd: String, batchSize: Int): Props =
@@ -14,16 +15,20 @@ object Reader {
 }
 class Reader(master: ActorRef, dd: String, batchSize: Int) extends Actor {
   private val log = LoggerFactory.getLogger(getClass)
-  private lazy val in: TRecordReader = ZOS.readDD(dd)
-  private var batchId: Int = 0
+  private lazy val in = ZOS.readDD(dd)
+  private var batchId = 0
+  private val pool = mutable.Stack[Array[Byte]]()
+  private val bufSize = in.lRecl * batchSize
 
   override def receive: Receive = {
     case Available if in.isOpen =>
-      val buf = new Array[Byte](in.lRecl * batchSize)
+      sendBatch(read(getBuffer()))
+
+    case Empty(buf) if in.isOpen && buf.length == bufSize =>
       sendBatch(read(buf))
 
-    case Batch(buf, _, _) if in.isOpen =>
-      sendBatch(read(buf))
+    case Free(buf) if buf.length == bufSize =>
+      pool.push(buf)
 
     case x =>
       log.error(s"Unable to accept ${x.getClass.getSimpleName} message")
@@ -50,15 +55,19 @@ class Reader(master: ActorRef, dd: String, batchSize: Int) extends Actor {
     Batch(buf, bb.position, batchId)
   }
 
-  def sendBatch(b: Batch): Unit = {
-    if (b.limit > 0) {
-      sender() ! b
+  def sendBatch(batch: Batch): Unit = {
+    if (batch.limit > 0 && batch.limit % in.lRecl == 0) {
+      sender ! batch
       batchId += 1
-      log.warn("discarded batch with 0 length")
-    }
+    } else
+      log.error(s"discarded batch with length ${batch.buf.length} and limit ${batch.limit} % ${in.lRecl} != 0")
     if (!in.isOpen) {
       master ! Finished
       context.stop(self)
     }
   }
+
+  def getBuffer(): Array[Byte] =
+    if (pool.nonEmpty) pool.pop()
+    else new Array[Byte](bufSize)
 }

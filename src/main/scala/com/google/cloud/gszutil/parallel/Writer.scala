@@ -4,7 +4,7 @@ import java.nio.ByteBuffer
 
 import akka.actor.{Actor, ActorRef, Props}
 import com.google.cloud.WriteChannel
-import com.google.cloud.gszutil.parallel.ActorSystem.{Available, Batch, Finished, getUri}
+import com.google.cloud.gszutil.parallel.ActorSystem.{Available, Batch, Empty, Finished, Free, getUri}
 import com.google.cloud.storage.{BlobInfo, Storage}
 import org.slf4j.LoggerFactory
 
@@ -13,29 +13,26 @@ object Writer {
             reader: ActorRef,
             storage: Storage,
             blobInfo: BlobInfo,
-            partLength: Long): Props =
-    Props(classOf[Writer], parent, reader, storage, blobInfo, partLength)
+            maxBytes: Long): Props =
+    Props(classOf[Writer], parent, reader, storage, blobInfo, maxBytes)
 }
 
 class Writer(parent: ActorRef,
              reader: ActorRef,
              storage: Storage,
              blobInfo: BlobInfo,
-             partLength: Long) extends Actor {
+             maxBytes: Long) extends Actor {
   private val log = LoggerFactory.getLogger(getClass)
   private var n = 0 // Stop writing when n >= partLength
 
-  override def preStart(): Unit = {
-    super.preStart()
-    reader ! Available
-  }
+  override def preStart(): Unit = reader ! Available
 
   def receive: Receive = {
     case batch: Batch =>
+      log.info(s"Opening ${getUri(blobInfo)} WriteChannel")
       val out = storage.writer(blobInfo)
-      log.info(s"Started writing to ${getUri(blobInfo)}")
       write(out, batch)
-      sender() ! batch
+      sender ! Empty(batch.buf)
       context.become(writing(out))
 
     case x =>
@@ -45,10 +42,11 @@ class Writer(parent: ActorRef,
   def writing(out: WriteChannel): Receive = {
     case batch: Batch =>
       write(out, batch)
-      if (n < partLength)
-        sender() ! Available
-      else
+      if (n >= maxBytes) {
         finish(out)
+        sender ! Free(batch.buf)
+      } else
+        sender ! Empty(batch.buf)
 
     case Finished => // Reader has no more bytes
       finish(out)
@@ -68,7 +66,7 @@ class Writer(parent: ActorRef,
 
   def finish(out: WriteChannel): Unit = {
     out.close()
-    log.info(s"${self.path} Finished writing $n bytes to ${getUri(blobInfo)}")
+    log.info(s"Closed ${getUri(blobInfo)} ($n bytes)")
     context.stop(self)
   }
 }

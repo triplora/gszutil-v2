@@ -9,14 +9,14 @@ import org.slf4j.LoggerFactory
 
 import scala.collection.mutable
 
-object Master {
+object Manager {
   def props(nWorkers: Int, dd: String, prefix: String,
             storage: Storage, batchSize: Int, partLen: Long): Props =
-    Props(classOf[Master], nWorkers, dd, prefix,
+    Props(classOf[Manager], nWorkers, dd, prefix,
       storage, batchSize, partLen)
 }
 
-class Master(nWorkers: Int, dd: String, prefix: String, storage: Storage, batchSize: Int, partLen: Long) extends Actor {
+class Manager(nWorkers: Int, dd: String, prefix: String, storage: Storage, batchSize: Int, partLen: Long) extends Actor {
   private val log = LoggerFactory.getLogger(getClass)
   private val reader = context.actorOf(Reader.props(self, dd, batchSize))
   private val writers = mutable.Set.empty[ActorRef]
@@ -26,7 +26,6 @@ class Master(nWorkers: Int, dd: String, prefix: String, storage: Storage, batchS
   private var isOpen = true
 
   override def preStart(): Unit = {
-    super.preStart()
     (1 until nWorkers).foreach(_ => newWriter())
   }
 
@@ -37,11 +36,15 @@ class Master(nWorkers: Int, dd: String, prefix: String, storage: Storage, batchS
       writers.foreach(_ ! Finished)
 
     case Terminated(writer) =>
-      val n = writers.size
-      log.info(s"Writer terminated ($n remaining)")
       writers.remove(writer)
-      if (n == 0 && !isOpen)
+      val n = writers.size
+      log.info(s"Writer terminated - $n remaining")
+      if (n > 0 && isOpen) {
+        newWriter()
+      } else {
+        log.info("stopping")
         context.stop(self)
+      }
 
     case x =>
       log.error(s"Unable to accept ${x.getClass.getSimpleName} message")
