@@ -4,10 +4,12 @@ import java.nio.ByteBuffer
 
 import com.google.cloud.gszutil.Util.Logging
 
-class ZDataSet(srcBytes: Array[Byte], recordLength: Int, blockSize: Int) extends ZRecordReaderT with Logging {
+class ZDataSet(srcBytes: Array[Byte], recordLength: Int, blockSize: Int, limit: Int = -1, position: Int = 0) extends ZRecordReaderT with Logging {
   private val buf = ByteBuffer.wrap(srcBytes)
   private var open = true
   private var bytesRead: Long = 0
+  buf.position(position)
+  if (limit >= 0) buf.limit(limit)
 
   override def read(bytes: Array[Byte]): Int =
     read(bytes, 0, bytes.length)

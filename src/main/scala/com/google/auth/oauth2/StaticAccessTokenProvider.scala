@@ -8,11 +8,23 @@ import org.apache.spark.SparkConf
 object StaticAccessTokenProvider {
   protected var Instance: CredentialProvider = _
   protected val expired = new AccessTokenProvider.AccessToken("", -1L)
+  val TpImpl = "fs.gs.auth.access.token.provider.impl"
+  val TpClassName = "com.google.auth.oauth2.StaticAccessTokenProvider"
+  val FsImpl = "fs.gs.impl"
+  val FsClassName = "com.google.cloud.hadoop.fs.gcs.GoogleHadoopFileSystem"
+
   def setCredentialProvider(cp: CredentialProvider): Unit =
     Instance = cp
+
   def sparkConf(c: SparkConf = new SparkConf()): SparkConf =
-    c.set("fs.gs.auth.access.token.provider.impl", "com.google.auth.oauth2.StaticAccessTokenProvider")
-      .set("fs.gs.impl","com.google.cloud.hadoop.fs.gcs.GoogleHadoopFileSystem")
+    c.set(TpImpl, TpClassName)
+      .set(FsImpl, FsClassName)
+
+  def configure(c: Configuration = new Configuration()): Configuration = {
+    c.set(TpImpl, TpClassName)
+    c.set(FsImpl, FsClassName)
+    c
+  }
 }
 
 class StaticAccessTokenProvider extends AccessTokenProvider {

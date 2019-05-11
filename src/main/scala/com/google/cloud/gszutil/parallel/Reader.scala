@@ -2,23 +2,27 @@ package com.google.cloud.gszutil.parallel
 
 import java.nio.ByteBuffer
 
-import akka.actor.{Actor, ActorRef, Props}
-import com.google.cloud.gszutil.ZOS
+import akka.actor.{Actor, Props}
+import com.google.cloud.gszutil.io.ZRecordReaderT
 import com.google.cloud.gszutil.parallel.ActorSystem._
 import org.slf4j.LoggerFactory
 
 import scala.collection.mutable
 
 object Reader {
-  def props(master: ActorRef, dd: String, batchSize: Int): Props =
-    Props(classOf[Reader], master, dd, batchSize)
+  def props(batchSize: Int, in: ZRecordReaderT): Props =
+    Props(classOf[Reader], batchSize, in)
 }
-class Reader(master: ActorRef, dd: String, batchSize: Int) extends Actor {
+class Reader(batchSize: Int, in: ZRecordReaderT) extends Actor {
   private val log = LoggerFactory.getLogger(getClass)
-  private lazy val in = ZOS.readDD(dd)
   private var batchId = 0
+  private var sendTime = -1L
+  private var recvTime = -1L
   private val pool = mutable.Stack[Array[Byte]]()
   private val bufSize = in.lRecl * batchSize
+  private val maxIOWaitMillis = 42L
+  private val maxLog = 42L
+  private var nLog = 0L
 
   override def receive: Receive = {
     case Available if in.isOpen =>
@@ -35,8 +39,12 @@ class Reader(master: ActorRef, dd: String, batchSize: Int) extends Actor {
   }
 
   def read(buf: Array[Byte]): Batch = {
-    if (buf.length % in.lRecl != 0)
-      log.error(s"Buffer ${buf.length} is not a multiple of LRECL")
+    if (buf.length % in.lRecl != 0) {
+      if (nLog < maxLog){
+        log.error(s"Buffer ${buf.length} is not a multiple of LRECL")
+        nLog += 1
+      }
+    }
     val bb = ByteBuffer.wrap(buf)
     bb.position(0)
     val newLimit = bb.capacity - (bb.capacity % in.lRecl)
@@ -50,19 +58,32 @@ class Reader(master: ActorRef, dd: String, batchSize: Int) extends Actor {
         bb.position(newPosition)
       }
     }
-    if (bb.position % in.lRecl != 0)
-      log.error("read was not a multiple of record length")
-    Batch(buf, bb.position, batchId)
+    if (bb.position % in.lRecl != 0) {
+      if (nLog < maxLog) {
+        log.error("read was not a multiple of record length")
+        nLog += 1
+      }
+    }
+    Batch(buf, bb.position, batchId, in.lRecl, in.blkSize)
   }
 
   def sendBatch(batch: Batch): Unit = {
+    recvTime = System.currentTimeMillis
+    if (recvTime - sendTime > maxIOWaitMillis)
+      context.parent ! Available
+
     if (batch.limit > 0 && batch.limit % in.lRecl == 0) {
       sender ! batch
       batchId += 1
-    } else
-      log.error(s"discarded batch with length ${batch.buf.length} and limit ${batch.limit} % ${in.lRecl} != 0")
+      sendTime = System.currentTimeMillis
+    } else {
+      if (nLog < maxLog) {
+        log.error(s"discarded batch with length ${batch.buf.length} and limit ${batch.limit} % ${in.lRecl} != 0")
+        nLog += 1
+      }
+    }
     if (!in.isOpen) {
-      master ! Finished
+      context.parent ! Finished
       context.stop(self)
     }
   }

@@ -21,6 +21,11 @@ import java.nio.charset.Charset
 import com.google.cloud.gszutil.io.ZReader
 import com.google.common.base.Charsets
 import com.ibm.jzos.fields.{BinaryAsIntField, BinaryAsLongField}
+import org.apache.orc.TypeDescription
+import org.apache.orc.TypeDescription.Category
+import org.apache.orc.storage.common.`type`.HiveDecimal
+import org.apache.orc.storage.ql.exec.vector.{BytesColumnVector, ColumnVector, DecimalColumnVector, LongColumnVector}
+import org.apache.orc.storage.serde2.io.HiveDecimalWritable
 import org.apache.spark.sql.catalyst.expressions.SpecificInternalRow
 import org.apache.spark.sql.types._
 import org.apache.spark.unsafe.types.UTF8String
@@ -68,6 +73,12 @@ object Decoding {
       */
     def get(a: Array[Byte], off: Int, row: SpecificInternalRow, i: Int): Unit =
       row.update(i, get(a, off))
+
+    def get(a: Array[Byte], off: Int, row: ColumnVector, i: Int): Unit
+
+    def columnVector(maxSize: Int): ColumnVector
+
+    def typeDescription: TypeDescription
   }
 
   case class StringDecoder(override val size: Int) extends Decoder[String] {
@@ -87,6 +98,17 @@ object Decoding {
       val utf8 = UTF8String.fromString(str)
       row.update(i, utf8)
     }
+
+    override def get(a: Array[Byte], off: Int, row: ColumnVector, i: Int): Unit = {
+      row.asInstanceOf[BytesColumnVector]
+          .vector.update(i, get(a, off).getBytes(Charsets.UTF_8))
+    }
+
+    override def columnVector(maxSize: Int): ColumnVector =
+      new BytesColumnVector(maxSize)
+
+    override def typeDescription: TypeDescription =
+      new TypeDescription(Category.STRING)
   }
 
   case class IntDecoder(override val size: Int) extends Decoder[Int] {
@@ -94,6 +116,16 @@ object Decoding {
     private lazy val field = new BinaryAsIntField(0, size, true)
     override def get(a: Array[Byte], off: Int): Int =
       field.getInt(a, off)
+
+    override def get(a: Array[Byte], off: Int, row: ColumnVector, i: Int): Unit =
+      row.asInstanceOf[LongColumnVector]
+        .vector.update(i, get(a, off))
+
+    override def columnVector(maxSize: Int): ColumnVector =
+      new LongColumnVector(maxSize)
+
+    override def typeDescription: TypeDescription =
+      new TypeDescription(Category.LONG)
   }
 
   case class LongDecoder(override val size: Int) extends Decoder[Long] {
@@ -101,6 +133,16 @@ object Decoding {
     private lazy val field = new BinaryAsLongField(0, size, true)
     override def get(a: Array[Byte], off: Int): Long =
       field.getLong(a, off)
+
+    override def get(a: Array[Byte], off: Int, row: ColumnVector, i: Int): Unit =
+      row.asInstanceOf[LongColumnVector]
+        .vector.update(i, get(a, off))
+
+    override def columnVector(maxSize: Int): ColumnVector =
+      new LongColumnVector(maxSize)
+
+    override def typeDescription: TypeDescription =
+      new TypeDescription(Category.LONG)
   }
 
   case class DecimalDecoder(precision: Int, scale: Int) extends Decoder[BigDecimal] {
@@ -110,6 +152,18 @@ object Decoding {
       BigDecimal(PackedDecimal.unpack(a, off, size), scale)
     override def get(a: Array[Byte], off: Int, row: SpecificInternalRow, i: Int): Unit =
       row.update(i, new Decimal().set(get(a, off)))
+
+    override def get(a: Array[Byte], off: Int, row: ColumnVector, i: Int): Unit = {
+      val value: HiveDecimalWritable = new HiveDecimalWritable(HiveDecimal.create(get(a, off).bigDecimal))
+      row.asInstanceOf[DecimalColumnVector]
+        .vector.update(i, value)
+    }
+
+    override def columnVector(maxSize: Int): ColumnVector =
+      new DecimalColumnVector(maxSize, precision, scale)
+
+    override def typeDescription: TypeDescription =
+      new TypeDescription(Category.DECIMAL)
   }
 
   case class CopyBook(raw: String) {
@@ -140,6 +194,18 @@ object Decoding {
       }
       buf.result.toArray.toSeq
     }
+
+    def getOrcSchema: TypeDescription = {
+      val schema = new TypeDescription(Category.STRUCT)
+      getFieldNames
+        .zip(getDecoders)
+        .foreach{f =>
+          schema.addField(f._1, f._2.typeDescription)
+        }
+      schema
+    }
+
+    def cols: Seq[ColumnVector] = getDecoders.map(_.columnVector(1024))
 
     def lRecl: Int = getDecoders.foldLeft(0){_ + _.size}
 

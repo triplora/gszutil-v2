@@ -19,17 +19,15 @@ import java.nio.ByteBuffer
 import java.nio.channels.WritableByteChannel
 
 import com.google.auth.oauth2.StaticAccessTokenProvider
-import com.google.cloud.{RetryOption, bigquery}
 import com.google.cloud.bigquery.JobInfo.{CreateDisposition, WriteDisposition}
-import com.google.cloud.gszutil.Config
 import com.google.cloud.gszutil.GSXML.CredentialProvider
 import com.google.cloud.gszutil.Util.Logging
 import com.google.cloud.gszutil.io.ZChannel
 import com.google.cloud.gszutil.parallel.ActorSystem
-import com.google.cloud.hadoop.fs.zfile.ZFileSystem
-import com.google.cloud.storage.{BlobId, BlobInfo, Storage, StorageOptions}
+import com.google.cloud.gszutil.{Config, ZOS}
+import com.google.cloud.storage.{BlobId, BlobInfo, Storage}
+import com.google.cloud.{RetryOption, bigquery}
 import com.google.common.hash.Hashing
-import org.apache.spark.sql.SparkSession
 import org.threeten.bp.Duration
 
 
@@ -72,23 +70,24 @@ object BQLoad extends Logging {
   }
 
   def run(c: Config, cp: CredentialProvider): Unit = {
+    val conf = StaticAccessTokenProvider.configure()
     StaticAccessTokenProvider.setCredentialProvider(cp)
-    val conf = ZFileSystem.addToSparkConf(StaticAccessTokenProvider.sparkConf())
-      .set("spark.sql.files.maxRecordsPerFile","8888888")
-    val spark = SparkSession.builder()
-      .master("local[1]")
-      .appName("GSZUtil")
-      .config(conf)
-      .getOrCreate()
 
     val orcUri = s"gs://${c.bq.bucket}/${c.bq.prefix}.orc"
 
-    val storage = StorageOptions.newBuilder().setCredentials(cp.getCredentials).build().getService
-
     System.out.println(s"Reading from ${c.inDD} $orcUri")
-    ActorSystem.start(orcUri, storage, 20, c.inDD)
+    ActorSystem.start(orcUri, 20, ZOS.readDD(c.inDD))
 
     /*
+    val sparkConf = ZFileSystem.addToSparkConf(StaticAccessTokenProvider.sparkConf())
+      .set("spark.sql.files.maxRecordsPerFile","8888888")
+
+    val spark = SparkSession.builder()
+      .master("local[1]")
+      .appName("GSZUtil")
+      .config(sparkConf)
+      .getOrCreate()
+
     val cpy = "imsku.cpy"
     val input = "zfile://DD/" + c.inDD
     System.out.println(s"Reading from $input with copy book $cpy")

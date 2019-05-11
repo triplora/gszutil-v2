@@ -8,14 +8,23 @@ import com.google.cloud.gszutil.Util.DebugLogging
 import com.google.cloud.gszutil.ZOS
 import com.google.cloud.gszutil.io.ZChannel
 import com.ibm.jzos.ZFile
+import org.apache.hadoop.conf.Configuration
 import org.apache.hadoop.fs._
 import org.apache.hadoop.fs.permission.FsPermission
 import org.apache.hadoop.util.Progressable
 import org.apache.spark.SparkConf
 
 object ZFileSystem {
-  def addToSparkConf(c: SparkConf = new SparkConf()): SparkConf =
-    c.set("fs.zfile.impl","com.google.cloud.hadoop.fs.zfile.ZFileSystem")
+  val FsImpl = "fs.zfile.impl"
+  val ClassName = "com.google.cloud.hadoop.fs.zfile.ZFileSystem"
+
+  def sparkConf(c: SparkConf = new SparkConf()): SparkConf =
+    c.set(FsImpl, ClassName)
+
+  def configure(c: Configuration = new Configuration()): Configuration = {
+    c.set(FsImpl, ClassName)
+    c
+  }
 }
 
 class ZFileSystem extends FileSystem with DebugLogging {

@@ -4,7 +4,8 @@ package com.google.cloud.gszutil.parallel
 import java.util.concurrent.TimeUnit
 
 import akka.actor.{Inbox, Terminated}
-import com.google.cloud.storage.{BlobInfo, Storage}
+import com.google.cloud.gszutil.io.ZRecordReaderT
+import com.google.cloud.storage.BlobInfo
 import org.slf4j.LoggerFactory
 
 import scala.concurrent.duration.FiniteDuration
@@ -13,7 +14,7 @@ object ActorSystem {
   sealed trait Message
   case object Start extends Message
   case object Available extends Message
-  case class Batch(buf: Array[Byte], limit: Int, partId: Int) extends Message
+  case class Batch(buf: Array[Byte], limit: Int, partId: Int, lRecl: Int, blkSize: Int) extends Message
   case class Empty(buf: Array[Byte]) extends Message
   case class Free(buf: Array[Byte]) extends Message
   case object Finished extends Message
@@ -21,9 +22,8 @@ object ActorSystem {
   private val log = LoggerFactory.getLogger(getClass)
 
   def start(prefix: String,
-            storage: Storage,
             nWorkers: Int = 20,
-            dd: String = "INFILE",
+            in: ZRecordReaderT,
             batchSize: Int = 1024,
             partLen: Long = 32 * 1024 * 1024,
             timeoutMinutes: Int = 30): Unit = {
@@ -31,17 +31,20 @@ object ActorSystem {
     val sys = akka.actor.ActorSystem("gszutil")
     log.info(s"creating master actor")
     val inbox = Inbox.create(sys)
-    val master = sys.actorOf(Manager.props(nWorkers, dd, prefix, storage, batchSize, partLen))
+    val master = sys.actorOf(Manager.props(nWorkers, prefix, batchSize, partLen, in))
     inbox.watch(master)
     log.info(s"timeout set to $timeoutMinutes minutes")
-    inbox.receive(FiniteDuration.apply(length = timeoutMinutes, unit = TimeUnit.MINUTES)) match {
-      case Terminated =>
-        log.warn(s"received Terminated")
-      case x =>
-        log.warn(s"received unexpected message $x")
+    while (true) {
+      inbox.receive(FiniteDuration.apply(length = timeoutMinutes, unit = TimeUnit.MINUTES)) match {
+        case Terminated =>
+          log.warn(s"terminating actor system")
+          sys.terminate()
+          Thread.sleep(1000)
+          System.exit(0)
+        case x =>
+          log.warn(s"received unexpected message $x")
+      }
     }
-    log.warn(s"terminating actor system")
-    sys.terminate()
   }
 
   def getUri(blobInfo: BlobInfo): String =

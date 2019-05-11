@@ -35,7 +35,7 @@ class DataSourceSpec extends FlatSpec with Logging with BeforeAndAfterAll {
     Util.setWarn("org.apache.spark.storage.memory.MemoryStore")
     Util.setWarn("org.apache.spark.sql.internal.SharedState")
     session = SparkSession.builder()
-      .config(ZFileSystem.addToSparkConf())
+      .config(ZFileSystem.sparkConf())
       .master("local[1]")
       .getOrCreate()
   }
