@@ -4,6 +4,7 @@ package com.google.cloud.gszutil.parallel
 import java.util.concurrent.TimeUnit
 
 import akka.actor.{Inbox, Terminated}
+import com.google.cloud.gszutil.Decoding.CopyBook
 import com.google.cloud.gszutil.io.ZRecordReaderT
 import com.google.cloud.storage.BlobInfo
 import org.slf4j.LoggerFactory
@@ -24,6 +25,7 @@ object ActorSystem {
   def start(prefix: String,
             nWorkers: Int = 20,
             in: ZRecordReaderT,
+            copyBook: CopyBook,
             batchSize: Int = 1024,
             partLen: Long = 32 * 1024 * 1024,
             timeoutMinutes: Int = 30): Unit = {
@@ -31,7 +33,7 @@ object ActorSystem {
     val sys = akka.actor.ActorSystem("gszutil")
     log.info(s"creating master actor")
     val inbox = Inbox.create(sys)
-    val master = sys.actorOf(Manager.props(nWorkers, prefix, batchSize, partLen, in))
+    val master = sys.actorOf(Manager.props(nWorkers, prefix, batchSize, partLen, in, copyBook))
     inbox.watch(master)
     log.info(s"timeout set to $timeoutMinutes minutes")
     while (true) {

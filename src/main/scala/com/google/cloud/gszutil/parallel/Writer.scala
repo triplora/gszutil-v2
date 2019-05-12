@@ -1,6 +1,7 @@
 package com.google.cloud.gszutil.parallel
 
 import akka.actor.{Actor, ActorRef, Props}
+import com.google.auth.oauth2.StaticAccessTokenProvider
 import com.google.cloud.gszutil.Decoding.CopyBook
 import com.google.cloud.gszutil.io.{ZDataSet, ZReader}
 import com.google.cloud.gszutil.parallel.ActorSystem._
@@ -13,10 +14,12 @@ import org.slf4j.LoggerFactory
 object Writer {
   def props(reader: ActorRef,
             blobInfo: BlobInfo,
-            maxBytes: Long): Props =
-    Props(classOf[Writer], reader, blobInfo, maxBytes)
+            maxBytes: Long,
+            copyBook: CopyBook): Props =
+    Props(classOf[Writer], reader, blobInfo, maxBytes, copyBook)
 
   def configuration(c: Configuration = new Configuration(false)): Configuration = {
+    StaticAccessTokenProvider.configure(c)
     OrcConf.COMPRESS.setString(c, "none")
     OrcConf.ENABLE_INDEXES.setBoolean(c, false)
     OrcConf.OVERWRITE_OUTPUT_FILE.setBoolean(c, true)

@@ -20,11 +20,12 @@ import java.nio.channels.WritableByteChannel
 
 import com.google.auth.oauth2.StaticAccessTokenProvider
 import com.google.cloud.bigquery.JobInfo.{CreateDisposition, WriteDisposition}
+import com.google.cloud.gszutil.Decoding.CopyBook
 import com.google.cloud.gszutil.GSXML.CredentialProvider
 import com.google.cloud.gszutil.Util.Logging
 import com.google.cloud.gszutil.io.ZChannel
 import com.google.cloud.gszutil.parallel.ActorSystem
-import com.google.cloud.gszutil.{Config, ZOS}
+import com.google.cloud.gszutil.{Config, Util, ZOS}
 import com.google.cloud.storage.{BlobId, BlobInfo, Storage}
 import com.google.cloud.{RetryOption, bigquery}
 import com.google.common.hash.Hashing
@@ -70,13 +71,13 @@ object BQLoad extends Logging {
   }
 
   def run(c: Config, cp: CredentialProvider): Unit = {
-    val conf = StaticAccessTokenProvider.configure()
     StaticAccessTokenProvider.setCredentialProvider(cp)
-
     val orcUri = s"gs://${c.bq.bucket}/${c.bq.prefix}.orc"
+    val copyBookId = sys.env.getOrElse("COPYBOOK", c.copyBook)
+    val copyBook = CopyBook(Util.readS(copyBookId))
 
     System.out.println(s"Reading from ${c.inDD} $orcUri")
-    ActorSystem.start(orcUri, 20, ZOS.readDD(c.inDD))
+    ActorSystem.start(orcUri, 20, ZOS.readDD(c.inDD), copyBook)
 
     /*
     val sparkConf = ZFileSystem.addToSparkConf(StaticAccessTokenProvider.sparkConf())

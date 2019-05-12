@@ -3,6 +3,7 @@ package com.google.cloud.gszutil.parallel
 import java.net.URI
 
 import akka.actor.{Actor, ActorRef, Props, Terminated}
+import com.google.cloud.gszutil.Decoding.CopyBook
 import com.google.cloud.gszutil.io.ZRecordReaderT
 import com.google.cloud.gszutil.parallel.ActorSystem.{Available, Finished}
 import com.google.cloud.storage.{BlobId, BlobInfo}
@@ -12,12 +13,12 @@ import scala.annotation.tailrec
 import scala.collection.mutable
 
 object Manager {
-  def props(maxWriters: Int, prefix: String, batchSize: Int, partLen: Long, in: ZRecordReaderT): Props =
+  def props(maxWriters: Int, prefix: String, batchSize: Int, partLen: Long, in: ZRecordReaderT, copyBook: CopyBook): Props =
     Props(classOf[Manager], maxWriters, prefix,
-      batchSize, partLen, in)
+      batchSize, partLen, in, copyBook)
 }
 
-class Manager(maxWriters: Int, prefix: String, batchSize: Int, partLen: Long, in: ZRecordReaderT) extends Actor {
+class Manager(maxWriters: Int, prefix: String, batchSize: Int, partLen: Long, in: ZRecordReaderT, copyBook: CopyBook) extends Actor {
   private val log = LoggerFactory.getLogger(getClass)
   private val reader = context.actorOf(Reader.props(batchSize, in))
   private val writers = mutable.Set.empty[ActorRef]
@@ -61,7 +62,7 @@ class Manager(maxWriters: Int, prefix: String, batchSize: Int, partLen: Long, in
   private final def newWriter(n: Int = 1): Unit = {
     val name = f"$writerId%05d"
     val blobInfo = BlobInfo.newBuilder(BlobId.of(uri.getAuthority, uri.getPath.stripPrefix("/") + s"_$name")).build()
-    val writer = context.actorOf(Writer.props(reader, blobInfo, partLen), name)
+    val writer = context.actorOf(Writer.props(reader, blobInfo, partLen, copyBook), name)
     writers += writer
     context.watch(writer)
     writerId += 1
