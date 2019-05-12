@@ -16,9 +16,11 @@
 package com.google.cloud.gszutil
 
 import java.io.InputStream
+import java.nio.channels.ReadableByteChannel
 
 import com.google.cloud.gszutil.GSXML.{CredentialProvider, XMLStorage}
-import com.google.cloud.gszutil.io.ZInputStream
+import com.google.cloud.gszutil.io.{ZChannel, ZInputStream}
+import com.google.cloud.storage.{BlobId, BlobInfo, Storage}
 
 object GCSPut {
   def run(config: Config, cp: CredentialProvider): Unit = {
@@ -45,5 +47,13 @@ object GCSPut {
       System.out.println(s"Error: Status code ${response.getStatusCode}\n${response.parseAsString}")
     }
     in.close()
+  }
+
+  def putDD(gcs: Storage, dd: String, destBucket: String, destPath: String): Util.CopyResult =
+    putChannel(gcs, ZChannel(dd), destBucket, destPath)
+
+  def putChannel(gcs: Storage, in: ReadableByteChannel, destBucket: String, destPath: String): Util.CopyResult = {
+    val out = gcs.writer(BlobInfo.newBuilder(BlobId.of(destBucket, destPath)).build())
+    Util.transferWithHash(in, out)
   }
 }

@@ -33,6 +33,7 @@ import com.google.api.client.util.{PemReader, SecurityUtils}
 import com.google.auth.oauth2.{AccessToken, GSZCredentials, GoogleCredentials}
 import com.google.cloud.gszutil.GSXML.CredentialProvider
 import com.google.cloud.gszutil.KeyFileProto.KeyFile
+import com.google.common.hash.Hashing
 import com.google.common.io.Resources
 import org.apache.commons.io.Charsets
 import org.apache.log4j.{Level, Logger}
@@ -232,6 +233,36 @@ object Util {
     }
     rc.close()
     wc.close()
+  }
+
+
+  case class CopyResult(hash: String, duration: Long, bytes: Long)
+
+  def transferWithHash(rc: ReadableByteChannel, wc: WritableByteChannel, chunkSize: Int = 4096): CopyResult = {
+    val t0 = System.currentTimeMillis
+    val buf = ByteBuffer.allocate(chunkSize)
+    val buf2 = buf.asReadOnlyBuffer()
+    val h = Hashing.sha256().newHasher()
+    var i = 0
+    var n = 0
+    var totalBytesRead = 0L
+    n = rc.read(buf)
+    while (n > -1) {
+      totalBytesRead += n
+      buf.flip()
+      buf2.position(buf.position)
+      buf2.limit(buf.limit)
+      h.putBytes(buf2)
+      wc.write(buf)
+      buf.clear()
+      i += 1
+      n += rc.read(buf)
+    }
+    rc.close()
+    wc.close()
+    val t1 = System.currentTimeMillis
+    val hash = h.hash().toString
+    CopyResult(hash, t1-t0, totalBytesRead)
   }
 
   def readS(x: String): String = {

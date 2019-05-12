@@ -5,13 +5,13 @@ import java.util.concurrent.TimeUnit
 
 import akka.actor.{Inbox, Terminated}
 import com.google.cloud.gszutil.Decoding.CopyBook
+import com.google.cloud.gszutil.Util.Logging
 import com.google.cloud.gszutil.io.ZRecordReaderT
 import com.google.cloud.storage.BlobInfo
-import org.slf4j.LoggerFactory
 
 import scala.concurrent.duration.FiniteDuration
 
-object ActorSystem {
+object ActorSystem extends Logging {
   sealed trait Message
   case object Start extends Message
   case object Available extends Message
@@ -20,8 +20,6 @@ object ActorSystem {
   case class Free(buf: Array[Byte]) extends Message
   case object Finished extends Message
 
-  private val log = LoggerFactory.getLogger(getClass)
-
   def start(prefix: String,
             nWorkers: Int = 20,
             in: ZRecordReaderT,
@@ -29,22 +27,22 @@ object ActorSystem {
             batchSize: Int = 1024,
             partLen: Long = 32 * 1024 * 1024,
             timeoutMinutes: Int = 30): Unit = {
-    log.info(s"initializing actor system")
+    logger.info(s"initializing actor system")
     val sys = akka.actor.ActorSystem("gszutil")
-    log.info(s"creating master actor")
+    logger.info(s"creating master actor")
     val inbox = Inbox.create(sys)
     val master = sys.actorOf(Manager.props(nWorkers, prefix, batchSize, partLen, in, copyBook))
     inbox.watch(master)
-    log.info(s"timeout set to $timeoutMinutes minutes")
+    logger.info(s"timeout set to $timeoutMinutes minutes")
     while (true) {
       inbox.receive(FiniteDuration.apply(length = timeoutMinutes, unit = TimeUnit.MINUTES)) match {
         case Terminated =>
-          log.warn(s"terminating actor system")
+          logger.warn(s"terminating actor system")
           sys.terminate()
           Thread.sleep(1000)
           System.exit(0)
         case x =>
-          log.warn(s"received unexpected message $x")
+          logger.warn(s"received unexpected message $x")
       }
     }
   }

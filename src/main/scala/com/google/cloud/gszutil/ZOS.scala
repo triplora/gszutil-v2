@@ -16,10 +16,11 @@
 package com.google.cloud.gszutil
 
 
+import com.google.cloud.gszutil.Util.Logging
 import com.google.cloud.gszutil.io.ZRecordReaderT
 import com.ibm.jzos.{RecordReader, ZFile, ZUtil}
 
-object ZOS {
+object ZOS extends Logging {
   class RecordReaderCloser(r: RecordReader) extends Thread { override def run(): Unit = r.close() }
 
   class WrappedRecordReader(r: RecordReader) extends ZRecordReaderT {
@@ -46,7 +47,7 @@ object ZOS {
       throw new RuntimeException(s"DD $ddName does not exist")
 
     val reader = RecordReader.newReaderForDD(ddName)
-    System.out.println(s"Reading DD $ddName ${reader.getDsn} with record format ${reader.getRecfm} BLKSIZE ${reader.getBlksize} LRECL ${reader.getLrecl} with default system encoding ${ZUtil.getDefaultPlatformEncoding}")
+    logger.info(s"Reading DD $ddName ${reader.getDsn} with record format ${reader.getRecfm} BLKSIZE ${reader.getBlksize} LRECL ${reader.getLrecl} with default system encoding ${ZUtil.getDefaultPlatformEncoding}")
     new WrappedRecordReader(reader)
   }
 }
