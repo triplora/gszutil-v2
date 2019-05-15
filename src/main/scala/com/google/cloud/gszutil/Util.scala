@@ -31,8 +31,8 @@ import com.google.api.client.googleapis.util.Utils
 import com.google.api.client.json.JsonObjectParser
 import com.google.api.client.util.{PemReader, SecurityUtils}
 import com.google.auth.oauth2.{AccessToken, GSZCredentials, GoogleCredentials}
-import com.google.cloud.gszutil.GSXML.CredentialProvider
 import com.google.cloud.gszutil.KeyFileProto.KeyFile
+import com.google.cloud.storage.BlobInfo
 import com.google.common.hash.Hashing
 import com.google.common.io.Resources
 import org.apache.commons.io.Charsets
@@ -76,15 +76,15 @@ object Util {
     protected lazy val logger: Logger = newLogger(this.getClass.getCanonicalName.stripSuffix("$"))
   }
 
+  trait DebugLogging {
+    @transient
+    protected lazy val logger: Logger = newDebugLogger(this.getClass.getCanonicalName.stripSuffix("$"))
+  }
+
   def schemaDiff(a: StructType, b: StructType) = {
     a.fields.zip(b.fields)
       .filterNot(x => x._1.name == x._2.name)
       .toSeq
-  }
-
-  trait DebugLogging {
-    @transient
-    protected lazy val logger: Logger = newLogger(this.getClass.getCanonicalName.stripSuffix("$"), Level.DEBUG)
   }
 
   def setDebug(logName: String): Unit = setLvl(logName, Level.DEBUG)
@@ -103,6 +103,9 @@ object Util {
       configureLogger(logger, level, consoleAppender)
       logger
   }
+
+  def newDebugLogger(name: String): org.apache.log4j.Logger =
+    newLogger(name, Level.DEBUG)
 
   def configureLogger(logger: org.apache.log4j.Logger, level: org.apache.log4j.Level, appender: org.apache.log4j.Appender): org.apache.log4j.Logger = {
     logger.setLevel(level)
@@ -209,6 +212,11 @@ object Util {
     }
   }
 
+  trait CredentialProvider {
+    def getCredential: Credential
+    def getCredentials: GoogleCredentials
+  }
+
   case class KeyFileCredentialProvider(keyFile: KeyFile) extends CredentialProvider {
     override def getCredential: Credential =
       readPbCredentials(keyFile)
@@ -237,6 +245,9 @@ object Util {
 
 
   case class CopyResult(hash: String, duration: Long, bytes: Long)
+
+  def toUri(blobInfo: BlobInfo): String =
+    s"gs://${blobInfo.getBlobId.getBucket}/${blobInfo.getBlobId.getName}"
 
   def transferWithHash(rc: ReadableByteChannel, wc: WritableByteChannel, chunkSize: Int = 4096): CopyResult = {
     val t0 = System.currentTimeMillis

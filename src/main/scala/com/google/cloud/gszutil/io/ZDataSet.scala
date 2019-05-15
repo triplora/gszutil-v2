@@ -23,7 +23,7 @@ class ZDataSet(srcBytes: Array[Byte], recordLength: Int, blockSize: Int, limit: 
     } else -1
   }
 
-  override def isOpen: Boolean = open
+  override def isOpen: Boolean = open || buf.hasRemaining
 
   override def close(): Unit = {
     logger.info(s"close() read $bytesRead bytes")

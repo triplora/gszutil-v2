@@ -51,18 +51,7 @@ object GSZUtil {
   }
 
   def run(config: Config): Try[Unit] = Try{
-    val keyFile: KeyFile = Try{
-      KeyFile.parseFrom(Resources.toByteArray(Resources.getResource("keyfile.pb")))
-    }.getOrElse(KeyFile.parseFrom(Util.readNio(config.keyfile)))
-
-    val cp = Util.validate(KeyFileCredentialProvider(keyFile)) match {
-      case Some(x) =>
-        System.out.println("Using KeyFileCredentialProvider")
-        x
-      case _ =>
-        System.out.println("Using AccessTokenCredentialProvider")
-        AccessTokenCredentialProvider(keyFile.getAccessToken)
-    }
+    val cp = KeyFileCredentialProvider(KeyFile.parseFrom(Util.readB("keyfile.pb")))
 
     if (config.mode == "cp")
       GCSPut.run(config, cp)

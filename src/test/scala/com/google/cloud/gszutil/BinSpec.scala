@@ -3,6 +3,7 @@ package com.google.cloud.gszutil
 import java.nio.ByteBuffer
 
 import com.google.cloud.gszutil.Decoding._
+import com.google.common.base.Charsets
 import org.scalatest.FlatSpec
 
 
@@ -44,7 +45,7 @@ class BinSpec extends FlatSpec {
     val x = cb.toString.toCharArray
     assert(x(uint(228.toByte)) == 'U')
     assert(x(uint(201.toByte)) == 'I')
-    assert(decoder.get(Array(228.toByte), 0) == "U")
-    assert(decoder.get(Array(201.toByte), 0) == "I")
+    assert(decoder.get(Array(228.toByte), 0).sameElements("U".getBytes(Charsets.UTF_8)))
+    assert(decoder.get(Array(201.toByte), 0).sameElements("I".getBytes(Charsets.UTF_8)))
   }
 }

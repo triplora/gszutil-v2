@@ -2,20 +2,20 @@ package com.google.cloud.gszutil.io
 
 import java.nio.ByteBuffer
 
-import com.google.cloud.gszutil.Util.Logging
+import com.google.cloud.gszutil.Util.{DebugLogging, Logging}
 
 import scala.annotation.tailrec
 
 object ZIterator {
   def apply(reader: ZRecordReaderT): (Array[Byte],ZIterator) = {
-    val size = reader.blkSize*1000
+    val size = reader.blkSize
     val buf = new Array[Byte](size)
     (buf, new ZIterator(reader, buf))
   }
 }
 
 class ZIterator(private val reader: ZRecordReaderT, private val data: Array[Byte]) extends Iterator[Int] with Logging {
-  require(data.length % reader.blkSize == 0, "buffer must be a multiple of block size")
+  require(data.length % reader.lRecl == 0, "buffer must be a multiple of record length")
   private var bytesRead: Long = 0
   private val lrecl = reader.lRecl
   private val blkSize = reader.blkSize
@@ -34,7 +34,6 @@ class ZIterator(private val reader: ZRecordReaderT, private val data: Array[Byte
     if (buf.remaining >= lrecl) {
       val pos = buf.position
       buf.position(pos + lrecl)
-      //logger.debug(s"returning offset = $pos")
       pos
     } else {
       if (buf.hasRemaining){
@@ -55,21 +54,19 @@ class ZIterator(private val reader: ZRecordReaderT, private val data: Array[Byte
 
     var n = 0
     while (buf.hasRemaining && hasRemaining) {
-      //if (buf.remaining < blkSize)
-      //  logger.error(s"buf.remaining < blkSize (${buf.remaining} < $blkSize)")
       val len = math.min(blkSize, buf.remaining)
       val off = buf.position
       val nBytesRead = reader.read(data, off, len)
       if (nBytesRead > 0) {
-        //if (nBytesRead != blkSize)
-        //  logger.warn(s"nBytesRead != blkSize ($nBytesRead != $blkSize)")
         val newPos = buf.position + nBytesRead
         n += nBytesRead
         buf.position(newPos)
-      } else if (nBytesRead == -1) {
-        hasRemaining = false
       } else {
+        buf.limit(buf.position)
         logger.warn("didn't read any bytes")
+      }
+      if (nBytesRead == -1) {
+        hasRemaining = false
       }
     }
     buf.flip()

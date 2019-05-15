@@ -24,7 +24,7 @@ class CopyBookSpec extends FlatSpec with Logging {
     val (data,offset) = ZIterator(reader)
     val offset1 = offset.toArray
     var n = 0
-    val rows = copyBook.reader.readA(data, offset1.iterator)
+    val rows = copyBook.reader.readOrc(data, offset1.iterator, 1024)
         .foldLeft(new StringBuilder){(a,b) =>
           n += 1
           a.append(b.toString)

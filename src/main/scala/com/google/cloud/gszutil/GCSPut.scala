@@ -16,37 +16,27 @@
 package com.google.cloud.gszutil
 
 import java.io.InputStream
-import java.nio.channels.ReadableByteChannel
+import java.nio.channels.{Channels, ReadableByteChannel}
 
-import com.google.cloud.gszutil.GSXML.{CredentialProvider, XMLStorage}
+import com.google.cloud.gszutil.Util.{CredentialProvider, Logging}
 import com.google.cloud.gszutil.io.{ZChannel, ZInputStream}
-import com.google.cloud.storage.{BlobId, BlobInfo, Storage}
+import com.google.cloud.storage.{BlobId, BlobInfo, Storage, StorageOptions}
 
-object GCSPut {
+object GCSPut extends Logging {
   def run(config: Config, cp: CredentialProvider): Unit = {
-    val gcs = XMLStorage(cp)
+    val gcs = StorageOptions.newBuilder().setCredentials(cp.getCredentials).build().getService
     System.out.println(s"Uploading ${config.inDD} to ${config.dest}")
     put(gcs, ZInputStream(config.inDD), config.destBucket, config.destPath)
     System.out.println(s"Upload Finished")
   }
 
-  def put(gcs: XMLStorage, in: InputStream, bucket: String, path: String): Unit = {
-    val request = gcs.putObject(
-      bucket = bucket,
-      key = path,
-      inputStream = in)
-
+  def put(gcs: Storage, in: InputStream, bucket: String, path: String): Unit = {
+    val w = gcs.writer(BlobInfo.newBuilder(BlobId.of(bucket,path)).build())
     val startTime = System.currentTimeMillis()
-    val response = request.execute()
+    Util.transferWithHash(Channels.newChannel(in), w)
     val endTime = System.currentTimeMillis()
-
-    if (response.isSuccessStatusCode){
-      val duration = (endTime - startTime) / 1000L
-      System.out.println(s"Success ($duration seconds)")
-    } else {
-      System.out.println(s"Error: Status code ${response.getStatusCode}\n${response.parseAsString}")
-    }
-    in.close()
+    val duration = (endTime - startTime) / 1000L
+    logger.info(s"Success ($duration seconds)")
   }
 
   def putDD(gcs: Storage, dd: String, destBucket: String, destPath: String): Util.CopyResult =

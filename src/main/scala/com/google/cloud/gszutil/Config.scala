@@ -24,7 +24,7 @@ import scala.util.{Success, Try}
 
 final case class Config(
                          inDD: String = "INFILE",
-                         copyBook: String = "sku_dly_pos.cpy",
+                         copyBook: String = "imsku.cpy",
                          srcBucket: String = "",
                          srcPath: String = "",
                          dest: String = "",

@@ -81,28 +81,26 @@ object Decoding {
     def typeDescription: TypeDescription
   }
 
-  case class StringDecoder(override val size: Int) extends Decoder[String] {
+  // decodes EBCDIC to UTF8 bytes
+  case class StringDecoder(override val size: Int) extends Decoder[Array[Byte]] {
     override val dataType: DataType = StringType
-    private val buf = new Array[Byte](size)
-    override def get(a: Array[Byte], off: Int): String = {
+    override def get(a: Array[Byte], off: Int): Array[Byte] = {
       var i = 0
+      val buf = new Array[Byte](size)
       while (i < size){
         buf(i) = ebdic2ascii(a(off + i))
-        i+=1
+        i += 1
       }
-      new String(buf, Charsets.UTF_8)
+      buf
     }
 
     override def get(a: Array[Byte], off: Int, row: SpecificInternalRow, i: Int): Unit = {
-      val str = get(a, off)
-      val utf8 = UTF8String.fromString(str)
-      row.update(i, utf8)
+      row.update(i, UTF8String.fromBytes(get(a, off)))
     }
 
-    override def get(a: Array[Byte], off: Int, row: ColumnVector, i: Int): Unit = {
+    override def get(a: Array[Byte], off: Int, row: ColumnVector, i: Int): Unit =
       row.asInstanceOf[BytesColumnVector]
-          .vector.update(i, get(a, off).getBytes(Charsets.UTF_8))
-    }
+        .setRef(i, get(a, off), 0, size)
 
     override def columnVector(maxSize: Int): ColumnVector =
       new BytesColumnVector(maxSize)
@@ -153,11 +151,9 @@ object Decoding {
     override def get(a: Array[Byte], off: Int, row: SpecificInternalRow, i: Int): Unit =
       row.update(i, new Decimal().set(get(a, off)))
 
-    override def get(a: Array[Byte], off: Int, row: ColumnVector, i: Int): Unit = {
-      val value: HiveDecimalWritable = new HiveDecimalWritable(HiveDecimal.create(get(a, off).bigDecimal))
+    override def get(a: Array[Byte], off: Int, row: ColumnVector, i: Int): Unit =
       row.asInstanceOf[DecimalColumnVector]
-        .vector.update(i, value)
-    }
+        .set(i, HiveDecimal.create(get(a, off).bigDecimal))
 
     override def columnVector(maxSize: Int): ColumnVector =
       new DecimalColumnVector(maxSize, precision, scale)
@@ -179,10 +175,7 @@ object Decoding {
       })
 
     def getFieldNames: Seq[String] =
-      lines.flatMap{
-        case CopyBookField(name, _) => Option(name)
-        case _ => None
-      }
+      getSchema.fields.map(_.name)
 
     def getDecoders: Seq[Decoder[_]] = {
       val buf = ArrayBuffer.empty[Decoder[_]]
@@ -205,8 +198,6 @@ object Decoding {
       schema
     }
 
-    def cols: Seq[ColumnVector] = getDecoders.map(_.columnVector(1024))
-
     def lRecl: Int = getDecoders.foldLeft(0){_ + _.size}
 
     def reader: ZReader = new ZReader(this)
@@ -225,7 +216,7 @@ object Decoding {
     override def getDataType: DataType = DecimalType(p,s)
   }
   case class PicString(size: Int) extends PIC {
-    override def getDecoder: Decoder[String] = StringDecoder(size)
+    override def getDecoder: Decoder[Array[Byte]] = StringDecoder(size)
     override def getDataType: DataType = StringType
   }
 
