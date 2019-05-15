@@ -11,6 +11,7 @@ import com.google.cloud.gszutil.{Config, Util}
 import com.google.cloud.hadoop.fs.gcs.SimpleGCSFileSystem
 import com.google.cloud.storage.StorageOptions
 import org.apache.orc.OrcFile
+import org.apache.orc.impl.MemoryManagerImpl
 import org.scalatest.FlatSpec
 import org.threeten.bp.Duration
 
@@ -49,6 +50,7 @@ class OrcWriterSpec extends FlatSpec with Logging {
       .writerOptions(conf)
       .setSchema(copyBook.getOrcSchema)
       .fileSystem(new SimpleGCSFileSystem(gcs))
+      .memory(new MemoryManagerImpl(conf))
 
     val in = new ZDataSet(Util.readB("test.bin"), copyBook.lRecl, copyBook.lRecl*1024)
     SimpleORCWriter.run(prefix, in, copyBook, writerOptions, maxWriters = 1)

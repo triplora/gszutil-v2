@@ -19,12 +19,13 @@ import com.google.api.gax.retrying.RetrySettings
 import com.google.api.gax.rpc.FixedHeaderProvider
 import com.google.cloud.bigquery.JobInfo.{CreateDisposition, WriteDisposition}
 import com.google.cloud.gszutil.Decoding.CopyBook
-import com.google.cloud.gszutil.Util.{Logging,CredentialProvider}
+import com.google.cloud.gszutil.Util.{CredentialProvider, Logging}
 import com.google.cloud.gszutil.{Config, Util, ZOS}
 import com.google.cloud.hadoop.fs.gcs.SimpleGCSFileSystem
 import com.google.cloud.storage.StorageOptions
 import com.google.cloud.{RetryOption, bigquery}
 import org.apache.orc.OrcFile
+import org.apache.orc.impl.MemoryManagerImpl
 import org.threeten.bp.Duration
 
 
@@ -52,6 +53,7 @@ object BQLoad extends Logging {
       .writerOptions(conf)
       .setSchema(copyBook.getOrcSchema)
       .fileSystem(new SimpleGCSFileSystem(gcs))
+      .memory(new MemoryManagerImpl(conf))
 
     SimpleORCWriter.run(prefix, ZOS.readDD(c.inDD), copyBook, writerOptions, maxWriters = 12)
   }

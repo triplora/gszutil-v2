@@ -8,8 +8,8 @@ import com.google.cloud.gszutil.Util.Logging
 import com.google.cloud.gszutil.io.{ZDataSet, ZRecordReaderT}
 import org.apache.hadoop.conf.Configuration
 import org.apache.hadoop.fs.Path
-import org.apache.orc.{OrcConf, OrcFile}
 import org.apache.orc.OrcFile.WriterOptions
+import org.apache.orc.{OrcConf, OrcFile}
 
 object SimpleORCWriter extends Logging {
   def run(prefix: String,
@@ -18,40 +18,49 @@ object SimpleORCWriter extends Logging {
           writerOptions: WriterOptions,
           maxWriters: Int,
           batchSize: Int = 1024,
-          partLen: Long = 32 * 1024 * 1024,
-          timeoutMinutes: Int = 30)= {
-    var writerId = 0
+          partLen: Long = 1 * 1024 * 1024,
+          timeoutMinutes: Int = 30): Unit = {
+    var partId = 0
+    var partSize = 0
     val uri = new URI(prefix)
 
     while (in.isOpen) {
-      val bufSize = in.lRecl * batchSize
-      val bb = ByteBuffer.allocate(bufSize)
-      val buf = bb.array()
-      while (bb.hasRemaining && in.isOpen){
-        val n = in.read(buf, bb.position, bb.remaining)
-        if (n < 0) {
-          bb.limit(bb.position)
-          in.close()
-        } else {
-          val newPosition = bb.position + n
-          bb.position(newPosition)
-        }
-      }
+      val partName = f"$partId%05d"
+      val path = new Path(s"gs://${uri.getAuthority}/${uri.getPath.stripPrefix("/") + s"_$partName"}")
 
-      val name = f"$writerId%05d"
-      val path = new Path(s"gs://${uri.getAuthority}/${uri.getPath.stripPrefix("/") + s"_$name"}")
-      val reader = copyBook.reader
+      // Begin a new part
       val writer = OrcFile.createWriter(path, writerOptions)
-      val rr = new ZDataSet(buf, in.lRecl, in.blkSize, bb.position)
-      reader
-        .readOrc(rr)
-        .filter(_.size > 0)
-        .foreach{rowBatch =>
-          writer.addRowBatch(rowBatch)
+      partSize = 0
+
+      // Write part up to partLen records
+      while (partSize < partLen && in.isOpen) {
+        val bufSize = in.lRecl * batchSize
+        val bb = ByteBuffer.allocate(bufSize)
+        val buf = bb.array()
+
+        // fill buffer
+        while (bb.hasRemaining && in.isOpen) {
+          val n = in.read(buf, bb.position, bb.remaining)
+          if (n < 0) {
+            bb.limit(bb.position)
+            in.close()
+          } else {
+            val newPosition = bb.position + n
+            bb.position(newPosition)
+          }
         }
 
+        val reader = copyBook.reader
+        reader
+          .readOrc(new ZDataSet(buf, in.lRecl, in.blkSize, bb.position))
+          .filter(_.size > 0)
+          .foreach{rowBatch =>
+            partSize += rowBatch.size
+            writer.addRowBatch(rowBatch)
+          }
+      }
       writer.close()
-      writerId += 1
+      partId += 1
     }
   }
 
@@ -60,6 +69,7 @@ object SimpleORCWriter extends Logging {
     OrcConf.COMPRESS.setString(c, "none")
     OrcConf.ENABLE_INDEXES.setBoolean(c, false)
     OrcConf.OVERWRITE_OUTPUT_FILE.setBoolean(c, true)
+    OrcConf.MEMORY_POOL.setDouble(c, 0.5d)
     c
   }
 }

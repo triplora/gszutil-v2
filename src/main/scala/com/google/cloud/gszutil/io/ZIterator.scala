@@ -2,7 +2,7 @@ package com.google.cloud.gszutil.io
 
 import java.nio.ByteBuffer
 
-import com.google.cloud.gszutil.Util.{DebugLogging, Logging}
+import com.google.cloud.gszutil.Util.Logging
 
 import scala.annotation.tailrec
 
@@ -63,7 +63,6 @@ class ZIterator(private val reader: ZRecordReaderT, private val data: Array[Byte
         buf.position(newPos)
       } else {
         buf.limit(buf.position)
-        logger.warn("didn't read any bytes")
       }
       if (nBytesRead == -1) {
         hasRemaining = false
