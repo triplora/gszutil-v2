@@ -26,7 +26,7 @@ object SimpleORCWriter extends Logging {
 
     while (in.isOpen) {
       val partName = f"$partId%05d"
-      val path = new Path(s"gs://${uri.getAuthority}/${uri.getPath.stripPrefix("/") + s"_$partName"}")
+      val path = new Path(s"gs://${uri.getAuthority}/${uri.getPath.stripPrefix("/") + s"_$partName.orc"}")
 
       // Begin a new part
       val writer = OrcFile.createWriter(path, writerOptions)

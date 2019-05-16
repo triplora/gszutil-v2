@@ -22,7 +22,7 @@ class OrcWriterSpec extends FlatSpec with Logging {
       bq = BigQueryConfig(
         project = "retail-poc-demo",
         bucket = "kms-demo1",
-        prefix = "imsku.orc"
+        prefix = "sku_dly_pos.orc"
       ), copyBook = "sku_dly_pos.cpy"
     )
 
@@ -53,6 +53,7 @@ class OrcWriterSpec extends FlatSpec with Logging {
       .memory(new MemoryManagerImpl(conf))
 
     val in = new ZDataSet(Util.readB("test.bin"), copyBook.lRecl, copyBook.lRecl*1024)
-    SimpleORCWriter.run(prefix, in, copyBook, writerOptions, maxWriters = 1)
+    //SimpleORCWriter.run(prefix, in, copyBook, writerOptions, maxWriters = 1)
+    ParallelORCWriter.run(prefix, in, copyBook, writerOptions, maxWriters = 2)
   }
 }

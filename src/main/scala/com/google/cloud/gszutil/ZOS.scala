@@ -25,7 +25,7 @@ object ZOS extends Logging {
 
   class WrappedRecordReader(r: RecordReader) extends ZRecordReaderT {
     // Ensure that reader is closed if job is killed
-    Runtime.getRuntime.addShutdownHook(new RecordReaderCloser(r))
+    //Runtime.getRuntime.addShutdownHook(new RecordReaderCloser(r))
     private var open = true
 
     override def read(buf: Array[Byte]): Int =
@@ -33,8 +33,15 @@ object ZOS extends Logging {
     override def read(buf: Array[Byte], off: Int, len: Int): Int =
       r.read(buf, off, len)
     override def close(): Unit = {
-      r.close()
-      open = false
+      if (open) {
+        try {
+          r.close() //fails if we are on BSAM
+        } catch {
+          case e: Exception =>
+            e.printStackTrace(System.err)
+        }
+        open = false
+      }
     }
 
     override def isOpen: Boolean = open

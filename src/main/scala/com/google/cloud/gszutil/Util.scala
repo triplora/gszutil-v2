@@ -37,7 +37,6 @@ import com.google.common.hash.Hashing
 import com.google.common.io.Resources
 import org.apache.commons.io.Charsets
 import org.apache.log4j.{Level, Logger}
-import org.apache.spark.sql.types.StructType
 import org.zeromq.codec.Z85
 
 import scala.util.{Failure, Random, Try}
@@ -81,51 +80,22 @@ object Util {
     protected lazy val logger: Logger = newDebugLogger(this.getClass.getCanonicalName.stripSuffix("$"))
   }
 
-  def schemaDiff(a: StructType, b: StructType) = {
-    a.fields.zip(b.fields)
-      .filterNot(x => x._1.name == x._2.name)
-      .toSeq
-  }
-
-  def setDebug(logName: String): Unit = setLvl(logName, Level.DEBUG)
-
-  def setWarn(logName: String): Unit = setLvl(logName, Level.WARN)
-
-  def setOff(logName: String): Unit = setLvl(logName, Level.OFF)
-
-  def setLvl(logName: String, level: Level): Unit = {
-    val logger = org.apache.log4j.Logger.getLogger(logName)
-    configureLogger(logger, level, consoleAppender)
-  }
-
   def newLogger(name: String, level: Level = Level.INFO): org.apache.log4j.Logger = {
       val logger = org.apache.log4j.Logger.getLogger(name)
-      configureLogger(logger, level, consoleAppender)
+      logger.setLevel(level)
       logger
   }
 
   def newDebugLogger(name: String): org.apache.log4j.Logger =
     newLogger(name, Level.DEBUG)
 
-  def configureLogger(logger: org.apache.log4j.Logger, level: org.apache.log4j.Level, appender: org.apache.log4j.Appender): org.apache.log4j.Logger = {
-    logger.setLevel(level)
-    logger.addAppender(appender)
-    logger
-  }
-
   def configureLogging(): Unit = {
     import org.apache.log4j.Level.{DEBUG, WARN}
     import org.apache.log4j.Logger.{getLogger, getRootLogger}
-
-    configureLogger(getRootLogger, WARN, consoleAppender)
-
-    Seq(
-      "org.apache.http",
-      "org.apache.orc",
-      "com.google.cloud.gszutil"
-    ).foreach{name =>
-      configureLogger(getLogger(name), DEBUG, consoleAppender)
-    }
+    getRootLogger.setLevel(WARN)
+    getRootLogger.addAppender(consoleAppender)
+    getLogger("com.google.cloud.gszutil").setLevel(DEBUG)
+    getLogger("com.google.cloud.pso").setLevel(DEBUG)
   }
 
   val StorageScope: java.util.Collection[String] = Collections.singleton("https://www.googleapis.com/auth/devstorage.read_write")

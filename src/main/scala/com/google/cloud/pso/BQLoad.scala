@@ -37,6 +37,7 @@ object BQLoad extends Logging {
         .setMaxAttempts(30)
         .setTotalTimeout(Duration.ofMinutes(30))
         .setInitialRetryDelay(Duration.ofSeconds(2))
+        .setMaxRetryDelay(Duration.ofSeconds(30))
         .setRetryDelayMultiplier(2.0d)
         .build())
       .setHeaderProvider(FixedHeaderProvider.create("user-agent", "gszutil-0.1"))
