@@ -6,7 +6,7 @@ import java.nio.channels.Channels
 import com.google.cloud.storage.{BlobId, BlobInfo, Storage}
 import org.apache.hadoop.conf.Configuration
 import org.apache.hadoop.fs.permission.FsPermission
-import org.apache.hadoop.fs.{FSDataInputStream, FSDataOutputStream, FileStatus, FileSystem, Path}
+import org.apache.hadoop.fs._
 import org.apache.hadoop.util.Progressable
 
 object SimpleGCSFileSystem {

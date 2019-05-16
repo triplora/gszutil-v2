@@ -10,8 +10,8 @@ import com.google.cloud.gszutil.io.{ZDataSet, ZRecordReaderT}
 import com.google.common.collect.ImmutableMap
 import com.typesafe.config.ConfigFactory
 import org.apache.hadoop.fs.Path
-import org.apache.orc.{OrcFile, Writer}
 import org.apache.orc.OrcFile.WriterOptions
+import org.apache.orc.{OrcFile, Writer}
 
 import scala.collection.mutable
 

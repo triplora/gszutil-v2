@@ -33,9 +33,9 @@ import com.google.api.client.util.{PemReader, SecurityUtils}
 import com.google.auth.oauth2.{AccessToken, GSZCredentials, GoogleCredentials}
 import com.google.cloud.gszutil.KeyFileProto.KeyFile
 import com.google.cloud.storage.BlobInfo
+import com.google.common.base.Charsets
 import com.google.common.hash.Hashing
 import com.google.common.io.Resources
-import org.apache.commons.io.Charsets
 import org.apache.log4j.{Level, Logger}
 import org.zeromq.codec.Z85
 
@@ -90,12 +90,13 @@ object Util {
     newLogger(name, Level.DEBUG)
 
   def configureLogging(): Unit = {
-    import org.apache.log4j.Level.{DEBUG, WARN}
+    import org.apache.log4j.Level.{DEBUG, WARN, ERROR}
     import org.apache.log4j.Logger.{getLogger, getRootLogger}
     getRootLogger.setLevel(WARN)
     getRootLogger.addAppender(consoleAppender)
     getLogger("com.google.cloud.gszutil").setLevel(DEBUG)
     getLogger("com.google.cloud.pso").setLevel(DEBUG)
+    getLogger("org.apache.orc.impl.MemoryManagerImpl").setLevel(ERROR)
   }
 
   val StorageScope: java.util.Collection[String] = Collections.singleton("https://www.googleapis.com/auth/devstorage.read_write")

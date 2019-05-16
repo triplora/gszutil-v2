@@ -16,8 +16,7 @@
 package com.google.cloud.gszutil
 
 import com.google.cloud.gszutil.KeyFileProto.KeyFile
-import com.google.cloud.gszutil.Util.{AccessTokenCredentialProvider, KeyFileCredentialProvider}
-import com.google.common.io.Resources
+import com.google.cloud.gszutil.Util.KeyFileCredentialProvider
 
 import scala.util.{Failure, Success, Try}
 
@@ -57,6 +56,7 @@ object GSZUtil {
       GCSPut.run(config, cp)
     else if (config.mode == "get")
       GCSGet.run(config, cp)
-    else if (config.mode == "load") Util.printException(Try(com.google.cloud.pso.BQLoad.run(config, cp)))
+    else if (config.mode == "load")
+      com.google.cloud.pso.BQLoad.run(config, cp)
   }
 }

@@ -16,6 +16,7 @@ import org.scalatest.FlatSpec
 import org.threeten.bp.Duration
 
 class OrcWriterSpec extends FlatSpec with Logging {
+  Util.configureLogging()
   "OrcWriter" should "write" in {
     val cp = KeyFileCredentialProvider(KeyFile.parseFrom(Util.readB("keyfile.pb")))
     val c: Config = Config(

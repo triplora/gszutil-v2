@@ -1,7 +1,7 @@
 package com.google.cloud.gszutil.io
 
 import com.google.cloud.gszutil.Decoding.{CopyBook, Decoder}
-import org.apache.orc.storage.ql.exec.vector.VectorizedRowBatch
+import org.apache.hadoop.hive.ql.exec.vector.VectorizedRowBatch
 
 class ZReader(private val copyBook: CopyBook) {
   private val decoders: Array[Decoder[_]] = copyBook.getDecoders.toArray

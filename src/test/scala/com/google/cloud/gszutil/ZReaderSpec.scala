@@ -1,12 +1,10 @@
 package com.google.cloud.gszutil
 
-import java.io.InputStream
 import java.nio.charset.StandardCharsets
 
 import com.google.cloud.gszutil.io._
 import com.google.common.hash.Hashing
 import org.scalatest.FlatSpec
-import sun.nio.cs.SingleByte.Decoder
 
 class ZReaderSpec extends FlatSpec {
 
