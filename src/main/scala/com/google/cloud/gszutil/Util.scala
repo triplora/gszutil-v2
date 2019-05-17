@@ -90,7 +90,7 @@ object Util {
     newLogger(name, Level.DEBUG)
 
   def configureLogging(): Unit = {
-    import org.apache.log4j.Level.{DEBUG, WARN, ERROR}
+    import org.apache.log4j.Level.{DEBUG, ERROR, WARN}
     import org.apache.log4j.Logger.{getLogger, getRootLogger}
     getRootLogger.setLevel(WARN)
     getRootLogger.addAppender(consoleAppender)

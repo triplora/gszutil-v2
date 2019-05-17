@@ -18,16 +18,14 @@ package com.google.cloud.pso
 import com.google.api.gax.retrying.RetrySettings
 import com.google.api.gax.rpc.FixedHeaderProvider
 import com.google.cloud.bigquery.JobInfo.{CreateDisposition, WriteDisposition}
-import com.google.cloud.gszutil.CopyBook
 import com.google.cloud.gszutil.Util.{CredentialProvider, Logging}
 import com.google.cloud.gszutil.io.ZRecordReaderT
-import com.google.cloud.gszutil.{Config, Util}
-import com.google.cloud.hadoop.fs.gcs.SimpleGCSFileSystem
+import com.google.cloud.gszutil.{Config, CopyBook, Util}
 import com.google.cloud.storage.StorageOptions
 import com.google.cloud.{RetryOption, bigquery}
 import com.ibm.jzos.ZOS
-import org.apache.orc.OrcFile
-import org.apache.orc.impl.MemoryManagerImpl
+import org.apache.hadoop.fs.SimpleGCSFileSystem
+import org.apache.orc.{NoOpMemoryManager, OrcFile}
 import org.threeten.bp.Duration
 
 
@@ -56,7 +54,7 @@ object BQLoad extends Logging {
       .writerOptions(conf)
       .setSchema(copyBook.getOrcSchema)
       .fileSystem(new SimpleGCSFileSystem(gcs))
-      .memory(new MemoryManagerImpl(conf))
+      .memory(NoOpMemoryManager)
 
     val reader: ZRecordReaderT = ZOS.readDD(c.inDD)
 

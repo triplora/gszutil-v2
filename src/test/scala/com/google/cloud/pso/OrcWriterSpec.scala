@@ -8,8 +8,8 @@ import com.google.cloud.gszutil.KeyFileProto.KeyFile
 import com.google.cloud.gszutil.Util.{KeyFileCredentialProvider, Logging}
 import com.google.cloud.gszutil.io.ZDataSet
 import com.google.cloud.gszutil.{Config, Util}
-import com.google.cloud.hadoop.fs.gcs.SimpleGCSFileSystem
 import com.google.cloud.storage.StorageOptions
+import org.apache.hadoop.fs.SimpleGCSFileSystem
 import org.apache.orc.OrcFile
 import org.apache.orc.impl.MemoryManagerImpl
 import org.scalatest.FlatSpec

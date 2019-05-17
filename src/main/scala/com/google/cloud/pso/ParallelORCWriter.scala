@@ -3,9 +3,8 @@ package com.google.cloud.pso
 import java.net.URI
 import java.nio.ByteBuffer
 
-import akka.actor.SupervisorStrategy.{Decider, Escalate, Restart, Stop}
-import akka.actor.{Actor, ActorInitializationException, ActorKilledException, ActorRef, ActorSystem, Inbox, OneForOneStrategy, Props, SupervisorStrategy, SupervisorStrategyConfigurator, Terminated}
-import com.google.cloud.gszutil.{CopyBook, Util}
+import akka.actor.{Actor, ActorRef, ActorSystem, EscalatingSupervisorStrategy, Props, SupervisorStrategy, Terminated}
+import com.google.cloud.gszutil.CopyBook
 import com.google.cloud.gszutil.Util.Logging
 import com.google.cloud.gszutil.io.{ZDataSet, ZRecordReaderT}
 import com.google.common.collect.ImmutableMap
@@ -16,7 +15,6 @@ import org.apache.orc.{OrcFile, Writer}
 
 import scala.collection.mutable
 import scala.concurrent.Await
-import scala.util.Try
 
 object ParallelORCWriter extends Logging {
 
@@ -179,15 +177,7 @@ object ParallelORCWriter extends Logging {
         reader
           .readOrc(new ZDataSet(x.buf, copyBook.lRecl, blkSize, x.limit))
           .filter(_.size > 0)
-          .foreach{b =>
-            // TODO handle java.util.ConcurrentModificationException here
-            try {
-              writer.addRowBatch(b)
-            } catch {
-              case e: java.util.ConcurrentModificationException =>
-                logger.error("failed to add row batch", e)
-            }
-          }
+          .foreach(writer.addRowBatch)
         val t1 = System.currentTimeMillis
         elapsedTime += (t1 - t0)
         if (nBytes < maxBytes)
@@ -219,7 +209,8 @@ object ParallelORCWriter extends Logging {
           partLen: Long = 128 * 1024 * 1024,
           timeoutMinutes: Int = 30): Unit = {
     import scala.concurrent.duration._
-    val conf = ConfigFactory.parseMap(ImmutableMap.of("akka.actor.guardian-supervisor-strategy","com.google.cloud.pso.EscalatingSupervisorStrategy"))
+    val conf = ConfigFactory.parseMap(ImmutableMap.of(
+      "akka.actor.guardian-supervisor-strategy","akka.actor.EscalatingSupervisorStrategy"))
     val sys = ActorSystem("gsz", conf)
     val args = FeederArgs(in, batchSize, new URI(prefix), partLen, writerOptions, maxWriters, copyBook)
     sys.actorOf(Props(classOf[Feeder], args))
