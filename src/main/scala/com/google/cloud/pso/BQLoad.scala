@@ -58,7 +58,7 @@ object BQLoad extends Logging {
       .fileSystem(new SimpleGCSFileSystem(gcs))
       .memory(new MemoryManagerImpl(conf))
 
-    val reader: ZRecordReaderT = ZOS.readDD(c.inDD, bsamFb = true)
+    val reader: ZRecordReaderT = ZOS.readDD(c.inDD)
 
     ParallelORCWriter.run(prefix, reader, copyBook, writerOptions, maxWriters = 10, timeoutMinutes = 15)
   }

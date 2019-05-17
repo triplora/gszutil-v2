@@ -31,6 +31,7 @@ object ZOS extends Logging {
     override def read(buf: Array[Byte], off: Int, len: Int): Int =
       r.read(buf, off, len)
     override def close(): Unit = {
+      logger.info("close() called")
       if (open) {
         open = false
         try {
@@ -53,8 +54,7 @@ object ZOS extends Logging {
                  |FeedbackRc: ${e.getFeedbackRc}
                  |LastOp: ${e.getLastOp}
                  |""".stripMargin
-            logger.error(msg)
-            e.printStackTrace(System.err)
+            logger.error(msg, e)
         }
       }
     }
@@ -64,15 +64,11 @@ object ZOS extends Logging {
     override val blkSize: Int = r.getBlksize
   }
 
-  def readDD(ddName: String, bsamFb: Boolean = false): ZRecordReaderT = {
+  def readDD(ddName: String): ZRecordReaderT = {
     if (!ZFile.ddExists(ddName))
       throw new RuntimeException(s"DD $ddName does not exist")
 
-    val reader: RecordReader = if (bsamFb){
-      new BsamFbRecordReader(new Bsam(ddName, ZFileConstants.OPEN_MODE_BINARY))
-    } else {
-      RecordReader.newReaderForDD(ddName)
-    }
+    val reader: RecordReader = RecordReader.newReaderForDD(ddName)
     logger.info(s"Reading DD $ddName ${reader.getDsn} with record format ${reader.getRecfm} BLKSIZE ${reader.getBlksize} LRECL ${reader.getLrecl}")
     new WrappedRecordReader(reader)
   }

@@ -3,8 +3,9 @@ package com.google.cloud.pso
 import java.net.URI
 import java.nio.ByteBuffer
 
-import akka.actor.{Actor, ActorRef, ActorSystem, Inbox, Props, Terminated}
-import com.google.cloud.gszutil.CopyBook
+import akka.actor.SupervisorStrategy.{Decider, Escalate, Restart, Stop}
+import akka.actor.{Actor, ActorInitializationException, ActorKilledException, ActorRef, ActorSystem, Inbox, OneForOneStrategy, Props, SupervisorStrategy, SupervisorStrategyConfigurator, Terminated}
+import com.google.cloud.gszutil.{CopyBook, Util}
 import com.google.cloud.gszutil.Util.Logging
 import com.google.cloud.gszutil.io.{ZDataSet, ZRecordReaderT}
 import com.google.common.collect.ImmutableMap
@@ -14,6 +15,8 @@ import org.apache.orc.OrcFile.WriterOptions
 import org.apache.orc.{OrcFile, Writer}
 
 import scala.collection.mutable
+import scala.concurrent.Await
+import scala.util.Try
 
 object ParallelORCWriter extends Logging {
 
@@ -26,9 +29,8 @@ object ParallelORCWriter extends Logging {
     * @param writerOptions OrcFile.WriterOptions
     * @param nWorkers worker count
     * @param copyBook CopyBook
-    * @param watcher ActorRef
     */
-  case class FeederArgs(in: ZRecordReaderT, batchSize: Int, uri: URI, maxBytes: Long, writerOptions: WriterOptions, nWorkers: Int, copyBook: CopyBook, watcher: ActorRef)
+  case class FeederArgs(in: ZRecordReaderT, batchSize: Int, uri: URI, maxBytes: Long, writerOptions: WriterOptions, nWorkers: Int, copyBook: CopyBook)
 
   /**
     *
@@ -46,9 +48,6 @@ object ParallelORCWriter extends Logging {
     * @param limit index past last byte of data
     */
   case class Batch(buf: Array[Byte], var limit: Int = 0)
-
-  case object Finished
-  case object Error
 
   /** Responsible for reading from input Data Set and creating ORC Writers
     * Creates writer child actors at startup
@@ -69,7 +68,6 @@ object ParallelORCWriter extends Logging {
       if (in.lRecl != copyBook.lRecl) {
         logger.error("input lRecl != copybook lRecl")
         in.close()
-        watcher ! Error
       } else {
         startTime = System.currentTimeMillis
         for (_ <- 0 until nWorkers)
@@ -80,8 +78,8 @@ object ParallelORCWriter extends Logging {
     override def receive: Receive = {
       case x: Batch =>
         lastRecv = System.currentTimeMillis
-        if (lastSend > 100L && nLog < maxLog) {
-          val dt = lastRecv - lastSend
+        val dt = lastRecv - lastSend
+        if (dt > 200L && lastSend > 100L && nLog < maxLog) {
           logger.info(s"$dt ms since last send")
           nLog += 1
         }
@@ -151,8 +149,10 @@ object ParallelORCWriter extends Logging {
       val v = f"$mbps%1.2f"
       val wait = totalTime - activeTime
       logger.info(s"Finished writing $totalBytes bytes; $nSent chunks; $totalTime ms; $v mbps; active $activeTime ms; wait $wait ms")
-      watcher ! Finished
+      context.system.terminate()
     }
+
+    override def supervisorStrategy: SupervisorStrategy = new EscalatingSupervisorStrategy().create()
   }
 
 
@@ -179,7 +179,15 @@ object ParallelORCWriter extends Logging {
         reader
           .readOrc(new ZDataSet(x.buf, copyBook.lRecl, blkSize, x.limit))
           .filter(_.size > 0)
-          .foreach(writer.addRowBatch)
+          .foreach{b =>
+            // TODO handle java.util.ConcurrentModificationException here
+            try {
+              writer.addRowBatch(b)
+            } catch {
+              case e: java.util.ConcurrentModificationException =>
+                logger.error("failed to add row batch", e)
+            }
+          }
         val t1 = System.currentTimeMillis
         elapsedTime += (t1 - t0)
         if (nBytes < maxBytes)
@@ -211,23 +219,11 @@ object ParallelORCWriter extends Logging {
           partLen: Long = 128 * 1024 * 1024,
           timeoutMinutes: Int = 30): Unit = {
     import scala.concurrent.duration._
-    val conf = ConfigFactory.parseMap(ImmutableMap.of())
+    val conf = ConfigFactory.parseMap(ImmutableMap.of("akka.actor.guardian-supervisor-strategy","com.google.cloud.pso.EscalatingSupervisorStrategy"))
     val sys = ActorSystem("gsz", conf)
-    val inbox = Inbox.create(sys)
-    val args = FeederArgs(in, batchSize, new URI(prefix), partLen, writerOptions, maxWriters, copyBook, inbox.getRef())
+    val args = FeederArgs(in, batchSize, new URI(prefix), partLen, writerOptions, maxWriters, copyBook)
     sys.actorOf(Props(classOf[Feeder], args))
-    inbox.receive(FiniteDuration(timeoutMinutes, MINUTES)) match {
-      case Finished =>
-        logger.info("terminating actor system")
-        sys.terminate()
-
-      case Error =>
-        logger.info("terminating actor system")
-        sys.terminate()
-        System.exit(1)
-
-      case x =>
-        logger.info(s"received unexpected $x")
-    }
+    val timeoutDuration = FiniteDuration(timeoutMinutes, MINUTES)
+    Await.result(sys.whenTerminated, timeoutDuration)
   }
 }
