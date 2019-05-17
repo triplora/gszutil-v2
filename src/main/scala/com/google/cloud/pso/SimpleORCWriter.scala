@@ -3,7 +3,7 @@ package com.google.cloud.pso
 import java.net.URI
 import java.nio.ByteBuffer
 
-import com.google.cloud.gszutil.Decoding.CopyBook
+import com.google.cloud.gszutil.CopyBook
 import com.google.cloud.gszutil.Util.Logging
 import com.google.cloud.gszutil.io.{ZDataSet, ZRecordReaderT}
 import org.apache.hadoop.conf.Configuration

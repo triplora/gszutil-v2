@@ -18,14 +18,11 @@ package com.google.cloud.gszutil
 import java.nio.ByteBuffer
 import java.nio.charset.Charset
 
-import com.google.cloud.gszutil.io.ZReader
 import com.ibm.jzos.fields.{BinaryAsIntField, BinaryAsLongField}
 import org.apache.hadoop.hive.common.`type`.HiveDecimal
 import org.apache.hadoop.hive.ql.exec.vector.{BytesColumnVector, ColumnVector, DecimalColumnVector, LongColumnVector}
 import org.apache.orc.TypeDescription
 import org.apache.orc.TypeDescription.Category
-
-import scala.collection.mutable.ArrayBuffer
 
 
 object Decoding {
@@ -141,43 +138,6 @@ object Decoding {
 
     override def typeDescription: TypeDescription =
       new TypeDescription(Category.DECIMAL)
-  }
-
-  case class CopyBook(raw: String) {
-    lazy val lines = raw.lines.flatMap(parseCopyBookLine).toSeq
-
-    def getFieldNames: Seq[String] =
-      lines.flatMap{
-        case CopyBookField(name, _) =>
-          Option(name.replaceAllLiterally("-","_"))
-        case _ =>
-          None
-      }
-
-    def getDecoders: Seq[Decoder[_]] = {
-      val buf = ArrayBuffer.empty[Decoder[_]]
-      lines.foreach{
-        case CopyBookField(_, pic) =>
-          val decoder = pic.getDecoder
-          buf.append(decoder)
-        case _ =>
-      }
-      buf.result.toArray.toSeq
-    }
-
-    def getOrcSchema: TypeDescription = {
-      val schema = new TypeDescription(Category.STRUCT)
-      getFieldNames
-        .zip(getDecoders)
-        .foreach{f =>
-          schema.addField(f._1, f._2.typeDescription)
-        }
-      schema
-    }
-
-    def lRecl: Int = getDecoders.foldLeft(0){_ + _.size}
-
-    def reader: ZReader = new ZReader(this)
   }
 
   sealed trait PIC {

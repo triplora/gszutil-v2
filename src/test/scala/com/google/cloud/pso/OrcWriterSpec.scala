@@ -3,7 +3,7 @@ package com.google.cloud.pso
 import com.google.api.gax.retrying.RetrySettings
 import com.google.api.gax.rpc.FixedHeaderProvider
 import com.google.cloud.gszutil.Config.BigQueryConfig
-import com.google.cloud.gszutil.Decoding.CopyBook
+import com.google.cloud.gszutil.CopyBook
 import com.google.cloud.gszutil.KeyFileProto.KeyFile
 import com.google.cloud.gszutil.Util.{KeyFileCredentialProvider, Logging}
 import com.google.cloud.gszutil.io.ZDataSet

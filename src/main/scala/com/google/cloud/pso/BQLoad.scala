@@ -18,7 +18,7 @@ package com.google.cloud.pso
 import com.google.api.gax.retrying.RetrySettings
 import com.google.api.gax.rpc.FixedHeaderProvider
 import com.google.cloud.bigquery.JobInfo.{CreateDisposition, WriteDisposition}
-import com.google.cloud.gszutil.Decoding.CopyBook
+import com.google.cloud.gszutil.CopyBook
 import com.google.cloud.gszutil.Util.{CredentialProvider, Logging}
 import com.google.cloud.gszutil.io.ZRecordReaderT
 import com.google.cloud.gszutil.{Config, Util}

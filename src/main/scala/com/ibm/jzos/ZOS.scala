@@ -73,7 +73,7 @@ object ZOS extends Logging {
     } else {
       RecordReader.newReaderForDD(ddName)
     }
-    logger.info(s"Reading DD $ddName ${reader.getDsn} with record format ${reader.getRecfm} BLKSIZE ${reader.getBlksize} LRECL ${reader.getLrecl} with default system encoding ${ZUtil.getDefaultPlatformEncoding}")
+    logger.info(s"Reading DD $ddName ${reader.getDsn} with record format ${reader.getRecfm} BLKSIZE ${reader.getBlksize} LRECL ${reader.getLrecl}")
     new WrappedRecordReader(reader)
   }
 }

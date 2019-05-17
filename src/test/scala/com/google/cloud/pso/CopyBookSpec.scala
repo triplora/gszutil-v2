@@ -1,6 +1,6 @@
 package com.google.cloud.pso
 
-import com.google.cloud.gszutil.Decoding.CopyBook
+import com.google.cloud.gszutil.CopyBook
 import com.google.cloud.gszutil.Util
 import com.google.cloud.gszutil.Util.Logging
 import com.google.cloud.gszutil.io.{ZDataSet, ZIterator}
