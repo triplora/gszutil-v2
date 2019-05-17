@@ -20,10 +20,12 @@ import com.google.api.gax.rpc.FixedHeaderProvider
 import com.google.cloud.bigquery.JobInfo.{CreateDisposition, WriteDisposition}
 import com.google.cloud.gszutil.Decoding.CopyBook
 import com.google.cloud.gszutil.Util.{CredentialProvider, Logging}
-import com.google.cloud.gszutil.{Config, Util, ZOS}
+import com.google.cloud.gszutil.io.ZRecordReaderT
+import com.google.cloud.gszutil.{Config, Util}
 import com.google.cloud.hadoop.fs.gcs.SimpleGCSFileSystem
 import com.google.cloud.storage.StorageOptions
 import com.google.cloud.{RetryOption, bigquery}
+import com.ibm.jzos.ZOS
 import org.apache.orc.OrcFile
 import org.apache.orc.impl.MemoryManagerImpl
 import org.threeten.bp.Duration
@@ -56,7 +58,9 @@ object BQLoad extends Logging {
       .fileSystem(new SimpleGCSFileSystem(gcs))
       .memory(new MemoryManagerImpl(conf))
 
-    SimpleORCWriter.run(prefix, ZOS.readDD(c.inDD), copyBook, writerOptions, maxWriters = 12)
+    val reader: ZRecordReaderT = ZOS.readDD(c.inDD, bsamFb = true)
+
+    ParallelORCWriter.run(prefix, reader, copyBook, writerOptions, maxWriters = 10, timeoutMinutes = 15)
   }
 
   def load(bq: bigquery.BigQuery, table: String, c: Config, sourceUri: String, formatOptions: bigquery.FormatOptions = bigquery.FormatOptions.orc()): Unit = {

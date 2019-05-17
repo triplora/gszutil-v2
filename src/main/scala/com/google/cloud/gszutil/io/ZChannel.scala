@@ -4,7 +4,7 @@ import java.nio.ByteBuffer
 import java.nio.channels.ReadableByteChannel
 
 import com.google.cloud.gszutil.Util.Logging
-import com.google.cloud.gszutil.ZOS
+import com.ibm.jzos.ZOS
 
 object ZChannel {
   def apply(dd: String): ZChannel = {

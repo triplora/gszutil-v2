@@ -3,7 +3,7 @@ package com.google.cloud.gszutil.io
 import java.io.InputStream
 import java.nio.channels.Channels
 
-import com.google.cloud.gszutil.ZOS
+import com.ibm.jzos.ZOS
 
 object ZInputStream{
   def apply(dd: String): InputStream =

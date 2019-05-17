@@ -13,12 +13,10 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package com.google.cloud.gszutil
-
+package com.ibm.jzos
 
 import com.google.cloud.gszutil.Util.Logging
 import com.google.cloud.gszutil.io.ZRecordReaderT
-import com.ibm.jzos.{RecordReader, ZFile, ZUtil}
 
 object ZOS extends Logging {
   class RecordReaderCloser(r: RecordReader) extends Thread { override def run(): Unit = r.close() }
@@ -34,13 +32,30 @@ object ZOS extends Logging {
       r.read(buf, off, len)
     override def close(): Unit = {
       if (open) {
+        open = false
         try {
           r.close() //fails if we are on BSAM
         } catch {
-          case e: Exception =>
+          case e: ZFileException =>
+            val msg =
+              s"""${e.getMessage}
+                 |SynadMsg: ${e.getSynadMsg}
+                 |AbendCode: ${e.getAbendCode}
+                 |AbendRc: ${e.getAbendRc}
+                 |AllocSvc99Error: ${e.getAllocSvc99Error}
+                 |AllocSvc99Info: ${e.getAllocSvc99Info}
+                 |Errno: ${e.getErrno}
+                 |Errno2: ${e.getErrno2}
+                 |ErrMsg: ${e.getErrnoMsg}
+                 |ErrorCode: ${e.getErrorCode}
+                 |Feedback: ${e.getFeedbackFdbk}
+                 |FeedbackFtncd: ${e.getFeedbackFtncd}
+                 |FeedbackRc: ${e.getFeedbackRc}
+                 |LastOp: ${e.getLastOp}
+                 |""".stripMargin
+            logger.error(msg)
             e.printStackTrace(System.err)
         }
-        open = false
       }
     }
 
@@ -49,11 +64,15 @@ object ZOS extends Logging {
     override val blkSize: Int = r.getBlksize
   }
 
-  def readDD(ddName: String): ZRecordReaderT = {
+  def readDD(ddName: String, bsamFb: Boolean = false): ZRecordReaderT = {
     if (!ZFile.ddExists(ddName))
       throw new RuntimeException(s"DD $ddName does not exist")
 
-    val reader = RecordReader.newReaderForDD(ddName)
+    val reader: RecordReader = if (bsamFb){
+      new BsamFbRecordReader(new Bsam(ddName, ZFileConstants.OPEN_MODE_BINARY))
+    } else {
+      RecordReader.newReaderForDD(ddName)
+    }
     logger.info(s"Reading DD $ddName ${reader.getDsn} with record format ${reader.getRecfm} BLKSIZE ${reader.getBlksize} LRECL ${reader.getLrecl} with default system encoding ${ZUtil.getDefaultPlatformEncoding}")
     new WrappedRecordReader(reader)
   }
