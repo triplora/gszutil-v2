@@ -68,7 +68,16 @@ object Util {
       sb.append(s"${x._1}=${x._2}\n")
     }
     sb.append("\n\n")
-    sb.append(showProvider(Security.getProvider("IBMJCECCA")))
+
+    sb.append("JCE Providers")
+    Security.getProviders.map(_.getName).foreach { x =>
+      sb.append(x)
+      sb.append("\n")
+    }
+
+    sb.append("\n\n")
+    sb.append(showProviders())
+
     sb.result().lines.foreach(System.out.println)
   }
 

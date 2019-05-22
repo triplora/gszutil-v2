@@ -144,6 +144,10 @@ object Config {
         .action { (x, c) => c.copy(useCCA = x) }
         .text("use IBMJCECCA Crypto Provider (default: true)")
 
+      opt[Boolean]("debug")
+        .action { (x, c) => c.copy(debug = x) }
+        .text("enable debug options (default: false)")
+
       checkConfig(c =>
         if (c.mode == "cp" && (c.destBucket.isEmpty || c.destPath.isEmpty))
           failure(s"invalid destination '${c.dest}'")

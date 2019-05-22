@@ -43,12 +43,12 @@ object BQLoad extends Logging {
       .getService
 
     val prefix = s"gs://${c.bq.bucket}/${c.bq.prefix}"
-    val copyBookId = sys.env.getOrElse("COPYBOOK", c.copyBook)
+    //val copyBookId = sys.env.getOrElse("COPYBOOK", c.copyBook)
+    val copyBookId = "sku_dly_pos.cpy"
     val copyBook = CopyBook(Util.readS(copyBookId))
     logger.info(s"Loaded copy book```\n${copyBook.raw}\n```")
 
     val reader: ZRecordReaderT = ZOS.readDD(c.inDD)
-
     ParallelORCWriter.run(prefix, reader, copyBook, gcs)
   }
 

@@ -32,31 +32,7 @@ object ZOS extends Logging {
       r.read(buf, off, len)
     override def close(): Unit = {
       logger.info("close() called")
-      if (open) {
-        open = false
-        try {
-          r.close() //fails if we are on BSAM
-        } catch {
-          case e: ZFileException =>
-            val msg =
-              s"""${e.getMessage}
-                 |SynadMsg: ${e.getSynadMsg}
-                 |AbendCode: ${e.getAbendCode}
-                 |AbendRc: ${e.getAbendRc}
-                 |AllocSvc99Error: ${e.getAllocSvc99Error}
-                 |AllocSvc99Info: ${e.getAllocSvc99Info}
-                 |Errno: ${e.getErrno}
-                 |Errno2: ${e.getErrno2}
-                 |ErrMsg: ${e.getErrnoMsg}
-                 |ErrorCode: ${e.getErrorCode}
-                 |Feedback: ${e.getFeedbackFdbk}
-                 |FeedbackFtncd: ${e.getFeedbackFtncd}
-                 |FeedbackRc: ${e.getFeedbackRc}
-                 |LastOp: ${e.getLastOp}
-                 |""".stripMargin
-            logger.error(msg, e)
-        }
-      }
+      if (open) open = false
     }
 
     override def isOpen: Boolean = open
