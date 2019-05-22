@@ -9,6 +9,7 @@ import org.apache.hadoop.fs.permission.FsPermission
 import org.apache.hadoop.util.Progressable
 
 object SimpleGCSFileSystem {
+  val Scheme = "gs"
   val FsImpl = "fs.gs.impl"
   val ClassName = "com.google.cloud.hadoop.fs.gs.SimpleGCSFileSystem"
 
@@ -23,19 +24,24 @@ object SimpleGCSFileSystem {
   }
 }
 
-class SimpleGCSFileSystem(storage: Storage) extends FileSystem {
+/** FileSystem implementation with user-provided Statistics instance
+  *
+  * @param storage Cloud Storage Client
+  * @param stats FileSystem.Statistics used to count bytes written
+  */
+class SimpleGCSFileSystem(storage: Storage, stats: FileSystem.Statistics) extends FileSystem {
   import SimpleGCSFileSystem._
 
-  override def getUri: URI = new URI(s"$getScheme://")
+  override def getUri: URI = new URI(s"$Scheme://")
 
-  override def getScheme: String = "gs"
+  override def getScheme: String = Scheme
 
   override def open(f: Path, bufferSize: Int): FSDataInputStream = throw new UnsupportedOperationException()
 
   override def create(f: Path, permission: FsPermission, overwrite: Boolean, bufferSize: Int, replication: Short, blockSize: Long, progress: Progressable): FSDataOutputStream = {
     val w = storage.writer(BlobInfo.newBuilder(toBlobId(f)).build())
     val os = Channels.newOutputStream(w)
-    new FSDataOutputStream(os, null, 0)
+    new FSDataOutputStream(os, stats, 0)
   }
 
   override def append(f: Path, bufferSize: Int, progress: Progressable): FSDataOutputStream = throw new UnsupportedOperationException()

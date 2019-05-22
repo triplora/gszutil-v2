@@ -18,7 +18,6 @@ package com.google.cloud.gszutil
 import java.nio.ByteBuffer
 import java.nio.charset.Charset
 
-import com.ibm.jzos.fields.{BinaryAsIntField, BinaryAsLongField}
 import org.apache.hadoop.hive.common.`type`.HiveDecimal
 import org.apache.hadoop.hive.ql.exec.vector.{BytesColumnVector, ColumnVector, DecimalColumnVector, LongColumnVector}
 import org.apache.orc.TypeDescription
@@ -92,26 +91,17 @@ object Decoding {
       new TypeDescription(Category.STRING)
   }
 
-  case class IntDecoder(override val size: Int) extends Decoder[Int] {
-    private lazy val field = new BinaryAsIntField(0, size, true)
-    override def get(a: Array[Byte], off: Int): Int =
-      field.getInt(a, off)
-
-    override def get(a: Array[Byte], off: Int, row: ColumnVector, i: Int): Unit =
-      row.asInstanceOf[LongColumnVector]
-        .vector.update(i, get(a, off))
-
-    override def columnVector(maxSize: Int): ColumnVector =
-      new LongColumnVector(maxSize)
-
-    override def typeDescription: TypeDescription =
-      new TypeDescription(Category.LONG)
-  }
-
   case class LongDecoder(override val size: Int) extends Decoder[Long] {
-    private lazy val field = new BinaryAsLongField(0, size, true)
-    override def get(a: Array[Byte], off: Int): Long =
-      field.getLong(a, off)
+    override def get(a: Array[Byte], off: Int): Long = {
+      var v: Long = 0x00
+      var i = 0
+      while (i < size){
+        v <<= 8
+        v |= (a(off + i) & 0xFF)
+        i += 1
+      }
+      v
+    }
 
     override def get(a: Array[Byte], off: Int, row: ColumnVector, i: Int): Unit =
       row.asInstanceOf[LongColumnVector]
@@ -144,7 +134,7 @@ object Decoding {
     def getDecoder: Decoder[_]
   }
   case class PicInt(size: Int) extends PIC {
-    override def getDecoder: Decoder[Int] = IntDecoder(size)
+    override def getDecoder: Decoder[Long] = LongDecoder(size)
   }
   case class PicDecimal(p: Int, s: Int) extends PIC {
     override def getDecoder: Decoder[BigDecimal] = DecimalDecoder(p, s)

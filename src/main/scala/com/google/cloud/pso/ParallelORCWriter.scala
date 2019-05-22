@@ -7,11 +7,11 @@ import akka.actor.{Actor, ActorRef, ActorSystem, EscalatingSupervisorStrategy, P
 import com.google.cloud.gszutil.CopyBook
 import com.google.cloud.gszutil.Util.Logging
 import com.google.cloud.gszutil.io.{ZDataSet, ZRecordReaderT}
+import com.google.cloud.storage.Storage
 import com.google.common.collect.ImmutableMap
 import com.typesafe.config.ConfigFactory
-import org.apache.hadoop.fs.Path
-import org.apache.orc.OrcFile.WriterOptions
-import org.apache.orc.{OrcFile, Writer}
+import org.apache.hadoop.fs.{FileSystem, Path, SimpleGCSFileSystem}
+import org.apache.orc.{NoOpMemoryManager, OrcFile, Writer}
 
 import scala.collection.mutable
 import scala.concurrent.Await
@@ -24,21 +24,19 @@ object ParallelORCWriter extends Logging {
     * @param batchSize rows per batch
     * @param uri prefix URI
     * @param maxBytes input bytes per part
-    * @param writerOptions OrcFile.WriterOptions
     * @param nWorkers worker count
     * @param copyBook CopyBook
     */
-  case class FeederArgs(in: ZRecordReaderT, batchSize: Int, uri: URI, maxBytes: Long, writerOptions: WriterOptions, nWorkers: Int, copyBook: CopyBook)
+  case class FeederArgs(in: ZRecordReaderT, batchSize: Int, uri: URI, maxBytes: Long, nWorkers: Int, copyBook: CopyBook, gcs: Storage)
 
   /**
     *
     * @param copyBook CopyBook
-    * @param writer ORC Writer
     * @param maxBytes number of bytes to accept before closing the writer
     * @param blkSize block size
     * @param batchSize records per batch
     */
-  case class WriterArgs(copyBook: CopyBook, writer: Writer, maxBytes: Long, blkSize: Int, batchSize: Int, path: Path)
+  case class WriterArgs(copyBook: CopyBook, maxBytes: Long, blkSize: Int, batchSize: Int, path: Path, gcs: Storage)
 
   /** Buffer containing data for a single batch
     *
@@ -132,8 +130,7 @@ object ParallelORCWriter extends Logging {
     private def newPart(): Unit = {
       val partName = f"$partId%05d"
       val path = new Path(s"gs://${uri.getAuthority}/${uri.getPath.stripPrefix("/") + s"/part-$partName.orc"}")
-      val writer = OrcFile.createWriter(path, writerOptions)
-      val args = WriterArgs(copyBook, writer, maxBytes, in.blkSize, batchSize, path)
+      val args = WriterArgs(copyBook, maxBytes, in.blkSize, batchSize, path, gcs)
       val w = context.actorOf(Props(classOf[OrcWriter], args), s"OrcWriter-$partName")
       context.watch(w)
       writers.add(w)
@@ -159,12 +156,20 @@ object ParallelORCWriter extends Logging {
   class OrcWriter(args: WriterArgs) extends Actor {
     import args._
     private val reader = copyBook.reader
-    private var nBytes: Long = 0
+    private var bytesIn: Long = 0
     private var elapsedTime: Long = 0
     private var startTime: Long = -1
     private var endTime: Long = -1
+    private var writer: Writer = _
+    private val stats = new FileSystem.Statistics(SimpleGCSFileSystem.Scheme)
 
     override def preStart(): Unit = {
+      val writerOptions = OrcFile
+        .writerOptions(SimpleORCWriter.configuration())
+        .setSchema(copyBook.getOrcSchema)
+        .memory(NoOpMemoryManager)
+        .fileSystem(new SimpleGCSFileSystem(gcs, stats))
+      writer = OrcFile.createWriter(path, writerOptions)
       context.parent ! Batch(new Array[Byte](copyBook.lRecl * batchSize))
       startTime = System.currentTimeMillis()
       logger.info(s"Starting writer for ${args.path}")
@@ -172,7 +177,7 @@ object ParallelORCWriter extends Logging {
 
     override def receive: Receive = {
       case x: Batch =>
-        nBytes += x.limit
+        bytesIn += x.limit
         val t0 = System.currentTimeMillis
         reader
           .readOrc(new ZDataSet(x.buf, copyBook.lRecl, blkSize, x.limit))
@@ -180,7 +185,7 @@ object ParallelORCWriter extends Logging {
           .foreach(writer.addRowBatch)
         val t1 = System.currentTimeMillis
         elapsedTime += (t1 - t0)
-        if (nBytes < maxBytes)
+        if (stats.getBytesWritten < maxBytes)
           sender ! x
         else context.stop(self)
       case _ =>
@@ -194,25 +199,26 @@ object ParallelORCWriter extends Logging {
       endTime = System.currentTimeMillis
       val dt = endTime - startTime
       val idle = dt - elapsedTime
-      val mbps = ((8.0d * nBytes) / (elapsedTime / 1000.0)) / 1000000
-      val v = f"$mbps%1.2f"
-      logger.info(s"Stopping writer for ${args.path} after writing $nBytes bytes in $elapsedTime ms ($v mbps) $dt ms total $idle ms idle")
+      val bytesOut = stats.getBytesWritten
+      val ratio = (bytesOut * 1.0d) / bytesIn
+      val mbps = ((8.0d * bytesOut) / (elapsedTime / 1000.0)) / 1000000
+      logger.info(s"Stopping writer for ${args.path} after writing $bytesOut bytes in $elapsedTime ms (${f"$mbps%1.2f"} mbps) $dt ms total $idle ms idle $bytesIn bytes read ${f"$ratio%1.2f"} compression ratio")
     }
   }
 
   def run(prefix: String,
           in: ZRecordReaderT,
           copyBook: CopyBook,
-          writerOptions: WriterOptions,
-          maxWriters: Int,
+          gcs: Storage,
+          maxWriters: Int = 5,
           batchSize: Int = 1024,
           partLen: Long = 128 * 1024 * 1024,
-          timeoutMinutes: Int = 30): Unit = {
+          timeoutMinutes: Int = 60): Unit = {
     import scala.concurrent.duration._
     val conf = ConfigFactory.parseMap(ImmutableMap.of(
       "akka.actor.guardian-supervisor-strategy","akka.actor.EscalatingSupervisorStrategy"))
     val sys = ActorSystem("gsz", conf)
-    val args = FeederArgs(in, batchSize, new URI(prefix), partLen, writerOptions, maxWriters, copyBook)
+    val args = FeederArgs(in, batchSize, new URI(prefix), partLen, maxWriters, copyBook, gcs)
     sys.actorOf(Props(classOf[Feeder], args))
     val timeoutDuration = FiniteDuration(timeoutMinutes, MINUTES)
     Await.result(sys.whenTerminated, timeoutDuration)

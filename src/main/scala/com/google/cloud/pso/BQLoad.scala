@@ -24,8 +24,6 @@ import com.google.cloud.gszutil.{Config, CopyBook, Util}
 import com.google.cloud.storage.StorageOptions
 import com.google.cloud.{RetryOption, bigquery}
 import com.ibm.jzos.ZOS
-import org.apache.hadoop.fs.SimpleGCSFileSystem
-import org.apache.orc.{NoOpMemoryManager, OrcFile}
 import org.threeten.bp.Duration
 
 
@@ -49,16 +47,9 @@ object BQLoad extends Logging {
     val copyBook = CopyBook(Util.readS(copyBookId))
     logger.info(s"Loaded copy book```\n${copyBook.raw}\n```")
 
-    val conf = SimpleORCWriter.configuration()
-    val writerOptions = OrcFile
-      .writerOptions(conf)
-      .setSchema(copyBook.getOrcSchema)
-      .fileSystem(new SimpleGCSFileSystem(gcs))
-      .memory(NoOpMemoryManager)
-
     val reader: ZRecordReaderT = ZOS.readDD(c.inDD)
 
-    ParallelORCWriter.run(prefix, reader, copyBook, writerOptions, maxWriters = 10, timeoutMinutes = 15)
+    ParallelORCWriter.run(prefix, reader, copyBook, gcs)
   }
 
   def load(bq: bigquery.BigQuery, table: String, c: Config, sourceUri: String, formatOptions: bigquery.FormatOptions = bigquery.FormatOptions.orc()): Unit = {

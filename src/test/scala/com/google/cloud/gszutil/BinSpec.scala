@@ -10,13 +10,13 @@ import org.scalatest.FlatSpec
 class BinSpec extends FlatSpec {
   "Decoder" should "unpack 2 byte binary integer" in {
     val data = Array[Byte](20.toByte, 140.toByte)
-    val x = IntDecoder(2).get(data, 0)
+    val x = LongDecoder(2).get(data, 0)
     assert(x == 5260)
   }
 
   it should "unpack 4 byte integer" in {
     val data = Array[Byte](0.toByte,180.toByte, 25.toByte, 41.toByte)
-    val decoder = IntDecoder(4)
+    val decoder = LongDecoder(4)
     val x = decoder.get(data, 0)
     assert(x == 11802921)
   }

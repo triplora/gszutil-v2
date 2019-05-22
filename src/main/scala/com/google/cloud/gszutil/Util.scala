@@ -21,7 +21,7 @@ import java.nio.channels.{Channels, ReadableByteChannel, WritableByteChannel}
 import java.nio.charset.StandardCharsets
 import java.nio.file.{Files, Paths}
 import java.security.spec.PKCS8EncodedKeySpec
-import java.security.{PrivateKey, Security}
+import java.security.{PrivateKey, Provider, Security}
 import java.time.Instant
 import java.util.{Collections, Date}
 
@@ -55,16 +55,57 @@ object Util {
 
   def printDebugInformation(): Unit = {
     import scala.collection.JavaConverters._
-    System.out.println("\n\nSystem Properties:")
-    System.getProperties.list(System.out)
-    System.out.println("\n\nEnvironment Variables:")
-    System.getenv.asScala.toMap.foreach{x =>
-      System.out.println(s"${x._1}=${x._2}")
+    val sb = new StringBuilder()
+    sb.append("\n\nSystem Properties:\n")
+    System.getProperties.asScala.foreach{x =>
+      sb.append(x._1)
+      sb.append("=")
+      sb.append(x._2)
+      sb.append("\n")
     }
+    sb.append("\n\nEnvironment Variables:\n")
+    System.getenv.asScala.foreach{x =>
+      sb.append(s"${x._1}=${x._2}\n")
+    }
+    sb.append("\n\n")
+    sb.append(showProvider(Security.getProvider("IBMJCECCA")))
+    sb.result().lines.foreach(System.out.println)
   }
 
   def configureBouncyCastleProvider(): Unit = {
-    Security.insertProviderAt(new org.bouncycastle.jce.provider.BouncyCastleProvider(), 1)
+    Security.addProvider(new org.bouncycastle.jce.provider.BouncyCastleProvider())
+  }
+
+  def insertIBMJCECCAProvider(): Unit = {
+    Security.insertProviderAt(new com.ibm.crypto.hdwrCCA.provider.IBMJCECCA(), 1)
+  }
+
+  def showProviders(): String = {
+    Security.getProviders
+      .map(showProvider)
+      .mkString("\n\n----------------------------------------\n\n")
+  }
+
+  def showService(s: Provider.Service): String = {
+    s"""Service: ${s.getAlgorithm} Type: ${s.getType} Class: ${s.getClassName}"""
+  }
+
+  def showProvider(p: Provider) : String = {
+    import scala.collection.JavaConverters._
+    val sb = new StringBuilder()
+    sb.append("Provider: ")
+    sb.append(p.getName)
+    sb.append("\n")
+    sb.append("Info: \n")
+    sb.append(p.getInfo)
+    sb.append("\n")
+    sb.append("Services:\n")
+    p.getServices.asScala.toArray.sortBy(_.getAlgorithm)
+      .foreach{s =>
+        sb.append(showService(s))
+        sb.append("\n")
+      }
+    sb.result()
   }
 
   val layout = new org.apache.log4j.PatternLayout("%d{ISO8601} [%t] %-5p %c %x - %m%n")

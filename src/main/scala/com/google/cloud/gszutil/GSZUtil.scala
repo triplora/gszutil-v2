@@ -39,6 +39,9 @@ object GSZUtil {
   }
 
   def init(config: Config): Unit = {
+    System.setProperty("java.net.preferIPv4Stack" , "true")
+    System.setProperty("jdk.tls.client.protocols" , "TLSv1.2")
+
     Util.configureLogging()
     if (config.debug)
       Util.printDebugInformation()
@@ -46,7 +49,8 @@ object GSZUtil {
     if (config.useBCProv)
       Util.configureBouncyCastleProvider()
 
-    System.setProperty("java.net.preferIPv4Stack" , "true")
+    if (System.getProperty("java.vm.vendor").contains("IBM"))
+      Util.insertIBMJCECCAProvider()
   }
 
   def run(config: Config): Try[Unit] = Try{
