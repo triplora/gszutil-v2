@@ -256,16 +256,24 @@ object Util {
   }
 
 
-  case class CopyResult(hash: String, duration: Long, bytes: Long)
+  case class CopyResult(hash: String, start: Long, end: Long, bytes: Long) {
+    def duration: Long = end - start
+    def mbps: Double = Util.mbps(bytes, duration)
+    def fmbps: String = Util.fmbps(bytes, duration)
+  }
 
   def toUri(blobInfo: BlobInfo): String =
     s"gs://${blobInfo.getBlobId.getBucket}/${blobInfo.getBlobId.getName}"
+
+  def fmbps(bytes: Long, milliseconds: Long): String = f"${mbps(bytes,milliseconds)}%1.2f"
+
+  def mbps(bytes: Long, milliseconds: Long): Double = ((8.0d * bytes) / (milliseconds / 1000.0d)) / 1000000.0d
 
   def transferWithHash(rc: ReadableByteChannel, wc: WritableByteChannel, chunkSize: Int = 4096): CopyResult = {
     val t0 = System.currentTimeMillis
     val buf = ByteBuffer.allocate(chunkSize)
     val buf2 = buf.asReadOnlyBuffer()
-    val h = Hashing.sha256().newHasher()
+    val h = Hashing.crc32().newHasher()
     var i = 0
     var n = 0
     var totalBytesRead = 0L
@@ -285,7 +293,7 @@ object Util {
     wc.close()
     val t1 = System.currentTimeMillis
     val hash = h.hash().toString
-    CopyResult(hash, t1-t0, totalBytesRead)
+    CopyResult(hash, t0, t1, totalBytesRead)
   }
 
   def readS(x: String): String = {

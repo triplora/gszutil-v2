@@ -4,7 +4,7 @@ import java.net.URI
 import java.nio.ByteBuffer
 
 import akka.actor.{Actor, ActorRef, ActorSystem, EscalatingSupervisorStrategy, Props, SupervisorStrategy, Terminated}
-import com.google.cloud.gszutil.CopyBook
+import com.google.cloud.gszutil.{CopyBook, Util}
 import com.google.cloud.gszutil.Util.Logging
 import com.google.cloud.gszutil.io.{ZDataSet, ZRecordReaderT}
 import com.google.cloud.storage.Storage
@@ -100,8 +100,8 @@ object ParallelORCWriter extends Logging {
         lastSend = System.currentTimeMillis
         activeTime += (lastSend - lastRecv)
         if (!in.isOpen) {
-          val mbps = ((8.0d * totalBytes) / (activeTime / 1000.0)) / 1000000
-          logger.info(s"Finished reading $nSent chunks with $totalBytes bytes in $activeTime ms (${f"$mbps%1.2f"} mbps)")
+          val mbps = Util.fmbps(totalBytes,activeTime)
+          logger.info(s"Finished reading $nSent chunks with $totalBytes bytes in $activeTime ms ($mbps mbps)")
           context.become(finished)
         }
 
@@ -140,10 +140,9 @@ object ParallelORCWriter extends Logging {
     override def postStop(): Unit = {
       endTime = System.currentTimeMillis
       val totalTime = endTime - startTime
-      val mbps = ((8.0d * totalBytes) / (totalTime / 1000.0d)) / 1000000.0d
-      val v = f"$mbps%1.2f"
+      val mbps = Util.fmbps(totalBytes, totalTime)
       val wait = totalTime - activeTime
-      logger.info(s"Finished writing $totalBytes bytes; $nSent chunks; $totalTime ms; $v mbps; active $activeTime ms; wait $wait ms")
+      logger.info(s"Finished writing $totalBytes bytes; $nSent chunks; $totalTime ms; $mbps mbps; active $activeTime ms; wait $wait ms")
       context.system.terminate()
     }
 
@@ -201,8 +200,8 @@ object ParallelORCWriter extends Logging {
       val idle = dt - elapsedTime
       val bytesOut = stats.getBytesWritten
       val ratio = (bytesOut * 1.0d) / bytesIn
-      val mbps = ((8.0d * bytesOut) / (elapsedTime / 1000.0)) / 1000000
-      logger.info(s"Stopping writer for ${args.path} after writing $bytesOut bytes in $elapsedTime ms (${f"$mbps%1.2f"} mbps) $dt ms total $idle ms idle $bytesIn bytes read ${f"$ratio%1.2f"} compression ratio")
+      val mbps = Util.fmbps(bytesOut, elapsedTime)
+      logger.info(s"Stopping writer for ${args.path} after writing $bytesOut bytes in $elapsedTime ms ($mbps mbps) $dt ms total $idle ms idle $bytesIn bytes read ${f"$ratio%1.2f"} compression ratio")
     }
   }
 

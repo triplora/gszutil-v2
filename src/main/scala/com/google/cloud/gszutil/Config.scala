@@ -33,6 +33,7 @@ final case class Config(
                          destPath: String = "",
                          mode: String = "",
                          useBCProv: Boolean = true,
+                         useCCA: Boolean = true,
                          debug: Boolean = false,
                          bq: BigQueryConfig = BigQueryConfig())
 
@@ -138,6 +139,10 @@ object Config {
             .action { (x, c) => c.copy(destPath = x)}
             .text("destination path (gs://bucket/path)")
         )
+
+      opt[Boolean]("useCCA")
+        .action { (x, c) => c.copy(useCCA = x) }
+        .text("use IBMJCECCA Crypto Provider (default: true)")
 
       checkConfig(c =>
         if (c.mode == "cp" && (c.destBucket.isEmpty || c.destPath.isEmpty))

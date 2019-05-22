@@ -49,7 +49,7 @@ object GSZUtil {
     if (config.useBCProv)
       Util.configureBouncyCastleProvider()
 
-    if (System.getProperty("java.vm.vendor").contains("IBM"))
+    if (config.useCCA && System.getProperty("java.vm.vendor").contains("IBM"))
       Util.insertIBMJCECCAProvider()
   }
 

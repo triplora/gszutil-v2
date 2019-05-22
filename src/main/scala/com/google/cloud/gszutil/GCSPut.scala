@@ -25,18 +25,14 @@ import com.google.cloud.storage.{BlobId, BlobInfo, Storage, StorageOptions}
 object GCSPut extends Logging {
   def run(config: Config, cp: CredentialProvider): Unit = {
     val gcs = StorageOptions.newBuilder().setCredentials(cp.getCredentials).build().getService
-    System.out.println(s"Uploading ${config.inDD} to ${config.dest}")
-    put(gcs, ZInputStream(config.inDD), config.destBucket, config.destPath)
-    System.out.println(s"Upload Finished")
+    logger.info(s"Uploading ${config.inDD} to ${config.dest}")
+    val result = put(gcs, ZInputStream(config.inDD), config.destBucket, config.destPath)
+    logger.info(s"Finished uploading ${result.bytes} bytes (${result.duration} ms) ${result.fmbps} mb/s crc32=${result.hash}")
   }
 
-  def put(gcs: Storage, in: InputStream, bucket: String, path: String): Unit = {
+  def put(gcs: Storage, in: InputStream, bucket: String, path: String): Util.CopyResult = {
     val w = gcs.writer(BlobInfo.newBuilder(BlobId.of(bucket,path)).build())
-    val startTime = System.currentTimeMillis()
     Util.transferWithHash(Channels.newChannel(in), w)
-    val endTime = System.currentTimeMillis()
-    val duration = (endTime - startTime) / 1000L
-    logger.info(s"Success ($duration seconds)")
   }
 
   def putDD(gcs: Storage, dd: String, destBucket: String, destPath: String): Util.CopyResult =
