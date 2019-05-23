@@ -32,9 +32,7 @@ object BQLoad extends Logging {
     val copyBookId = "sku_dly_pos.cpy"
     val copyBook = CopyBook(Util.readS(copyBookId))
     logger.info(s"Loaded copy book```\n${copyBook.raw}\n```")
-
-    val reader: ZRecordReaderT = ZOS.readDD(c.inDD)
-    ParallelORCWriter.run(prefix, reader, copyBook, gcs)
+    ParallelORCWriter.run(prefix, ZOS.readDD(c.inDD), copyBook, gcs)
   }
 
   def load(bq: bigquery.BigQuery, table: String, c: Config, sourceUri: String, formatOptions: bigquery.FormatOptions = bigquery.FormatOptions.orc()): Unit = {

@@ -35,6 +35,7 @@ final case class Config(
                          useBCProv: Boolean = true,
                          useCCA: Boolean = true,
                          debug: Boolean = false,
+                         compress: Boolean = false,
                          bq: BigQueryConfig = BigQueryConfig())
 
 object Config {

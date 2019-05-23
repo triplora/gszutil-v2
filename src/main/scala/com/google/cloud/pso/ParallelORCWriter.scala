@@ -11,7 +11,7 @@ import com.google.cloud.storage.Storage
 import com.google.common.collect.ImmutableMap
 import com.typesafe.config.ConfigFactory
 import org.apache.hadoop.fs.{FileSystem, Path, SimpleGCSFileSystem}
-import org.apache.orc.{NoOpMemoryManager, OrcFile, Writer}
+import org.apache.orc.{CompressionKind, NoOpMemoryManager, OrcFile, Writer}
 
 import scala.collection.mutable
 import scala.concurrent.Await
@@ -167,6 +167,7 @@ object ParallelORCWriter extends Logging {
         .writerOptions(SimpleORCWriter.configuration())
         .setSchema(copyBook.getOrcSchema)
         .memory(NoOpMemoryManager)
+        .compress(CompressionKind.ZLIB)
         .fileSystem(new SimpleGCSFileSystem(gcs, stats))
       writer = OrcFile.createWriter(path, writerOptions)
       context.parent ! Batch(new Array[Byte](copyBook.lRecl * batchSize))
@@ -217,9 +218,7 @@ object ParallelORCWriter extends Logging {
     val conf = ConfigFactory.parseMap(ImmutableMap.of(
       "akka.actor.guardian-supervisor-strategy","akka.actor.EscalatingSupervisorStrategy"))
     val sys = ActorSystem("gsz", conf)
-    val args = FeederArgs(in, batchSize, new URI(prefix), partLen, maxWriters, copyBook, gcs)
-    sys.actorOf(Props(classOf[Feeder], args))
-    val timeoutDuration = FiniteDuration(timeoutMinutes, MINUTES)
-    Await.result(sys.whenTerminated, timeoutDuration)
+    sys.actorOf(Props(classOf[Feeder], FeederArgs(in, batchSize, new URI(prefix), partLen, maxWriters, copyBook, gcs)), "ZReader")
+    Await.result(sys.whenTerminated, atMost = FiniteDuration(timeoutMinutes, MINUTES))
   }
 }

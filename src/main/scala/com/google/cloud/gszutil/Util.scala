@@ -15,7 +15,7 @@
  */
 package com.google.cloud.gszutil
 
-import java.io.{ByteArrayOutputStream, InputStream, StringReader}
+import java.io.{ByteArrayOutputStream, InputStream, OutputStream, StringReader}
 import java.nio.ByteBuffer
 import java.nio.channels.{Channels, ReadableByteChannel, WritableByteChannel}
 import java.nio.charset.StandardCharsets
@@ -23,6 +23,7 @@ import java.nio.file.{Files, Paths}
 import java.security.spec.PKCS8EncodedKeySpec
 import java.security.{MessageDigest, PrivateKey, Provider, Security}
 import java.time.Instant
+import java.util.zip.GZIPOutputStream
 import java.util.{Collections, Date}
 
 import com.google.api.client.auth.oauth2.{BearerToken, Credential}
@@ -278,6 +279,14 @@ object Util {
   def fmbps(bytes: Long, milliseconds: Long): String = f"${mbps(bytes,milliseconds)}%1.2f"
 
   def mbps(bytes: Long, milliseconds: Long): Double = ((8.0d * bytes) / (milliseconds / 1000.0d)) / 1000000.0d
+
+  def transferStreamToChannel(in: InputStream, out: WritableByteChannel, compress: Boolean = false, chunkSize: Int = 4096): CopyResult = {
+    val rc = Channels.newChannel(in)
+    if (compress) {
+      val gzos = new GZIPOutputStream(Channels.newOutputStream(out), 4096, true)
+      transferWithHash(rc, Channels.newChannel(gzos), chunkSize)
+    } else transferWithHash(rc, out, chunkSize)
+  }
 
   def transferWithHash(rc: ReadableByteChannel, wc: WritableByteChannel, chunkSize: Int = 4096): CopyResult = {
     val t0 = System.currentTimeMillis

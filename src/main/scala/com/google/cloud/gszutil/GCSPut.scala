@@ -16,42 +16,35 @@
 package com.google.cloud.gszutil
 
 import java.io.InputStream
-import java.nio.channels.{Channels, ReadableByteChannel}
 
 import com.google.cloud.gszutil.Util.{CredentialProvider, Logging}
-import com.google.cloud.gszutil.io.{ZChannel, ZInputStream}
+import com.google.cloud.gszutil.io.ZInputStream
 import com.google.cloud.storage.Storage.BlobTargetOption
 import com.google.cloud.storage.{BlobId, BlobInfo, Storage}
 
 object GCSPut extends Logging {
   def run(config: Config, cp: CredentialProvider): Unit = {
-    val gcs = GCS.defaultClient(cp.getCredentials)
-    logger.info(s"Uploading ${config.inDD} to ${config.dest}")
-    val result = put(gcs, ZInputStream(config.inDD), config.destBucket, config.destPath)
-    logger.info(s"Finished uploading ${result.bytes} bytes (${result.duration} ms) ${result.fmbps} mb/s md5=${result.hash}")
+    put(GCS.defaultClient(cp.getCredentials), ZInputStream(config.inDD), config.destBucket, config.destPath, config.compress)
   }
 
-  def put(gcs: Storage, in: InputStream, bucket: String, path: String): Util.CopyResult = {
-    val blobId = BlobId.of(bucket,path)
+  def put(gcs: Storage, in: InputStream, bucket: String, path: String, compress: Boolean = true): Util.CopyResult = {
+    val blobId = BlobId.of(bucket, if (compress) path + ".gz" else path)
     val w = gcs.writer(BlobInfo.newBuilder(blobId).build())
-    val blob = gcs.get(blobId)
+    logger.info(s"Opened write channel to gs://$bucket/${blobId.getName}")
+    val result = Util.transferStreamToChannel(in, w, compress)
+    logger.info(s"Finished uploading ${result.bytes} bytes (${result.duration} ms) ${result.fmbps} mb/s md5=${result.hash}")
 
-    val result = Util.transferWithHash(Channels.newChannel(in), w)
-
-    blob.toBuilder
+    // Update blob metadata
+    val builder = gcs.get(blobId).toBuilder
       .setMd5(result.hash)
       .setContentType("application/octet-stream")
-      .build()
+
+    if (compress)
+      builder.setContentEncoding("gzip")
+
+    builder.build()
       .update(BlobTargetOption.metagenerationMatch())
 
     result
-  }
-
-  def putDD(gcs: Storage, dd: String, destBucket: String, destPath: String): Util.CopyResult =
-    putChannel(gcs, ZChannel(dd), destBucket, destPath)
-
-  def putChannel(gcs: Storage, in: ReadableByteChannel, destBucket: String, destPath: String): Util.CopyResult = {
-    val out = gcs.writer(BlobInfo.newBuilder(BlobId.of(destBucket, destPath)).build())
-    Util.transferWithHash(in, out)
   }
 }
