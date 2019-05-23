@@ -15,13 +15,10 @@
  */
 package com.google.cloud.pso
 
-import com.google.api.gax.retrying.RetrySettings
-import com.google.api.gax.rpc.FixedHeaderProvider
 import com.google.cloud.bigquery.JobInfo.{CreateDisposition, WriteDisposition}
 import com.google.cloud.gszutil.Util.{CredentialProvider, Logging}
 import com.google.cloud.gszutil.io.ZRecordReaderT
-import com.google.cloud.gszutil.{Config, CopyBook, Util}
-import com.google.cloud.storage.StorageOptions
+import com.google.cloud.gszutil.{Config, CopyBook, GCS, Util}
 import com.google.cloud.{RetryOption, bigquery}
 import com.ibm.jzos.ZOS
 import org.threeten.bp.Duration
@@ -29,19 +26,7 @@ import org.threeten.bp.Duration
 
 object BQLoad extends Logging {
   def run(c: Config, cp: CredentialProvider): Unit = {
-    val gcs = StorageOptions.newBuilder()
-      .setCredentials(cp.getCredentials)
-      .setRetrySettings(RetrySettings.newBuilder()
-        .setMaxAttempts(30)
-        .setTotalTimeout(Duration.ofMinutes(30))
-        .setInitialRetryDelay(Duration.ofSeconds(2))
-        .setMaxRetryDelay(Duration.ofSeconds(30))
-        .setRetryDelayMultiplier(2.0d)
-        .build())
-      .setHeaderProvider(FixedHeaderProvider.create("user-agent", "gszutil-0.1"))
-      .build()
-      .getService
-
+    val gcs = GCS.defaultClient(cp.getCredentials)
     val prefix = s"gs://${c.bq.bucket}/${c.bq.prefix}"
     //val copyBookId = sys.env.getOrElse("COPYBOOK", c.copyBook)
     val copyBookId = "sku_dly_pos.cpy"

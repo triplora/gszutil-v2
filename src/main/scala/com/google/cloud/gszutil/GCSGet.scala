@@ -8,7 +8,7 @@ import com.google.cloud.storage.{Storage, StorageOptions}
 
 object GCSGet extends Logging {
   def run(config: Config, cp: CredentialProvider): Unit = {
-    val gcs = StorageOptions.newBuilder().setCredentials(cp.getCredentials).build().getService
+    val gcs = GCS.defaultClient(cp.getCredentials)
     logger.info(s"Downloading gs://${config.srcBucket}/${config.srcPath} to ${config.destPath}")
 
     get(gcs, config.destBucket, config.destPath)

@@ -21,7 +21,7 @@ import java.nio.channels.{Channels, ReadableByteChannel, WritableByteChannel}
 import java.nio.charset.StandardCharsets
 import java.nio.file.{Files, Paths}
 import java.security.spec.PKCS8EncodedKeySpec
-import java.security.{PrivateKey, Provider, Security}
+import java.security.{MessageDigest, PrivateKey, Provider, Security}
 import java.time.Instant
 import java.util.{Collections, Date}
 
@@ -34,8 +34,9 @@ import com.google.auth.oauth2.{AccessToken, GSZCredentials, GoogleCredentials}
 import com.google.cloud.gszutil.KeyFileProto.KeyFile
 import com.google.cloud.storage.BlobInfo
 import com.google.common.base.Charsets
-import com.google.common.hash.Hashing
+import com.google.common.hash.{HashCode, Hashing}
 import com.google.common.io.Resources
+import com.ibm.crypto.hdwrCCA.provider.MD5
 import org.apache.log4j.{Level, Logger}
 import org.zeromq.codec.Z85
 
@@ -282,7 +283,9 @@ object Util {
     val t0 = System.currentTimeMillis
     val buf = ByteBuffer.allocate(chunkSize)
     val buf2 = buf.asReadOnlyBuffer()
-    val h = Hashing.crc32().newHasher()
+    val h = MessageDigest.getInstance("MD5")
+
+    //val h = Hashing.crc32().newHasher()
     var i = 0
     var n = 0
     var totalBytesRead = 0L
@@ -292,7 +295,7 @@ object Util {
       buf.flip()
       buf2.position(buf.position)
       buf2.limit(buf.limit)
-      h.putBytes(buf2)
+      h.update(buf2)
       wc.write(buf)
       buf.clear()
       i += 1
@@ -301,7 +304,7 @@ object Util {
     rc.close()
     wc.close()
     val t1 = System.currentTimeMillis
-    val hash = h.hash().toString
+    val hash = HashCode.fromBytes(h.digest()).toString
     CopyResult(hash, t0, t1, totalBytesRead)
   }
 

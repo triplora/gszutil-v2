@@ -20,19 +20,31 @@ import java.nio.channels.{Channels, ReadableByteChannel}
 
 import com.google.cloud.gszutil.Util.{CredentialProvider, Logging}
 import com.google.cloud.gszutil.io.{ZChannel, ZInputStream}
-import com.google.cloud.storage.{BlobId, BlobInfo, Storage, StorageOptions}
+import com.google.cloud.storage.Storage.BlobTargetOption
+import com.google.cloud.storage.{BlobId, BlobInfo, Storage}
 
 object GCSPut extends Logging {
   def run(config: Config, cp: CredentialProvider): Unit = {
-    val gcs = StorageOptions.newBuilder().setCredentials(cp.getCredentials).build().getService
+    val gcs = GCS.defaultClient(cp.getCredentials)
     logger.info(s"Uploading ${config.inDD} to ${config.dest}")
     val result = put(gcs, ZInputStream(config.inDD), config.destBucket, config.destPath)
-    logger.info(s"Finished uploading ${result.bytes} bytes (${result.duration} ms) ${result.fmbps} mb/s crc32=${result.hash}")
+    logger.info(s"Finished uploading ${result.bytes} bytes (${result.duration} ms) ${result.fmbps} mb/s md5=${result.hash}")
   }
 
   def put(gcs: Storage, in: InputStream, bucket: String, path: String): Util.CopyResult = {
-    val w = gcs.writer(BlobInfo.newBuilder(BlobId.of(bucket,path)).build())
-    Util.transferWithHash(Channels.newChannel(in), w)
+    val blobId = BlobId.of(bucket,path)
+    val w = gcs.writer(BlobInfo.newBuilder(blobId).build())
+    val blob = gcs.get(blobId)
+
+    val result = Util.transferWithHash(Channels.newChannel(in), w)
+
+    blob.toBuilder
+      .setMd5(result.hash)
+      .setContentType("application/octet-stream")
+      .build()
+      .update(BlobTargetOption.metagenerationMatch())
+
+    result
   }
 
   def putDD(gcs: Storage, dd: String, destBucket: String, destPath: String): Util.CopyResult =

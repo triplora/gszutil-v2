@@ -32,6 +32,8 @@ libraryDependencies ++= Seq(
 libraryDependencies ++= Seq(
   "com.ibm.jzos" % "jzos" % "1.0" % Provided from s"file://$jzosPath/ext/ibmjzos.jar",
   "com.ibm.jzos" % "rt" % "1.0" % Provided from s"file://$jzosPath/rt.jar",
+  "com.ibm.jzos" % "ibmjssefw" % "1.0" % Provided from s"file://$jzosPath/ibmjssefw.jar",
+  "com.ibm.jzos" % "ibmjsseprovider2" % "1.0" % Provided from s"file://$jzosPath/ibmjsseprovider2.jar",
   "com.ibm.jzos" % "ibmjcecca" % "1.0" % Provided from s"file://$jzosPath/ext/ibmjcecca.jar"
 )
 
