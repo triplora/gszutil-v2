@@ -19,12 +19,20 @@ import java.io.InputStream
 
 import com.google.cloud.gszutil.Util.{CredentialProvider, Logging}
 import com.google.cloud.gszutil.io.ZInputStream
+import com.google.cloud.pso.ParallelGZIPWriter
 import com.google.cloud.storage.Storage.BlobTargetOption
 import com.google.cloud.storage.{BlobId, BlobInfo, Storage}
+import com.ibm.jzos.ZOS
+
+import scala.util.Try
 
 object GCSPut extends Logging {
   def run(config: Config, cp: CredentialProvider): Unit = {
-    put(GCS.defaultClient(cp.getCredentials), ZInputStream(config.inDD), config.destBucket, config.destPath, config.compress)
+    if (config.parallelism == 1 || !config.compress)
+      put(GCS.defaultClient(cp.getCredentials), ZInputStream(config.inDD), config.destBucket, config.destPath, config.compress)
+    else {
+      ParallelGZIPWriter.run(config.destBucket, config.destPath, ZOS.readDD(config.inDD), GCS.defaultClient(cp.getCredentials), config.parallelism)
+    }
   }
 
   def put(gcs: Storage, in: InputStream, bucket: String, path: String, compress: Boolean = true): Util.CopyResult = {
@@ -42,8 +50,8 @@ object GCSPut extends Logging {
     if (compress)
       builder.setContentEncoding("gzip")
 
-    builder.build()
-      .update(BlobTargetOption.metagenerationMatch())
+    Try(builder.build()
+      .update(BlobTargetOption.metagenerationMatch()))
 
     result
   }

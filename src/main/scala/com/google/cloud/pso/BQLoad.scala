@@ -17,7 +17,6 @@ package com.google.cloud.pso
 
 import com.google.cloud.bigquery.JobInfo.{CreateDisposition, WriteDisposition}
 import com.google.cloud.gszutil.Util.{CredentialProvider, Logging}
-import com.google.cloud.gszutil.io.ZRecordReaderT
 import com.google.cloud.gszutil.{Config, CopyBook, GCS, Util}
 import com.google.cloud.{RetryOption, bigquery}
 import com.ibm.jzos.ZOS

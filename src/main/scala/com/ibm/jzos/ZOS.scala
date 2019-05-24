@@ -18,10 +18,12 @@ package com.ibm.jzos
 import com.google.cloud.gszutil.Util.Logging
 import com.google.cloud.gszutil.io.ZRecordReaderT
 
+import scala.util.Try
+
 object ZOS extends Logging {
   class RecordReaderCloser(r: RecordReader) extends Thread { override def run(): Unit = r.close() }
 
-  class WrappedRecordReader(r: RecordReader) extends ZRecordReaderT {
+  class WrappedRecordReader(r: RecordReader) extends ZRecordReaderT with Logging {
     // Ensure that reader is closed if job is killed
     //Runtime.getRuntime.addShutdownHook(new RecordReaderCloser(r))
     private var open = true
@@ -31,8 +33,12 @@ object ZOS extends Logging {
     override def read(buf: Array[Byte], off: Int, len: Int): Int =
       r.read(buf, off, len)
     override def close(): Unit = {
-      logger.info("close() called")
-      if (open) open = false
+      if (open) {
+        open = false
+        Try(r.close())
+          .failed
+          .foreach(t => logger.error(t.getMessage))
+      }
     }
 
     override def isOpen: Boolean = open

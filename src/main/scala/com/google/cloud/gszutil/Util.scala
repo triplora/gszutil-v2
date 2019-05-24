@@ -26,6 +26,7 @@ import java.time.Instant
 import java.util.zip.GZIPOutputStream
 import java.util.{Collections, Date}
 
+import akka.io.Tcp.Write
 import com.google.api.client.auth.oauth2.{BearerToken, Credential}
 import com.google.api.client.googleapis.auth.oauth2.GoogleCredential
 import com.google.api.client.googleapis.util.Utils
@@ -255,6 +256,51 @@ object Util {
       accessTokenCredentials1(token)
   }
 
+  class CountingChannel(out: WritableByteChannel) extends WritableByteChannel {
+    private var open: Boolean = true
+    private var bytesWritten: Long = 0
+    override def write(src: ByteBuffer): Int = {
+      val n = out.write(src)
+      bytesWritten += n
+      n
+    }
+
+    def getBytesWritten: Long = bytesWritten
+
+    override def isOpen: Boolean = open
+
+    override def close(): Unit = {
+      open = false
+      out.close()
+    }
+  }
+
+  class GZIPChannel(out: WritableByteChannel, size: Int) extends WritableByteChannel {
+    private val countingChannel = new CountingChannel(out)
+    private val gzip = new GZIPOutputStream(Channels.newOutputStream(countingChannel), size, true)
+    private val buf = new Array[Byte](size)
+    private var open: Boolean = true
+    def getBytesWritten: Long = countingChannel.getBytesWritten
+
+    override def write(src: ByteBuffer): Int = {
+      var n = 0
+      while (src.hasRemaining){
+        val m = math.min(src.remaining, buf.length)
+        src.get(buf,0, m)
+        gzip.write(buf, 0, m)
+        n += m
+      }
+      n
+    }
+
+    override def isOpen: Boolean = open
+
+    override def close(): Unit = {
+      gzip.close()
+      open = false
+    }
+  }
+
   def transfer(rc: ReadableByteChannel, wc: WritableByteChannel, chunkSize: Int = 4096): Unit = {
     val buf = ByteBuffer.allocate(chunkSize)
     while (rc.read(buf) > -1) {
@@ -280,12 +326,11 @@ object Util {
 
   def mbps(bytes: Long, milliseconds: Long): Double = ((8.0d * bytes) / (milliseconds / 1000.0d)) / 1000000.0d
 
-  def transferStreamToChannel(in: InputStream, out: WritableByteChannel, compress: Boolean = false, chunkSize: Int = 4096): CopyResult = {
+  def transferStreamToChannel(in: InputStream, out: WritableByteChannel, compress: Boolean = false, chunkSize: Int = 65536): CopyResult = {
     val rc = Channels.newChannel(in)
-    if (compress) {
-      val gzos = new GZIPOutputStream(Channels.newOutputStream(out), 4096, true)
-      transferWithHash(rc, Channels.newChannel(gzos), chunkSize)
-    } else transferWithHash(rc, out, chunkSize)
+    if (compress)
+      transferWithHash(rc, new GZIPChannel(out, chunkSize), chunkSize)
+    else transferWithHash(rc, out, chunkSize)
   }
 
   def transferWithHash(rc: ReadableByteChannel, wc: WritableByteChannel, chunkSize: Int = 4096): CopyResult = {

@@ -35,7 +35,8 @@ final case class Config(
                          useBCProv: Boolean = true,
                          useCCA: Boolean = true,
                          debug: Boolean = false,
-                         compress: Boolean = false,
+                         compress: Boolean = true,
+                         parallelism: Int = 5,
                          bq: BigQueryConfig = BigQueryConfig())
 
 object Config {
@@ -148,6 +149,10 @@ object Config {
       opt[Boolean]("debug")
         .action { (x, c) => c.copy(debug = x) }
         .text("enable debug options (default: false)")
+
+      opt[Int]('p', "parallelism")
+        .action{(x,c) => c.copy(parallelism = x)}
+        .text("number of concurrent writers (default: 5)")
 
       checkConfig(c =>
         if (c.mode == "cp" && (c.destBucket.isEmpty || c.destPath.isEmpty))
