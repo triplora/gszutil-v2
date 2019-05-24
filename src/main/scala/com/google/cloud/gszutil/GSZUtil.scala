@@ -40,7 +40,6 @@ object GSZUtil {
 
   def init(config: Config): Unit = {
     System.setProperty("java.net.preferIPv4Stack" , "true")
-    System.setProperty("jdk.tls.client.protocols" , "TLSv1.2")
 
     Util.configureLogging()
     if (config.debug)

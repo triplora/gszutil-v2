@@ -2,38 +2,49 @@ package com.google.cloud.gszutil
 
 import java.net.{InetAddress, Socket}
 
-import javax.net.ssl.{SSLContext, SSLSocketFactory}
+import com.google.api.client.googleapis.GoogleUtils
+import com.google.api.client.util.SslUtils
+import com.google.cloud.gszutil.Util.Logging
+import javax.net.ssl.{SSLContext, SSLSocket, SSLSocketFactory}
 
-class CCASSLSocketFactory extends SSLSocketFactory {
-  private val isIBM: Boolean = System.getProperty("java.vm.vendor").contains("IBM")
+class CCASSLSocketFactory extends SSLSocketFactory with Logging {
+  private val factory: SSLSocketFactory = {
+    val ciphers: String = Seq(
+      "TLS_RSA_WITH_AES_256_GCM_SHA384",
+      "TLS_RSA_WITH_AES_128_GCM_SHA256",
+      "TLS_RSA_WITH_AES_256_CBC_SHA",
+      "TLS_RSA_WITH_AES_128_CBC_SHA"
+    ).mkString(",")
+    System.setProperty("jdk.tls.client.cipherSuites", ciphers)
+    System.setProperty("jdk.tls.client.protocols" , "TLSv1.2")
+    val ctx = SSLContext.getInstance("TLSv1.2")
+    val tmf = SslUtils.getPkixTrustManagerFactory
+    tmf.init(GoogleUtils.getCertificateTrustStore)
+    ctx.init(null, tmf.getTrustManagers, null)
+    ctx.getSocketFactory
+  }
 
-  private val factory: SSLSocketFactory =
-    if (isIBM)
-      new com.ibm.jsse2.SSLSocketFactoryImpl()
-    else
-      SSLContext.getInstance("TLSv1.2").getSocketFactory
+  override def getDefaultCipherSuites: Array[String] = throw new UnsupportedOperationException
 
-  private val ciphers: Array[String] =
-    if (isIBM)
-      Array[String](
-        "TLS_RSA_WITH_AES_256_GCM_SHA384",
-        "TLS_RSA_WITH_AES_128_GCM_SHA256",
-        "TLS_RSA_WITH_AES_256_CBC_SHA",
-        "TLS_RSA_WITH_AES_128_CBC_SHA"
-      )
-    else factory.getSupportedCipherSuites
+  override def getSupportedCipherSuites: Array[String] = throw new UnsupportedOperationException
 
-  override def getDefaultCipherSuites: Array[String] = ciphers
+  override def createSocket(socket: Socket, host: String, port: Int, autoClose: Boolean): Socket = {
+    val s = factory.createSocket(socket, host, port, autoClose)
+    s match {
+      case x: SSLSocket =>
+        logger.info(x.getClass.getCanonicalName)
+        logger.info("Cipher Suites: "+x.getEnabledCipherSuites.mkString(","))
+      case x =>
+        logger.warn(s"${x.getClass.getCanonicalName} is not an instance of SSLSocket ")
+    }
+    s
+  }
 
-  override def getSupportedCipherSuites: Array[String] = ciphers
+  override def createSocket(host: String, port: Int): Socket = throw new UnsupportedOperationException
 
-  override def createSocket(socket: Socket, s: String, i: Int, b: Boolean): Socket = factory.createSocket(socket, s, i, b)
+  override def createSocket(host: String, port: Int, localAddress: InetAddress, localPort: Int): Socket = throw new UnsupportedOperationException
 
-  override def createSocket(s: String, i: Int): Socket = factory.createSocket(s, i)
+  override def createSocket(address: InetAddress, port: Int): Socket = throw new UnsupportedOperationException
 
-  override def createSocket(s: String, i: Int, inetAddress: InetAddress, i1: Int): Socket = factory.createSocket(s, i, inetAddress, i1)
-
-  override def createSocket(inetAddress: InetAddress, i: Int): Socket = factory.createSocket(inetAddress, i)
-
-  override def createSocket(inetAddress: InetAddress, i: Int, inetAddress1: InetAddress, i1: Int): Socket = factory.createSocket(inetAddress, i, inetAddress1, i1)
+  override def createSocket(inetAddress: InetAddress, port: Int, localAddress: InetAddress, localPort: Int): Socket = throw new UnsupportedOperationException
 }
