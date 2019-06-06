@@ -15,12 +15,20 @@
  */
 package com.google.cloud.gszutil
 
-import com.google.cloud.gszutil.KeyFileProto.KeyFile
-import com.google.cloud.gszutil.Util.KeyFileCredentialProvider
+import java.io.ByteArrayInputStream
+
+import com.google.api.client.auth.oauth2.Credential
+import com.google.api.client.googleapis.auth.oauth2.GoogleCredential
+import com.google.auth.oauth2.GoogleCredentials
+import com.google.cloud.gszutil.Util.{CredentialProvider, Logging}
+import com.google.cloud.gszutil.io.ZInputStream
+import com.google.common.base.Charsets
+import com.google.common.io.ByteStreams
+import com.google.protobuf.ByteString
 
 import scala.util.{Failure, Success, Try}
 
-object GSZUtil {
+object GSZUtil extends Logging {
 
   def main(args: Array[String]): Unit = {
     Config.parse(args) match {
@@ -52,9 +60,16 @@ object GSZUtil {
       Util.insertIBMJCECCAProvider()
   }
 
-  def run(config: Config): Try[Unit] = Try{
-    val cp = KeyFileCredentialProvider(KeyFile.parseFrom(Util.readB("keyfile.pb")))
+  class ByteStringCredentialsProvider(bytes: ByteString) extends CredentialProvider {
+    override def getCredential: Credential = GoogleCredential.fromStream(new ByteArrayInputStream(bytes.toByteArray))
+    override def getCredentials: GoogleCredentials = GoogleCredentials.fromStream(new ByteArrayInputStream(bytes.toByteArray))
+  }
 
+  def run(config: Config): Try[Unit] = Try{
+    val bytes = ByteStreams.toByteArray(ZInputStream("KEYFILE"))
+    logger.debug("Loaded credential json:\n" + new String(bytes, Charsets.UTF_8))
+    val cp: CredentialProvider = Try(new ByteStringCredentialsProvider(ByteString.copyFrom(bytes)))
+      .getOrElse(new ByteStringCredentialsProvider(ByteString.copyFrom(bytes.map(Decoding.ebdic2ascii))))
     if (config.mode == "cp")
       GCSPut.run(config, cp)
     else if (config.mode == "get")

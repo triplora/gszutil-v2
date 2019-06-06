@@ -7,14 +7,21 @@ import com.google.api.client.util.SslUtils
 import com.google.cloud.gszutil.Util.Logging
 import javax.net.ssl.{SSLContext, SSLSocket, SSLSocketFactory}
 
+/** This SSLSocketFactory implementation is necessary to
+  * disable ECDHE ciphers which are not supported by
+  * IBM Crypto Cards.
+  */
 class CCASSLSocketFactory extends SSLSocketFactory with Logging {
+  private final val Protocols = Array("TLSv1.2")
+  private final val Ciphers = Array(
+    "TLS_RSA_WITH_AES_256_GCM_SHA384",
+    "TLS_RSA_WITH_AES_128_GCM_SHA256",
+    "TLS_RSA_WITH_AES_256_CBC_SHA",
+    "TLS_RSA_WITH_AES_128_CBC_SHA"
+  )
+
   private val factory: SSLSocketFactory = {
-    val ciphers: String = Seq(
-      "TLS_RSA_WITH_AES_256_GCM_SHA384",
-      "TLS_RSA_WITH_AES_128_GCM_SHA256",
-      "TLS_RSA_WITH_AES_256_CBC_SHA",
-      "TLS_RSA_WITH_AES_128_CBC_SHA"
-    ).mkString(",")
+    val ciphers: String = Ciphers.mkString(",")
     System.setProperty("jdk.tls.client.cipherSuites", ciphers)
     System.setProperty("jdk.tls.client.protocols" , "TLSv1.2")
     val ctx = SSLContext.getInstance("TLSv1.2")
@@ -32,8 +39,9 @@ class CCASSLSocketFactory extends SSLSocketFactory with Logging {
     val s = factory.createSocket(socket, host, port, autoClose)
     s match {
       case x: SSLSocket =>
-        logger.info(x.getClass.getCanonicalName)
-        logger.info("Cipher Suites: "+x.getEnabledCipherSuites.mkString(","))
+        x.setEnabledCipherSuites(Ciphers)
+        x.setEnabledProtocols(Protocols)
+        logger.info("created " + x.getClass.getCanonicalName + " with " + x.getEnabledProtocols.mkString(",") + " Cipher Suites: "+x.getEnabledCipherSuites.mkString(","))
       case x =>
         logger.warn(s"${x.getClass.getCanonicalName} is not an instance of SSLSocket ")
     }

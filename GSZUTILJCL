@@ -23,17 +23,23 @@
 //*
 //*******************************************************************
 //JAVA EXEC PROC=JVMPRC86,
-// JAVACLS='com.google.cloud.gszutil.GSZUtil'
-//INFILE DD DSNAME=LIB.NAME.DATA,DISP=SHR
+//          JAVACLS='com.google.cloud.gszutil.GSZUtil'
+//*
+//INFILE DD DISP=SHR,
+//          DSNAME=LIB.NAME.INFILE,
+//          DCB=(BUFNO=32,DSORG=PS)
+//*
+//KEYFILE DD DISP=SHR,DSNAME=LIB.NAME.KEYFILE
+//*
+//COPYBOOK DD DISP=SHR,DSNAME=LIB.NAME.COPYBOOK
 //STDENV DD *
 
 . /etc/profile
 export BUCKET=""  # GCS Bucket Name
-export DESTOBJ="" # GCS Path
+export OUTPATH="" # GCS Path
 export APP_JAR="" # path/to/GSZUtil.jar
 export DEP_JAR="" # path/to/GSZUtilDeps.jar
-export GCREDS=""  # path/to/keyfile.pb
-export JZOS_MAIN_ARGS="cp INFILE gs://$BUCKET/$DESTOBJ $GCREDS"
+export JZOS_MAIN_ARGS="cp INFILE gs://$BUCKET/OUTPATH $GCREDS"
 
 export JAVA_HOME=/usr/lpp/java/J8.0_64
 export PATH="/bin:${JAVA_HOME}/bin:"
@@ -48,9 +54,9 @@ CLASSPATH="$APP_JAR:$DEP_JAR"
 CLASSPATH="$CLASSPATH:${JAVA_HOME}/lib:${JAVA_HOME}/lib/ext:"
 export CLASSPATH
 
-export SPARK_USER="spark"
-export HADOOP_USER_NAME="spark"
-IJO="-Djava.net.preferIPv4Stack=true"
-export IBM_JAVA_OPTIONS="-Xms256m -Xmx256m $IJO"
+IJO="-Xms1g -Xmx1g"
+IJO="-Xcompressedrefs"
+IJO="$IJO -Djava.net.preferIPv4Stack=true"
+export IBM_JAVA_OPTIONS="$IJO"
 
 //

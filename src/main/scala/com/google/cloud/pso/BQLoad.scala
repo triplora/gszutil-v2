@@ -17,8 +17,11 @@ package com.google.cloud.pso
 
 import com.google.cloud.bigquery.JobInfo.{CreateDisposition, WriteDisposition}
 import com.google.cloud.gszutil.Util.{CredentialProvider, Logging}
-import com.google.cloud.gszutil.{Config, CopyBook, GCS, Util}
+import com.google.cloud.gszutil.io.ZInputStream
+import com.google.cloud.gszutil.{Config, CopyBook, Decoding, GCS, Util}
 import com.google.cloud.{RetryOption, bigquery}
+import com.google.common.base.Charsets
+import com.google.common.io.ByteStreams
 import com.ibm.jzos.ZOS
 import org.threeten.bp.Duration
 
@@ -27,9 +30,14 @@ object BQLoad extends Logging {
   def run(c: Config, cp: CredentialProvider): Unit = {
     val gcs = GCS.defaultClient(cp.getCredentials)
     val prefix = s"gs://${c.bq.bucket}/${c.bq.prefix}"
-    //val copyBookId = sys.env.getOrElse("COPYBOOK", c.copyBook)
-    val copyBookId = "sku_dly_pos.cpy"
-    val copyBook = CopyBook(Util.readS(copyBookId))
+
+    val copyBook = if (ZOS.ddExists("COPYBOOK")){
+      CopyBook(new String(ByteStreams.toByteArray(ZInputStream("COPYBOOK")).map(Decoding.ebdic2ascii), Charsets.UTF_8))
+    } else {
+      // TODO remove hardcoded copy book
+      CopyBook(Util.readS("imsku.cpy"))
+    }
+
     logger.info(s"Loaded copy book```\n${copyBook.raw}\n```")
     ParallelORCWriter.run(prefix, ZOS.readDD(c.inDD), copyBook, gcs)
   }
