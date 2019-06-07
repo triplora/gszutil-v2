@@ -19,13 +19,13 @@ class OrcWriterSpec extends FlatSpec with Logging {
       bq = BigQueryConfig(
         project = "retail-poc-demo",
         bucket = "kms-demo1",
-        prefix = "sku_dly_pos.orc"
+        path = "sku_dly_pos.orc"
       ), copyBook = "sku_dly_pos.cpy"
     )
 
     val gcs = GCS.defaultClient(cp.getCredentials)
 
-    val prefix = s"gs://${c.bq.bucket}/${c.bq.prefix}"
+    val prefix = s"gs://${c.bq.bucket}/${c.bq.path}"
     val copyBookId = sys.env.getOrElse("COPYBOOK", c.copyBook)
     val copyBook = CopyBook(Util.readS(copyBookId))
     logger.info(s"Loaded copy book```\n${copyBook.raw}\n```")

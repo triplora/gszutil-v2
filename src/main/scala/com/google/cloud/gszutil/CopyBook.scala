@@ -1,12 +1,26 @@
 package com.google.cloud.gszutil
 
 import com.google.cloud.gszutil.Decoding.{CopyBookField, Decoder, parseCopyBookLine}
-import com.google.cloud.gszutil.io.ZReader
+import com.google.cloud.gszutil.Util.Logging
+import com.google.cloud.gszutil.io.{ZInputStream, ZReader, ZRecordReaderT}
+import com.google.common.base.Charsets
+import com.google.common.io.ByteStreams
 import org.apache.orc.TypeDescription
 import org.apache.orc.TypeDescription.Category
 
 import scala.collection.mutable.ArrayBuffer
 
+
+object CopyBook extends Logging {
+  def apply(rr: ZRecordReaderT): CopyBook = {
+    val copyBook = CopyBook(ByteStreams.toByteArray(ZInputStream(rr))
+      .grouped(rr.lRecl)
+      .map(b => new String(b.map(Decoding.ebdic2ascii), Charsets.UTF_8))
+      .mkString("\n"))
+    logger.info(s"Loaded copy book with LRECL=${copyBook.lRecl} FIELDS=${copyBook.getFieldNames.mkString(",")}```\n${copyBook.raw}\n```")
+    copyBook
+  }
+}
 
 case class CopyBook(raw: String) {
   @transient

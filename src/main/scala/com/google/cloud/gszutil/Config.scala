@@ -46,7 +46,7 @@ object Config {
                                    dataset: String = "",
                                    table: String = "",
                                    bucket: String = "",
-                                   prefix: String = "",
+                                   path: String = "",
                                    location: String = "US")
 
   def parse(args: Array[String]): Option[Config] = Parser.parse(args, Config())
@@ -94,7 +94,7 @@ object Config {
 
           arg[String]("prefix")
             .required()
-            .action { (x, c) => c.copy(bq = c.bq.copy(prefix = x)) }
+            .action { (x, c) => c.copy(bq = c.bq.copy(path = x)) }
             .text("GCS prefix of source")
         )
 

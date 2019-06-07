@@ -21,11 +21,20 @@ import com.google.cloud.gszutil.io.ZRecordReaderT
 import scala.util.Try
 
 object ZOS extends Logging {
-  class RecordReaderCloser(r: RecordReader) extends Thread { override def run(): Unit = r.close() }
+  class RecordReaderCloser(r: RecordReader) extends Thread {
+    override def run(): Unit = {
+      try {
+        r.close()
+      } catch {
+        case e: ZFileException =>
+          logger.error(s"failed to close ${r.getDDName}", e)
+      }
+    }
+  }
 
   class WrappedRecordReader(r: RecordReader) extends ZRecordReaderT with Logging {
     // Ensure that reader is closed if job is killed
-    //Runtime.getRuntime.addShutdownHook(new RecordReaderCloser(r))
+    Runtime.getRuntime.addShutdownHook(new RecordReaderCloser(r))
     private var open = true
 
     override def read(buf: Array[Byte]): Int =

@@ -206,7 +206,7 @@ object ParallelORCWriter extends Logging {
     }
   }
 
-  def run(prefix: String,
+  def run(gcsUri: String,
           in: ZRecordReaderT,
           copyBook: CopyBook,
           gcs: Storage,
@@ -218,7 +218,7 @@ object ParallelORCWriter extends Logging {
     val conf = ConfigFactory.parseMap(ImmutableMap.of(
       "akka.actor.guardian-supervisor-strategy","akka.actor.EscalatingSupervisorStrategy"))
     val sys = ActorSystem("gsz", conf)
-    sys.actorOf(Props(classOf[Feeder], FeederArgs(in, batchSize, new URI(prefix), partLen, maxWriters, copyBook, gcs)), "ZReader")
+    sys.actorOf(Props(classOf[Feeder], FeederArgs(in, batchSize, new URI(gcsUri), partLen, maxWriters, copyBook, gcs)), "ZReader")
     Await.result(sys.whenTerminated, atMost = FiniteDuration(timeoutMinutes, MINUTES))
   }
 }
