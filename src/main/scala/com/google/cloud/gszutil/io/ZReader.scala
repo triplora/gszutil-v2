@@ -36,8 +36,11 @@ class ZReader(private val copyBook: CopyBook) {
           batch.cols(i) = columns(i)
         var rowId = 0
         while (rowId < batchSize && offset.hasNext){
-          readOrc(data, offset.next, batch, rowId)
-          rowId += 1
+          val off = offset.next
+          if (off > 0) {
+            readOrc(data, off, batch, rowId)
+            rowId += 1
+          }
         }
         batch.size = rowId
         if (!offset.hasNext)
