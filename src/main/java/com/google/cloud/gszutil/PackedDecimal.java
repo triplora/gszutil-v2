@@ -1,9 +1,10 @@
 package com.google.cloud.gszutil;
 
 
-import com.google.common.base.Preconditions;
+import com.ibm.jzos.CrossPlatform;
 
 public class PackedDecimal {
+    private static boolean relaxedParsing = !CrossPlatform.IBM();
     private static final String[] hexValues = new String[256];
     private static final char[] hex = new char[]{'0','1','2','3','4','5','6','7','8','9','A','B','C','D','E','F'};
 
@@ -40,8 +41,6 @@ public class PackedDecimal {
     }
 
     public static long unpack(byte[] bytes, int off, int len) {
-        Preconditions.checkNotNull(bytes);
-        Preconditions.checkArgument(bytes.length > 0);
         long x = 0;
         for (int i = off; i < off + len - 1; i++) {
             x += uint(bytes[i]) >>> 4;
@@ -54,7 +53,11 @@ public class PackedDecimal {
         if (sign == 0xD) { x *= -1L; }
         else if (sign == 0xC) { /*positive*/ }
         else if (sign == 0xF) { /*unsigned*/ }
-        else { throw new IllegalArgumentException("unexpected sign bits " + sign); }
+        else {
+            if (!relaxedParsing) {
+                throw new IllegalArgumentException("unexpected sign bits " + sign);
+            }
+        }
         return x;
     }
 }
