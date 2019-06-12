@@ -33,9 +33,9 @@ final case class Config(
                          destBucket: String = "",
                          destPath: String = "",
                          mode: String = "",
-                         useCCA: Boolean = true,
                          debug: Boolean = false,
                          compress: Boolean = true,
+                         batchSize: Int = 10000,
                          parallelism: Int = 5,
                          bq: BigQueryConfig = BigQueryConfig())
 
@@ -141,10 +141,6 @@ object Config {
             .action { (x, c) => c.copy(destPath = x)}
             .text("destination path (gs://bucket/path)")
         )
-
-      opt[Boolean]("useCCA")
-        .action { (x, c) => c.copy(useCCA = x) }
-        .text("use IBMJCECCA Crypto Provider (default: true)")
 
       opt[Boolean]("debug")
         .action { (x, c) => c.copy(debug = x) }

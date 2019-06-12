@@ -1,12 +1,11 @@
 package com.google.cloud.pso
 
-import java.net.URI
 import java.nio.ByteBuffer
 
 import akka.actor.{Actor, ActorRef, ActorSystem, EscalatingSupervisorStrategy, Props, SupervisorStrategy, Terminated}
+import com.google.cloud.gszutil.Util
 import com.google.cloud.gszutil.Util.{GZIPChannel, Logging}
 import com.google.cloud.gszutil.io.ZRecordReaderT
-import com.google.cloud.gszutil.Util
 import com.google.cloud.storage.{BlobId, BlobInfo, Storage}
 import com.google.common.collect.ImmutableMap
 import com.typesafe.config.ConfigFactory

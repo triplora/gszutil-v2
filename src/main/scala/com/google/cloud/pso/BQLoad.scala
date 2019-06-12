@@ -17,7 +17,7 @@ package com.google.cloud.pso
 
 import com.google.cloud.bigquery.JobInfo.{CreateDisposition, WriteDisposition}
 import com.google.cloud.gszutil.Util.{CredentialProvider, Logging}
-import com.google.cloud.gszutil.{Config, CopyBook, GCS, Util}
+import com.google.cloud.gszutil.{Config, GCS}
 import com.google.cloud.{RetryOption, bigquery}
 import com.ibm.jzos.CrossPlatform
 import org.threeten.bp.Duration
@@ -30,6 +30,7 @@ object BQLoad extends Logging {
       in = CrossPlatform.readDD(c.inDD),
       copyBook = CrossPlatform.loadCopyBook(c.copyBookDD),
       gcs = GCS.defaultClient(cp.getCredentials),
+      batchSize = c.batchSize,
       timeoutMinutes = 600)
   }
 

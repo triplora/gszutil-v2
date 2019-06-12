@@ -4,9 +4,9 @@ import java.net.URI
 import java.nio.ByteBuffer
 
 import akka.actor.{Actor, ActorRef, ActorSystem, EscalatingSupervisorStrategy, Props, SupervisorStrategy, Terminated}
-import com.google.cloud.gszutil.{CopyBook, Util}
 import com.google.cloud.gszutil.Util.Logging
 import com.google.cloud.gszutil.io.{ZDataSet, ZRecordReaderT}
+import com.google.cloud.gszutil.{CopyBook, Util}
 import com.google.cloud.storage.Storage
 import com.google.common.collect.ImmutableMap
 import com.typesafe.config.ConfigFactory
@@ -73,9 +73,9 @@ object ParallelORCWriter extends Logging {
     }
 
     def logMem(): String = {
-      val free = r.freeMemory()
-      val total = r.totalMemory()
-      val max = r.maxMemory()
+      val free = r.freeMemory() * 1.0d / 1e9
+      val total = r.totalMemory() * 1.0d / 1e9
+      val max = r.maxMemory() * 1.0d / 1e9
       s"Memory: $free of $total total ($max max)"
     }
 
@@ -209,9 +209,9 @@ object ParallelORCWriter extends Logging {
 
     override def receive: Receive = {
       case x: Batch =>
-        val shouldLog = i%10 == 0 && i < n
+        val shouldLog = i < n
         if (shouldLog) {
-          logger.info(s"received batch $i "+ logMem())
+          logger.info(s"received batch $i ${x.buf.length} ${x.limit} "+ logMem())
         }
         bytesIn += x.limit
         val t0 = System.currentTimeMillis

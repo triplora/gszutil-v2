@@ -15,7 +15,7 @@
  */
 package com.google.cloud.gszutil
 
-import java.io.{ByteArrayInputStream, ByteArrayOutputStream, InputStream, OutputStream, StringReader}
+import java.io.{ByteArrayInputStream, ByteArrayOutputStream, InputStream, StringReader}
 import java.nio.ByteBuffer
 import java.nio.channels.{Channels, ReadableByteChannel, WritableByteChannel}
 import java.nio.charset.StandardCharsets
@@ -26,7 +26,6 @@ import java.time.Instant
 import java.util.zip.GZIPOutputStream
 import java.util.{Collections, Date}
 
-import akka.io.Tcp.Write
 import com.google.api.client.auth.oauth2.{BearerToken, Credential}
 import com.google.api.client.googleapis.auth.oauth2.GoogleCredential
 import com.google.api.client.googleapis.util.Utils
@@ -36,10 +35,9 @@ import com.google.auth.oauth2.{AccessToken, GSZCredentials, GoogleCredentials}
 import com.google.cloud.gszutil.KeyFileProto.KeyFile
 import com.google.cloud.storage.BlobInfo
 import com.google.common.base.Charsets
-import com.google.common.hash.{HashCode, Hashing}
+import com.google.common.hash.HashCode
 import com.google.common.io.Resources
 import com.google.protobuf.ByteString
-import com.ibm.crypto.hdwrCCA.provider.MD5
 import org.apache.log4j.{Level, Logger}
 import org.zeromq.codec.Z85
 

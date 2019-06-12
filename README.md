@@ -130,7 +130,9 @@ Command: get source dest
 download a GCS object to UNIX filesystem
   source                   source path (/path/to/file)
   dest                     destination path (gs://bucket/path)
-
+  --debug <value>          enable debug options (default: false)
+  -p, --parallelism <value>
+                           number of concurrent writers (default: 5)
 ```
 
 

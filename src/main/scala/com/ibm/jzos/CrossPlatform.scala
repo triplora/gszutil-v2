@@ -5,7 +5,6 @@ import java.nio.file.{Files, Paths}
 import java.security.Security
 
 import com.google.cloud.gszutil.{CopyBook, Decoding}
-import com.google.cloud.gszutil.GSZUtil.logger
 import com.google.cloud.gszutil.Util.{ByteStringCredentialsProvider, CredentialProvider, DefaultCredentialProvider, Logging}
 import com.google.cloud.gszutil.io.{ChannelRecordReader, ZInputStream, ZRecordReaderT}
 import com.google.common.base.Charsets
@@ -38,6 +37,7 @@ object CrossPlatform extends Logging {
       val blkSize: Int = env.get(dd + "_BLKSIZE").toInt
       val ddPath = Paths.get(System.getenv(dd))
       require(ddPath.toFile.exists(), s"$dd $ddPath does not exist")
+      require(ddPath.toFile.isFile(), s"$dd $ddPath is not a file")
       new ChannelRecordReader(FileChannel.open(ddPath), lRecl, blkSize)
     }
   }
@@ -63,7 +63,9 @@ object CrossPlatform extends Logging {
       logger.info(s"Loaded copy book with LRECL=${copyBook.lRecl} FIELDS=${copyBook.getFieldNames.mkString(",")}```\n${copyBook.raw}\n```")
       copyBook
     } else {
-      val ddPath = Paths.get(dd)
+      val ddValue = System.getenv(dd)
+      require(ddValue != null, s"$dd environment variable not defined")
+      val ddPath = Paths.get(ddValue)
       require(ddPath.toFile.exists(), s"$ddPath doesn't exist")
       CopyBook(new String(Files.readAllBytes(ddPath), Charsets.UTF_8))
     }
