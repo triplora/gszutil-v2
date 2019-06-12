@@ -18,6 +18,7 @@ package com.google.cloud.gszutil
 import java.nio.ByteBuffer
 import java.nio.charset.Charset
 
+import com.google.common.base.Charsets
 import org.apache.hadoop.hive.common.`type`.HiveDecimal
 import org.apache.hadoop.hive.ql.exec.vector.{BytesColumnVector, ColumnVector, DecimalColumnVector, LongColumnVector}
 import org.apache.orc.TypeDescription
@@ -33,8 +34,20 @@ object Decoding {
     cb.toString.toCharArray.map(_.toByte)
   }
 
-  def ebdic2ascii(b: Byte): Byte = {
-    EBCDIC(uint(b))
+  def ebcdic2ascii(b: Byte): Byte = EBCDIC(uint(b))
+
+  def ebcdic2utf8(a: Array[Byte]): String = {
+    new String(ebcdic2ascii(a), Charsets.UTF_8)
+  }
+
+  def ebcdic2ascii(a: Array[Byte]): Array[Byte] = {
+    val a1 = new Array[Byte](a.length)
+    var i = 0
+    while (i < a.length){
+      a1(i) = ebcdic2ascii(a(i))
+      i += 1
+    }
+    a1
   }
 
   def uint(b: Byte): Int = {
@@ -74,7 +87,7 @@ object Decoding {
       var i = 0
       val buf = new Array[Byte](size)
       while (i < size){
-        buf(i) = ebdic2ascii(a(off + i))
+        buf(i) = EBCDIC(uint(a(off + i)))
         i += 1
       }
       buf

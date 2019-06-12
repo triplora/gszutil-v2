@@ -4,11 +4,11 @@ import java.nio.ByteBuffer
 import java.nio.channels.ReadableByteChannel
 
 import com.google.cloud.gszutil.Util.Logging
-import com.ibm.jzos.ZOS
+import com.ibm.jzos.CrossPlatform
 
 object ZChannel {
   def apply(dd: String): ZChannel = {
-    new ZChannel(ZOS.readDD(dd))
+    new ZChannel(CrossPlatform.readDD(dd))
   }
 }
 

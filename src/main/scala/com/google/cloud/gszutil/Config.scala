@@ -24,6 +24,7 @@ import scala.util.{Success, Try}
 
 final case class Config(
                          inDD: String = "INFILE",
+                         copyBookDD: String = "COPYBOOK",
                          copyBook: String = "",
                          srcBucket: String = "",
                          srcPath: String = "",
@@ -32,7 +33,6 @@ final case class Config(
                          destBucket: String = "",
                          destPath: String = "",
                          mode: String = "",
-                         useBCProv: Boolean = true,
                          useCCA: Boolean = true,
                          debug: Boolean = false,
                          compress: Boolean = true,

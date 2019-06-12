@@ -30,7 +30,6 @@ class KeyFileSpec extends FlatSpec with BeforeAndAfterAll {
   private def readPb: KeyFile = Util.convertJson(new ByteArrayInputStream(readKeyfile.getBytes(StandardCharsets.UTF_8)))
 
   override def beforeAll(): Unit = {
-    Util.configureBouncyCastleProvider()
     Util.configureLogging()
   }
 
@@ -50,10 +49,10 @@ class KeyFileSpec extends FlatSpec with BeforeAndAfterAll {
     val keyFile = Util.convertJson(new ByteArrayInputStream(Resources.toByteArray(Resources.getResource("keyfile.json"))))
 
     val cp = KeyFileCredentialProvider(keyFile)
-    val cred = cp.getCredential
-    cred.refreshToken()
-    val token = cred.getAccessToken
-    System.out.println(token)
+    val cred = cp.getCredentials
+    cred.refresh()
+    val token = cred.getAccessToken.getTokenValue
+    System.out.println(token.substring(0,10)+"...")
     val withToken = keyFile.toBuilder.setAccessToken(token).build()
 
     Files.write(Paths.get("src/main/resources/keyfile.pb"), withToken.toByteArray)

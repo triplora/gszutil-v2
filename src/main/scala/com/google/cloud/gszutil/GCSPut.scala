@@ -22,7 +22,7 @@ import com.google.cloud.gszutil.io.ZInputStream
 import com.google.cloud.pso.ParallelGZIPWriter
 import com.google.cloud.storage.Storage.BlobTargetOption
 import com.google.cloud.storage.{BlobId, BlobInfo, Storage}
-import com.ibm.jzos.ZOS
+import com.ibm.jzos.CrossPlatform
 
 import scala.util.Try
 
@@ -31,7 +31,11 @@ object GCSPut extends Logging {
     if (config.parallelism == 1 || !config.compress)
       put(GCS.defaultClient(cp.getCredentials), ZInputStream(config.inDD), config.destBucket, config.destPath, config.compress)
     else {
-      ParallelGZIPWriter.run(config.destBucket, config.destPath, ZOS.readDD(config.inDD), GCS.defaultClient(cp.getCredentials), config.parallelism)
+      ParallelGZIPWriter.run(config.destBucket,
+        config.destPath,
+        CrossPlatform.readDD(config.inDD),
+        GCS.defaultClient(cp.getCredentials),
+        config.parallelism)
     }
   }
 

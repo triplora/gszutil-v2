@@ -36,7 +36,7 @@ class ZReaderSpec extends FlatSpec {
     val in = test.getBytes(Decoding.CP1047)
     val expected = test.getBytes(StandardCharsets.UTF_8).toSeq
 
-    val got = in.map(Decoding.ebdic2ascii)
+    val got = in.map(Decoding.ebcdic2ascii)
     val n = got.length
 
     assert(n == expected.length)

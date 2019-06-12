@@ -17,12 +17,9 @@ package com.google.cloud.pso
 
 import com.google.cloud.bigquery.JobInfo.{CreateDisposition, WriteDisposition}
 import com.google.cloud.gszutil.Util.{CredentialProvider, Logging}
-import com.google.cloud.gszutil.io.{ZInputStream, ZIterator}
-import com.google.cloud.gszutil.{Config, CopyBook, Decoding, GCS}
+import com.google.cloud.gszutil.{Config, CopyBook, GCS, Util}
 import com.google.cloud.{RetryOption, bigquery}
-import com.google.common.base.Charsets
-import com.google.common.io.ByteStreams
-import com.ibm.jzos.ZOS
+import com.ibm.jzos.CrossPlatform
 import org.threeten.bp.Duration
 
 
@@ -30,8 +27,8 @@ object BQLoad extends Logging {
   def run(c: Config, cp: CredentialProvider): Unit = {
     ParallelORCWriter.run(
       gcsUri = s"gs://${c.bq.bucket}/${c.bq.path}",
-      in = ZOS.readDD(c.inDD),
-      copyBook = CopyBook(ZOS.readDD("COPYBOOK")),
+      in = CrossPlatform.readDD(c.inDD),
+      copyBook = CrossPlatform.loadCopyBook(c.copyBookDD),
       gcs = GCS.defaultClient(cp.getCredentials),
       timeoutMinutes = 600)
   }

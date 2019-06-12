@@ -20,7 +20,7 @@ import com.google.cloud.gszutil.io.ZRecordReaderT
 
 import scala.util.Try
 
-object ZOS extends Logging {
+protected object ZOS extends Logging {
   class RecordReaderCloser(r: RecordReader) extends Thread {
     override def run(): Unit = {
       try {
@@ -53,10 +53,6 @@ object ZOS extends Logging {
     override def isOpen: Boolean = open
     override val lRecl: Int = r.getLrecl
     override val blkSize: Int = r.getBlksize
-  }
-
-  def ddExists(dd: String): Boolean = {
-    ZFile.ddExists(dd)
   }
 
   def readDD(ddName: String): ZRecordReaderT = {

@@ -15,7 +15,7 @@
  */
 package com.google.cloud.gszutil
 
-import java.io.{ByteArrayOutputStream, InputStream, OutputStream, StringReader}
+import java.io.{ByteArrayInputStream, ByteArrayOutputStream, InputStream, OutputStream, StringReader}
 import java.nio.ByteBuffer
 import java.nio.channels.{Channels, ReadableByteChannel, WritableByteChannel}
 import java.nio.charset.StandardCharsets
@@ -38,6 +38,7 @@ import com.google.cloud.storage.BlobInfo
 import com.google.common.base.Charsets
 import com.google.common.hash.{HashCode, Hashing}
 import com.google.common.io.Resources
+import com.google.protobuf.ByteString
 import com.ibm.crypto.hdwrCCA.provider.MD5
 import org.apache.log4j.{Level, Logger}
 import org.zeromq.codec.Z85
@@ -86,10 +87,6 @@ object Util {
 
   def configureBouncyCastleProvider(): Unit = {
     Security.addProvider(new org.bouncycastle.jce.provider.BouncyCastleProvider())
-  }
-
-  def insertIBMJCECCAProvider(): Unit = {
-    Security.insertProviderAt(new com.ibm.crypto.hdwrCCA.provider.IBMJCECCA(), 1)
   }
 
   def showProviders(): String = {
@@ -162,12 +159,6 @@ object Util {
     new JsonObjectParser(Utils.getDefaultJsonFactory).parseAndClose(json, StandardCharsets.UTF_8, classOf[ServiceAccountCredential])
   }
 
-  def validate(c: CredentialProvider): Option[CredentialProvider] = {
-    if (c.getCredential.refreshToken())
-      Option(c)
-    else None
-  }
-
   def readCredentials(json: InputStream): GoogleCredential = {
     val parsed = parseJson(json)
     new GoogleCredential.Builder()
@@ -237,21 +228,23 @@ object Util {
   }
 
   trait CredentialProvider {
-    def getCredential: Credential
     def getCredentials: GoogleCredentials
   }
 
-  case class KeyFileCredentialProvider(keyFile: KeyFile) extends CredentialProvider {
-    override def getCredential: Credential =
-      readPbCredentials(keyFile)
+  object DefaultCredentialProvider extends CredentialProvider {
+    override def getCredentials: GoogleCredentials = GoogleCredentials.getApplicationDefault
+  }
 
+  case class KeyFileCredentialProvider(keyFile: KeyFile) extends CredentialProvider {
     override def getCredentials: GoogleCredentials =
       GSZCredentials.fromKeyFile(keyFile)
   }
 
+  class ByteStringCredentialsProvider(bytes: ByteString) extends CredentialProvider {
+    override def getCredentials: GoogleCredentials = GoogleCredentials.fromStream(new ByteArrayInputStream(bytes.toByteArray))
+  }
+
   case class AccessTokenCredentialProvider(token: String) extends CredentialProvider {
-    override def getCredential: Credential =
-      accessTokenCredentials(token)
     override def getCredentials: GoogleCredentials =
       accessTokenCredentials1(token)
   }

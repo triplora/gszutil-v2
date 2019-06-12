@@ -58,6 +58,7 @@ object ParallelORCWriter extends Logging {
     private var totalBytes = 0L
     private val maxLog = 20
     private var nLog = 0
+    private val r = Runtime.getRuntime
     import args._
 
     override def preStart(): Unit = {
@@ -71,12 +72,19 @@ object ParallelORCWriter extends Logging {
       }
     }
 
+    def logMem(): String = {
+      val free = r.freeMemory()
+      val total = r.totalMemory()
+      val max = r.maxMemory()
+      s"Memory: $free of $total total ($max max)"
+    }
+
     override def receive: Receive = {
       case x: Batch =>
         lastRecv = System.currentTimeMillis
         val dt = lastRecv - lastSend
         if (dt > 200L && lastSend > 100L && nLog < maxLog) {
-          logger.info(s"$dt ms since last send")
+          logger.info(s"$dt ms since last send " + logMem())
           nLog += 1
         }
         val buf = x.buf
@@ -96,6 +104,10 @@ object ParallelORCWriter extends Logging {
         x.limit = bb.limit
         totalBytes += bb.limit
         sender ! x
+        if (nLog < maxLog){
+          logger.info(s"sent batch with limit=${x.limit} ${logMem()}")
+          nLog += 1
+        }
         nSent += 1
         lastSend = System.currentTimeMillis
         activeTime += (lastSend - lastRecv)
@@ -149,6 +161,16 @@ object ParallelORCWriter extends Logging {
     override def supervisorStrategy: SupervisorStrategy = new EscalatingSupervisorStrategy().create()
   }
 
+  // TODO collect heartbeat and print cumulative stats
+  class HeartBeatActor extends Actor {
+    override def receive: Receive = {
+      case _ =>
+
+    }
+  }
+
+  case class HeartBeat()
+
 
   /** Responsible for writing a single output partition
     */
@@ -161,6 +183,9 @@ object ParallelORCWriter extends Logging {
     private var endTime: Long = -1
     private var writer: Writer = _
     private val stats = new FileSystem.Statistics(SimpleGCSFileSystem.Scheme)
+    private val r = Runtime.getRuntime
+    private var i: Long = 0
+    private val n: Long = 100
 
     override def preStart(): Unit = {
       val writerOptions = OrcFile
@@ -175,14 +200,29 @@ object ParallelORCWriter extends Logging {
       logger.info(s"Starting writer for ${args.path}")
     }
 
+    def logMem(): String = {
+      val free = r.freeMemory()
+      val total = r.totalMemory()
+      val max = r.maxMemory()
+      s"Memory: $free of $total total ($max max)"
+    }
+
     override def receive: Receive = {
       case x: Batch =>
+        val shouldLog = i%10 == 0 && i < n
+        if (shouldLog) {
+          logger.info(s"received batch $i "+ logMem())
+        }
         bytesIn += x.limit
         val t0 = System.currentTimeMillis
         reader
           .readOrc(new ZDataSet(x.buf, copyBook.lRecl, blkSize, x.limit))
           .filter(_.size > 0)
           .foreach(writer.addRowBatch)
+        if (shouldLog) {
+          logger.info(s"finished batch $i " + logMem())
+          i += 1
+        }
         val t1 = System.currentTimeMillis
         elapsedTime += (t1 - t0)
         if (stats.getBytesWritten < maxBytes)
