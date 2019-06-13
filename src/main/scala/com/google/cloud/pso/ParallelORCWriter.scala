@@ -19,8 +19,8 @@ import scala.concurrent.Await
 
 object ParallelORCWriter extends Logging {
   def logMem(r: Runtime): String = {
-    val free = r.freeMemory() * 1.0d / 1e9
-    val total = r.totalMemory() * 1.0d / 1e9
+    val free = r.freeMemory() / (1024L * 1024L)
+    val total = r.totalMemory() / (1024L * 1024L)
     s"Memory: ${free}M free of ${total}M total"
   }
 
@@ -193,7 +193,7 @@ object ParallelORCWriter extends Logging {
       case x: ByteBuffer =>
         val shouldLog = i < n
         if (shouldLog) {
-          logger.info(s"received ByteBuffer $i ${x.capacity} ${x.limit} " + logMem(r))
+          logger.info(s"received ByteBuffer $i $x " + logMem(r))
         }
         bytesIn += x.limit
         val t0 = System.currentTimeMillis

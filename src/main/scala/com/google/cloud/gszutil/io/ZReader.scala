@@ -22,9 +22,9 @@ class ZReader(private val copyBook: CopyBook, private val batchSize: Int) extend
   }
 
   def readOrc(buf: ByteBuffer, writer: Writer): Unit = {
-    while (buf.hasRemaining){
+    require(buf.hasRemaining)
+    while (buf.hasRemaining)
       writer.addRowBatch(readBatch(buf))
-    }
   }
 
   /** Read
