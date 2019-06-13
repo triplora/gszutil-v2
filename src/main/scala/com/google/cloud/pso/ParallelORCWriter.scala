@@ -12,6 +12,7 @@ import com.google.cloud.storage.Storage
 import com.google.common.collect.ImmutableMap
 import com.typesafe.config.ConfigFactory
 import org.apache.hadoop.fs.{FileSystem, Path, SimpleGCSFileSystem}
+import org.apache.orc.impl.WriterImpl
 import org.apache.orc.{CompressionKind, NoOpMemoryManager, OrcFile, Writer}
 
 import scala.collection.mutable
@@ -167,6 +168,7 @@ object ParallelORCWriter extends Logging {
     import args._
     private val reader = new ZReader(copyBook, batchSize)
     private var bytesIn: Long = 0
+    private var bytesSinceLastFlush: Long = 0
     private var elapsedTime: Long = 0
     private var startTime: Long = -1
     private var endTime: Long = -1
@@ -196,8 +198,17 @@ object ParallelORCWriter extends Logging {
           logger.info(s"received ByteBuffer $i $x " + logMem(r))
         }
         bytesIn += x.limit
+        bytesSinceLastFlush += x.limit
         val t0 = System.currentTimeMillis
         reader.readOrc(x, writer)
+        if (bytesSinceLastFlush > 32L * 1024L * 1024L) {
+          writer match {
+            case w: WriterImpl =>
+              w.checkMemory(1.0d)
+              bytesSinceLastFlush = 0
+            case _ =>
+          }
+        }
         val t1 = System.currentTimeMillis
         elapsedTime += (t1 - t0)
         val partBytesRemaining = maxBytes - stats.getBytesWritten
