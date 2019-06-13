@@ -2,10 +2,11 @@ package com.google.cloud.pso
 
 import java.net.URI
 import java.nio.ByteBuffer
+import java.nio.channels.ReadableByteChannel
 
 import com.google.cloud.gszutil.CopyBook
 import com.google.cloud.gszutil.Util.Logging
-import com.google.cloud.gszutil.io.{ZDataSet, ZRecordReaderT}
+import com.google.cloud.gszutil.io.ZReader
 import org.apache.hadoop.conf.Configuration
 import org.apache.hadoop.fs.Path
 import org.apache.orc.OrcFile.WriterOptions
@@ -13,7 +14,8 @@ import org.apache.orc.{OrcConf, OrcFile}
 
 object SimpleORCWriter extends Logging {
   def run(prefix: String,
-          in: ZRecordReaderT,
+          in: ReadableByteChannel,
+          lRecl: Int,
           copyBook: CopyBook,
           writerOptions: WriterOptions,
           maxWriters: Int,
@@ -23,6 +25,7 @@ object SimpleORCWriter extends Logging {
     var partId = 0
     var partSize = 0
     val uri = new URI(prefix)
+    val reader = new ZReader(copyBook)
 
     while (in.isOpen) {
       val partName = f"$partId%05d"
@@ -34,30 +37,17 @@ object SimpleORCWriter extends Logging {
 
       // Write part up to partLen records
       while (partSize < partLen && in.isOpen) {
-        val bufSize = in.lRecl * batchSize
+        val bufSize = lRecl * batchSize
         val bb = ByteBuffer.allocate(bufSize)
-        val buf = bb.array()
 
         // fill buffer
         while (bb.hasRemaining && in.isOpen) {
-          val n = in.read(buf, bb.position, bb.remaining)
-          if (n < 0) {
-            bb.limit(bb.position)
+          if (in.read(bb) < 0) {
             in.close()
-          } else {
-            val newPosition = bb.position + n
-            bb.position(newPosition)
           }
         }
 
-        val reader = copyBook.reader
-        reader
-          .readOrc(new ZDataSet(buf, in.lRecl, in.blkSize, bb.position))
-          .filter(_.size > 0)
-          .foreach{rowBatch =>
-            partSize += rowBatch.size
-            writer.addRowBatch(rowBatch)
-          }
+        reader.readOrc(bb, writer, batchSize)
       }
       writer.close()
       partId += 1

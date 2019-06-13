@@ -30,7 +30,7 @@ class OrcWriterSpec extends FlatSpec with Logging {
     val copyBook = CopyBook(Util.readS(copyBookId))
     logger.info(s"Loaded copy book```\n${copyBook.raw}\n```")
 
-    val in = new ZDataSet(Util.readB("test.bin"), copyBook.lRecl, copyBook.lRecl*1024)
+    val in = new ZDataSet(Util.readB("test.bin"), copyBook.LRECL, copyBook.LRECL*1024)
     ParallelORCWriter.run(prefix, in, copyBook, gcs, maxWriters = 2)
   }
 }

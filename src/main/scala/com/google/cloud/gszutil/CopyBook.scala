@@ -1,9 +1,6 @@
 package com.google.cloud.gszutil
 
-import com.google.cloud.gszutil.Decoding.{CopyBookField, Decoder, parseCopyBookLine}
-import com.google.cloud.gszutil.Util.Logging
-import com.google.cloud.gszutil.io.{ZInputStream, ZReader, ZRecordReaderT}
-import com.google.common.io.ByteStreams
+import com.google.cloud.gszutil.Decoding.{CopyBookField, CopyBookLine, Decoder, parseCopyBookLine}
 import org.apache.orc.TypeDescription
 import org.apache.orc.TypeDescription.Category
 
@@ -11,30 +8,29 @@ import scala.collection.mutable.ArrayBuffer
 
 
 case class CopyBook(raw: String) {
-  lazy val lines = raw.lines.flatMap(parseCopyBookLine).toSeq
+  final val Fields: Seq[CopyBookLine] = raw.lines.flatMap(parseCopyBookLine).toSeq
 
-  lazy val getFieldNames: Seq[String] =
-    lines.flatMap{
+  final val FieldNames: Seq[String] =
+    Fields.flatMap{
       case CopyBookField(name, _) =>
         Option(name.replaceAllLiterally("-","_"))
       case _ =>
         None
     }
 
-  lazy val getDecoders: Seq[Decoder[_]] = {
+  def getDecoders: Seq[Decoder[_]] = {
     val buf = ArrayBuffer.empty[Decoder[_]]
-    lines.foreach{
+    Fields.foreach{
       case CopyBookField(_, pic) =>
-        val decoder = pic.getDecoder
-        buf.append(decoder)
+        buf.append(pic.getDecoder)
       case _ =>
     }
     buf.result.toArray.toSeq
   }
 
-  lazy val getOrcSchema: TypeDescription = {
+  final val ORCSchema: TypeDescription = {
     val schema = new TypeDescription(Category.STRUCT)
-    getFieldNames
+    FieldNames
       .zip(getDecoders)
       .foreach{f =>
         schema.addField(f._1, f._2.typeDescription)
@@ -42,8 +38,6 @@ case class CopyBook(raw: String) {
     schema
   }
 
-  lazy val lRecl: Int = getDecoders.foldLeft(0){_ + _.size}
-
-  def reader: ZReader = new ZReader(this)
+  final val LRECL: Int = getDecoders.foldLeft(0){_ + _.size}
 }
 

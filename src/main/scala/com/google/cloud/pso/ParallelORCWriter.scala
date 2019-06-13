@@ -2,10 +2,11 @@ package com.google.cloud.pso
 
 import java.net.URI
 import java.nio.ByteBuffer
+import java.nio.channels.ReadableByteChannel
 
 import akka.actor.{Actor, ActorRef, ActorSystem, EscalatingSupervisorStrategy, Props, SupervisorStrategy, Terminated}
 import com.google.cloud.gszutil.Util.Logging
-import com.google.cloud.gszutil.io.{ZDataSet, ZRecordReaderT}
+import com.google.cloud.gszutil.io.{ZChannel, ZReader, ZRecordReaderT}
 import com.google.cloud.gszutil.{CopyBook, Util}
 import com.google.cloud.storage.Storage
 import com.google.common.collect.ImmutableMap
@@ -27,16 +28,15 @@ object ParallelORCWriter extends Logging {
     * @param nWorkers worker count
     * @param copyBook CopyBook
     */
-  case class FeederArgs(in: ZRecordReaderT, batchSize: Int, uri: URI, maxBytes: Long, nWorkers: Int, copyBook: CopyBook, gcs: Storage)
+  case class FeederArgs(in: ReadableByteChannel, lRecl: Int, batchSize: Int, uri: URI, maxBytes: Long, nWorkers: Int, copyBook: CopyBook, gcs: Storage)
 
   /**
     *
     * @param copyBook CopyBook
     * @param maxBytes number of bytes to accept before closing the writer
-    * @param blkSize block size
     * @param batchSize records per batch
     */
-  case class WriterArgs(copyBook: CopyBook, maxBytes: Long, blkSize: Int, batchSize: Int, path: Path, gcs: Storage)
+  case class WriterArgs(copyBook: CopyBook, maxBytes: Long, batchSize: Int, path: Path, gcs: Storage)
 
   /** Buffer containing data for a single batch
     *
@@ -62,7 +62,7 @@ object ParallelORCWriter extends Logging {
     import args._
 
     override def preStart(): Unit = {
-      if (in.lRecl != copyBook.lRecl) {
+      if (lRecl != copyBook.LRECL) {
         logger.error("input lRecl != copybook lRecl")
         in.close()
       } else {
@@ -80,32 +80,23 @@ object ParallelORCWriter extends Logging {
     }
 
     override def receive: Receive = {
-      case x: Batch =>
+      case bb: ByteBuffer =>
         lastRecv = System.currentTimeMillis
         val dt = lastRecv - lastSend
         if (dt > 200L && lastSend > 100L && nLog < maxLog) {
           logger.info(s"$dt ms since last send " + logMem())
           nLog += 1
         }
-        val buf = x.buf
-        val bb = ByteBuffer.wrap(buf)
 
-        // fill buffer
         while (bb.hasRemaining && in.isOpen) {
-          val n = in.read(buf, bb.position, bb.remaining)
-          if (n < 0) {
-            bb.limit(bb.position)
-            in.close()
-          } else {
-            val newPosition = bb.position + n
-            bb.position(newPosition)
-          }
+          if (in.read(bb) < 0) in.close()
         }
-        x.limit = bb.limit
+
         totalBytes += bb.limit
-        sender ! x
+        bb.flip()
+        sender ! bb
         if (nLog < maxLog){
-          logger.info(s"sent batch with limit=${x.limit} ${logMem()}")
+          logger.info(s"sent ByteBuffer with limit=${bb.limit} ${logMem()}")
           nLog += 1
         }
         nSent += 1
@@ -142,7 +133,7 @@ object ParallelORCWriter extends Logging {
     private def newPart(): Unit = {
       val partName = f"$partId%05d"
       val path = new Path(s"gs://${uri.getAuthority}/${uri.getPath.stripPrefix("/") + s"/part-$partName.orc"}")
-      val args = WriterArgs(copyBook, maxBytes, in.blkSize, batchSize, path, gcs)
+      val args = WriterArgs(copyBook, maxBytes, batchSize, path, gcs)
       val w = context.actorOf(Props(classOf[OrcWriter], args), s"OrcWriter-$partName")
       context.watch(w)
       writers.add(w)
@@ -176,7 +167,7 @@ object ParallelORCWriter extends Logging {
     */
   class OrcWriter(args: WriterArgs) extends Actor {
     import args._
-    private val reader = copyBook.reader
+    private val reader = new ZReader(copyBook)
     private var bytesIn: Long = 0
     private var elapsedTime: Long = 0
     private var startTime: Long = -1
@@ -190,12 +181,12 @@ object ParallelORCWriter extends Logging {
     override def preStart(): Unit = {
       val writerOptions = OrcFile
         .writerOptions(SimpleORCWriter.configuration())
-        .setSchema(copyBook.getOrcSchema)
+        .setSchema(copyBook.ORCSchema)
         .memory(NoOpMemoryManager)
         .compress(CompressionKind.ZLIB)
         .fileSystem(new SimpleGCSFileSystem(gcs, stats))
       writer = OrcFile.createWriter(path, writerOptions)
-      context.parent ! Batch(new Array[Byte](copyBook.lRecl * batchSize))
+      context.parent ! ByteBuffer.allocate(copyBook.LRECL * batchSize)
       startTime = System.currentTimeMillis()
       logger.info(s"Starting writer for ${args.path}")
     }
@@ -208,17 +199,14 @@ object ParallelORCWriter extends Logging {
     }
 
     override def receive: Receive = {
-      case x: Batch =>
+      case x: ByteBuffer =>
         val shouldLog = i < n
         if (shouldLog) {
-          logger.info(s"received batch $i ${x.buf.length} ${x.limit} "+ logMem())
+          logger.info(s"received ByteBuffer $i ${x.capacity} ${x.limit} " + logMem())
         }
         bytesIn += x.limit
         val t0 = System.currentTimeMillis
-        reader
-          .readOrc(new ZDataSet(x.buf, copyBook.lRecl, blkSize, x.limit))
-          .filter(_.size > 0)
-          .foreach(writer.addRowBatch)
+        reader.readOrc(x, writer, batchSize)
         if (shouldLog) {
           logger.info(s"finished batch $i " + logMem())
           i += 1
@@ -258,7 +246,8 @@ object ParallelORCWriter extends Logging {
     val conf = ConfigFactory.parseMap(ImmutableMap.of(
       "akka.actor.guardian-supervisor-strategy","akka.actor.EscalatingSupervisorStrategy"))
     val sys = ActorSystem("gsz", conf)
-    sys.actorOf(Props(classOf[Feeder], FeederArgs(in, batchSize, new URI(gcsUri), partLen, maxWriters, copyBook, gcs)), "ZReader")
+    val args: FeederArgs = FeederArgs(new ZChannel(in), in.lRecl, batchSize, new URI(gcsUri), partLen, maxWriters, copyBook, gcs)
+    sys.actorOf(Props(classOf[Feeder], args), "ZReader")
     Await.result(sys.whenTerminated, atMost = FiniteDuration(timeoutMinutes, MINUTES))
   }
 }

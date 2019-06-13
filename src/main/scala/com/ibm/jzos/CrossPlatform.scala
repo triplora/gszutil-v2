@@ -60,7 +60,7 @@ object CrossPlatform extends Logging {
         .grouped(rr.lRecl)
         .map(Decoding.ebcdic2utf8)
         .mkString("\n"))
-      logger.info(s"Loaded copy book with LRECL=${copyBook.lRecl} FIELDS=${copyBook.getFieldNames.mkString(",")}```\n${copyBook.raw}\n```")
+      logger.info(s"Loaded copy book with LRECL=${copyBook.LRECL} FIELDS=${copyBook.FieldNames.mkString(",")}```\n${copyBook.raw}\n```")
       copyBook
     } else {
       val ddValue = System.getenv(dd)
