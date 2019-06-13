@@ -4,6 +4,7 @@ import java.net.URI
 import java.nio.channels.ReadableByteChannel
 
 import akka.actor.{ActorSystem, Props}
+import akka.io.ByteBufferPool
 import com.google.cloud.gszutil.CopyBook
 import com.google.cloud.gszutil.Util.Logging
 import com.google.cloud.storage.Storage
@@ -26,7 +27,9 @@ object WriteORCFile extends Logging {
     val conf = ConfigFactory.parseMap(ImmutableMap.of(
       "akka.actor.guardian-supervisor-strategy","akka.actor.EscalatingSupervisorStrategy"))
     val sys = ActorSystem("gsz", conf)
-    val args: DatasetReaderArgs = DatasetReaderArgs(in, batchSize, new URI(gcsUri), partSizeMb*1024*1024, maxWriters, copyBook, gcs, compress)
+    val bufSize = copyBook.LRECL * batchSize
+    val pool = ByteBufferPool.allocate(bufSize, maxWriters)
+    val args: DatasetReaderArgs = DatasetReaderArgs(in, batchSize, new URI(gcsUri), partSizeMb*1024*1024, maxWriters, copyBook, gcs, compress, pool)
     sys.actorOf(Props(classOf[DatasetReader], args), "ZReader")
     Await.result(sys.whenTerminated, atMost = FiniteDuration(timeoutMinutes, MINUTES))
   }

@@ -65,16 +65,14 @@ object Decoding {
 
   trait Decoder[T] {
     val size: Int
-    def get(a: Array[Byte], off: Int): T
 
     /** Read a field into a mutable output builder
       *
-      * @param a byte array
-      * @param off offset within a to begin reading
+      * @param buf ByteBuffer
       * @param row mutable output builder
       * @param i field index
       */
-    def get(a: Array[Byte], off: Int, row: ColumnVector, i: Int): Unit
+    def get(buf: ByteBuffer, row: ColumnVector, i: Int): Unit
 
     def columnVector(maxSize: Int): ColumnVector
 
@@ -83,19 +81,16 @@ object Decoding {
 
   // decodes EBCDIC to UTF8 bytes
   case class StringDecoder(override val size: Int) extends Decoder[Array[Byte]] {
-    override def get(a: Array[Byte], off: Int): Array[Byte] = {
-      var i = 0
-      val buf = new Array[Byte](size)
-      while (i < size){
-        buf(i) = EBCDIC(uint(a(off + i)))
-        i += 1
+    override def get(buf: ByteBuffer, row: ColumnVector, i: Int): Unit = {
+      var j = 0
+      val res = new Array[Byte](size)
+      while (j < size){
+        res(j) = EBCDIC(uint(buf.get))
+        j += 1
       }
-      buf
-    }
-
-    override def get(a: Array[Byte], off: Int, row: ColumnVector, i: Int): Unit =
       row.asInstanceOf[BytesColumnVector]
-        .setRef(i, get(a, off), 0, size)
+        .setRef(i, res, 0, size)
+    }
 
     override def columnVector(maxSize: Int): ColumnVector =
       new BytesColumnVector(maxSize)
@@ -105,20 +100,17 @@ object Decoding {
   }
 
   case class LongDecoder(override val size: Int) extends Decoder[Long] {
-    override def get(a: Array[Byte], off: Int): Long = {
+    override def get(buf: ByteBuffer, row: ColumnVector, i: Int): Unit = {
       var v: Long = 0x00
-      var i = 0
-      while (i < size){
+      var j = 0
+      while (j < size){
         v <<= 8
-        v |= (a(off + i) & 0xFF)
-        i += 1
+        v |= (buf.get() & 0xFF)
+        j += 1
       }
-      v
-    }
-
-    override def get(a: Array[Byte], off: Int, row: ColumnVector, i: Int): Unit =
       row.asInstanceOf[LongColumnVector]
-        .vector.update(i, get(a, off))
+        .vector.update(i, v)
+    }
 
     override def columnVector(maxSize: Int): ColumnVector =
       new LongColumnVector(maxSize)
@@ -129,12 +121,12 @@ object Decoding {
 
   case class DecimalDecoder(precision: Int, scale: Int) extends Decoder[BigDecimal] {
     override val size: Int = ((precision + scale) / 2) + 1
-    override def get(a: Array[Byte], off: Int): BigDecimal =
-      BigDecimal(PackedDecimal.unpack(a, off, size), scale)
 
-    override def get(a: Array[Byte], off: Int, row: ColumnVector, i: Int): Unit =
+    override def get(buf: ByteBuffer, row: ColumnVector, i: Int): Unit = {
+      val v = BigDecimal(PackedDecimal.unpack(buf, size), scale)
       row.asInstanceOf[DecimalColumnVector]
-        .set(i, HiveDecimal.create(get(a, off).bigDecimal))
+        .set(i, HiveDecimal.create(v.bigDecimal))
+    }
 
     override def columnVector(maxSize: Int): ColumnVector =
       new DecimalColumnVector(maxSize, precision, scale)

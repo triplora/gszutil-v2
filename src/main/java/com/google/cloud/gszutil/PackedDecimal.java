@@ -3,6 +3,8 @@ package com.google.cloud.gszutil;
 
 import com.ibm.jzos.CrossPlatform;
 
+import java.nio.ByteBuffer;
+
 public class PackedDecimal {
     private static boolean relaxedParsing = !CrossPlatform.IBM();
     private static final String[] hexValues = new String[256];
@@ -36,20 +38,18 @@ public class PackedDecimal {
         return sb1.toString() + "\n" + sb2.toString();
     }
 
-    public static long unpack(byte[] bytes) {
-        return unpack(bytes, 0, bytes.length);
-    }
-
-    public static long unpack(byte[] bytes, int off, int len) {
+    public static long unpack(ByteBuffer buf, int len) {
         long x = 0;
-        for (int i = off; i < off + len - 1; i++) {
-            x += uint(bytes[i]) >>> 4;
+        for (int i = 0; i < len - 1; i++) {
+            byte b = buf.get();
+            x += uint(b) >>> 4;
             x *= 10L;
-            x += uint(bytes[i]) & 0xF;
+            x += uint(b) & 0xF;
             x *= 10L;
         }
-        x += uint(bytes[off + len - 1]) >>> 4;
-        int sign = uint(bytes[off + len - 1]) & 0xF ;
+        byte b = buf.get();
+        x += uint(b) >>> 4;
+        int sign = uint(b) & 0xF ;
         if (sign == 0xD) { x *= -1L; }
         else if (sign == 0xC) { /*positive*/ }
         else if (sign == 0xF) { /*unsigned*/ }

@@ -32,7 +32,7 @@ class ORCFileWriter(args: ORCFileWriterArgs) extends Actor with Logging {
       .compress(CompressionKind.ZLIB)
       .fileSystem(new SimpleGCSFileSystem(gcs, stats))
     writer = OrcFile.createWriter(path, writerOptions)
-    context.parent ! ByteBuffer.allocate(copyBook.LRECL * batchSize)
+    context.parent ! pool.acquire()
     startTime = System.currentTimeMillis()
     logger.info(s"Starting writer for ${args.path} ${Util.logMem()}")
   }
@@ -57,6 +57,7 @@ class ORCFileWriter(args: ORCFileWriterArgs) extends Actor with Logging {
       if (partBytesRemaining > 0) {
         sender ! x
       } else {
+        pool.release(x)
         context.stop(self)
       }
     case _ =>

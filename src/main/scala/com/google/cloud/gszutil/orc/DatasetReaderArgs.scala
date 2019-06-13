@@ -3,6 +3,7 @@ package com.google.cloud.gszutil.orc
 import java.net.URI
 import java.nio.channels.ReadableByteChannel
 
+import akka.io.BufferPool
 import com.google.cloud.gszutil.CopyBook
 import com.google.cloud.storage.Storage
 
@@ -15,4 +16,4 @@ import com.google.cloud.storage.Storage
   * @param nWorkers worker count
   * @param copyBook CopyBook
   */
-case class DatasetReaderArgs(in: ReadableByteChannel, batchSize: Int, uri: URI, maxBytes: Long, nWorkers: Int, copyBook: CopyBook, gcs: Storage, compress: Boolean)
+case class DatasetReaderArgs(in: ReadableByteChannel, batchSize: Int, uri: URI, maxBytes: Long, nWorkers: Int, copyBook: CopyBook, gcs: Storage, compress: Boolean, pool: BufferPool)

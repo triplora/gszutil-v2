@@ -12,18 +12,11 @@ class ZReader(private val copyBook: CopyBook, private val batchSize: Int) extend
   private val decoders: Array[Decoder[_]] = copyBook.getDecoders
   private val nCols = decoders.length
   private val lRecl = copyBook.LRECL
-  private var rowBatch: VectorizedRowBatch = _
-
-  private def getBatch(): VectorizedRowBatch = {
-    if (rowBatch == null){
-      val batch = new VectorizedRowBatch(nCols, batchSize)
-      for (i <- decoders.indices)
-        batch.cols(i) = decoders(i).columnVector(batchSize)
-      rowBatch = batch
-    } else {
-      rowBatch.reset()
-    }
-    rowBatch
+  private val rowBatch: VectorizedRowBatch = {
+    val batch = new VectorizedRowBatch(nCols, batchSize)
+    for (i <- decoders.indices)
+      batch.cols(i) = decoders(i).columnVector(batchSize)
+    batch
   }
 
   def readOrc(buf: ByteBuffer, writer: Writer): Unit = {
@@ -36,34 +29,29 @@ class ZReader(private val copyBook: CopyBook, private val batchSize: Int) extend
   /** Read
     *
     * @param buf byte array with multiple records
-    * @param recordStart offset within buffer
     * @param batch VectorizedRowBatch
     * @param rowId index within the batch
     */
-  private def readRecord(buf: Array[Byte], recordStart: Int, batch: VectorizedRowBatch, rowId: Int): Unit = {
-    var fieldOffset = 0
+  private def readRecord(buf: ByteBuffer,batch: VectorizedRowBatch, rowId: Int): Unit = {
     var i = 0
     while (i < decoders.length){
-      val decoder = decoders(i)
-      val off = recordStart + fieldOffset
-      decoder.get(buf, off, batch.cols(i), rowId)
-      fieldOffset += decoder.size
+      decoders(i).get(buf, batch.cols(i), rowId)
       i += 1
     }
   }
 
   private def readBatch(buf: ByteBuffer): VectorizedRowBatch = {
-    val batch = getBatch()
+    rowBatch.reset()
     var rowId = 0
     while (rowId < batchSize && buf.remaining() >= lRecl){
-      readRecord(buf.array(), buf.position(), batch, rowId)
-      val newPos = buf.position() + lRecl
-      buf.position(newPos)
+      val newPos = buf.position() + lRecl // TODO remove this
+      readRecord(buf, rowBatch, rowId)
+      assert(buf.position() == newPos) // TODO remove this
       rowId += 1
     }
-    batch.size = rowId
-    if (batch.size == 0)
-      batch.endOfFile = true
-    batch
+    rowBatch.size = rowId
+    if (rowBatch.size == 0)
+      rowBatch.endOfFile = true
+    rowBatch
   }
 }
