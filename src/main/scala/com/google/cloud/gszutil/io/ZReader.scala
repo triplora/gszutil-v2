@@ -14,7 +14,7 @@ class ZReader(private val copyBook: CopyBook, private val batchSize: Int) extend
   private val lRecl = copyBook.LRECL
 
   private def newBatch(): VectorizedRowBatch = {
-    logger.debug("Creating new VectorizedRowBatch")
+    logger.info("Creating new VectorizedRowBatch")
     val batch = new VectorizedRowBatch(nCols, batchSize)
     for (i <- decoders.indices)
       batch.cols(i) = decoders(i).columnVector(batchSize)
@@ -26,7 +26,7 @@ class ZReader(private val copyBook: CopyBook, private val batchSize: Int) extend
     while (buf.hasRemaining) {
       val batch: VectorizedRowBatch = readBatch(buf)
       writer.addRowBatch(batch)
-      logger.debug(s"Wrote VectorizedRowBatch with size ${batch.size}")
+      logger.info(s"Wrote VectorizedRowBatch with size ${batch.size}")
     }
   }
 
@@ -60,7 +60,7 @@ class ZReader(private val copyBook: CopyBook, private val batchSize: Int) extend
     }
     batch.size = rowId
     batch.endOfFile = true
-    logger.debug(s"Read VectorizedRowBatch with size ${batch.size}")
+    logger.info(s"Read VectorizedRowBatch with size ${batch.size}")
     batch
   }
 }
