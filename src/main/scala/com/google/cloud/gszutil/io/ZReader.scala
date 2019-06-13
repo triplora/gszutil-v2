@@ -4,17 +4,26 @@ import java.nio.ByteBuffer
 
 import com.google.cloud.gszutil.CopyBook
 import com.google.cloud.gszutil.Decoding.Decoder
+import com.google.cloud.gszutil.Util.Logging
 import org.apache.hadoop.hive.ql.exec.vector.VectorizedRowBatch
 import org.apache.orc.Writer
 
-class ZReader(private val copyBook: CopyBook) {
-  private val decoders: Array[Decoder[_]] = copyBook.getDecoders.toArray
+class ZReader(private val copyBook: CopyBook, private val batchSize: Int) extends Logging {
+  private val decoders: Array[Decoder[_]] = copyBook.getDecoders
   private val nCols = decoders.length
   private val lRecl = copyBook.LRECL
 
-  def readOrc(buf: ByteBuffer, writer: Writer, batchSize: Int): Unit = {
+  private def newBatch(): VectorizedRowBatch = {
+    logger.debug("Creating new VectorizedRowBatch")
+    val batch = new VectorizedRowBatch(nCols, batchSize)
+    for (i <- decoders.indices)
+      batch.cols(i) = decoders(i).columnVector(batchSize)
+    batch
+  }
+
+  def readOrc(buf: ByteBuffer, writer: Writer): Unit = {
     while (buf.hasRemaining){
-      writer.addRowBatch(readBatch(buf, batchSize))
+      writer.addRowBatch(readBatch(buf))
     }
   }
 
@@ -37,11 +46,8 @@ class ZReader(private val copyBook: CopyBook) {
     }
   }
 
-  private def readBatch(buf: ByteBuffer, batchSize: Int): VectorizedRowBatch = {
-    val columns = decoders.map(_.columnVector(batchSize))
-    val batch = new VectorizedRowBatch(nCols, batchSize)
-    for (i <- columns.indices)
-      batch.cols(i) = columns(i)
+  private def readBatch(buf: ByteBuffer): VectorizedRowBatch = {
+    val batch = newBatch()
     var rowId = 0
     while (rowId < batchSize && buf.remaining() >= lRecl){
       readRecord(buf.array(), buf.position(), batch, rowId)

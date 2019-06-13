@@ -19,13 +19,13 @@ object SimpleORCWriter extends Logging {
           copyBook: CopyBook,
           writerOptions: WriterOptions,
           maxWriters: Int,
-          batchSize: Int = 1024,
+          batchSize: Int = 10000,
           partLen: Long = 1 * 1024 * 1024,
           timeoutMinutes: Int = 30): Unit = {
     var partId = 0
     var partSize = 0
     val uri = new URI(prefix)
-    val reader = new ZReader(copyBook)
+    val reader = new ZReader(copyBook, batchSize)
 
     while (in.isOpen) {
       val partName = f"$partId%05d"

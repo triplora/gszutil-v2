@@ -18,6 +18,11 @@ import scala.collection.mutable
 import scala.concurrent.Await
 
 object ParallelORCWriter extends Logging {
+  def logMem(r: Runtime): String = {
+    val free = r.freeMemory() * 1.0d / 1e9
+    val total = r.totalMemory() * 1.0d / 1e9
+    s"Memory: ${free}M free of ${total}M total"
+  }
 
   /**
     *
@@ -72,19 +77,12 @@ object ParallelORCWriter extends Logging {
       }
     }
 
-    def logMem(): String = {
-      val free = r.freeMemory() * 1.0d / 1e9
-      val total = r.totalMemory() * 1.0d / 1e9
-      val max = r.maxMemory() * 1.0d / 1e9
-      s"Memory: $free of $total total ($max max)"
-    }
-
     override def receive: Receive = {
       case bb: ByteBuffer =>
         lastRecv = System.currentTimeMillis
         val dt = lastRecv - lastSend
         if (dt > 200L && lastSend > 100L && nLog < maxLog) {
-          logger.info(s"$dt ms since last send " + logMem())
+          logger.info(s"$dt ms since last send " + logMem(r))
           nLog += 1
         }
 
@@ -96,7 +94,7 @@ object ParallelORCWriter extends Logging {
         bb.flip()
         sender ! bb
         if (nLog < maxLog){
-          logger.info(s"sent ByteBuffer with limit=${bb.limit} ${logMem()}")
+          logger.info(s"sent ByteBuffer with limit=${bb.limit} ${logMem(r)}")
           nLog += 1
         }
         nSent += 1
@@ -167,7 +165,7 @@ object ParallelORCWriter extends Logging {
     */
   class OrcWriter(args: WriterArgs) extends Actor {
     import args._
-    private val reader = new ZReader(copyBook)
+    private val reader = new ZReader(copyBook, batchSize)
     private var bytesIn: Long = 0
     private var elapsedTime: Long = 0
     private var startTime: Long = -1
@@ -191,24 +189,17 @@ object ParallelORCWriter extends Logging {
       logger.info(s"Starting writer for ${args.path}")
     }
 
-    def logMem(): String = {
-      val free = r.freeMemory()
-      val total = r.totalMemory()
-      val max = r.maxMemory()
-      s"Memory: $free of $total total ($max max)"
-    }
-
     override def receive: Receive = {
       case x: ByteBuffer =>
         val shouldLog = i < n
         if (shouldLog) {
-          logger.info(s"received ByteBuffer $i ${x.capacity} ${x.limit} " + logMem())
+          logger.info(s"received ByteBuffer $i ${x.capacity} ${x.limit} " + logMem(r))
         }
         bytesIn += x.limit
         val t0 = System.currentTimeMillis
         reader.readOrc(x, writer, batchSize)
         if (shouldLog) {
-          logger.info(s"finished batch $i " + logMem())
+          logger.info(s"finished batch $i " + logMem(r))
           i += 1
         }
         val t1 = System.currentTimeMillis

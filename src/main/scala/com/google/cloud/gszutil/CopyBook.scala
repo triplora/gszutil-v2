@@ -18,14 +18,14 @@ case class CopyBook(raw: String) {
         None
     }
 
-  def getDecoders: Seq[Decoder[_]] = {
+  def getDecoders: Array[Decoder[_]] = {
     val buf = ArrayBuffer.empty[Decoder[_]]
     Fields.foreach{
       case CopyBookField(_, pic) =>
         buf.append(pic.getDecoder)
       case _ =>
     }
-    buf.result.toArray.toSeq
+    buf.toArray
   }
 
   final val ORCSchema: TypeDescription = {
