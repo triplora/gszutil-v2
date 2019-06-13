@@ -44,9 +44,7 @@ class ZReader(private val copyBook: CopyBook, private val batchSize: Int) extend
     rowBatch.reset()
     var rowId = 0
     while (rowId < batchSize && buf.remaining() >= lRecl){
-      val newPos = buf.position() + lRecl // TODO remove this
       readRecord(buf, rowBatch, rowId)
-      assert(buf.position() == newPos) // TODO remove this
       rowId += 1
     }
     rowBatch.size = rowId
