@@ -22,7 +22,8 @@ object ParallelORCWriter extends Logging {
   def logMem(r: Runtime): String = {
     val free = r.freeMemory() / (1024L * 1024L)
     val total = r.totalMemory() / (1024L * 1024L)
-    s"Memory: ${free}M free of ${total}M total"
+    val used = total - free
+    s"Memory: ${used}M used\t${free}M free\t${total}M total"
   }
 
   /**

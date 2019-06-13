@@ -12,21 +12,24 @@ class ZReader(private val copyBook: CopyBook, private val batchSize: Int) extend
   private val decoders: Array[Decoder[_]] = copyBook.getDecoders
   private val nCols = decoders.length
   private val lRecl = copyBook.LRECL
+  private var rowBatch: VectorizedRowBatch = _
 
-  private def newBatch(): VectorizedRowBatch = {
-    logger.info("Creating new VectorizedRowBatch")
-    val batch = new VectorizedRowBatch(nCols, batchSize)
-    for (i <- decoders.indices)
-      batch.cols(i) = decoders(i).columnVector(batchSize)
-    batch
+  private def getBatch(): VectorizedRowBatch = {
+    if (rowBatch == null){
+      val batch = new VectorizedRowBatch(nCols, batchSize)
+      for (i <- decoders.indices)
+        batch.cols(i) = decoders(i).columnVector(batchSize)
+      rowBatch = batch
+    } else {
+      rowBatch.reset()
+    }
+    rowBatch
   }
 
   def readOrc(buf: ByteBuffer, writer: Writer): Unit = {
-    require(buf.hasRemaining)
     while (buf.hasRemaining) {
       val batch: VectorizedRowBatch = readBatch(buf)
       writer.addRowBatch(batch)
-      logger.info(s"Wrote VectorizedRowBatch with size ${batch.size}")
     }
   }
 
@@ -50,7 +53,7 @@ class ZReader(private val copyBook: CopyBook, private val batchSize: Int) extend
   }
 
   private def readBatch(buf: ByteBuffer): VectorizedRowBatch = {
-    val batch = newBatch()
+    val batch = getBatch()
     var rowId = 0
     while (rowId < batchSize && buf.remaining() >= lRecl){
       readRecord(buf.array(), buf.position(), batch, rowId)
@@ -59,8 +62,8 @@ class ZReader(private val copyBook: CopyBook, private val batchSize: Int) extend
       rowId += 1
     }
     batch.size = rowId
-    batch.endOfFile = true
-    logger.info(s"Read VectorizedRowBatch with size ${batch.size}")
+    if (batch.size == 0)
+      batch.endOfFile = true
     batch
   }
 }
