@@ -47,7 +47,7 @@ object SimpleORCWriter extends Logging {
           }
         }
 
-        reader.readOrc(bb, writer, batchSize)
+        reader.readOrc(bb, writer)
       }
       writer.close()
       partId += 1

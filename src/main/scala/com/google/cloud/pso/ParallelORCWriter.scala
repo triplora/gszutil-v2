@@ -197,16 +197,19 @@ object ParallelORCWriter extends Logging {
         }
         bytesIn += x.limit
         val t0 = System.currentTimeMillis
-        reader.readOrc(x, writer, batchSize)
-        if (shouldLog) {
-          logger.info(s"finished batch $i " + logMem(r))
-          i += 1
-        }
+        reader.readOrc(x, writer)
         val t1 = System.currentTimeMillis
         elapsedTime += (t1 - t0)
-        if (stats.getBytesWritten < maxBytes)
+        val partBytesRemaining = maxBytes - stats.getBytesWritten
+        if (shouldLog) {
+          logger.info(s"finished batch $i ${logMem(r)} $partBytesRemaining bytes remaining in part")
+          i += 1
+        }
+        if (partBytesRemaining > 0) {
           sender ! x
-        else context.stop(self)
+        } else {
+          context.stop(self)
+        }
       case _ =>
     }
 
