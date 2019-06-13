@@ -41,7 +41,7 @@ class CCASSLSocketFactory extends SSLSocketFactory with Logging {
       case x: SSLSocket =>
         x.setEnabledCipherSuites(Ciphers)
         x.setEnabledProtocols(Protocols)
-        logger.info("created " + x.getClass.getCanonicalName + " with " + x.getEnabledProtocols.mkString(",") + " Cipher Suites: "+x.getEnabledCipherSuites.mkString(","))
+        logger.debug("created " + x.getClass.getCanonicalName + " with " + x.getEnabledProtocols.mkString(",") + " Cipher Suites: "+x.getEnabledCipherSuites.mkString(","))
       case x =>
         logger.warn(s"${x.getClass.getCanonicalName} is not an instance of SSLSocket ")
     }

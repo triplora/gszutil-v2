@@ -176,8 +176,6 @@ object ParallelORCWriter extends Logging {
     private var writer: Writer = _
     private val stats = new FileSystem.Statistics(SimpleGCSFileSystem.Scheme)
     private val r = Runtime.getRuntime
-    private var i: Long = 0
-    private val n: Long = 100
 
     override def preStart(): Unit = {
       val writerOptions = OrcFile
@@ -194,10 +192,6 @@ object ParallelORCWriter extends Logging {
 
     override def receive: Receive = {
       case x: ByteBuffer =>
-        val shouldLog = i < n
-        if (shouldLog) {
-          logger.info(s"received ByteBuffer $i $x " + logMem(r))
-        }
         bytesIn += x.limit
         bytesSinceLastFlush += x.limit
         val t0 = System.currentTimeMillis
@@ -213,10 +207,6 @@ object ParallelORCWriter extends Logging {
         val t1 = System.currentTimeMillis
         elapsedTime += (t1 - t0)
         val partBytesRemaining = maxBytes - stats.getBytesWritten
-        if (shouldLog) {
-          logger.info(s"finished batch $i ${logMem(r)} $partBytesRemaining bytes remaining in part")
-          i += 1
-        }
         if (partBytesRemaining > 0) {
           sender ! x
         } else {
@@ -236,7 +226,7 @@ object ParallelORCWriter extends Logging {
       val bytesOut = stats.getBytesWritten
       val ratio = (bytesOut * 1.0d) / bytesIn
       val mbps = Util.fmbps(bytesOut, elapsedTime)
-      logger.info(s"Stopping writer for ${args.path} after writing $bytesOut bytes in $elapsedTime ms ($mbps mbps) $dt ms total $idle ms idle $bytesIn bytes read ${f"$ratio%1.2f"} compression ratio")
+      logger.info(s"Stopping writer for ${args.path} after writing $bytesOut bytes in $elapsedTime ms ($mbps mbps) $dt ms total $idle ms idle $bytesIn bytes read ${f"$ratio%1.2f"} compression ratio ${logMem(r)}")
     }
   }
 
