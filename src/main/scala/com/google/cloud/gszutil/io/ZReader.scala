@@ -23,8 +23,11 @@ class ZReader(private val copyBook: CopyBook, private val batchSize: Int) extend
 
   def readOrc(buf: ByteBuffer, writer: Writer): Unit = {
     require(buf.hasRemaining)
-    while (buf.hasRemaining)
-      writer.addRowBatch(readBatch(buf))
+    while (buf.hasRemaining) {
+      val batch: VectorizedRowBatch = readBatch(buf)
+      writer.addRowBatch(batch)
+      logger.debug(s"Wrote VectorizedRowBatch with size ${batch.size}")
+    }
   }
 
   /** Read
@@ -57,6 +60,7 @@ class ZReader(private val copyBook: CopyBook, private val batchSize: Int) extend
     }
     batch.size = rowId
     batch.endOfFile = true
+    logger.debug(s"Read VectorizedRowBatch with size ${batch.size}")
     batch
   }
 }
