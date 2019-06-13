@@ -31,10 +31,10 @@ object BQLoad extends Logging {
                      in = CrossPlatform.readChannel(c.inDD, copyBook),
                      copyBook = copyBook,
                      gcs = GCS.defaultClient(cp.getCredentials),
-                     maxWriters = 5,
+                     maxWriters = c.parallelism,
                      batchSize = c.batchSize,
                      partSizeMb = c.partSizeMB,
-                     timeoutMinutes = 600,
+                     timeoutMinutes = c.timeOutMinutes,
                      compress = c.compress)
   }
 

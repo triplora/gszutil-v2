@@ -39,4 +39,13 @@ assemblyMergeStrategy in assembly := {
   case _ => MergeStrategy.first
 }
 
+val ibmLibs = Set(
+  "ibmjzos.jar",
+  "ibmjcecca.jar"
+)
+
+assemblyExcludedJars in assembly := {
+  (fullClasspath in assembly).value.filter(x => ibmLibs.contains(x.data.getName))
+}
+
 publishMavenStyle := false

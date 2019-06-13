@@ -15,7 +15,4 @@ fi
 
 mkdir -p lib
 ln -vs $jzosPath/lib/ext/ibmjzos.jar lib/ibmjzos.jar
-ln -vs $jzosPath/lib/rt.jar lib/rt.jar
-ln -vs $jzosPath/lib/ibmjssefw.jar lib/ibmjssefw.jar
-ln -vs $jzosPath/lib/ibmjsseprovider2.jar lib/ibmjsseprovider2.jar
 ln -vs $jzosPath/lib/ext/ibmjcecca.jar lib/ibmjcecca.jar

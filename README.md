@@ -131,8 +131,12 @@ download a GCS object to UNIX filesystem
   source                   source path (/path/to/file)
   dest                     destination path (gs://bucket/path)
   --debug <value>          enable debug options (default: false)
+  --partSizeMB <value>     target part size in megabytes (default: 256)
+  --batchSize <value>      rows per batch (default: 10000)
   -p, --parallelism <value>
                            number of concurrent writers (default: 5)
+  --timeOutMinutes <value>
+                           timeout in minutes (default: 180)
 ```
 
 

@@ -113,6 +113,10 @@ object ConfigParser extends OptionParser[Config]("GSZUtil") {
     .action{(x,c) => c.copy(parallelism = x)}
     .text("number of concurrent writers (default: 5)")
 
+  opt[Int]("timeOutMinutes")
+    .action{(x,c) => c.copy(timeOutMinutes = x)}
+    .text("timeout in minutes (default: 180)")
+
   checkConfig(c =>
     if (c.mode == "cp" && (c.destBucket.isEmpty || c.destPath.isEmpty))
       failure(s"invalid destination '${c.dest}'")
