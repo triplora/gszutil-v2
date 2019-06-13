@@ -147,6 +147,15 @@ object Util {
     getLogger("org.apache.orc.impl.MemoryManagerImpl").setLevel(ERROR)
   }
 
+  private val r = Runtime.getRuntime
+
+  def logMem(): String = {
+    val free = r.freeMemory() / (1024L * 1024L)
+    val total = r.totalMemory() / (1024L * 1024L)
+    val used = total - free
+    s"Memory: ${used}M used\t${free}M free\t${total}M total"
+  }
+
   val StorageScope: java.util.Collection[String] = Collections.singleton("https://www.googleapis.com/auth/devstorage.read_write")
 
   def readNio(path: String): Array[Byte] = {
