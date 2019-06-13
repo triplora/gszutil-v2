@@ -29,5 +29,6 @@ final case class Config(
                          debug: Boolean = false,
                          compress: Boolean = true,
                          batchSize: Int = 10000,
+                         partSize: Int = 256*1024*1024,
                          parallelism: Int = 5,
                          bq: BigQueryConfig = BigQueryConfig())

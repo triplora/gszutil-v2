@@ -4,7 +4,7 @@ import java.nio.channels.FileChannel
 import java.nio.file.Paths
 
 import com.google.cloud.gszutil.Util.{CredentialProvider, Logging}
-import com.google.cloud.storage.{Storage, StorageOptions}
+import com.google.cloud.storage.Storage
 
 object GCSGet extends Logging {
   def run(config: Config, cp: CredentialProvider): Unit = {

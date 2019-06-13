@@ -1,12 +1,13 @@
 package com.ibm.jzos
 
-import java.nio.channels.FileChannel
-import java.nio.file.{Files, Paths}
+import java.io.FileInputStream
+import java.nio.channels.{FileChannel, ReadableByteChannel}
+import java.nio.file.{Files, Paths, StandardOpenOption}
 import java.security.Security
 
-import com.google.cloud.gszutil.{CopyBook, Decoding}
 import com.google.cloud.gszutil.Util.{ByteStringCredentialsProvider, CredentialProvider, DefaultCredentialProvider, Logging}
-import com.google.cloud.gszutil.io.{ChannelRecordReader, ZInputStream, ZRecordReaderT}
+import com.google.cloud.gszutil.io.{ChannelRecordReader, ZChannel, ZInputStream, ZRecordReaderT}
+import com.google.cloud.gszutil.{CopyBook, Decoding}
 import com.google.common.base.Charsets
 import com.google.common.io.ByteStreams
 import com.google.protobuf.ByteString
@@ -19,6 +20,18 @@ object CrossPlatform extends Logging {
   def init(): Unit = {
     if (IBM) {
       Security.insertProviderAt(new com.ibm.crypto.hdwrCCA.provider.IBMJCECCA(), 1)
+    }
+  }
+
+  def readChannel(dd: String, copyBook: CopyBook): ReadableByteChannel = {
+    if (IBM) {
+      val rr = ZOS.readDD(dd)
+      require(rr.lRecl == copyBook.LRECL)
+      new ZChannel(rr)
+    } else {
+      val ddPath = Paths.get(System.getenv(dd))
+      logger.info(s"Opening $dd $ddPath")
+      FileChannel.open(ddPath, StandardOpenOption.READ)
     }
   }
 

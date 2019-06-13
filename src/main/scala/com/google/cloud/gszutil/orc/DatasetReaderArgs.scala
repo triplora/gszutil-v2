@@ -15,4 +15,4 @@ import com.google.cloud.storage.Storage
   * @param nWorkers worker count
   * @param copyBook CopyBook
   */
-case class DatasetReaderArgs(in: ReadableByteChannel, lRecl: Int, batchSize: Int, uri: URI, maxBytes: Long, nWorkers: Int, copyBook: CopyBook, gcs: Storage)
+case class DatasetReaderArgs(in: ReadableByteChannel, batchSize: Int, uri: URI, maxBytes: Long, nWorkers: Int, copyBook: CopyBook, gcs: Storage)

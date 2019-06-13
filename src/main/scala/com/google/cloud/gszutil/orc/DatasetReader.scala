@@ -23,25 +23,23 @@ class DatasetReader(args: DatasetReaderArgs) extends Actor with Logging {
   import args._
 
   override def preStart(): Unit = {
-    if (lRecl != copyBook.LRECL) {
-      logger.error("input lRecl != copybook lRecl")
-      in.close()
-    } else {
-      startTime = System.currentTimeMillis
-      for (_ <- 0 until nWorkers)
-        newPart()
-    }
+    startTime = System.currentTimeMillis
+    for (_ <- 0 until nWorkers)
+      newPart()
   }
 
   override def receive: Receive = {
     case bb: ByteBuffer =>
       lastRecv = System.currentTimeMillis
-
+      bb.clear()
       while (bb.hasRemaining && in.isOpen) {
-        if (in.read(bb) < 0) in.close()
+        if (in.read(bb) < 0){
+          logger.info(s"closing ${in.getClass.getSimpleName}")
+          in.close()
+        }
       }
 
-      totalBytes += bb.limit
+      totalBytes += bb.position
       bb.flip()
       sender ! bb
       nSent += 1

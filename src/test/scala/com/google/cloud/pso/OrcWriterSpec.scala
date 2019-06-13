@@ -2,7 +2,7 @@ package com.google.cloud.pso
 
 import com.google.cloud.gszutil.KeyFileProto.KeyFile
 import com.google.cloud.gszutil.Util.{KeyFileCredentialProvider, Logging}
-import com.google.cloud.gszutil.io.ZDataSet
+import com.google.cloud.gszutil.io.{ZChannel, ZDataSet}
 import com.google.cloud.gszutil.orc.WriteORCFile
 import com.google.cloud.gszutil._
 import org.scalatest.FlatSpec
@@ -27,6 +27,7 @@ class OrcWriterSpec extends FlatSpec with Logging {
     logger.info(s"Loaded copy book```\n${copyBook.raw}\n```")
 
     val in = new ZDataSet(Util.readB("test.bin"), copyBook.LRECL, copyBook.LRECL*1024)
-    WriteORCFile.run(prefix, in, copyBook, gcs, maxWriters = 2)
+    val rc = new ZChannel(in)
+    WriteORCFile.run(prefix, rc, copyBook, gcs, maxWriters = 2)
   }
 }
