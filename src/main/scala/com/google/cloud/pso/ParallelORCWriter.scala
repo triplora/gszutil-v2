@@ -65,7 +65,6 @@ object ParallelORCWriter extends Logging {
     private var totalBytes = 0L
     private val maxLog = 20
     private var nLog = 0
-    private val r = Runtime.getRuntime
     import args._
 
     override def preStart(): Unit = {
@@ -82,11 +81,6 @@ object ParallelORCWriter extends Logging {
     override def receive: Receive = {
       case bb: ByteBuffer =>
         lastRecv = System.currentTimeMillis
-        val dt = lastRecv - lastSend
-        if (dt > 200L && lastSend > 100L && nLog < maxLog) {
-          logger.info(s"$dt ms since last send " + logMem(r))
-          nLog += 1
-        }
 
         while (bb.hasRemaining && in.isOpen) {
           if (in.read(bb) < 0) in.close()
@@ -95,10 +89,6 @@ object ParallelORCWriter extends Logging {
         totalBytes += bb.limit
         bb.flip()
         sender ! bb
-        if (nLog < maxLog){
-          logger.info(s"sent ByteBuffer with limit=${bb.limit} ${logMem(r)}")
-          nLog += 1
-        }
         nSent += 1
         lastSend = System.currentTimeMillis
         activeTime += (lastSend - lastRecv)
