@@ -23,7 +23,7 @@ import scala.util.{Failure, Success, Try}
 object GSZUtil extends Logging {
 
   def main(args: Array[String]): Unit = {
-    Config.parse(args) match {
+    ConfigParser.parse(args, Config()) match {
       case Some(config) =>
         init(config)
         run(config) match {

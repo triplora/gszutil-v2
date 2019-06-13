@@ -1,16 +1,11 @@
 package com.google.cloud.pso
 
-import com.google.api.gax.retrying.RetrySettings
-import com.google.api.gax.rpc.FixedHeaderProvider
-import com.google.cloud.gszutil.Config.BigQueryConfig
-import com.google.cloud.gszutil.{Config, CopyBook, GCS, Util}
 import com.google.cloud.gszutil.KeyFileProto.KeyFile
 import com.google.cloud.gszutil.Util.{KeyFileCredentialProvider, Logging}
 import com.google.cloud.gszutil.io.ZDataSet
 import com.google.cloud.gszutil.orc.WriteORCFile
-import com.google.cloud.storage.StorageOptions
+import com.google.cloud.gszutil._
 import org.scalatest.FlatSpec
-import org.threeten.bp.Duration
 
 class OrcWriterSpec extends FlatSpec with Logging {
   Util.configureLogging()

@@ -1,7 +1,6 @@
 package com.google.cloud.pso
 
-import com.google.cloud.gszutil.CopyBook
-import com.google.cloud.gszutil.Util
+import com.google.cloud.gszutil.{CopyBook, Util}
 import com.google.cloud.gszutil.Util.Logging
 import org.scalatest.FlatSpec
 

@@ -4,13 +4,6 @@ import java.nio.ByteBuffer
 import java.nio.channels.ReadableByteChannel
 
 import com.google.cloud.gszutil.Util.Logging
-import com.ibm.jzos.CrossPlatform
-
-object ZChannel {
-  def apply(dd: String): ZChannel = {
-    new ZChannel(CrossPlatform.readDD(dd))
-  }
-}
 
 class ZChannel(private val reader: ZRecordReaderT) extends ReadableByteChannel with Logging {
   private var hasRemaining = true
@@ -19,8 +12,6 @@ class ZChannel(private val reader: ZRecordReaderT) extends ReadableByteChannel w
   private val buf: ByteBuffer = ByteBuffer.wrap(data)
   private var bytesRead: Long = 0
   private val t = System.currentTimeMillis()
-  val lrecl = reader.lRecl
-  val blkSize = reader.blkSize
 
   buf.position(buf.capacity) // initial buffer state = empty
 
