@@ -23,7 +23,7 @@ import scala.util.{Failure, Success, Try}
 object GSZUtil extends Logging {
 
   def main(args: Array[String]): Unit = {
-    ConfigParser.parse(args, Config()) match {
+    ConfigParser.parse(args) match {
       case Some(config) =>
         init(config)
         run(config) match {
@@ -48,7 +48,7 @@ object GSZUtil extends Logging {
   }
 
   def run(config: Config): Try[Unit] = Try{
-    val cp = CrossPlatform.getCredentialProvider()
+    val cp = CrossPlatform.getCredentialProvider(config.keyFileDD)
     if (config.mode == "cp")
       GCSPut.run(config, cp)
     else if (config.mode == "get")

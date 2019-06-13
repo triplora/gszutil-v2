@@ -38,7 +38,7 @@ import com.google.common.base.Charsets
 import com.google.common.hash.HashCode
 import com.google.common.io.Resources
 import com.google.protobuf.ByteString
-import org.apache.log4j.{Level, Logger}
+import org.apache.log4j.{Level, LogManager, Logger}
 import org.zeromq.codec.Z85
 
 import scala.util.{Failure, Random, Try}
@@ -111,7 +111,7 @@ object Util {
     sb.result()
   }
 
-  val layout = new org.apache.log4j.PatternLayout("%d{ISO8601} [%t] %-5p %c %x - %m%n")
+  val layout = new org.apache.log4j.PatternLayout("%d{ISO8601} %-5p %c %x - %m%n")
   val consoleAppender = new org.apache.log4j.ConsoleAppender(layout)
 
   trait Logging {
@@ -134,13 +134,11 @@ object Util {
     newLogger(name, Level.DEBUG)
 
   def configureLogging(): Unit = {
-    import org.apache.log4j.Level.{DEBUG, ERROR, WARN}
-    import org.apache.log4j.Logger.{getLogger, getRootLogger}
-    getRootLogger.setLevel(WARN)
-    getRootLogger.addAppender(consoleAppender)
-    getLogger("com.google.cloud.gszutil").setLevel(DEBUG)
-    getLogger("com.google.cloud.pso").setLevel(DEBUG)
-    getLogger("org.apache.orc.impl.MemoryManagerImpl").setLevel(ERROR)
+    LogManager.getRootLogger.setLevel(Level.WARN)
+    LogManager.getRootLogger.addAppender(consoleAppender)
+    LogManager.getLogger("com.google.cloud.gszutil").setLevel(Level.DEBUG)
+    LogManager.getLogger("com.google.cloud.pso").setLevel(Level.DEBUG)
+    LogManager.getLogger("org.apache.orc.impl.MemoryManagerImpl").setLevel(Level.ERROR)
   }
 
   private val r = Runtime.getRuntime
@@ -334,8 +332,6 @@ object Util {
     val buf = ByteBuffer.allocate(chunkSize)
     val buf2 = buf.asReadOnlyBuffer()
     val h = MessageDigest.getInstance("MD5")
-
-    //val h = Hashing.crc32().newHasher()
     var i = 0
     var n = 0
     var totalBytesRead = 0L

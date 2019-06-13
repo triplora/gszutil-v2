@@ -20,12 +20,13 @@ object WriteORCFile extends Logging {
           maxWriters: Int = 5,
           batchSize: Int = 10000,
           partLen: Long = 256 * 1024 * 1024,
-          timeoutMinutes: Int = 60): Unit = {
+          timeoutMinutes: Int = 60,
+          compress: Boolean = true): Unit = {
     import scala.concurrent.duration._
     val conf = ConfigFactory.parseMap(ImmutableMap.of(
       "akka.actor.guardian-supervisor-strategy","akka.actor.EscalatingSupervisorStrategy"))
     val sys = ActorSystem("gsz", conf)
-    val args: DatasetReaderArgs = DatasetReaderArgs(in, batchSize, new URI(gcsUri), partLen, maxWriters, copyBook, gcs)
+    val args: DatasetReaderArgs = DatasetReaderArgs(in, batchSize, new URI(gcsUri), partLen, maxWriters, copyBook, gcs, compress)
     sys.actorOf(Props(classOf[DatasetReader], args), "ZReader")
     Await.result(sys.whenTerminated, atMost = FiniteDuration(timeoutMinutes, MINUTES))
   }

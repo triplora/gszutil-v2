@@ -56,7 +56,7 @@ object SimpleORCWriter extends Logging {
 
 
   def configuration(c: Configuration = new Configuration(false)): Configuration = {
-    OrcConf.COMPRESS.setString(c, "none")
+    OrcConf.COMPRESS.setString(c, "ZLIB")
     OrcConf.ENABLE_INDEXES.setBoolean(c, false)
     OrcConf.OVERWRITE_OUTPUT_FILE.setBoolean(c, true)
     OrcConf.MEMORY_POOL.setDouble(c, 0.5d)

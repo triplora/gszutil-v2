@@ -1,12 +1,13 @@
 package com.google.cloud.gszutil
 
-import java.nio.file.Paths
-
 import com.google.cloud.pso.BQLoad
+import scopt.OptionParser
 
 import scala.util.{Success, Try}
 
-object ConfigParser extends scopt.OptionParser[Config]("GSZUtil") {
+object ConfigParser extends OptionParser[Config]("GSZUtil") {
+  private val DefaultConfig = Config()
+  def parse(args: Seq[String]): Option[Config] = parse(args, DefaultConfig)
 
   head("GSZUtil", "0.1.1")
 
@@ -20,12 +21,12 @@ object ConfigParser extends scopt.OptionParser[Config]("GSZUtil") {
     .children(
       arg[String]("bqProject")
         .required()
-        .action { (x, c) => c.copy(bq = c.bq.copy(project = x)) }
+        .action { (x, c) => c.copy(bqProject = x) }
         .text("BigQuery Project ID"),
 
       arg[String]("bqDataset")
         .required()
-        .action { (x, c) => c.copy(bq = c.bq.copy(dataset = x)) }
+        .action { (x, c) => c.copy(bqDataset = x) }
         .validate { x =>
           if (BQLoad.isValidBigQueryName(x)) success
           else failure(s"'$x' is not a valid dataset name")
@@ -34,7 +35,7 @@ object ConfigParser extends scopt.OptionParser[Config]("GSZUtil") {
 
       arg[String]("bqTable")
         .required()
-        .action { (x, c) => c.copy(bq = c.bq.copy(table = x)) }
+        .action { (x, c) => c.copy(bqTable = x) }
         .validate { x =>
           if (BQLoad.isValidBigQueryName(x)) success
           else failure(s"'$x' is not a valid dataset name")
@@ -43,12 +44,12 @@ object ConfigParser extends scopt.OptionParser[Config]("GSZUtil") {
 
       arg[String]("bucket")
         .required()
-        .action { (x, c) => c.copy(bq = c.bq.copy(bucket = x)) }
+        .action { (x, c) => c.copy(bqBucket = x) }
         .text("GCS bucket of source"),
 
       arg[String]("prefix")
         .required()
-        .action { (x, c) => c.copy(bq = c.bq.copy(path = x)) }
+        .action { (x, c) => c.copy(bqPath = x) }
         .text("GCS prefix of source")
     )
 
@@ -107,8 +108,6 @@ object ConfigParser extends scopt.OptionParser[Config]("GSZUtil") {
   checkConfig(c =>
     if (c.mode == "cp" && (c.destBucket.isEmpty || c.destPath.isEmpty))
       failure(s"invalid destination '${c.dest}'")
-    else if (c.keyfile.nonEmpty && !Paths.get(c.keyfile).toFile.exists())
-      failure(s"keyfile '${c.keyfile}' doesn't exist")
     else success
   )
 }

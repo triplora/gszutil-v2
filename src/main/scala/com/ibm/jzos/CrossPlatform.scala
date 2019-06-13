@@ -55,9 +55,9 @@ object CrossPlatform extends Logging {
     }
   }
 
-  def getCredentialProvider(): CredentialProvider = {
+  def getCredentialProvider(keyFileDD: String): CredentialProvider = {
     if (IBM) {
-      val bytes = ByteStreams.toByteArray(ZInputStream("KEYFILE"))
+      val bytes = ByteStreams.toByteArray(ZInputStream(keyFileDD))
       logger.debug("Loaded credential json:\n" + new String(bytes, Charsets.UTF_8))
       Try(new ByteStringCredentialsProvider(ByteString.copyFrom(bytes)))
         .getOrElse(new ByteStringCredentialsProvider(ByteString.copyFrom(Decoding.ebcdic2ascii(bytes))))

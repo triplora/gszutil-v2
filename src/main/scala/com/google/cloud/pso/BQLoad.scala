@@ -28,19 +28,20 @@ object BQLoad extends Logging {
   def run(c: Config, cp: CredentialProvider): Unit = {
     val copyBook = CrossPlatform.loadCopyBook(c.copyBookDD)
     WriteORCFile.run(
-      gcsUri = s"gs://${c.bq.bucket}/${c.bq.path}",
+      gcsUri = s"gs://${c.bqBucket}/${c.bqPath}",
       in = CrossPlatform.readChannel(c.inDD, copyBook),
       copyBook = copyBook,
       gcs = GCS.defaultClient(cp.getCredentials),
       batchSize = c.batchSize,
       partLen = c.partSize,
-      timeoutMinutes = 600)
+      timeoutMinutes = 600,
+      compress = c.compress)
   }
 
   def load(bq: bigquery.BigQuery, table: String, c: Config, sourceUri: String, formatOptions: bigquery.FormatOptions = bigquery.FormatOptions.orc()): Unit = {
 
     val jobConf = bigquery.LoadJobConfiguration
-      .newBuilder(bigquery.TableId.of(c.bq.project, c.bq.dataset, table), sourceUri)
+      .newBuilder(bigquery.TableId.of(c.bqProject, c.bqDataset, table), sourceUri)
       .setFormatOptions(formatOptions)
       .setAutodetect(true)
       .setWriteDisposition(WriteDisposition.WRITE_TRUNCATE)

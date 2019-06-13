@@ -76,7 +76,7 @@ class DatasetReader(args: DatasetReaderArgs) extends Actor with Logging {
   private def newPart(): Unit = {
     val partName = f"$partId%05d"
     val path = new Path(s"gs://${uri.getAuthority}/${uri.getPath.stripPrefix("/") + s"/part-$partName.orc"}")
-    val args = ORCFileWriterArgs(copyBook, maxBytes, batchSize, path, gcs)
+    val args = ORCFileWriterArgs(copyBook, maxBytes, batchSize, path, gcs, compress)
     val w = context.actorOf(Props(classOf[ORCFileWriter], args), s"OrcWriter-$partName")
     context.watch(w)
     writers.add(w)
