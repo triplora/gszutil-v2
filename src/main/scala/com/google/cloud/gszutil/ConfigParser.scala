@@ -101,6 +101,14 @@ object ConfigParser extends OptionParser[Config]("GSZUtil") {
     .action { (x, c) => c.copy(debug = x) }
     .text("enable debug options (default: false)")
 
+  opt[Int]("partSizeMB")
+    .action{(x,c) => c.copy(partSizeMB = x)}
+    .text("target part size in megabytes (default: 256)")
+
+  opt[Int]("batchSize")
+    .action{(x,c) => c.copy(batchSize = x)}
+    .text("rows per batch (default: 10000)")
+
   opt[Int]('p', "parallelism")
     .action{(x,c) => c.copy(parallelism = x)}
     .text("number of concurrent writers (default: 5)")

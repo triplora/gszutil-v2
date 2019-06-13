@@ -19,12 +19,20 @@ class OrcWriterSpec extends FlatSpec with Logging {
 
     val gcs = GCS.defaultClient(cp.getCredentials)
 
-    val prefix = s"gs://${c.bqBucket}/${c.bqPath}"
+    val gcsUri = s"gs://${c.bqBucket}/${c.bqPath}"
     val copyBook = CopyBook(Util.readS("sku_dly_pos.cpy"))
     logger.info(s"Loaded copy book```\n${copyBook.raw}\n```")
 
     val in = new ZDataSet(Util.readB("test.bin"), copyBook.LRECL, copyBook.LRECL*1024)
     val rc = new ZChannel(in)
-    WriteORCFile.run(prefix, rc, copyBook, gcs, maxWriters = 2)
+    WriteORCFile.run(gcsUri,
+                     rc,
+                     copyBook,
+                     gcs,
+                     maxWriters = 2,
+                     batchSize = 1024,
+                     partSizeMb = 128,
+                     timeoutMinutes = 3,
+                     compress = false)
   }
 }

@@ -15,11 +15,16 @@
  */
 package com.ibm.jzos
 
+import java.security.Security
+
 import com.google.cloud.gszutil.Util.Logging
 import com.google.cloud.gszutil.io.ZRecordReaderT
 
 import scala.util.Try
 
+/**  Calls and wraps IBM JZOS classes
+  *
+  */
 protected object ZOS extends Logging {
   class RecordReaderCloser(r: RecordReader) extends Thread {
     override def run(): Unit = {
@@ -62,5 +67,9 @@ protected object ZOS extends Logging {
     val reader: RecordReader = RecordReader.newReaderForDD(ddName)
     logger.info(s"Reading DD $ddName ${reader.getDsn} with record format ${reader.getRecfm} BLKSIZE ${reader.getBlksize} LRECL ${reader.getLrecl}")
     new WrappedRecordReader(reader)
+  }
+
+  def addCCAProvider(): Unit = {
+    Security.insertProviderAt(new com.ibm.crypto.hdwrCCA.provider.IBMJCECCA(), 1)
   }
 }

@@ -1,9 +1,7 @@
 package com.ibm.jzos
 
-import java.io.FileInputStream
 import java.nio.channels.{FileChannel, ReadableByteChannel}
 import java.nio.file.{Files, Paths, StandardOpenOption}
-import java.security.Security
 
 import com.google.cloud.gszutil.Util.{ByteStringCredentialsProvider, CredentialProvider, DefaultCredentialProvider, Logging}
 import com.google.cloud.gszutil.io.{ChannelRecordReader, ZChannel, ZInputStream, ZRecordReaderT}
@@ -14,15 +12,24 @@ import com.google.protobuf.ByteString
 
 import scala.util.Try
 
+/** Provides methods that work on both Linux and z/OS
+  * Does not import any IBM classes directly to enable testing
+  */
 object CrossPlatform extends Logging {
   val IBM: Boolean = System.getProperty("java.vm.vendor").contains("IBM")
 
   def init(): Unit = {
     if (IBM) {
-      Security.insertProviderAt(new com.ibm.crypto.hdwrCCA.provider.IBMJCECCA(), 1)
+      ZOS.addCCAProvider()
     }
   }
 
+  /** Opens a ReadableByteChannel
+    *
+    * @param dd DD name of input dataset
+    * @param copyBook used to verify LRECL of the dataset
+    * @return
+    */
   def readChannel(dd: String, copyBook: CopyBook): ReadableByteChannel = {
     if (IBM) {
       val rr = ZOS.readDD(dd)
