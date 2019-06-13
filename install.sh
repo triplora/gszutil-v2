@@ -18,16 +18,15 @@ sudo tar xfzo ~/sbt-1.2.8.tgz
 echo 'PATH="$PATH:/opt/sbt/bin"' >> ~/.profile && . ~/.profile
 
 # Clone repository
-cd ~
-git clone https://github.com/jasonmar/gszutil
+git clone $REPO_URL
 cd gszutil
+./install_ibm_libs /opt/J8.0_64
 
-# Edit Credentials.scala using a text editor
-# (command not shown)
+# Build Dependency Jar
+sbt assemblyPackageDependency
 
-# Build assembly jar
-sbt assembly
+# Build Application Jar
+sbt package
 
-# Copy assembly jar to mainframe
-# (command not shown)
-# jar is located at ~/gszutil/target/scala-2.11/gszutil.jar
+ls -ldh target/scala-2.11/gszutil.dep.jar
+ls -ldh target/scala-2.11/gszutil-*.jar

@@ -83,10 +83,6 @@ object Util {
     sb.result().lines.foreach(System.out.println)
   }
 
-  def configureBouncyCastleProvider(): Unit = {
-    Security.addProvider(new org.bouncycastle.jce.provider.BouncyCastleProvider())
-  }
-
   def showProviders(): String = {
     Security.getProviders
       .map(showProvider)

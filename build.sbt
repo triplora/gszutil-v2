@@ -6,8 +6,6 @@ organization := "com.google.cloud"
 
 version := "0.1.0-SNAPSHOT"
 
-val jzosPath = "/opt/J8.0_64/lib"
-
 val exGuava = ExclusionRule(organization = "com.google.guava")
 
 libraryDependencies ++= Seq(
@@ -25,17 +23,8 @@ libraryDependencies ++= Seq(
   "com.google.protobuf" % "protobuf-java" % "3.7.1",
   "com.google.protobuf" % "protobuf-java-util" % "3.7.1",
   "com.github.scopt" %% "scopt" % "3.7.1",
-  "org.bouncycastle" % "bcprov-jdk15on" % "1.61",
   "org.scalatest" %% "scalatest" % "3.0.5" % Test
 ).map(_ excludeAll exGuava)
-
-libraryDependencies ++= Seq(
-  "com.ibm.jzos" % "jzos" % "1.0" % Provided from s"file://$jzosPath/ext/ibmjzos.jar",
-  "com.ibm.jzos" % "rt" % "1.0" % Provided from s"file://$jzosPath/rt.jar",
-  "com.ibm.jzos" % "ibmjssefw" % "1.0" % Provided from s"file://$jzosPath/ibmjssefw.jar",
-  "com.ibm.jzos" % "ibmjsseprovider2" % "1.0" % Provided from s"file://$jzosPath/ibmjsseprovider2.jar",
-  "com.ibm.jzos" % "ibmjcecca" % "1.0" % Provided from s"file://$jzosPath/ext/ibmjcecca.jar"
-)
 
 mainClass in assembly := Some("com.google.cloud.gszutil.GSZUtil")
 
