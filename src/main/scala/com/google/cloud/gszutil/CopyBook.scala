@@ -18,7 +18,7 @@ case class CopyBook(raw: String) {
         None
     }
 
-  def getDecoders: Array[Decoder[_]] = {
+  final val decoders: Array[Decoder[_]] = {
     val buf = ArrayBuffer.empty[Decoder[_]]
     Fields.foreach{
       case CopyBookField(_, pic) =>
@@ -31,13 +31,13 @@ case class CopyBook(raw: String) {
   final val ORCSchema: TypeDescription = {
     val schema = new TypeDescription(Category.STRUCT)
     FieldNames
-      .zip(getDecoders)
+      .zip(decoders)
       .foreach{f =>
         schema.addField(f._1, f._2.typeDescription)
       }
     schema
   }
 
-  final val LRECL: Int = getDecoders.foldLeft(0){_ + _.size}
+  final val LRECL: Int = decoders.foldLeft(0){_ + _.size}
 }
 

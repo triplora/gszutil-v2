@@ -3,15 +3,12 @@ package com.google.cloud.gszutil.io
 import java.nio.ByteBuffer
 import java.nio.channels.ReadableByteChannel
 
-import com.google.cloud.gszutil.Util.Logging
-
-class ZChannel(private val reader: ZRecordReaderT) extends ReadableByteChannel with Logging {
+class ZChannel(private val reader: ZRecordReaderT) extends ReadableByteChannel {
   private var hasRemaining = true
   private var open = true
   private val data: Array[Byte] = new Array[Byte](reader.blkSize)
   private val buf: ByteBuffer = ByteBuffer.wrap(data)
   private var bytesRead: Long = 0
-  private val t = System.currentTimeMillis()
 
   buf.position(buf.capacity) // initial buffer state = empty
 
@@ -42,9 +39,6 @@ class ZChannel(private val reader: ZRecordReaderT) extends ReadableByteChannel w
   override def isOpen: Boolean = open
   override def close(): Unit = {
     if (isOpen) {
-      val t1 = System.currentTimeMillis()
-      val dt = (t1 - t) / 1000L
-      logger.debug(s"Closing - $bytesRead bytes read in $dt seconds")
       reader.close()
       open = false
     }

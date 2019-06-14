@@ -1,16 +1,17 @@
 package com.google.cloud.pso
 
-import com.google.cloud.gszutil.KeyFileProto.KeyFile
-import com.google.cloud.gszutil.Util.{KeyFileCredentialProvider, Logging}
-import com.google.cloud.gszutil.io.{ZChannel, ZDataSet}
-import com.google.cloud.gszutil.orc.WriteORCFile
+import java.io.ByteArrayInputStream
+import java.nio.channels.Channels
+
+import com.google.cloud.gszutil.Util.{DefaultCredentialProvider, Logging}
 import com.google.cloud.gszutil._
+import com.google.cloud.gszutil.orc.WriteORCFile
 import org.scalatest.FlatSpec
 
 class OrcWriterSpec extends FlatSpec with Logging {
   Util.configureLogging()
   "OrcWriter" should "write" in {
-    val cp = KeyFileCredentialProvider(KeyFile.parseFrom(Util.readB("keyfile.pb")))
+    val cp = DefaultCredentialProvider
     val c = Config(
       bqProject = "retail-poc-demo",
       bqBucket = "kms-demo1",
@@ -23,8 +24,7 @@ class OrcWriterSpec extends FlatSpec with Logging {
     val copyBook = CopyBook(Util.readS("sku_dly_pos.cpy"))
     logger.info(s"Loaded copy book```\n${copyBook.raw}\n```")
 
-    val in = new ZDataSet(Util.readB("test.bin"), copyBook.LRECL, copyBook.LRECL*1024)
-    val rc = new ZChannel(in)
+    val rc = Channels.newChannel(new ByteArrayInputStream(Util.readB("test.bin")))
     WriteORCFile.run(gcsUri,
                      rc,
                      copyBook,

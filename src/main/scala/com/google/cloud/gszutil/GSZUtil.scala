@@ -42,9 +42,7 @@ object GSZUtil extends Logging {
     CrossPlatform.init()
     System.setProperty("java.net.preferIPv4Stack" , "true")
 
-    Util.configureLogging()
-    if (config.debug)
-      Util.printDebugInformation()
+    Util.configureLogging(config.debug)
   }
 
   def run(config: Config): Try[Unit] = Try{

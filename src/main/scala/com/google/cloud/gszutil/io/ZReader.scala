@@ -9,7 +9,7 @@ import org.apache.hadoop.hive.ql.exec.vector.VectorizedRowBatch
 import org.apache.orc.Writer
 
 class ZReader(private val copyBook: CopyBook, private val batchSize: Int) extends Logging {
-  private val decoders: Array[Decoder[_]] = copyBook.getDecoders
+  private val decoders: Array[Decoder[_]] = copyBook.decoders
   private val nCols = decoders.length
   private val lRecl = copyBook.LRECL
   private val rowBatch: VectorizedRowBatch = {

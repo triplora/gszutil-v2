@@ -15,30 +15,21 @@
  */
 package com.google.cloud.gszutil
 
-import java.io.{ByteArrayInputStream, ByteArrayOutputStream, InputStream, StringReader}
+import java.io.{ByteArrayInputStream, ByteArrayOutputStream, InputStream}
 import java.nio.ByteBuffer
 import java.nio.channels.{Channels, ReadableByteChannel, WritableByteChannel}
-import java.nio.charset.StandardCharsets
 import java.nio.file.{Files, Paths}
-import java.security.spec.PKCS8EncodedKeySpec
-import java.security.{MessageDigest, PrivateKey, Provider, Security}
-import java.time.Instant
+import java.security.{MessageDigest, Provider, Security}
+import java.util.Collections
 import java.util.zip.GZIPOutputStream
-import java.util.{Collections, Date}
 
-import com.google.api.client.auth.oauth2.{BearerToken, Credential}
-import com.google.api.client.googleapis.auth.oauth2.GoogleCredential
-import com.google.api.client.googleapis.util.Utils
-import com.google.api.client.json.JsonObjectParser
-import com.google.api.client.util.{PemReader, SecurityUtils}
-import com.google.auth.oauth2.{AccessToken, GSZCredentials, GoogleCredentials}
-import com.google.cloud.gszutil.KeyFileProto.KeyFile
+import com.google.auth.oauth2.GoogleCredentials
 import com.google.cloud.storage.BlobInfo
 import com.google.common.base.Charsets
 import com.google.common.hash.HashCode
 import com.google.common.io.Resources
 import com.google.protobuf.ByteString
-import org.apache.log4j.{Level, LogManager, Logger}
+import org.apache.log4j.{ConsoleAppender, Level, LogManager, Logger, PatternLayout}
 import org.zeromq.codec.Z85
 
 import scala.util.{Failure, Random, Try}
@@ -55,90 +46,26 @@ object Util {
     }
   }
 
-  def printDebugInformation(): Unit = {
-    import scala.collection.JavaConverters._
-    val sb = new StringBuilder()
-    sb.append("\n\nSystem Properties:\n")
-    System.getProperties.asScala.foreach{x =>
-      sb.append(x._1)
-      sb.append("=")
-      sb.append(x._2)
-      sb.append("\n")
-    }
-    sb.append("\n\nEnvironment Variables:\n")
-    System.getenv.asScala.foreach{x =>
-      sb.append(s"${x._1}=${x._2}\n")
-    }
-    sb.append("\n\n")
-
-    sb.append("JCE Providers")
-    Security.getProviders.map(_.getName).foreach { x =>
-      sb.append(x)
-      sb.append("\n")
-    }
-
-    sb.append("\n\n")
-    sb.append(showProviders())
-
-    sb.result().lines.foreach(System.out.println)
-  }
-
-  def showProviders(): String = {
-    Security.getProviders
-      .map(showProvider)
-      .mkString("\n\n----------------------------------------\n\n")
-  }
-
-  def showService(s: Provider.Service): String = {
-    s"""Service: ${s.getAlgorithm} Type: ${s.getType} Class: ${s.getClassName}"""
-  }
-
-  def showProvider(p: Provider) : String = {
-    import scala.collection.JavaConverters._
-    val sb = new StringBuilder()
-    sb.append("Provider: ")
-    sb.append(p.getName)
-    sb.append("\n")
-    sb.append("Info: \n")
-    sb.append(p.getInfo)
-    sb.append("\n")
-    sb.append("Services:\n")
-    p.getServices.asScala.toArray.sortBy(_.getAlgorithm)
-      .foreach{s =>
-        sb.append(showService(s))
-        sb.append("\n")
-      }
-    sb.result()
-  }
-
-  val layout = new org.apache.log4j.PatternLayout("%d{ISO8601} %-5p %c %x - %m%n")
-  val consoleAppender = new org.apache.log4j.ConsoleAppender(layout)
+  val layout = new PatternLayout("%d{ISO8601} %-5p %c %x - %m%n")
+  val consoleAppender = new ConsoleAppender(layout)
 
   trait Logging {
     @transient
-    protected lazy val logger: Logger = newLogger(this.getClass.getCanonicalName.stripSuffix("$"))
+    protected lazy val logger: Logger = LogManager.getLogger(this.getClass.getCanonicalName.stripSuffix("$"))
   }
 
-  trait DebugLogging {
-    @transient
-    protected lazy val logger: Logger = newDebugLogger(this.getClass.getCanonicalName.stripSuffix("$"))
-  }
-
-  def newLogger(name: String, level: Level = Level.INFO): org.apache.log4j.Logger = {
-      val logger = org.apache.log4j.Logger.getLogger(name)
-      logger.setLevel(level)
-      logger
-  }
-
-  def newDebugLogger(name: String): org.apache.log4j.Logger =
-    newLogger(name, Level.DEBUG)
-
-  def configureLogging(): Unit = {
-    LogManager.getRootLogger.setLevel(Level.WARN)
-    LogManager.getRootLogger.addAppender(consoleAppender)
-    LogManager.getLogger("com.google.cloud.gszutil").setLevel(Level.DEBUG)
-    LogManager.getLogger("com.google.cloud.pso").setLevel(Level.DEBUG)
+  def configureLogging(debug: Boolean = false): Unit = {
+    val rootLogger = LogManager.getRootLogger
+    rootLogger.addAppender(consoleAppender)
     LogManager.getLogger("org.apache.orc.impl.MemoryManagerImpl").setLevel(Level.ERROR)
+
+    if (debug) {
+      rootLogger.setLevel(Level.DEBUG)
+    } else {
+      rootLogger.setLevel(Level.WARN)
+      LogManager.getLogger("com.google.cloud.gszutil").setLevel(Level.INFO)
+      LogManager.getLogger("com.google.cloud.pso").setLevel(Level.INFO)
+    }
   }
 
   private val r = Runtime.getRuntime
@@ -154,69 +81,6 @@ object Util {
 
   def readNio(path: String): Array[Byte] = {
     Files.readAllBytes(Paths.get(path))
-  }
-
-  def parseJson(json: InputStream): ServiceAccountCredential = {
-    new JsonObjectParser(Utils.getDefaultJsonFactory).parseAndClose(json, StandardCharsets.UTF_8, classOf[ServiceAccountCredential])
-  }
-
-  def readCredentials(json: InputStream): GoogleCredential = {
-    val parsed = parseJson(json)
-    new GoogleCredential.Builder()
-      .setTransport(Utils.getDefaultTransport)
-      .setJsonFactory(Utils.getDefaultJsonFactory)
-      .setServiceAccountId(parsed.getClientEmail)
-      .setServiceAccountScopes(StorageScope)
-      .setServiceAccountPrivateKey(privateKey(parsed.getPrivateKeyPem))
-      .setServiceAccountPrivateKeyId(parsed.getPrivateKeyId)
-      .setTokenServerEncodedUrl(parsed.getTokenUri)
-      .setServiceAccountProjectId(parsed.getProjectId)
-      .build()
-  }
-
-  def convertJson(json: InputStream): KeyFile = {
-    val parsed = parseJson(json)
-    KeyFile.newBuilder()
-      .setType(parsed.getKeyType)
-      .setProjectId(parsed.getProjectId)
-      .setPrivateKeyId(parsed.getPrivateKeyId)
-      .setPrivateKey(parsed.getPrivateKeyPem)
-      .setClientEmail(parsed.getClientEmail)
-      .setClientId(parsed.getClientId)
-      .setAuthUri(parsed.getAuthUri)
-      .setTokenUri(parsed.getTokenUri)
-      .setAuthProviderX509CertUrl(parsed.getAuthProviderX509CertUrl)
-      .setClientX509CertUrl(parsed.getClientX509CertUrl)
-      .build()
-  }
-
-  def readPbCredentials(keyFile: KeyFile): GoogleCredential = {
-    new GoogleCredential.Builder()
-      .setTransport(Utils.getDefaultTransport)
-      .setJsonFactory(Utils.getDefaultJsonFactory)
-      .setServiceAccountId(keyFile.getClientEmail)
-      .setServiceAccountScopes(StorageScope)
-      .setServiceAccountPrivateKey(privateKey(keyFile.getPrivateKey))
-      .setServiceAccountPrivateKeyId(keyFile.getPrivateKeyId)
-      .setTokenServerEncodedUrl(keyFile.getTokenUri)
-      .setServiceAccountProjectId(keyFile.getProjectId)
-      .build()
-  }
-
-  def accessTokenCredentials(token: String): Credential = {
-    val cred = new Credential(BearerToken.authorizationHeaderAccessMethod())
-    cred.setAccessToken(token)
-    cred
-  }
-
-  def accessTokenCredentials1(token: String): GoogleCredentials = {
-    new GoogleCredentials(new AccessToken(token, Date.from(Instant.ofEpochMilli(System.currentTimeMillis() + 1000*60*60))))
-  }
-
-  def privateKey(privateKeyPem: String): PrivateKey = {
-    SecurityUtils.getRsaKeyFactory.generatePrivate(new PKCS8EncodedKeySpec(PemReader
-      .readFirstSectionAndClose(new StringReader(privateKeyPem), "PRIVATE KEY")
-      .getBase64DecodedBytes))
   }
 
   def printException[T](x: Try[T]): Unit = {
@@ -236,18 +100,8 @@ object Util {
     override def getCredentials: GoogleCredentials = GoogleCredentials.getApplicationDefault
   }
 
-  case class KeyFileCredentialProvider(keyFile: KeyFile) extends CredentialProvider {
-    override def getCredentials: GoogleCredentials =
-      GSZCredentials.fromKeyFile(keyFile)
-  }
-
   class ByteStringCredentialsProvider(bytes: ByteString) extends CredentialProvider {
     override def getCredentials: GoogleCredentials = GoogleCredentials.fromStream(new ByteArrayInputStream(bytes.toByteArray))
-  }
-
-  case class AccessTokenCredentialProvider(token: String) extends CredentialProvider {
-    override def getCredentials: GoogleCredentials =
-      accessTokenCredentials1(token)
   }
 
   class CountingChannel(out: WritableByteChannel) extends WritableByteChannel {
@@ -305,7 +159,6 @@ object Util {
     rc.close()
     wc.close()
   }
-
 
   case class CopyResult(hash: String, start: Long, end: Long, bytes: Long) {
     def duration: Long = end - start
