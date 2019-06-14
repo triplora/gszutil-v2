@@ -27,12 +27,14 @@ import org.threeten.bp.Duration
 object BQLoad extends Logging {
   def run(c: Config, cp: CredentialProvider): Unit = {
     val copyBook = CrossPlatform.loadCopyBook(c.copyBookDD)
+    val in = CrossPlatform.readChannel(c.inDD, copyBook)
+    val batchSize = (c.blocksPerBatch * in.blkSize) / in.lRecl
     WriteORCFile.run(gcsUri = s"gs://${c.bqBucket}/${c.bqPath}",
-                     in = CrossPlatform.readChannel(c.inDD, copyBook),
+                     in = in.rc,
                      copyBook = copyBook,
                      gcs = GCS.defaultClient(cp.getCredentials),
                      maxWriters = c.parallelism,
-                     batchSize = c.batchSize,
+                     batchSize = batchSize,
                      partSizeMb = c.partSizeMB,
                      timeoutMinutes = c.timeOutMinutes,
                      compress = c.compress)

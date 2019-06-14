@@ -4,7 +4,7 @@ import java.nio.channels.{FileChannel, ReadableByteChannel}
 import java.nio.file.{Files, Paths, StandardOpenOption}
 
 import com.google.cloud.gszutil.Util.{ByteStringCredentialsProvider, CredentialProvider, DefaultCredentialProvider, Logging}
-import com.google.cloud.gszutil.io.{ChannelRecordReader, ZChannel, ZInputStream, ZRecordReaderT}
+import com.google.cloud.gszutil.io.{ChannelRecordReader, DDChannel, ZChannel, ZInputStream, ZRecordReaderT}
 import com.google.cloud.gszutil.{CopyBook, Decoding}
 import com.google.common.base.Charsets
 import com.google.common.io.ByteStreams
@@ -30,35 +30,42 @@ object CrossPlatform extends Logging {
     * @param copyBook used to verify LRECL of the dataset
     * @return
     */
-  def readChannel(dd: String, copyBook: CopyBook): ReadableByteChannel = {
+  def readChannel(dd: String, copyBook: CopyBook): DDChannel = {
     if (IBM) {
       val rr = ZOS.readDD(dd)
       require(rr.lRecl == copyBook.LRECL)
-      new ZChannel(rr)
+      DDChannel(new ZChannel(rr), rr.lRecl, rr.blkSize)
     } else {
-      val ddPath = Paths.get(System.getenv(dd))
-      logger.info(s"Opening $dd $ddPath")
-      FileChannel.open(ddPath, StandardOpenOption.READ)
+      val ddc = ddFile(dd)
+      require(ddc.lRecl == copyBook.LRECL)
+      ddc
     }
+  }
+
+  /** On Linux DD is an environment variable pointing to a file
+   */
+  private def ddFile(dd: String): DDChannel = {
+    val ddPath = Paths.get(System.getenv(dd))
+    logger.info(s"Opening $dd $ddPath")
+    val lReclKey = dd + "_LRECL"
+    val blkSizeKey = dd + "_BLKSIZE"
+    val env = System.getenv()
+    require(env.containsKey(lReclKey), s"$lReclKey environment variable not set")
+    require(env.containsKey(blkSizeKey), s"$blkSizeKey environment variable not set")
+    val lRecl: Int = env.get(dd + "_LRECL").toInt
+    val blkSize: Int = env.get(dd + "_BLKSIZE").toInt
+    val ddFile = ddPath.toFile
+    require(ddFile.exists, s"$dd $ddPath does not exist")
+    require(ddFile.isFile, s"$dd $ddPath is not a file")
+    DDChannel(FileChannel.open(ddPath, StandardOpenOption.READ), lRecl, blkSize)
   }
 
   def readDD(dd: String): ZRecordReaderT = {
     if (IBM) {
       ZOS.readDD(dd)
     } else {
-      // On linux DD is an environment variable pointing to a file
-      val env = System.getenv()
-      require(env.containsKey(dd), s"$dd environment variable not set")
-      val lReclKey = dd + "_LRECL"
-      val blkSizeKey = dd + "_BLKSIZE"
-      require(env.containsKey(lReclKey), s"$lReclKey environment variable not set")
-      require(env.containsKey(blkSizeKey), s"$blkSizeKey environment variable not set")
-      val lRecl: Int = env.get(dd + "_LRECL").toInt
-      val blkSize: Int = env.get(dd + "_BLKSIZE").toInt
-      val ddPath = Paths.get(System.getenv(dd))
-      require(ddPath.toFile.exists(), s"$dd $ddPath does not exist")
-      require(ddPath.toFile.isFile(), s"$dd $ddPath is not a file")
-      new ChannelRecordReader(FileChannel.open(ddPath), lRecl, blkSize)
+      val ddc = ddFile(dd)
+      new ChannelRecordReader(ddc.rc, ddc.lRecl, ddc.blkSize)
     }
   }
 

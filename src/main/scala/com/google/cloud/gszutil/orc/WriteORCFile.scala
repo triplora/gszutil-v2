@@ -29,7 +29,16 @@ object WriteORCFile extends Logging {
     val sys = ActorSystem("gsz", conf)
     val bufSize = copyBook.LRECL * batchSize
     val pool = ByteBufferPool.allocate(bufSize, maxWriters)
-    val args: DatasetReaderArgs = DatasetReaderArgs(in, batchSize, new URI(gcsUri), partSizeMb*1024*1024, maxWriters, copyBook, gcs, compress, pool)
+    val args = DatasetReaderArgs(
+      in = in,
+      batchSize = batchSize,
+      uri = new URI(gcsUri),
+      maxBytes = partSizeMb*1024*1024,
+      nWorkers = maxWriters,
+      copyBook = copyBook,
+      gcs = gcs,
+      compress = compress,
+      pool = pool)
     sys.actorOf(Props(classOf[DatasetReader], args), "ZReader")
     Await.result(sys.whenTerminated, atMost = FiniteDuration(timeoutMinutes, MINUTES))
   }

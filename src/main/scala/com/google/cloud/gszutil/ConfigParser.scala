@@ -106,8 +106,8 @@ object ConfigParser extends OptionParser[Config]("GSZUtil") {
     .text("target part size in megabytes (default: 256)")
 
   opt[Int]("batchSize")
-    .action{(x,c) => c.copy(batchSize = x)}
-    .text("rows per batch (default: 10000)")
+    .action{(x,c) => c.copy(blocksPerBatch = x)}
+    .text("blocks per batch (default: 1000)")
 
   opt[Int]('p', "parallelism")
     .action{(x,c) => c.copy(parallelism = x)}
