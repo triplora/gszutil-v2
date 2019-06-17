@@ -5,7 +5,7 @@ import java.nio.file.{Files, Paths, StandardOpenOption}
 
 import com.google.cloud.gszutil.Util.{ByteStringCredentialsProvider, CredentialProvider, DefaultCredentialProvider, Logging}
 import com.google.cloud.gszutil.io.{ChannelRecordReader, DDChannel, ZChannel, ZInputStream, ZRecordReaderT}
-import com.google.cloud.gszutil.{CopyBook, Decoding}
+import com.google.cloud.gszutil.{CopyBook, Decoding, Util}
 import com.google.common.base.Charsets
 import com.google.common.io.ByteStreams
 import com.google.protobuf.ByteString
@@ -66,6 +66,18 @@ object CrossPlatform extends Logging {
     } else {
       val ddc = ddFile(dd)
       new ChannelRecordReader(ddc.rc, ddc.lRecl, ddc.blkSize)
+    }
+  }
+
+  def readDDString(dd: String): String = {
+    val in = CrossPlatform.readDD(dd)
+    val bytes = Util.readAllBytes(new ZChannel(in))
+    if (IBM) {
+      bytes.grouped(in.lRecl)
+        .map(new String(_, Decoding.CP1047).trim)
+        .mkString("\n")
+    } else {
+      new String(bytes, Charsets.UTF_8)
     }
   }
 

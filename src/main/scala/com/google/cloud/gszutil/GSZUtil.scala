@@ -53,5 +53,7 @@ object GSZUtil extends Logging {
       GCSGet.run(config, cp)
     else if (config.mode == "load")
       com.google.cloud.pso.BQLoad.run(config, cp)
+    else if (config.mode == "query")
+      RunQueries.run(config, cp)
   }
 }

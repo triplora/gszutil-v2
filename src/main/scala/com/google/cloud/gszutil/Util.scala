@@ -233,4 +233,8 @@ object Util {
 
   def randString(len: Int): String =
     Z85.Z85Encoder(randBytes(len))
+
+  def randB64(len: Int): String = {
+    new String(randBytes(len), Charsets.UTF_8)
+  }
 }

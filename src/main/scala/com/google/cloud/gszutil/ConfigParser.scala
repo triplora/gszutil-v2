@@ -53,6 +53,10 @@ object ConfigParser extends OptionParser[Config]("GSZUtil") {
         .text("GCS prefix of source")
     )
 
+  cmd("query")
+    .action{ (_, c) => c.copy(mode = "query") }
+    .text("runs a series of queries")
+
   cmd("cp")
     .action { (_, c) => c.copy(mode = "cp") }
 
@@ -116,6 +120,10 @@ object ConfigParser extends OptionParser[Config]("GSZUtil") {
   opt[Int]("timeOutMinutes")
     .action{(x,c) => c.copy(timeOutMinutes = x)}
     .text("timeout in minutes (default: 180)")
+
+  opt[String]("bqLocation")
+    .action{(x,c) => c.copy(bqLocation = x)}
+    .text("BigQuery location (default: US)")
 
   checkConfig(c =>
     if (c.mode == "cp" && (c.destBucket.isEmpty || c.destPath.isEmpty))
