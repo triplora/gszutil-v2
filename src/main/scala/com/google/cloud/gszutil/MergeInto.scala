@@ -6,9 +6,9 @@ import com.google.cloud.gszutil.Util.{CredentialProvider, Logging}
 object MergeInto extends Logging {
   def run(c: Config, cp: CredentialProvider): Unit = {
     val bq = BQ.defaultClient(c.bqProject, c.bqLocation, cp.getCredentials)
-    val a = TableId.of(c.bqProject, c.bqDataset, c.bqTable)
-    val b = TableId.of(c.bqProject2, c.bqDataset2, c.bqTable2)
-    val mergeRequest = buildAndValidateMergeRequest(bq, a, b, c.nativeKeyColumns)
+    val source = TableId.of(c.bqProject2, c.bqDataset2, c.bqTable2)
+    val target = TableId.of(c.bqProject, c.bqDataset, c.bqTable)
+    val mergeRequest = buildMergeRequest(bq, source, target, c.nativeKeyColumns)
 
     val query = genMerge(mergeRequest)
     logger.debug("Generated SQL:\n" + query)
@@ -21,7 +21,7 @@ object MergeInto extends Logging {
       .setDryRun(c.dryRun)
       .build()
 
-    val jobId: JobId = JobId.of(s"gszutil_merge_into_${a.getDataset}_${a.getTable}_${System.currentTimeMillis()/1000}_${Util.randString(6)}")
+    val jobId: JobId = JobId.of(s"gszutil_merge_into_${target.getDataset}_${target.getTable}_${System.currentTimeMillis()/1000}_${Util.randString(6)}")
     BQ.runJob(bq, cfg, jobId, 60*60)
   }
 
@@ -34,16 +34,23 @@ object MergeInto extends Logging {
     t.getDefinition[TableDefinition].getSchema
   }
 
-  def buildAndValidateMergeRequest(bq: BigQuery, a: TableId, b: TableId, naturalKeyCols: Seq[String]): MergeRequest = {
-    val tblA = bq.getTable(a)
-    val tblB = bq.getTable(b)
+  def buildMergeRequest(bq: BigQuery, source: TableId, target: TableId, naturalKeyCols: Seq[String]): MergeRequest = {
+    val tblA = bq.getTable(target)
+    val tblB = bq.getTable(source)
     val schemaA = getSchema(tblA)
     val schemaB = getSchema(tblB)
     val fields = getFields(schemaA)
-    require(fields.toMap == getFields(schemaB).toMap, "schema mismatch")
-    require(naturalKeyCols.forall(fields.contains), "missing key column")
-    val valCols = fields.map(_._1).filterNot(naturalKeyCols.contains)
-    MergeRequest(a, b, naturalKeyCols, valCols)
+    val naturalKeySet = naturalKeyCols.toSet
+    validateMerge(fields.toMap, getFields(schemaB).toMap, naturalKeySet)
+    val valCols = fields.map(_._1).filterNot(naturalKeySet.contains)
+    MergeRequest(target, source, naturalKeyCols, valCols)
+  }
+
+  def validateMerge(fieldsA: Map[String,String], fieldsB: Map[String,String], naturalKeyCols: Set[String]): Boolean = {
+    require(fieldsA == fieldsB, "schema mismatch")
+    require(naturalKeyCols.forall(fieldsA.contains), "missing key column")
+    require(fieldsA.keySet.diff(naturalKeyCols).nonEmpty, "no columns to merge")
+    true
   }
 
   def getFields(f: Schema): Seq[(String,String)] = {
@@ -56,17 +63,19 @@ object MergeInto extends Logging {
     import request._
     val naturalKeys = naturalKeyCols
       .map{colName => s"A.$colName\t=\tB.$colName"}
-      .mkString("\n\t\t","\n\tAND\t", "")
+      .mkString("\t\t","\n\tAND\t", "")
 
     val values = valCols
       .map{colName => s"A.$colName\t=\tB.$colName"}
-      .mkString("\n\t","\n\t,","")
+      .mkString("\t","\n\t,","")
 
-    s"""MERGE INTO ${a.getDataset}.${a.getTable} A
-       |USING ${b.getDataset}.${b.getTable} B
-       |ON $naturalKeys
+    s"""MERGE INTO `${a.getProject}.${a.getDataset}.${a.getTable}` A
+       |USING `${b.getProject}.${b.getDataset}.${b.getTable}` B
+       |ON
+       |$naturalKeys
        |WHEN MATCHED THEN
-       |UPDATE SET $values
+       |UPDATE SET
+       |$values
        |WHEN NOT MATCHED THEN
        |INSERT ROW""".stripMargin
   }
