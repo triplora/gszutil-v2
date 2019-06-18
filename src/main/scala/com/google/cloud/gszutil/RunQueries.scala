@@ -1,8 +1,9 @@
 package com.google.cloud.gszutil
 
+import com.google.auth.oauth2.GoogleCredentials
 import com.google.cloud.RetryOption
 import com.google.cloud.bigquery.{BigQuery, BigQueryException, Job, JobConfiguration, JobId, JobInfo, QueryJobConfiguration, TableId}
-import com.google.cloud.gszutil.Util.{CredentialProvider, Logging}
+import com.google.cloud.gszutil.Util.Logging
 import com.google.common.base.Preconditions
 import com.ibm.jzos.CrossPlatform
 import org.threeten.bp.Duration
@@ -10,10 +11,10 @@ import org.threeten.bp.Duration
 object RunQueries extends Logging {
   val TableSpecParam = "{{ tablespec }}"
 
-  def run(c: Config, cp: CredentialProvider): Unit = {
-    val bq = BQ.defaultClient(c.bqProject, c.bqLocation, cp.getCredentials)
+  def run(c: Config, creds: GoogleCredentials): Unit = {
+    val bq = BQ.defaultClient(c.bqProject, c.bqLocation, creds)
     val statements = CrossPlatform.readDDString(c.inDD)
-    val jobNamePrefix = s"gszutil_query_${System.currentTimeMillis() / 1000}_${Util.randB64(4)}_"
+    val jobNamePrefix = s"gszutil_query_${System.currentTimeMillis() / 1000}_${Util.randString(4)}_"
 
     val queries = split(statements)
     var last: Option[TableId] = None

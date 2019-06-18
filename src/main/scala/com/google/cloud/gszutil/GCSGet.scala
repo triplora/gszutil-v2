@@ -3,12 +3,13 @@ package com.google.cloud.gszutil
 import java.nio.channels.FileChannel
 import java.nio.file.Paths
 
-import com.google.cloud.gszutil.Util.{CredentialProvider, Logging}
+import com.google.auth.oauth2.GoogleCredentials
+import com.google.cloud.gszutil.Util.Logging
 import com.google.cloud.storage.Storage
 
 object GCSGet extends Logging {
-  def run(config: Config, cp: CredentialProvider): Unit = {
-    val gcs = GCS.defaultClient(cp.getCredentials)
+  def run(config: Config, creds: GoogleCredentials): Unit = {
+    val gcs = GCS.defaultClient(creds)
     logger.info(s"Downloading gs://${config.srcBucket}/${config.srcPath} to ${config.destPath}")
 
     get(gcs, config.destBucket, config.destPath)

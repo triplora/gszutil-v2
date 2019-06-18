@@ -17,7 +17,8 @@ package com.google.cloud.gszutil
 
 import java.io.InputStream
 
-import com.google.cloud.gszutil.Util.{CredentialProvider, Logging}
+import com.google.auth.oauth2.GoogleCredentials
+import com.google.cloud.gszutil.Util.Logging
 import com.google.cloud.gszutil.io.ZInputStream
 import com.google.cloud.pso.ParallelGZIPWriter
 import com.google.cloud.storage.Storage.BlobTargetOption
@@ -27,14 +28,14 @@ import com.ibm.jzos.CrossPlatform
 import scala.util.Try
 
 object GCSPut extends Logging {
-  def run(config: Config, cp: CredentialProvider): Unit = {
+  def run(config: Config, creds: GoogleCredentials): Unit = {
     if (config.parallelism == 1 || !config.compress)
-      put(GCS.defaultClient(cp.getCredentials), ZInputStream(config.inDD), config.destBucket, config.destPath, config.compress)
+      put(GCS.defaultClient(creds), ZInputStream(config.inDD), config.destBucket, config.destPath, config.compress)
     else {
       ParallelGZIPWriter.run(config.destBucket,
         config.destPath,
         CrossPlatform.readDD(config.inDD),
-        GCS.defaultClient(cp.getCredentials),
+        GCS.defaultClient(creds),
         config.parallelism)
     }
   }

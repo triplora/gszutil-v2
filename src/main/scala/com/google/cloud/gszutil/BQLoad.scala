@@ -13,26 +13,26 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package com.google.cloud.pso
+package com.google.cloud.gszutil
 
+import com.google.auth.oauth2.GoogleCredentials
 import com.google.cloud.bigquery.JobInfo.{CreateDisposition, WriteDisposition}
-import com.google.cloud.gszutil.Util.{CredentialProvider, Logging}
+import com.google.cloud.gszutil.Util.Logging
 import com.google.cloud.gszutil.orc.WriteORCFile
-import com.google.cloud.gszutil.{Config, GCS}
 import com.google.cloud.{RetryOption, bigquery}
 import com.ibm.jzos.CrossPlatform
 import org.threeten.bp.Duration
 
 
 object BQLoad extends Logging {
-  def run(c: Config, cp: CredentialProvider): Unit = {
+  def run(c: Config, creds: GoogleCredentials): Unit = {
     val copyBook = CrossPlatform.loadCopyBook(c.copyBookDD)
     val in = CrossPlatform.readChannel(c.inDD, copyBook)
     val batchSize = (c.blocksPerBatch * in.blkSize) / in.lRecl
     WriteORCFile.run(gcsUri = s"gs://${c.bqBucket}/${c.bqPath}",
                      in = in.rc,
                      copyBook = copyBook,
-                     gcs = GCS.defaultClient(cp.getCredentials),
+                     gcs = GCS.defaultClient(creds),
                      maxWriters = c.parallelism,
                      batchSize = batchSize,
                      partSizeMb = c.partSizeMB,

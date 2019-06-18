@@ -1,16 +1,13 @@
 package com.ibm.jzos
 
-import java.nio.channels.{FileChannel, ReadableByteChannel}
+import java.nio.channels.FileChannel
 import java.nio.file.{Files, Paths, StandardOpenOption}
 
-import com.google.cloud.gszutil.Util.{ByteStringCredentialsProvider, CredentialProvider, DefaultCredentialProvider, Logging}
-import com.google.cloud.gszutil.io.{ChannelRecordReader, DDChannel, ZChannel, ZInputStream, ZRecordReaderT}
+import com.google.cloud.gszutil.Util.{CredentialProvider, DefaultCredentialProvider, GoogleCredentialsProvider, Logging}
+import com.google.cloud.gszutil.io._
 import com.google.cloud.gszutil.{CopyBook, Decoding, Util}
 import com.google.common.base.Charsets
 import com.google.common.io.ByteStreams
-import com.google.protobuf.ByteString
-
-import scala.util.Try
 
 /** Provides methods that work on both Linux and z/OS
   * Does not import any IBM classes directly to enable testing
@@ -84,20 +81,15 @@ object CrossPlatform extends Logging {
   def getCredentialProvider(keyFileDD: String): CredentialProvider = {
     if (IBM) {
       val bytes = ByteStreams.toByteArray(ZInputStream(keyFileDD))
-      logger.debug("Loaded credential json:\n" + new String(bytes, Charsets.UTF_8))
-      new ByteStringCredentialsProvider(ByteString.copyFrom(bytes))
+      new GoogleCredentialsProvider(bytes)
     } else {
-      DefaultCredentialProvider
+      new DefaultCredentialProvider
     }
   }
 
   def loadCopyBook(dd: String): CopyBook = {
     if (IBM) {
-      val rr = readDD(dd)
-      val copyBook = CopyBook(ByteStreams.toByteArray(ZInputStream(rr))
-        .grouped(rr.lRecl)
-        .map(Decoding.ebcdic2utf8)
-        .mkString("\n"))
+      val copyBook = CopyBook(readDDString(dd))
       logger.info(s"Loaded copy book with LRECL=${copyBook.LRECL} FIELDS=${copyBook.FieldNames.mkString(",")}```\n${copyBook.raw}\n```")
       copyBook
     } else {

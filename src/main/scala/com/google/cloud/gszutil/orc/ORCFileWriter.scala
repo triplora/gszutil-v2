@@ -6,10 +6,10 @@ import akka.actor.Actor
 import com.google.cloud.gszutil.Util
 import com.google.cloud.gszutil.Util.Logging
 import com.google.cloud.gszutil.io.ZReader
-import com.google.cloud.pso.SimpleORCWriter
+import org.apache.hadoop.conf.Configuration
 import org.apache.hadoop.fs.{FileSystem, SimpleGCSFileSystem}
 import org.apache.orc.impl.WriterImpl
-import org.apache.orc.{CompressionKind, NoOpMemoryManager, OrcFile, Writer}
+import org.apache.orc.{CompressionKind, NoOpMemoryManager, OrcConf, OrcFile, Writer}
 
 /** Responsible for writing a single output partition
   */
@@ -25,8 +25,16 @@ class ORCFileWriter(args: ORCFileWriterArgs) extends Actor with Logging {
   private val stats = new FileSystem.Statistics(SimpleGCSFileSystem.Scheme)
 
   override def preStart(): Unit = {
+    val c = new Configuration(false)
+    OrcConf.COMPRESS.setString(c, "ZLIB")
+    OrcConf.ENABLE_INDEXES.setBoolean(c, false)
+    OrcConf.OVERWRITE_OUTPUT_FILE.setBoolean(c, true)
+    OrcConf.MEMORY_POOL.setDouble(c, 0.5d)
+    OrcConf.BUFFER_SIZE.setLong(c, 512*1024)
+    OrcConf.COMPRESSION_STRATEGY.setString(c, "COMPRESSION")
+
     val writerOptions = OrcFile
-      .writerOptions(SimpleORCWriter.configuration())
+      .writerOptions(c)
       .setSchema(copyBook.ORCSchema)
       .memory(NoOpMemoryManager)
       .compress(CompressionKind.ZLIB)

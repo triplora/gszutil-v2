@@ -47,13 +47,15 @@ object GSZUtil extends Logging {
 
   def run(config: Config): Try[Unit] = Try{
     val cp = CrossPlatform.getCredentialProvider(config.keyFileDD)
+    val creds = cp.getCredentials
+
     if (config.mode == "cp")
-      GCSPut.run(config, cp)
+      GCSPut.run(config, creds)
     else if (config.mode == "get")
-      GCSGet.run(config, cp)
+      GCSGet.run(config, creds)
     else if (config.mode == "load")
-      com.google.cloud.pso.BQLoad.run(config, cp)
+      BQLoad.run(config, creds)
     else if (config.mode == "query")
-      RunQueries.run(config, cp)
+      RunQueries.run(config, creds)
   }
 }

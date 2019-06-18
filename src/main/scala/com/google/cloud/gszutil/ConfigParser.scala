@@ -1,6 +1,5 @@
 package com.google.cloud.gszutil
 
-import com.google.cloud.pso.BQLoad
 import scopt.OptionParser
 
 import scala.util.{Success, Try}

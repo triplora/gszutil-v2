@@ -19,18 +19,16 @@ import java.io.{ByteArrayInputStream, ByteArrayOutputStream, InputStream}
 import java.nio.ByteBuffer
 import java.nio.channels.{Channels, ReadableByteChannel, WritableByteChannel}
 import java.nio.file.{Files, Paths}
-import java.security.{MessageDigest, Provider, Security}
-import java.util.Collections
+import java.security.MessageDigest
 import java.util.zip.GZIPOutputStream
 
 import com.google.auth.oauth2.GoogleCredentials
 import com.google.cloud.storage.BlobInfo
 import com.google.common.base.Charsets
+import com.google.common.collect.ImmutableSet
 import com.google.common.hash.HashCode
-import com.google.common.io.Resources
-import com.google.protobuf.ByteString
-import org.apache.log4j.{ConsoleAppender, Level, LogManager, Logger, PatternLayout}
-import org.zeromq.codec.Z85
+import com.google.common.io.{BaseEncoding, Resources}
+import org.apache.log4j._
 
 import scala.util.{Failure, Random, Try}
 
@@ -77,7 +75,9 @@ object Util {
     s"Memory: ${used}M used\t${free}M free\t${total}M total"
   }
 
-  val StorageScope: java.util.Collection[String] = Collections.singleton("https://www.googleapis.com/auth/devstorage.read_write")
+  val StorageScope = "https://www.googleapis.com/auth/devstorage.read_write"
+  val BigQueryScope = "https://www.googleapis.com/auth/bigquery"
+  final val Scopes = ImmutableSet.of(StorageScope, BigQueryScope)
 
   def readNio(path: String): Array[Byte] = {
     Files.readAllBytes(Paths.get(path))
@@ -96,12 +96,26 @@ object Util {
     def getCredentials: GoogleCredentials
   }
 
-  object DefaultCredentialProvider extends CredentialProvider {
-    override def getCredentials: GoogleCredentials = GoogleCredentials.getApplicationDefault
+  class DefaultCredentialProvider extends CredentialProvider {
+    private val credentials =
+      GoogleCredentials
+        .getApplicationDefault
+        .createScoped(Scopes)
+    override def getCredentials: GoogleCredentials = {
+      credentials.refreshIfExpired()
+      credentials
+    }
   }
 
-  class ByteStringCredentialsProvider(bytes: ByteString) extends CredentialProvider {
-    override def getCredentials: GoogleCredentials = GoogleCredentials.fromStream(new ByteArrayInputStream(bytes.toByteArray))
+  class GoogleCredentialsProvider(bytes: Array[Byte]) extends CredentialProvider {
+    private val credentials: GoogleCredentials =
+      GoogleCredentials
+        .fromStream(new ByteArrayInputStream(bytes))
+        .createScoped(Scopes)
+    override def getCredentials: GoogleCredentials = {
+      credentials.refreshIfExpired()
+      credentials
+    }
   }
 
   class CountingChannel(out: WritableByteChannel) extends WritableByteChannel {
@@ -232,9 +246,5 @@ object Util {
   }
 
   def randString(len: Int): String =
-    Z85.Z85Encoder(randBytes(len))
-
-  def randB64(len: Int): String = {
-    new String(randBytes(len), Charsets.UTF_8)
-  }
+    BaseEncoding.base64Url().encode(randBytes(len)).substring(0,len)
 }
