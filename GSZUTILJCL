@@ -1,4 +1,4 @@
-//* Copyright 2019 Google LLC
+//* Copyright 2019 Google Inc. All Rights Reserved.
 //*
 //* Licensed under the Apache License, Version 2.0 (the "License");
 //* you may not use this file except in compliance with the License.
@@ -11,37 +11,25 @@
 //* WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 //* See the License for the specific language governing permissions and
 //* limitations under the License.
-//*
-//* Batch job to run GSZUtil Java application
-//*
-//* Instructions:
-//* 1.) Set DSN to point to source file
-//* 2.) Set BUCKET to target GCS Bucket
-//* 3.) Set APP_JAR to path of the application jar
-//* 4.) Set GCREDS to path of service account credentials keyfile
-//* 5.) Set JAVA_HOME to point the location of the IBM JZOS SDK (JVM)
-//*
 //*******************************************************************
 //JAVA EXEC PROC=JVMPRC86,
 //          JAVACLS='com.google.cloud.gszutil.GSZUtil'
-//*
 //INFILE DD DISP=SHR,
 //          DSNAME=LIB.NAME.INFILE,
 //          DCB=(BUFNO=32,DSORG=PS)
-//*
 //KEYFILE DD DISP=SHR,DSNAME=LIB.NAME.KEYFILE
-//*
 //COPYBOOK DD DISP=SHR,DSNAME=LIB.NAME.COPYBOOK
 //STDENV DD *
 
 . /etc/profile
-export BUCKET=""  # GCS Bucket Name
-export OUTPATH="" # GCS Path
-export APP_JAR="" # path/to/GSZUtil.jar
-export DEP_JAR="" # path/to/GSZUtilDeps.jar
-export JZOS_MAIN_ARGS="cp INFILE gs://$BUCKET/OUTPATH $GCREDS"
+BUCKET=""
+OUTPATH=""
+APP_JAR="/path/to/GSZUtil.jar"
+DEP_JAR="/path/to/GSZUtil.dep.jar"
+ARGS="cp gs://$BUCKET/OUTPATH"
+export JZOS_MAIN_ARGS="$ARGS"
 
-export JAVA_HOME=/usr/lpp/java/J8.0_64
+export JAVA_HOME="/usr/lpp/java/J8.0_64"
 export PATH="/bin:${JAVA_HOME}/bin:"
 
 LIBPATH="/lib:/usr/lib:${JAVA_HOME}/bin"
@@ -51,11 +39,12 @@ LIBPATH="$LIBPATH:${JAVA_HOME}/bin/classic:"
 export LIBPATH
 
 CLASSPATH="$APP_JAR:$DEP_JAR"
-CLASSPATH="$CLASSPATH:${JAVA_HOME}/lib:${JAVA_HOME}/lib/ext:"
+CLASSPATH="$CLASSPATH:${JAVA_HOME}/lib"
+CLASSPATH="$CLASSPATH:${JAVA_HOME}/lib/ext"
 export CLASSPATH
 
-IJO="-Xms1g -Xmx1g"
-IJO="-Xcompressedrefs"
+IJO="-Xms1500m -Xmx1500m"
+IJO="$IJO -Xcompressedrefs"
 IJO="$IJO -Djava.net.preferIPv4Stack=true"
 export IBM_JAVA_OPTIONS="$IJO"
 
