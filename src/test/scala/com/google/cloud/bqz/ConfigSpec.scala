@@ -20,7 +20,7 @@ import org.scalatest.FlatSpec
 
 class ConfigSpec extends FlatSpec {
   "BQZ" should "parse command" in {
-    val args = """bq --location=EU load --source_format=ORC project.dataset.table gs://mybucket/00/*.orc,gs://mybucket/01/*.orc"""
+    val args = """bq --project_id=project --dataset_id=dataset --location=EU load --source_format=ORC project:dataset.table gs://mybucket/00/*.orc,gs://mybucket/01/*.orc"""
 
     val parsed = BQParser.parse(args.split(" "))
     assert(parsed.isDefined)
@@ -34,7 +34,9 @@ class ConfigSpec extends FlatSpec {
           case Some(x) =>
             assert(x.location == "EU")
             assert(x.source_format == "ORC")
-            assert(x.tablespec == "project.dataset.table")
+            assert(x.tablespec == "project:dataset.table")
+            assert(x.projectId == "project")
+            assert(x.datasetId == "dataset")
             assert(x.path == Seq("gs://mybucket/00/*.orc","gs://mybucket/01/*.orc"))
           case _ =>
         }

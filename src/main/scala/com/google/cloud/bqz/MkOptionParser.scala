@@ -25,6 +25,7 @@ import scala.util.Try
 object MkOptionParser extends OptionParser[MkConfig]("mk") {
   private val DefaultConfig = MkConfig()
   def parse(args: Seq[String]): Option[MkConfig] = parse(args, DefaultConfig)
+
   head("mk", "1.0")
 
   help("help")

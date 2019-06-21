@@ -30,7 +30,7 @@ object BQParser extends OptionParser[BQOptions]("bq") {
       if (cmdArgs.length > 1)
         Option(BQOptions(cmdArgs.head, globalArgs.drop(1) ++ cmdArgs.drop(1)))
       else None
-    } else throw new IllegalArgumentException(s"unrecognized command '${args.head}'")
+    } else None
   }
 
   head("bq")

@@ -22,6 +22,11 @@ object RmOptionParser extends OptionParser[RmConfig]("rm") {
   def parse(args: Seq[String]): Option[RmConfig] =
     parse(args, RmConfig())
 
+  head("rm")
+
+  help("help")
+    .text("prints this usage text")
+
   checkConfig{x =>
     if (x.model || x.dataset || x.table)
       failure("must specify one of --dataset --table --model")

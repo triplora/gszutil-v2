@@ -21,17 +21,23 @@ import scopt.OptionParser
 object LoadOptionParser extends OptionParser[LoadConfig]("load") {
   def parse(args: Seq[String]): Option[LoadConfig] =
     parse(args, LoadConfig())
+
+  head("load")
+
+  help("help")
+    .text("prints this usage text")
+
   arg[String]("tablespec")
-    .text("tablespec")
+    .text("Tablespec in format [PROJECT]:[DATASET].[TABLE]")
     .action((x,c) => c.copy(tablespec = x))
 
   arg[Seq[String]]("path")
-    .text("path")
+    .text("Comma-separated source URIs in format gs://bucket/path,gs://bucket/path")
     .action((x,c) => c.copy(path = x))
 
   arg[Seq[String]]("schema")
     .optional()
-    .text("schema")
+    .text("""Comma-separated list of column definitions in the form [FIELD]:[DATA_TYPE],[FIELD]:[DATA_TYPE].""")
     .action((x,c) => c.copy(schema = x))
 
   opt[Boolean]("allow_jagged_rows")
@@ -92,7 +98,7 @@ ISO-8859-1 (also known as Latin-1) UTF-8""")
     .action((x,c) => c.copy(append = x))
 
   opt[Seq[String]]("schema")
-    .text("""Either the path to a local JSON schema file or a comma-separated list of column definitions in the form [FIELD]:[DATA_TYPE],[FIELD]:[DATA_TYPE].""")
+    .text("""Comma-separated list of column definitions in the form [FIELD]:[DATA_TYPE],[FIELD]:[DATA_TYPE].""")
     .action((x,c) => c.copy(schema = x))
 
   opt[Seq[String]]("schema_update_option")

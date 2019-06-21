@@ -22,7 +22,7 @@ object QueryOptionParser extends OptionParser[QueryConfig]("query"){
   def parse(args: Seq[String]): Option[QueryConfig] =
     parse(args, QueryConfig())
 
-  head("query", "1.0")
+  head("query")
 
   help("help")
     .text("prints this usage text")
