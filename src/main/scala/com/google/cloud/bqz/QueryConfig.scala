@@ -19,8 +19,10 @@ package com.google.cloud.bqz
 case class QueryConfig(
   // Custom Options
   timeoutMinutes: Int = 60,
+  parametersFromFile: Seq[String] = Seq.empty,
 
   // Standard Options
+  allowLargeResults: Boolean = true,
   appendTable: Boolean = false,
   batch: Boolean = false,
   clusteringFields: Seq[String] = Seq.empty,

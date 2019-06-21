@@ -27,10 +27,16 @@ object QueryOptionParser extends OptionParser[QueryConfig]("query"){
   help("help")
     .text("prints this usage text")
 
-  /*
+  // z/OS Options
+  opt[Seq[String]]("parameters_from_file")
+    .text("Comma-separated query parameters in the form [NAME]:[TYPE]:[DDNAME]. An empty name creates a positional parameter. [TYPE] may be omitted to assume a STRING value in the form: name::ddname or ::ddname. NULL produces a null value.")
+    .action((x,c) => c.copy(parametersFromFile = x))
+
+  // Standard Options
+
   opt[Boolean]("allow_large_results")
     .text("When specified, enables large destination table sizes for legacy SQL queries.")
-  */
+    .action((x,c) => c.copy(allowLargeResults = x))
 
   opt[Boolean]("append_table")
     .text("When specified, append data to a destination table. The default value is false.")

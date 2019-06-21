@@ -43,6 +43,49 @@ object Query extends Logging {
     BQ.runJob(bq, jobConfiguration, jobId, cfg.timeoutMinutes * 60)
   }
 
+  def parseParametersFromFile(parameters: Seq[String]): (Seq[QueryParameterValue], Seq[(String,QueryParameterValue)]) = {
+    val params = parameters.map(_.split(':'))
+
+    val positionalValues = params.flatMap{x =>
+      if (x.head.nonEmpty) None
+      else {
+        val t = x(1)
+        val value = CrossPlatform.readDDString(x(2))
+        val typeName =
+          if (t.nonEmpty) StandardSQLTypeName.valueOf(t)
+          else StandardSQLTypeName.STRING
+
+        scala.Option(
+          QueryParameterValue.newBuilder()
+            .setType(typeName)
+            .setValue(value)
+            .build()
+        )
+      }
+    }
+
+    val namedValues = params.flatMap{x =>
+      if (x.head.isEmpty) None
+      else {
+        val name = x(0)
+        val t = x(1)
+        val value = CrossPlatform.readDDString(x(2))
+        val typeName =
+          if (t.nonEmpty) StandardSQLTypeName.valueOf(t)
+          else StandardSQLTypeName.STRING
+
+        val parameterValue = QueryParameterValue.newBuilder()
+          .setType(typeName)
+          .setValue(value)
+          .build()
+
+        scala.Option((name, parameterValue))
+      }
+    }
+
+    (positionalValues, namedValues)
+  }
+
   def parseParameters(parameters: Seq[String]): (Seq[QueryParameterValue], Seq[(String,QueryParameterValue)]) = {
     val params = parameters.map(_.split(':'))
 
@@ -95,6 +138,9 @@ object Query extends Logging {
       .setUseLegacySql(cfg.useLegacySql)
       .setUseQueryCache(cfg.useCache)
 
+    if (cfg.useLegacySql)
+      b.setAllowLargeResults(cfg.allowLargeResults)
+
     if (cfg.clusteringFields.nonEmpty){
       val clustering = Clustering.newBuilder()
         .setFields(cfg.clusteringFields.asJava)
@@ -113,8 +159,11 @@ object Query extends Logging {
       b.setTimePartitioning(timePartitioning)
     }
 
-    if (cfg.parameters.nonEmpty){
-      val (positionalValues, namedValues) = parseParameters(cfg.parameters)
+    if (cfg.parameters.nonEmpty || cfg.parametersFromFile.nonEmpty){
+      val (positionalValues1, namedValues1) = parseParameters(cfg.parameters)
+      val (positionalValues2, namedValues2) = parseParametersFromFile(cfg.parametersFromFile)
+      val positionalValues = positionalValues1 ++ positionalValues2
+      val namedValues = namedValues1 ++ namedValues2
       if (positionalValues.nonEmpty)
         b.setPositionalParameters(positionalValues.asJava)
       if (namedValues.nonEmpty)
