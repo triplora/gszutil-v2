@@ -14,10 +14,12 @@
  * limitations under the License.
  */
 
-package com.google.cloud.gszutil
+package com.google.cloud.bqz.op
 
 import com.google.cloud.bigquery._
+import com.google.cloud.bqz.BQ
 import com.google.cloud.gszutil.Util.{CredentialProvider, Logging}
+import com.google.cloud.gszutil.{Config, Util}
 
 object MergeInto extends Logging {
   def run(c: Config, cp: CredentialProvider): Unit = {

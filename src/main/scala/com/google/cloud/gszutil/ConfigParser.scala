@@ -16,6 +16,7 @@
 
 package com.google.cloud.gszutil
 
+import com.google.cloud.bqz.BQ
 import scopt.OptionParser
 
 import scala.util.{Success, Try}
@@ -43,7 +44,7 @@ object ConfigParser extends OptionParser[Config]("GSZUtil") {
         .required()
         .action { (x, c) => c.copy(bqDataset = x) }
         .validate { x =>
-          if (BQLoad.isValidBigQueryName(x)) success
+          if (BQ.isValidBigQueryName(x)) success
           else failure(s"'$x' is not a valid dataset name")
         }
         .text("BigQuery Dataset name"),
@@ -52,7 +53,7 @@ object ConfigParser extends OptionParser[Config]("GSZUtil") {
         .required()
         .action { (x, c) => c.copy(bqTable = x) }
         .validate { x =>
-          if (BQLoad.isValidBigQueryName(x)) success
+          if (BQ.isValidBigQueryName(x)) success
           else failure(s"'$x' is not a valid dataset name")
         }
         .text("BigQuery Table name"),
@@ -85,7 +86,7 @@ object ConfigParser extends OptionParser[Config]("GSZUtil") {
         .required()
         .action { (x, c) => c.copy(bqDataset = x) }
         .validate { x =>
-          if (BQLoad.isValidBigQueryName(x)) success
+          if (BQ.isValidBigQueryName(x)) success
           else failure(s"'$x' is not a valid dataset name")
         }
         .text("Merge Destination Dataset name"),
@@ -94,7 +95,7 @@ object ConfigParser extends OptionParser[Config]("GSZUtil") {
         .required()
         .action { (x, c) => c.copy(bqTable = x) }
         .validate { x =>
-          if (BQLoad.isValidBigQueryName(x)) success
+          if (BQ.isValidBigQueryName(x)) success
           else failure(s"'$x' is not a valid dataset name")
         }
         .text("Merge Destination Table name"),
@@ -108,7 +109,7 @@ object ConfigParser extends OptionParser[Config]("GSZUtil") {
         .required()
         .action { (x, c) => c.copy(bqDataset2 = x) }
         .validate { x =>
-          if (BQLoad.isValidBigQueryName(x)) success
+          if (BQ.isValidBigQueryName(x)) success
           else failure(s"'$x' is not a valid dataset name")
         }
         .text("Merge Source Dataset name"),
@@ -117,7 +118,7 @@ object ConfigParser extends OptionParser[Config]("GSZUtil") {
         .required()
         .action { (x, c) => c.copy(bqTable2 = x) }
         .validate { x =>
-          if (BQLoad.isValidBigQueryName(x)) success
+          if (BQ.isValidBigQueryName(x)) success
           else failure(s"'$x' is not a valid dataset name")
         }
         .text("Merge Source Table name"),

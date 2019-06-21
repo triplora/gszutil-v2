@@ -25,7 +25,7 @@ import com.google.cloud.gszutil.io.ZReader
 import org.apache.hadoop.conf.Configuration
 import org.apache.hadoop.fs.{FileSystem, SimpleGCSFileSystem}
 import org.apache.orc.impl.WriterImpl
-import org.apache.orc.{CompressionKind, NoOpMemoryManager, OrcConf, OrcFile, Writer}
+import org.apache.orc._
 
 /** Responsible for writing a single output partition
   */

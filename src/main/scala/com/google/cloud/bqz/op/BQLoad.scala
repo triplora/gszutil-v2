@@ -13,15 +13,13 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package com.google.cloud.gszutil
+package com.google.cloud.bqz.op
 
 import com.google.auth.oauth2.GoogleCredentials
-import com.google.cloud.bigquery.JobInfo.{CreateDisposition, WriteDisposition}
 import com.google.cloud.gszutil.Util.Logging
 import com.google.cloud.gszutil.orc.WriteORCFile
-import com.google.cloud.{RetryOption, bigquery}
+import com.google.cloud.gszutil.{Config, GCS}
 import com.ibm.jzos.CrossPlatform
-import org.threeten.bp.Duration
 
 
 object BQLoad extends Logging {
@@ -39,37 +37,4 @@ object BQLoad extends Logging {
                      timeoutMinutes = c.timeOutMinutes,
                      compress = c.compress)
   }
-
-  def load(bq: bigquery.BigQuery, table: String, c: Config, sourceUri: String, formatOptions: bigquery.FormatOptions = bigquery.FormatOptions.orc()): Unit = {
-
-    val jobConf = bigquery.LoadJobConfiguration
-      .newBuilder(bigquery.TableId.of(c.bqProject, c.bqDataset, table), sourceUri)
-      .setFormatOptions(formatOptions)
-      .setAutodetect(true)
-      .setWriteDisposition(WriteDisposition.WRITE_TRUNCATE)
-      .setCreateDisposition(CreateDisposition.CREATE_IF_NEEDED)
-      .build()
-
-    val jobInfo = bigquery.JobInfo
-      .newBuilder(jobConf)
-      .setJobId(bigquery.JobId.of(s"gszutil_load_${System.currentTimeMillis()}"))
-      .build()
-
-    System.out.println(s"Submitting load job:\n$jobInfo")
-    val job = bq.create(jobInfo)
-
-    System.out.println(s"Waiting for job to complete")
-    job.waitFor(RetryOption.initialRetryDelay(Duration.ofSeconds(1)),
-      RetryOption.totalTimeout(Duration.ofMinutes(1)))
-
-    val jobStatus = job.getStatus
-    System.out.println(s"Job returned with JobStatus:\n$jobStatus")
-  }
-
-  def isValidTableName(s: String): Boolean = {
-    s.matches("[a-zA-Z0-9_]{1,1024}")
-  }
-
-  def isValidBigQueryName(s: String): Boolean =
-    s.matches("[a-zA-Z0-9_]{1,1024}")
 }

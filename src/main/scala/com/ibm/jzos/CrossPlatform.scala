@@ -29,6 +29,10 @@ import com.google.common.io.ByteStreams
   * Does not import any IBM classes directly to enable testing
   */
 object CrossPlatform extends Logging {
+  val Infile = "INFILE"
+  val Keyfile = "KEYFILE"
+  val Copybook = "COPYBOOK"
+  val StdIn = "STDIN"
   val IBM: Boolean = System.getProperty("java.vm.vendor").contains("IBM")
 
   def init(): Unit = {
@@ -73,12 +77,28 @@ object CrossPlatform extends Logging {
     DDChannel(FileChannel.open(ddPath, StandardOpenOption.READ), lRecl, blkSize)
   }
 
+  def ddExists(dd: String): Boolean = {
+    if (IBM) ZOS.ddExists(dd)
+    else {
+      sys.env.contains(dd) && sys.env.contains(dd+"_LRECL") && sys.env.contains(dd+"_BLKSIZE")
+    }
+  }
+
   def readDD(dd: String): ZRecordReaderT = {
     if (IBM) {
       ZOS.readDD(dd)
     } else {
       val ddc = ddFile(dd)
       new ChannelRecordReader(ddc.rc, ddc.lRecl, ddc.blkSize)
+    }
+  }
+
+  def readStdin(): String = {
+    val in = ByteStreams.toByteArray(System.in)
+    if (IBM) {
+      new String(in, Decoding.CP1047)
+    } else {
+      new String(in, Charsets.UTF_8)
     }
   }
 

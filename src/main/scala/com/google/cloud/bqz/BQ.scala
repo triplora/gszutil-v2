@@ -14,15 +14,17 @@
  * limitations under the License.
  */
 
-package com.google.cloud.gszutil
+package com.google.cloud.bqz
 
 import com.google.api.gax.retrying.RetrySettings
 import com.google.api.gax.rpc.FixedHeaderProvider
 import com.google.auth.Credentials
 import com.google.cloud.RetryOption
-import com.google.cloud.bigquery.{BigQuery, BigQueryException, BigQueryOptions, Job, JobId, JobInfo, QueryJobConfiguration}
+import com.google.cloud.bigquery._
+import com.google.cloud.gszutil.CCATransportFactory
 import com.google.cloud.http.HttpTransportOptions
 import com.google.common.base.Preconditions
+import com.google.common.collect.ImmutableList
 import org.threeten.bp.Duration
 
 object BQ {
@@ -77,4 +79,45 @@ object BQ {
       job.waitFor(RetryOption.totalTimeout(Duration.ofSeconds(timeoutSeconds)))
     }
   }
+
+  def resolveTableSpec(tableSpec: String, defaultProject: String, defaultDataset: String): TableId = {
+    val i = tableSpec.indexOf(':')
+    val j = tableSpec.indexOf('.')
+
+    val project = if (i > 0) tableSpec.substring(0, i) else defaultProject
+    val dataset = if (j > 0) tableSpec.substring(i+1, j) else defaultDataset
+    val table = if (j > 0) tableSpec.substring(j+1, tableSpec.length) else tableSpec
+    TableId.of(project, dataset, table)
+  }
+
+  def parseSchemaUpdateOption(schemaUpdateOption: Seq[String]): java.util.List[JobInfo.SchemaUpdateOption] = {
+    val schemaUpdateOptionsBuilder = ImmutableList.builder[JobInfo.SchemaUpdateOption]()
+    if (schemaUpdateOption.contains(JobInfo.SchemaUpdateOption.ALLOW_FIELD_ADDITION.name())) {
+      schemaUpdateOptionsBuilder
+        .add(JobInfo.SchemaUpdateOption.ALLOW_FIELD_ADDITION)
+    }
+    if (schemaUpdateOption.contains(JobInfo.SchemaUpdateOption.ALLOW_FIELD_RELAXATION.name())) {
+      schemaUpdateOptionsBuilder
+        .add(JobInfo.SchemaUpdateOption.ALLOW_FIELD_RELAXATION)
+    }
+    schemaUpdateOptionsBuilder.build()
+  }
+
+  def parseField(s: String): Field = {
+    val Array(field,dataType) = s.split(':')
+    val fieldList = FieldList.of()
+    val typeName = StandardSQLTypeName.valueOf(dataType)
+    Field.newBuilder(field,typeName,fieldList).build()
+  }
+
+  def parseSchema(s: Seq[String]): Schema = {
+    Schema.of(s.map(parseField):_*)
+  }
+
+  def isValidTableName(s: String): Boolean = {
+    s.matches("[a-zA-Z0-9_]{1,1024}")
+  }
+
+  def isValidBigQueryName(s: String): Boolean =
+    s.matches("[a-zA-Z0-9_]{1,1024}")
 }

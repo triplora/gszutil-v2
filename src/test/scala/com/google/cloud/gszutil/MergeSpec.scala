@@ -17,7 +17,8 @@
 package com.google.cloud.gszutil
 
 import com.google.cloud.bigquery.TableId
-import com.google.cloud.gszutil.MergeInto.MergeRequest
+import com.google.cloud.bqz.op.MergeInto
+import com.google.cloud.bqz.op.MergeInto.MergeRequest
 import org.scalatest.FlatSpec
 
 class MergeSpec extends FlatSpec {
@@ -69,6 +70,7 @@ class MergeSpec extends FlatSpec {
       case Some(c) =>
         assert(c.mode == "merge")
         assert(c.nativeKeyColumns == Seq("a","b","c"))
+      case _ =>
     }
   }
 

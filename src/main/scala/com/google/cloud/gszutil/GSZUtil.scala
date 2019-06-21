@@ -15,6 +15,7 @@
  */
 package com.google.cloud.gszutil
 
+import com.google.cloud.bqz.op.{BQLoad, RunQueries}
 import com.google.cloud.gszutil.Util.Logging
 import com.ibm.jzos.CrossPlatform
 

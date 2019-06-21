@@ -60,6 +60,10 @@ protected object ZOS extends Logging {
     override val blkSize: Int = r.getBlksize
   }
 
+  def ddExists(ddName: String): Boolean = {
+    ZFile.ddExists(ddName)
+  }
+
   def readDD(ddName: String): ZRecordReaderT = {
     if (!ZFile.ddExists(ddName))
       throw new RuntimeException(s"DD $ddName does not exist")
