@@ -28,7 +28,7 @@ object RmOptionParser extends OptionParser[RmConfig]("rm") {
     .text("prints this usage text")
 
   checkConfig{x =>
-    if (x.model || x.dataset || x.table)
+    if (!(x.model || x.dataset || x.table))
       failure("must specify one of --dataset --table --model")
     else if (x.table && x.tablespec.isEmpty)
       failure("must specify tablespec")
@@ -38,6 +38,7 @@ object RmOptionParser extends OptionParser[RmConfig]("rm") {
   arg[String]("tablespec")
     .required()
     .text("[PROJECT_ID]:[DATASET].[TABLE]")
+    .action((x,c) => c.copy(tablespec = x))
 
   opt[Boolean]('d', "dataset")
     .text("When specified, deletes a dataset. The default value is false.")
@@ -45,7 +46,6 @@ object RmOptionParser extends OptionParser[RmConfig]("rm") {
 
   opt[Boolean]('f', "force")
     .text("When specified, deletes a table, view, model, or dataset without prompting. The default value is false.")
-    .action((x,c) => c.copy(force = x))
 
   opt[Boolean]('m', "model")
     .text("When specified, deletes a BigQuery ML model.")

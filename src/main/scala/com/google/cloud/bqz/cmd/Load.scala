@@ -17,13 +17,20 @@
 package com.google.cloud.bqz.cmd
 
 import com.google.auth.oauth2.GoogleCredentials
+import com.google.cloud.bigquery.JobStatistics.LoadStatistics
 import com.google.cloud.bigquery._
 import com.google.cloud.bqz.{BQ, LoadConfig}
 
 object Load {
-  def run(cfg: LoadConfig, creds: GoogleCredentials): Unit = {
+  def run(cfg: LoadConfig, creds: GoogleCredentials): Result = {
     val bq = BQ.defaultClient(cfg.projectId, cfg.location, creds)
-    bq.create(JobInfo.of(configureLoadJob(cfg)))
+    val job = bq.create(JobInfo.of(configureLoadJob(cfg)))
+    job.getStatistics[JobStatistics] match {
+      case x: LoadStatistics =>
+        Result.withExportLong("ACTIVITYCOUNT",x.getOutputRows)
+      case _ =>
+        Result.Success
+    }
   }
 
   def configureLoadJob(cfg: LoadConfig): LoadJobConfiguration = {

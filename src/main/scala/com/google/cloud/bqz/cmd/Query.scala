@@ -17,6 +17,7 @@
 package com.google.cloud.bqz.cmd
 
 import com.google.auth.oauth2.GoogleCredentials
+import com.google.cloud.bigquery.JobStatistics.QueryStatistics
 import com.google.cloud.bigquery._
 import com.google.cloud.bqz.{BQ, QueryConfig}
 import com.google.cloud.gszutil.Util
@@ -24,12 +25,12 @@ import com.google.cloud.gszutil.Util.Logging
 import com.ibm.jzos.CrossPlatform
 
 object Query extends Logging {
-  def run(cfg: QueryConfig, creds: GoogleCredentials): Unit = {
+  def run(cfg: QueryConfig, creds: GoogleCredentials): Result = {
     val bq = BQ.defaultClient(cfg.projectId, cfg.location, creds)
 
-    val query = if (CrossPlatform.ddExists(CrossPlatform.Infile)) {
-      logger.debug(s"Reading query from ${CrossPlatform.Infile}")
-      CrossPlatform.readDDString(CrossPlatform.Infile)
+    val query = if (CrossPlatform.ddExists(CrossPlatform.Query)) {
+      logger.debug(s"Reading query from ${CrossPlatform.Query}")
+      CrossPlatform.readDDString(CrossPlatform.Query)
     } else {
       logger.debug(s"Reading query from ${CrossPlatform.StdIn}")
       CrossPlatform.readStdin()
@@ -40,7 +41,13 @@ object Query extends Logging {
     val jobConfiguration = configureQueryJob(query, cfg)
     val jobId = JobId.of(cfg.jobId + "_" + Util.randString(5))
 
-    BQ.runJob(bq, jobConfiguration, jobId, cfg.timeoutMinutes * 60)
+    val job = BQ.runJob(bq, jobConfiguration, jobId, cfg.timeoutMinutes * 60)
+    job.getStatistics[JobStatistics] match {
+      case x: QueryStatistics =>
+        Result.withExportLong("ACTIVITYCOUNT", x.getNumDmlAffectedRows)
+      case _ =>
+        Result.Success
+    }
   }
 
   def parseParametersFromFile(parameters: Seq[String]): (Seq[QueryParameterValue], Seq[(String,QueryParameterValue)]) = {
@@ -137,6 +144,7 @@ object Query extends Logging {
       .setDefaultDataset(cfg.datasetId)
       .setUseLegacySql(cfg.useLegacySql)
       .setUseQueryCache(cfg.useCache)
+      .setCreateDisposition(if (cfg.createIfNeeded) JobInfo.CreateDisposition.CREATE_IF_NEEDED else JobInfo.CreateDisposition.CREATE_NEVER)
 
     if (cfg.useLegacySql)
       b.setAllowLargeResults(cfg.allowLargeResults)

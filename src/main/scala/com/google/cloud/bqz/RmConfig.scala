@@ -18,7 +18,6 @@ package com.google.cloud.bqz
 
 case class RmConfig (
   dataset: Boolean = false,
-  force: Boolean = false,
   model: Boolean = false,
   recursive: Boolean = false,
   table: Boolean = false,

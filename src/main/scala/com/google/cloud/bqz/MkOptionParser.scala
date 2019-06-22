@@ -37,7 +37,8 @@ object MkOptionParser extends OptionParser[MkConfig]("mk") {
     .action{(x,c) => c.copy(tablespec = x)}
 
   arg[Seq[String]]("schema")
-    .text("The path to a local JSON schema file or a comma-separated list of column definitions in the form [FIELD]:[DATA_TYPE],[FIELD]:[DATA_TYPE]. The default value is ''.")
+    .optional()
+    .text("Comma-separated list of column definitions in the form [FIELD]:[DATA_TYPE],[FIELD]:[DATA_TYPE]. The default value is ''.")
     .validate{x =>
       if (!x.forall(_.contains(':'))) failure("column definition must be in the form [FIELD]:[DATA_TYPE]")
       success
@@ -103,7 +104,7 @@ object MkOptionParser extends OptionParser[MkConfig]("mk") {
     .action{(x,c) => c.copy(expiration = x)}
 
   opt[String]("external_table_definition")
-    .text("Specifies a table definition to used to create an external table. The value can be either an inline table definition or a path to a file containing a JSON table definition. The format of an inline definition is schema@format=uri.")
+    .text("Specifies a table definition to used to create an external table. The value can be either an inline table definition or a path to a file containing a JSON table definition. The format of an inline definition is format=uri.")
     .validate{s =>
       val uris = extractUris(s)
       if (!s.startsWith("ORC=")){
@@ -114,8 +115,7 @@ object MkOptionParser extends OptionParser[MkConfig]("mk") {
       success
     }
     .action{(x,c) =>
-      c.copy(externalTableDefinition = x)
-      c.copy(externalTableUri = extractUris(x))
+      c.copy(externalTableDefinition = x, externalTableUri = extractUris(x))
     }
 
   private def extractUris(x: String): Seq[URI] = {

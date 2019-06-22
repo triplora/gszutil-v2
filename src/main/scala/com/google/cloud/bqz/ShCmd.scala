@@ -14,23 +14,8 @@
  * limitations under the License.
  */
 
-package com.google.cloud.bqz.cmd
+package com.google.cloud.bqz
 
-import com.google.auth.oauth2.GoogleCredentials
-import com.google.cloud.bigquery.DatasetId
-import com.google.cloud.bqz.{BQ, RmConfig}
-
-object Rm {
-  def run(c: RmConfig, creds: GoogleCredentials): Result = {
-    val bq = BQ.defaultClient(c.projectId, c.location, creds)
-
-    if (c.dataset) {
-      bq.delete(DatasetId.of(c.projectId, c.datasetId))
-    } else if (c.table || c.model) {
-      val tableId = BQ.resolveTableSpec(c.tablespec, c.projectId, c.datasetId)
-      bq.delete(tableId)
-    } else throw new IllegalArgumentException("nothing to delete")
-
-    Result()
-  }
-}
+case class ShCmd(name: String = "",
+                 args: Seq[String] = Seq.empty,
+                 env: Map[String,String] = Map.empty)

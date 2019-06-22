@@ -32,6 +32,10 @@ object QueryOptionParser extends OptionParser[QueryConfig]("query"){
     .text("Comma-separated query parameters in the form [NAME]:[TYPE]:[DDNAME]. An empty name creates a positional parameter. [TYPE] may be omitted to assume a STRING value in the form: name::ddname or ::ddname. NULL produces a null value.")
     .action((x,c) => c.copy(parametersFromFile = x))
 
+  opt[Boolean]("create_if_needed")
+    .text("When specified, create destination table. The default value is true.")
+    .action((x,c) => c.copy(createIfNeeded = x))
+
   // Standard Options
 
   opt[Boolean]("allow_large_results")
@@ -50,15 +54,15 @@ object QueryOptionParser extends OptionParser[QueryConfig]("query"){
     .text("If specified, a comma-separated list of columns is used to cluster the destination table in a query. This flag must be used with the time partitioning flags to create either an ingestion-time partitioned table or a table partitioned on a DATE or TIMESTAMP column. When specified, the table is first partitioned, and then it is clustered using the supplied columns.")
     .action((x,c) => c.copy(clusteringFields = x))
 
-  opt[String]("destinationKmsKey")
+  opt[String]("destination_kms_key")
     .text("The Cloud KMS key used to encrypt the destination table data.")
     .action((x,c) => c.copy(destinationKmsKey = x))
 
-  opt[String]("destinationSchema")
+  opt[String]("destination_schema")
     .text("The path to a local JSON schema file or a comma-separated list of column definitions in the form [FIELD]:[DATA_TYPE],[FIELD]:[DATA_TYPE]. The default value is ''.")
     .action((x,c) => c.copy(destinationSchema = x))
 
-  opt[String]("destinationTable")
+  opt[String]("destination_table")
     .text("The name of the destination table for writing query results. The default value is ''")
     .action((x,c) => c.copy(destinationTable = x))
 
@@ -66,7 +70,7 @@ object QueryOptionParser extends OptionParser[QueryConfig]("query"){
     .text("When specified, the query is validated but not run.")
     .action((x,c) => c.copy(dryRun = x))
 
-  opt[String]("externalTableDefinition")
+  opt[String]("external_table_definition")
     .text("The table name and schema definition used in an external table query. The schema can be a path to a local JSON schema file or a comma-separated list of column definitions in the form [FIELD]:[DATA_TYPE],[FIELD]:[DATA_TYPE]. The format for supplying the table name and schema is: [TABLE]::[PATH_TO_FILE] or [TABLE]::[SCHEMA]@[SOURCE_FORMAT]=[CLOUD_STORAGE_URI]. Repeat this flag to query multiple tables.")
     .action((x,c) => c.copy(externalTableDefinition = x))
 
@@ -155,7 +159,6 @@ object QueryOptionParser extends OptionParser[QueryConfig]("query"){
     .action((x,c) => c.copy(useLegacySql = x))
 
   // Global options
-
   opt[String]("dataset_id")
     .text(GlobalConfig.datasetIdText)
     .action((x,c) => c.copy(datasetId = x))

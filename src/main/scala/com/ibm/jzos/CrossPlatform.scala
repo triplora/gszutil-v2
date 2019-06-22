@@ -33,6 +33,7 @@ object CrossPlatform extends Logging {
   val Keyfile = "KEYFILE"
   val Copybook = "COPYBOOK"
   val StdIn = "STDIN"
+  val Query = "QUERY"
   val IBM: Boolean = System.getProperty("java.vm.vendor").contains("IBM")
 
   def init(): Unit = {

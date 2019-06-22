@@ -20,6 +20,7 @@ case class QueryConfig(
   // Custom Options
   timeoutMinutes: Int = 60,
   parametersFromFile: Seq[String] = Seq.empty,
+  createIfNeeded: Boolean = true,
 
   // Standard Options
   allowLargeResults: Boolean = true,

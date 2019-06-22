@@ -22,12 +22,12 @@ class ConfigSpec extends FlatSpec {
   "BQZ" should "parse command" in {
     val args = """bq --project_id=project --dataset_id=dataset --location=EU load --source_format=ORC project:dataset.table gs://mybucket/00/*.orc,gs://mybucket/01/*.orc"""
 
-    val parsed = BQParser.parse(args.split(" "))
+    val parsed = ShParser.parse(args.split(" "))
     assert(parsed.isDefined)
 
     parsed match {
       case Some(c) =>
-        assert(c.cmd == "load")
+        assert(c.name == "load")
         val opts = LoadOptionParser.parse(c.args)
         assert(opts.isDefined)
         opts match {

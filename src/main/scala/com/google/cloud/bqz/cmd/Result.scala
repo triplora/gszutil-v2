@@ -14,6 +14,19 @@
  * limitations under the License.
  */
 
-package com.google.cloud.bqz
+package com.google.cloud.bqz.cmd
 
-case class BQOptions(cmd: String = "", args: Seq[String] = Seq.empty)
+object Result {
+  def withExport(name: String, value: String, exitCode: Int = 0): Result = {
+    Result(Map(name -> value), exitCode)
+  }
+
+  def withExportLong(name: String, value: Long, exitCode: Int = 0): Result = {
+    Result(Map(name -> value.toString), exitCode)
+  }
+
+  def Success = Result()
+  def Failure(msg: String, exitCode: Int = 1): Result =
+    withExport("ERRMSG", msg, 1)
+}
+case class Result(export: Map[String,String] = Map.empty, exitCode: Int = 0)

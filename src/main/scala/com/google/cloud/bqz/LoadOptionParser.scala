@@ -28,10 +28,12 @@ object LoadOptionParser extends OptionParser[LoadConfig]("load") {
     .text("prints this usage text")
 
   arg[String]("tablespec")
+    .required()
     .text("Tablespec in format [PROJECT]:[DATASET].[TABLE]")
     .action((x,c) => c.copy(tablespec = x))
 
   arg[Seq[String]]("path")
+    .required()
     .text("Comma-separated source URIs in format gs://bucket/path,gs://bucket/path")
     .action((x,c) => c.copy(path = x))
 

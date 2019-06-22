@@ -22,7 +22,7 @@ import com.google.cloud.bqz.{BQ, MkConfig}
 import com.ibm.jzos.CrossPlatform
 
 object Mk {
-  def run(cfg: MkConfig, creds: GoogleCredentials): Unit = {
+  def run(cfg: MkConfig, creds: GoogleCredentials): Result = {
     val bq = BQ.defaultClient(cfg.projectId, cfg.location, creds)
     val tableId = BQ.resolveTableSpec(cfg.tablespec, cfg.projectId, cfg.datasetId)
 
@@ -36,6 +36,7 @@ object Mk {
     } else {
       throw new NotImplementedError(s"unsupported operation $cfg")
     }
+    Result()
   }
 
   def createView(bq: BigQuery,

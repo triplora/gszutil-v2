@@ -12,14 +12,15 @@
 //* See the License for the specific language governing permissions and
 //* limitations under the License.
 //*******************************************************************
-//BQZ PROC ARGS='',MEM='128m'
+//BQSH PROC MBR='',MEM='128m'
 //*
 //* The following DDs can/should be present in the calling JCL
 //* JAVA.STDIN DD  < OPTIONAL - Java Standard Input
 //* INFILE   DD    < OPTIONAL - Input Dataset
+//* SCHEMA   DD    < OPTIONAL - Dataset containing JSON Schema
 //* KEYFILE  DD    < REQUIRED - Service Account Credentials JSON
 //*
-//JAVA EXEC PROC=JVMPRC80,
+//BQ EXEC PROC=JVMPRC80,
 //    JAVACLS='com.google.cloud.bqz.BQZ'
 //STDENV DD *
 
