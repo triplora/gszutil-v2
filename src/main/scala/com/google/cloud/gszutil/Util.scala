@@ -44,25 +44,21 @@ object Util {
     }
   }
 
-  val layout = new PatternLayout("%d{ISO8601} %-5p %c %x - %m%n")
-  val consoleAppender = new ConsoleAppender(layout)
-
   trait Logging {
     @transient
     protected lazy val logger: Logger = LogManager.getLogger(this.getClass.getCanonicalName.stripSuffix("$"))
   }
 
-  def configureLogging(debug: Boolean = false): Unit = {
+  def configureLogging(): Unit = {
+    val debug = sys.env.getOrElse("BQSH_ROOT_LOGGER","").contains("DEBUG")
     val rootLogger = LogManager.getRootLogger
-    rootLogger.addAppender(consoleAppender)
+    rootLogger.addAppender(new ConsoleAppender(new PatternLayout("%d{ISO8601} %-5p %c %x - %m%n")))
     LogManager.getLogger("org.apache.orc.impl.MemoryManagerImpl").setLevel(Level.ERROR)
 
     if (debug) {
       rootLogger.setLevel(Level.DEBUG)
     } else {
-      rootLogger.setLevel(Level.WARN)
-      LogManager.getLogger("com.google.cloud.gszutil").setLevel(Level.INFO)
-      LogManager.getLogger("com.google.cloud.pso").setLevel(Level.INFO)
+      rootLogger.setLevel(Level.INFO)
     }
   }
 

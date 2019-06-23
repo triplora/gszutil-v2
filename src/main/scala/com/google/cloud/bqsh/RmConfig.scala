@@ -14,20 +14,22 @@
  * limitations under the License.
  */
 
-package com.google.cloud.pso
+package com.google.cloud.bqsh
 
-import com.google.cloud.gszutil.Util.Logging
-import com.google.cloud.gszutil.{CopyBook, Util}
-import org.scalatest.FlatSpec
+case class RmConfig (
+  dataset: Boolean = false,
+  model: Boolean = false,
+  recursive: Boolean = false,
+  table: Boolean = false,
+  tablespec: String = "",
 
-class CopyBookSpec extends FlatSpec with Logging {
-  "CopyBook" should "parse" in {
-    for (name <- (1 to 3).map(i => s"test$i.cpy")){
-      val cb1 = CopyBook(Util.readS(name))
-      val s = cb1.Fields.map(_.toString).mkString("\n")
-      System.out.println("\n*********************************\n")
-      System.out.println(s)
-      System.out.println("\n*********************************\n")
-    }
-  }
-}
+  // Global Options
+  datasetId: String = "",
+  debugMode: Boolean = false,
+  jobId: String = "",
+  jobProperties: Map[String,String] = Map.empty,
+  location: String = "",
+  projectId: String = "",
+  synchronousMode: Boolean = true,
+  sync: Boolean = true
+)

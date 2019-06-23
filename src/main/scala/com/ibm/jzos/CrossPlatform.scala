@@ -40,6 +40,7 @@ object CrossPlatform extends Logging {
     if (IBM) {
       ZOS.addCCAProvider()
     }
+    System.setProperty("java.net.preferIPv4Stack" , "true")
   }
 
   /** Opens a ReadableByteChannel

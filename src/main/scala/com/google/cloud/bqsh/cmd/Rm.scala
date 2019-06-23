@@ -14,20 +14,23 @@
  * limitations under the License.
  */
 
-package com.google.cloud.pso
+package com.google.cloud.bqsh.cmd
 
-import com.google.cloud.gszutil.Util.Logging
-import com.google.cloud.gszutil.{CopyBook, Util}
-import org.scalatest.FlatSpec
+import com.google.auth.oauth2.GoogleCredentials
+import com.google.cloud.bigquery.DatasetId
+import com.google.cloud.bqsh.{BQ, RmConfig}
 
-class CopyBookSpec extends FlatSpec with Logging {
-  "CopyBook" should "parse" in {
-    for (name <- (1 to 3).map(i => s"test$i.cpy")){
-      val cb1 = CopyBook(Util.readS(name))
-      val s = cb1.Fields.map(_.toString).mkString("\n")
-      System.out.println("\n*********************************\n")
-      System.out.println(s)
-      System.out.println("\n*********************************\n")
-    }
+object Rm {
+  def run(c: RmConfig, creds: GoogleCredentials): Result = {
+    val bq = BQ.defaultClient(c.projectId, c.location, creds)
+
+    if (c.dataset) {
+      bq.delete(DatasetId.of(c.projectId, c.datasetId))
+    } else if (c.table || c.model) {
+      val tableId = BQ.resolveTableSpec(c.tablespec, c.projectId, c.datasetId)
+      bq.delete(tableId)
+    } else throw new IllegalArgumentException("nothing to delete")
+
+    Result()
   }
 }

@@ -24,8 +24,8 @@ import com.google.cloud.gszutil.Util.Logging
 import com.google.cloud.gszutil.io.ZReader
 import org.apache.hadoop.conf.Configuration
 import org.apache.hadoop.fs.{FileSystem, SimpleGCSFileSystem}
-import org.apache.orc.impl.WriterImpl
 import org.apache.orc._
+import org.apache.orc.impl.WriterImpl
 
 /** Responsible for writing a single output partition
   */

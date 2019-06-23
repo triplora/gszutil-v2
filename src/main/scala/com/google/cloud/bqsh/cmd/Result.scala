@@ -14,20 +14,19 @@
  * limitations under the License.
  */
 
-package com.google.cloud.pso
+package com.google.cloud.bqsh.cmd
 
-import com.google.cloud.gszutil.Util.Logging
-import com.google.cloud.gszutil.{CopyBook, Util}
-import org.scalatest.FlatSpec
-
-class CopyBookSpec extends FlatSpec with Logging {
-  "CopyBook" should "parse" in {
-    for (name <- (1 to 3).map(i => s"test$i.cpy")){
-      val cb1 = CopyBook(Util.readS(name))
-      val s = cb1.Fields.map(_.toString).mkString("\n")
-      System.out.println("\n*********************************\n")
-      System.out.println(s)
-      System.out.println("\n*********************************\n")
-    }
+object Result {
+  def withExport(name: String, value: String, exitCode: Int = 0): Result = {
+    Result(Map(name -> value), exitCode)
   }
+
+  def withExportLong(name: String, value: Long, exitCode: Int = 0): Result = {
+    Result(Map(name -> value.toString), exitCode)
+  }
+
+  def Success = Result()
+  def Failure(msg: String, exitCode: Int = 1): Result =
+    withExport("ERRMSG", msg, 1)
 }
+case class Result(env: Map[String,String] = Map.empty, exitCode: Int = 0)

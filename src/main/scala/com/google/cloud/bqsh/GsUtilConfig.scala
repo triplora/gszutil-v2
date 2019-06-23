@@ -13,21 +13,16 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+package com.google.cloud.bqsh
 
-package com.google.cloud.pso
-
-import com.google.cloud.gszutil.Util.Logging
-import com.google.cloud.gszutil.{CopyBook, Util}
-import org.scalatest.FlatSpec
-
-class CopyBookSpec extends FlatSpec with Logging {
-  "CopyBook" should "parse" in {
-    for (name <- (1 to 3).map(i => s"test$i.cpy")){
-      val cb1 = CopyBook(Util.readS(name))
-      val s = cb1.Fields.map(_.toString).mkString("\n")
-      System.out.println("\n*********************************\n")
-      System.out.println(s)
-      System.out.println("\n*********************************\n")
-    }
-  }
-}
+case class GsUtilConfig(source: String = "INFILE",
+                        copyBook: String = "COPYBOOK",
+                        keyFile: String = "KEYFILE",
+                        destinationUri: String = "",
+                        mode: String = "",
+                        compress: Boolean = true,
+                        blocksPerBatch: Int = 128,
+                        partSizeMB: Int = 256,
+                        parallelism: Int = 8,
+                        timeOutMinutes: Int = 180,
+                        nativeKeyColumns: Seq[String] = Seq.empty)

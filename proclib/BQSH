@@ -20,8 +20,8 @@
 //* SCHEMA   DD    < OPTIONAL - Dataset containing JSON Schema
 //* KEYFILE  DD    < REQUIRED - Service Account Credentials JSON
 //*
-//BQ EXEC PROC=JVMPRC80,
-//    JAVACLS='com.google.cloud.bqz.BQZ'
+//BQSH EXEC PROC=JVMPRC80,
+//    JAVACLS='com.google.cloud.bqsh.Bqsh'
 //STDENV DD *
 
 . /etc/profile

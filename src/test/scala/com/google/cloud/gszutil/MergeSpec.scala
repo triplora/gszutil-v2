@@ -17,8 +17,9 @@
 package com.google.cloud.gszutil
 
 import com.google.cloud.bigquery.TableId
-import com.google.cloud.bqz.op.MergeInto
-import com.google.cloud.bqz.op.MergeInto.MergeRequest
+import com.google.cloud.bqsh.GsUtilOptionParser
+import com.google.cloud.bqsh.op.MergeInto
+import com.google.cloud.bqsh.op.MergeInto.MergeRequest
 import org.scalatest.FlatSpec
 
 class MergeSpec extends FlatSpec {
@@ -64,7 +65,7 @@ class MergeSpec extends FlatSpec {
 
   it should "parse args" in {
     val args = "merge destProject destDataset destTable srcProject srcDataset srcTable a,b,c"
-    val config = ConfigParser.parse(args.split(" "))
+    val config = GsUtilOptionParser.parse(args.split(" "))
     assert(config.isDefined)
     config match {
       case Some(c) =>
