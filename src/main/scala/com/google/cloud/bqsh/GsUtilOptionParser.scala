@@ -22,8 +22,8 @@ import scopt.OptionParser
 
 
 object GsUtilOptionParser extends OptionParser[GsUtilConfig]("gsutil") {
-  private val DefaultConfig = GsUtilConfig()
-  def parse(args: Seq[String]): Option[GsUtilConfig] = parse(args, DefaultConfig)
+  def parse(args: Seq[String]): Option[GsUtilConfig] =
+    parse(args, GsUtilConfig())
 
   head("gsutil", "0.2.1")
 
@@ -49,6 +49,32 @@ object GsUtilOptionParser extends OptionParser[GsUtilConfig]("gsutil") {
             success
         }
         .action((x, c) => c.copy(destinationUri = x))
+    )
+
+
+  cmd("rm")
+    .text("Delete objects in GCS")
+
+    .children(
+      arg[String]("destinationUri")
+        .required()
+        .text("Destination URI (gs://bucket/path)")
+        .validate{x =>
+          val uri = new URI(x)
+          if (uri.getScheme != "gs" || uri.getAuthority.isEmpty)
+            failure("invalid GCS URI")
+          else
+            success
+        }
+        .action((x, c) => c.copy(destinationUri = x)),
+
+      opt[Boolean]('r', "recursive")
+        .optional()
+        .text("Delete recursively (default: false"),
+
+      opt[Boolean]('f', "force")
+        .optional()
+        .text("Delete without interaction (default: true)")
     )
 
   opt[Int]("partSizeMB")

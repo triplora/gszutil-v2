@@ -98,6 +98,13 @@ object Bqsh {
                 case _ =>
                   fail
               }
+            case "rm" =>
+              GsUtilOptionParser.parse(cmd.args) match {
+                case Some(c) =>
+                  GsUtilRm.run(c, creds)
+                case _ =>
+                  fail
+              }
             case _ =>
               fail
           }
