@@ -19,6 +19,9 @@ package com.google.cloud.bqsh
 import java.net.URI
 
 case class MkConfig (
+  queryDD: String = "QUERY",
+
+  // Standard options
   clusteringFields: Seq[String] = Seq.empty,
   dataset: Boolean = false,
   defaultPartitionExpiration: Int = -1,
@@ -28,8 +31,6 @@ case class MkConfig (
   displayName: String = "",
   expiration: Long = -1,
   externalTableDefinition: String = "",
-  externalTableSchema: String = "",
-  externalTableFormat: String = "",
   externalTableUri: Seq[URI] = Seq.empty,
   force: Boolean = false,
   label: Seq[String] = Seq.empty,

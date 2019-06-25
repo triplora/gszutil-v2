@@ -19,13 +19,13 @@ import com.google.auth.oauth2.GoogleCredentials
 import com.google.cloud.bqsh.{GCS, GsUtilConfig}
 import com.google.cloud.gszutil.Util.Logging
 import com.google.cloud.gszutil.orc.WriteORCFile
-import com.ibm.jzos.CrossPlatform
+import com.ibm.jzos.ZFileProvider
 
 
 object Cp extends Logging {
-  def run(c: GsUtilConfig, creds: GoogleCredentials): Result = {
-    val copyBook = CrossPlatform.loadCopyBook(c.copyBook)
-    val in = CrossPlatform.readChannel(c.source, copyBook)
+  def run(c: GsUtilConfig, creds: GoogleCredentials, zos: ZFileProvider): Result = {
+    val copyBook = zos.loadCopyBook(c.copyBook)
+    val in = zos.readChannel(c.source, copyBook)
     val batchSize = (c.blocksPerBatch * in.blkSize) / in.lRecl
     WriteORCFile.run(gcsUri = c.destinationUri,
                      in = in.rc,

@@ -17,12 +17,11 @@
 package com.google.cloud.gszutil;
 
 
-import com.ibm.jzos.CrossPlatform;
 
 import java.nio.ByteBuffer;
 
 public class PackedDecimal {
-    private static boolean relaxedParsing = !CrossPlatform.IBM();
+    private static boolean relaxedParsing = !System.getProperty("java.vm.vendor").contains("IBM");
     private static final String[] hexValues = new String[256];
     private static final char[] hex = new char[]{'0','1','2','3','4','5','6','7','8','9','A','B','C','D','E','F'};
 

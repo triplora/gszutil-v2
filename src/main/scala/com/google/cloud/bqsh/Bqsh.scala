@@ -19,40 +19,43 @@ package com.google.cloud.bqsh
 import com.google.auth.oauth2.GoogleCredentials
 import com.google.cloud.bqsh.cmd._
 import com.google.cloud.gszutil.Util
-import com.ibm.jzos.CrossPlatform
+import com.ibm.jzos.ZFileProvider
 
 import scala.collection.mutable.ListBuffer
 
 object Bqsh {
   def main(args: Array[String]): Unit = {
     val ddName = args.headOption.getOrElse("")
+    val zos = ZFileProvider.getProvider()
     val script =
-      if (ddName.nonEmpty && CrossPlatform.ddExists(ddName))
-        CrossPlatform.readDDString(ddName)
+      if (ddName.nonEmpty && zos.ddExists(ddName))
+        zos.readDDString(ddName)
       else
-        CrossPlatform.readStdin()
+        zos.readStdin()
 
-    CrossPlatform.init()
+    zos.init()
     Util.configureLogging()
-    run(script, sys.env)
+    run(script, sys.env, zos)
   }
 
-  def run(script: String, env: Map[String,String]): Result = {
+  def run(script: String, env: Map[String,String], zos: ZFileProvider): Result = {
     val env1 = splitSH(script)
       .map(readArgs)
       .foldLeft(env){(a,b) =>
-        val result = exec(b, a)
+        val result = exec(b, a, zos)
         a ++ result.env
       }
     Result(env = env1)
   }
 
-  def creds: GoogleCredentials = CrossPlatform
-    .getCredentialProvider(CrossPlatform.Keyfile)
-    .getCredentials
 
-  def exec(args: Seq[String], env: Map[String,String]): Result = {
+
+  def exec(args: Seq[String], env: Map[String,String], zos: ZFileProvider): Result = {
     lazy val fail = Result.Failure(s"invalid command '${args.mkString(" ")}'")
+
+    def creds: GoogleCredentials = zos
+      .getCredentialProvider(ZFileProvider.KeyFileDD)
+      .getCredentials
 
     BqshParser.parse(args, env) match {
       case Some(cmd) =>
@@ -61,14 +64,14 @@ object Bqsh {
             case "mk" =>
               MkOptionParser.parse(cmd.args) match {
                 case Some(c) =>
-                  Mk.run(c, creds)
+                  Mk.run(c, creds, zos)
                 case _ =>
                   fail
               }
             case "query" =>
               QueryOptionParser.parse(cmd.args) match {
                 case Some(c) =>
-                  Query.run(c, creds)
+                  Query.run(c, creds, zos)
                 case _ =>
                   fail
               }
@@ -94,7 +97,7 @@ object Bqsh {
             case "cp" =>
               GsUtilOptionParser.parse(cmd.args) match {
                 case Some(c) =>
-                  Cp.run(c, creds)
+                  Cp.run(c, creds, zos)
                 case _ =>
                   fail
               }

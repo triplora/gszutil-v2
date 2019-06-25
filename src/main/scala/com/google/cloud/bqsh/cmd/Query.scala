@@ -22,23 +22,22 @@ import com.google.cloud.bigquery._
 import com.google.cloud.bqsh.{BQ, QueryConfig}
 import com.google.cloud.gszutil.Util
 import com.google.cloud.gszutil.Util.Logging
-import com.ibm.jzos.CrossPlatform
+import com.ibm.jzos.ZFileProvider
 
 object Query extends Logging {
-  def run(cfg: QueryConfig, creds: GoogleCredentials): Result = {
+  def run(cfg: QueryConfig, creds: GoogleCredentials, zos: ZFileProvider): Result = {
     val bq = BQ.defaultClient(cfg.projectId, cfg.location, creds)
-
-    val query = if (CrossPlatform.ddExists(CrossPlatform.Query)) {
-      logger.debug(s"Reading query from ${CrossPlatform.Query}")
-      CrossPlatform.readDDString(CrossPlatform.Query)
+    val query = if (zos.ddExists(cfg.queryDD)) {
+      logger.debug(s"Reading query from ${cfg.queryDD}")
+      zos.readDDString(cfg.queryDD)
     } else {
-      logger.debug(s"Reading query from ${CrossPlatform.StdIn}")
-      CrossPlatform.readStdin()
+      logger.debug(s"Reading query from STDIN")
+      zos.readStdin()
     }
 
     require(query.nonEmpty, "query must not be empty")
 
-    val jobConfiguration = configureQueryJob(query, cfg)
+    val jobConfiguration = configureQueryJob(query, cfg, zos)
     val jobId = JobId.of(cfg.jobId + "_" + Util.randString(5))
 
     val job = BQ.runJob(bq, jobConfiguration, jobId, cfg.timeoutMinutes * 60)
@@ -50,14 +49,14 @@ object Query extends Logging {
     }
   }
 
-  def parseParametersFromFile(parameters: Seq[String]): (Seq[QueryParameterValue], Seq[(String,QueryParameterValue)]) = {
+  def parseParametersFromFile(parameters: Seq[String], zos: ZFileProvider): (Seq[QueryParameterValue], Seq[(String,QueryParameterValue)]) = {
     val params = parameters.map(_.split(':'))
 
     val positionalValues = params.flatMap{x =>
       if (x.head.nonEmpty) None
       else {
         val t = x(1)
-        val value = CrossPlatform.readDDString(x(2))
+        val value = zos.readDDString(x(2))
         val typeName =
           if (t.nonEmpty) StandardSQLTypeName.valueOf(t)
           else StandardSQLTypeName.STRING
@@ -76,7 +75,7 @@ object Query extends Logging {
       else {
         val name = x(0)
         val t = x(1)
-        val value = CrossPlatform.readDDString(x(2))
+        val value = zos.readDDString(x(2))
         val typeName =
           if (t.nonEmpty) StandardSQLTypeName.valueOf(t)
           else StandardSQLTypeName.STRING
@@ -136,7 +135,7 @@ object Query extends Logging {
     (positionalValues, namedValues)
   }
 
-  def configureQueryJob(query: String, cfg: QueryConfig): QueryJobConfiguration = {
+  def configureQueryJob(query: String, cfg: QueryConfig, zos: ZFileProvider): QueryJobConfiguration = {
     import scala.collection.JavaConverters.{mapAsJavaMapConverter, seqAsJavaListConverter}
 
     val b = QueryJobConfiguration.newBuilder(query)
@@ -169,7 +168,7 @@ object Query extends Logging {
 
     if (cfg.parameters.nonEmpty || cfg.parametersFromFile.nonEmpty){
       val (positionalValues1, namedValues1) = parseParameters(cfg.parameters)
-      val (positionalValues2, namedValues2) = parseParametersFromFile(cfg.parametersFromFile)
+      val (positionalValues2, namedValues2) = parseParametersFromFile(cfg.parametersFromFile, zos)
       val positionalValues = positionalValues1 ++ positionalValues2
       val namedValues = namedValues1 ++ namedValues2
       if (positionalValues.nonEmpty)

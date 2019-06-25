@@ -16,6 +16,7 @@
 
 package com.google.cloud.bqsh
 
+import com.ibm.jzos.ZFileProvider
 import org.scalatest.FlatSpec
 
 class ShellSpec extends FlatSpec {
@@ -71,7 +72,7 @@ class ShellSpec extends FlatSpec {
       """TABLE=project:dataset.table
         |SOURCE=gs://mybucket/path.orc/*
         |echo $TABLE $SOURCE""".stripMargin
-    val result = Bqsh.run(script, Map.empty)
+    val result = Bqsh.run(script, Map.empty, ZFileProvider.getProvider())
     val expected = Map[String,String](
       "TABLE" -> "project:dataset.table",
       "SOURCE" -> "gs://mybucket/path.orc/*"

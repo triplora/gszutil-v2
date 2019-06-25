@@ -19,19 +19,19 @@ package com.google.cloud.bqsh.cmd
 import com.google.auth.oauth2.GoogleCredentials
 import com.google.cloud.bigquery._
 import com.google.cloud.bqsh.{BQ, MkConfig}
-import com.ibm.jzos.CrossPlatform
+import com.ibm.jzos.ZFileProvider
 
 object Mk {
-  def run(cfg: MkConfig, creds: GoogleCredentials): Result = {
+  def run(cfg: MkConfig, creds: GoogleCredentials, zos: ZFileProvider): Result = {
     val bq = BQ.defaultClient(cfg.projectId, cfg.location, creds)
     val tableId = BQ.resolveTableSpec(cfg.tablespec, cfg.projectId, cfg.datasetId)
 
     if (cfg.externalTableDefinition.nonEmpty){
-      create(bq, tableId, cfg.externalTableUri.map(_.toString), cfg.expiration)
+      createExternalTable(bq, tableId, cfg.externalTableUri.map(_.toString), cfg.expiration)
     } else if (cfg.table) {
       createTable(bq, cfg, tableId)
     } else if (cfg.view) {
-      val query = CrossPlatform.readDDString(CrossPlatform.Infile)
+      val query = zos.readDDString(cfg.queryDD)
       createView(bq, cfg, tableId, query)
     } else {
       throw new NotImplementedError(s"unsupported operation $cfg")
@@ -92,10 +92,10 @@ object Mk {
     bq.create(tableInfo.build())
   }
 
-  def create(bq: BigQuery,
-             tableId: TableId,
-             sources: Seq[String],
-             lifetimeMillis: Long): Table = {
+  def createExternalTable(bq: BigQuery,
+                          tableId: TableId,
+                          sources: Seq[String],
+                          lifetimeMillis: Long): Table = {
     import scala.collection.JavaConverters.seqAsJavaListConverter
 
     val expirationTime = System.currentTimeMillis() + lifetimeMillis

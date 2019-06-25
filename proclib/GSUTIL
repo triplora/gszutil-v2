@@ -12,13 +12,13 @@
 //* See the License for the specific language governing permissions and
 //* limitations under the License.
 //*******************************************************************
-//BQSH PROC MBR='',MEM='128m'
+//GSUTIL PROC MBR='',MEM='1500m'
 //*
 //* The following DDs can/should be present in the calling JCL
 //* STDIN DD    < OPTIONAL - Java Standard Input
 //* KEYFILE DD  < REQUIRED - Service Account Credentials JSON
 //*
-//BQSH EXEC PROC=JVMPRC80,
+//GSUTIL EXEC PROC=JVMPRC80,
 //    JAVACLS='com.google.cloud.bqsh.Bqsh'
 //SYSIN DD DSN=&PREF.&CC.&COQUAL.SCRIPT.&MBR..&JOBCHK,DISP=SHR
 //STDENV DD *

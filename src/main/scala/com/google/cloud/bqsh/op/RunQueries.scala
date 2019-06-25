@@ -22,15 +22,15 @@ import com.google.cloud.bigquery.{BigQuery, Job, JobConfiguration, JobId, JobInf
 import com.google.cloud.bqsh.BQ
 import com.google.cloud.gszutil.Util
 import com.google.cloud.gszutil.Util.Logging
-import com.ibm.jzos.CrossPlatform
+import com.ibm.jzos.ZFileProvider
 
 object RunQueries extends Logging {
-  def run(source: String, project: String, location: String, dryRun: Boolean, creds: GoogleCredentials): Unit = {
+  def run(source: String, project: String, location: String, dryRun: Boolean, creds: GoogleCredentials, zos: ZFileProvider): Unit = {
     val statements =
-      if (CrossPlatform.ddExists(source))
-        CrossPlatform.readDDString(source)
+      if (zos.ddExists(source))
+        zos.readDDString(source)
       else
-        CrossPlatform.readStdin()
+        zos.readStdin()
 
     val bq = BQ.defaultClient(project, location, creds)
     runQueries(statements, Map.empty, dryRun, bq)

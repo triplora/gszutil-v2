@@ -36,14 +36,10 @@ object MkOptionParser extends OptionParser[MkConfig]("mk") {
     .text("[PROJECT_ID]:[DATASET].[TABLE]")
     .action{(x,c) => c.copy(tablespec = x)}
 
-  arg[Seq[String]]("schema")
+  arg[String]("queryDD")
     .optional()
-    .text("Comma-separated list of column definitions in the form [FIELD]:[DATA_TYPE],[FIELD]:[DATA_TYPE]. The default value is ''.")
-    .validate{x =>
-      if (!x.forall(_.contains(':'))) failure("column definition must be in the form [FIELD]:[DATA_TYPE]")
-      success
-    }
-    .action{(x,c) => c.copy(schema = x)}
+    .text("DD containing query for view creation. The default value is QUERY.")
+    .action{(x,c) => c.copy(queryDD = x)}
 
   opt[Seq[String]]("clustering_fields")
     .text("A comma-separated list of column names used to cluster a table. This flag is currently available only for partitioned tables. When specified, the table is partitioned and then clustered using these columns.")
@@ -103,8 +99,8 @@ object MkOptionParser extends OptionParser[MkConfig]("mk") {
     .text("An integer that specifies the table or view's lifetime in milliseconds. The expiration time is set to the current UTC time plus this value.")
     .action{(x,c) => c.copy(expiration = x)}
 
-  opt[String]("external_table_definition")
-    .text("Specifies a table definition to used to create an external table. The value can be either an inline table definition or a path to a file containing a JSON table definition. The format of an inline definition is format=uri.")
+  opt[String]('e',"external_table_definition")
+    .text("Specifies a table definition to used to create an external table. The format of an inline definition is format=uri. Example: ORC=gs://bucket/table_part1.orc/*,gs://bucket/table_part2.orc/*")
     .validate{s =>
       val uris = extractUris(s)
       if (!s.startsWith("ORC=")){
