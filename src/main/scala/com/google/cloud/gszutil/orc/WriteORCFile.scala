@@ -44,7 +44,8 @@ object WriteORCFile extends Logging {
       "akka.actor.guardian-supervisor-strategy","akka.actor.EscalatingSupervisorStrategy"))
     val sys = ActorSystem("gsz", conf)
     val bufSize = copyBook.LRECL * batchSize
-    val pool = ByteBufferPool.allocate(bufSize, maxWriters)
+    //val pool = ByteBufferPool.allocate(bufSize, maxWriters)
+    val pool = new NoOpHeapBufferPool(bufSize, maxWriters)
     val args = DatasetReaderArgs(
       in = in,
       batchSize = batchSize,
