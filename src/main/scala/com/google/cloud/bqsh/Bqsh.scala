@@ -38,11 +38,13 @@ object Bqsh {
     run(script, sys.env, zos)
   }
 
-  def run(script: String, env: Map[String,String], zos: ZFileProvider): Result = {
+  def run(script: String, env: Map[String,String], zos: ZFileProvider, throwOnError: Boolean = true): Result = {
     val env1 = splitSH(script)
       .map(readArgs)
       .foldLeft(env){(a,b) =>
         val result = exec(b, a, zos)
+        if (result.exitCode != 0 && throwOnError)
+          throw new RuntimeException(result.env.getOrElse("ERRMSG",s"${b.mkString(" ")} returned exit code ${result.exitCode}"))
         a ++ result.env
       }
     Result(env = env1)
