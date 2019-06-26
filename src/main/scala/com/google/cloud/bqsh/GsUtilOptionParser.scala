@@ -70,7 +70,8 @@ object GsUtilOptionParser extends OptionParser[GsUtilConfig]("gsutil") {
 
       opt[Boolean]('r', "recursive")
         .optional()
-        .text("Delete recursively (default: false"),
+        .text("Delete recursively (default: false")
+        .action((x, c) => c.copy(recursive = x)),
 
       opt[Boolean]('f', "force")
         .optional()

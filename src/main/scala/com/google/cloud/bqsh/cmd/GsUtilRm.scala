@@ -25,19 +25,27 @@ import com.google.cloud.storage.{BlobId, Storage}
 
 object GsUtilRm extends Logging {
   def run(c: GsUtilConfig, creds: GoogleCredentials): Result = {
+    logger.info(s"gsutil rm ${c.destinationUri}")
     val gcs = GCS.defaultClient(creds)
     val uri = new URI(c.destinationUri)
     val bucket = uri.getAuthority
     if (c.recursive) {
-      var ls = gcs.list(bucket, Storage.BlobListOption.prefix(c.destinationUri))
+      logger.debug(s"deleting recursively from ${c.destinationUri}")
+      val withTrailingSlash = uri.getPath.stripPrefix("/") + (if (uri.getPath.last == '/') "" else "/")
+      var ls = gcs.list(bucket,
+        Storage.BlobListOption.prefix(withTrailingSlash),
+        Storage.BlobListOption.currentDirectory())
       import scala.collection.JavaConverters.iterableAsScalaIterableConverter
       var deleted: Long = 0
       var notDeleted: Long = 0
-      while (ls.hasNextPage) {
+      while (ls != null) {
         val blobIds = ls.getValues.asScala.toArray.map(_.getBlobId)
-        val deleteResults = gcs.delete(blobIds: _*)
-        deleted += deleteResults.asScala.count(_ == true)
-        notDeleted += deleteResults.asScala.count(_ == false)
+        logger.debug(s"deleting ${blobIds.map(_.getName).mkString(",")}")
+        if (blobIds.nonEmpty){
+          val deleteResults = gcs.delete(blobIds: _*)
+          deleted += deleteResults.asScala.count(_ == true)
+          notDeleted += deleteResults.asScala.count(_ == false)
+        }
         ls = ls.getNextPage
       }
       logger.info(s"$deleted deleted $notDeleted notDeleted")
@@ -48,8 +56,8 @@ object GsUtilRm extends Logging {
         logger.info(s"deleted $uri")
         Result.withExportLong("ACTIVITYCOUNT", 1)
       } else {
-        logger.info(s"$uri was not deleted")
-        Result.withExportLong("ACTIVITYCOUNT", 0)
+        logger.info(s"$uri was not found. Use --recursive=true to delete a directory")
+        Result.withExportLong("ACTIVITYCOUNT", 0, 1)
       }
     }
   }
