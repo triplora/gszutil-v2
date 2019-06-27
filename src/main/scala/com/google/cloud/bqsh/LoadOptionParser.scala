@@ -115,7 +115,7 @@ Repeat this flag to specify multiple schema update options.""")
     .action((x,c) => c.copy(skip_leading_rows = x))
 
   opt[String]("source_format")
-    .text("""The format of the source data. Possible values include: CSV NEWLINE_DELIMITED_JSON AVRO DATASTORE_BACKUP PARQUET ORC""")
+    .text("""The format of the source data. Possible values include: CSV NEWLINE_DELIMITED_JSON AVRO DATASTORE_BACKUP PARQUET ORC (Default: ORC)""")
     .action((x,c) => c.copy(source_format = x))
 
   opt[Long]("time_partitioning_expiration")

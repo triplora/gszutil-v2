@@ -1,3 +1,6 @@
+//BQSH PROC
+//*******************************************************************
+//*
 //* Copyright 2019 Google Inc. All Rights Reserved.
 //*
 //* Licensed under the Apache License, Version 2.0 (the "License");
@@ -11,51 +14,39 @@
 //* WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 //* See the License for the specific language governing permissions and
 //* limitations under the License.
+//*
 //*******************************************************************
-//BQSH PROC MBR='',MEM='128m'
-//*
-//* The following DDs can/should be present in the calling JCL
-//* STDIN DD    < OPTIONAL - Java Standard Input
-//* KEYFILE DD  < REQUIRED - Service Account Credentials JSON
-//*
-//BQSH EXEC PROC=JVMPRC80,
-//    JAVACLS='com.google.cloud.bqsh.Bqsh'
-//SYSIN DD DSN=&PREF.&CC.&COQUAL.SCRIPT.&MBR..&JOBCHK,DISP=SHR
-//STDENV DD *
-
-. /etc/profile
-
+//JAVA EXEC PGM=JVMLDM86,PARM='/+I com.google.cloud.bqsh.Bqsh'
+//SYSPRINT DD SYSOUT=*
+//SYSOUT   DD SYSOUT=*
+//STDOUT   DD SYSOUT=*
+//STDERR   DD SYSOUT=*
+//CEEDUMP  DD SYSOUT=*
+//ABNLIGNR DD DUMMY
+//STDIN    DD DUMMY
+//QUERY    DD DUMMY
+//INFILE   DD DUMMY
+//COPYBOOK DD DUMMY
+//KEYFILE  DD DSN=&SYSUID..KEYFILE,DISP=SHR
+//STDENV   DD *
 # IBM JZOS JDK Location
-JH="/usr/lpp/java/J8.0_64"
+JH="/usr/lpp/java/alias"
+export JAVA_HOME="$JH"
+export PATH="/bin:$JH/bin"
 
 # Native Libraries
-LP="/lib"
-LP="$LP:/usr/lib"
-LP="$LP:$JH/bin"
-LP="$LP:$JH/lib/s390x"
-LP="$LP:$JH/lib/s390x/j9vm"
-LP="$LP:$JH/bin/classic:"
+JL="$JH/lib"
+LP="/lib:/usr/lib:$JH/bin:$JL/s390x:$JL/s390x/j9vm:$JH/bin/classic"
+export LIBPATH="$LP"
 
 # Java Classpath
-CP="/path/to/gszutil.jar"
-CP="$CP:/path/to/gszutil.dep.jar"
-CP="$CP:$JH/lib"
-CP="$CP:$JH/lib/ext"
+LD=/shared_products/google_cloud/poc/lib
+CP="$LD/GSZUtil.jar:$LD/GSZUtil.dep.jar:$JL:$JL/ext"
+export CLASSPATH="$CP"
 
 # JVM options
-IJO="-Xms&MEM -Xmx&MEM"
-IJO="$IJO -Xcompressedrefs"
-IJO="$IJO -Djava.net.preferIPv4Stack=true"
-
-# Command-line Arguments
-ARGS="SYSIN"
-
-export PATH="/bin:$JH/bin:"
-export JAVA_HOME="$JH"
-export LIBPATH="$LP"
-export CLASSPATH="$CP"
+IJO="-Xms2g -Xmx2g -Xcompressedrefs -Djava.net.preferIPv4Stack=true"
 export IBM_JAVA_OPTIONS="$IJO"
-export JZOS_MAIN_ARGS="$ARGS"
-
-//
+export JZOS_MAIN_ARGS=""
+/*
 // PEND

@@ -24,6 +24,6 @@ case class GsUtilConfig(source: String = "INFILE",
                         compress: Boolean = true,
                         blocksPerBatch: Int = 128,
                         partSizeMB: Int = 256,
-                        parallelism: Int = 8,
+                        parallelism: Int = 6,
                         timeOutMinutes: Int = 180,
                         nativeKeyColumns: Seq[String] = Seq.empty)

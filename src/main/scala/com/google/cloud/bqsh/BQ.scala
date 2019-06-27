@@ -80,13 +80,43 @@ object BQ {
     }
   }
 
+  /**
+    *
+    * @param datasetSpec [PROJECT]:[DATASET] may override project
+    * @param defaultProject BigQuery billing project
+    * @return
+    */
+  def resolveDataset(datasetSpec: String, defaultProject: String): DatasetId = {
+    val i = datasetSpec.indexOf(':')
+    val project = if (i > 0) datasetSpec.substring(0, i) else defaultProject
+    val dataset = datasetSpec.substring(i+1)
+    DatasetId.of(project, dataset)
+  }
+
+  /**
+    *
+    * @param tableSpec [PROJECT]:[DATASET].TABLE may override dataset and project
+    * @param defaultProject BigQuery billing project
+    * @param defaultDataset [PROJECT]:[DATASET] may override project
+    * @return
+    */
   def resolveTableSpec(tableSpec: String, defaultProject: String, defaultDataset: String): TableId = {
     val i = tableSpec.indexOf(':')
     val j = tableSpec.indexOf('.')
 
-    val project = if (i > 0) tableSpec.substring(0, i) else defaultProject
-    val dataset = if (j > 0) tableSpec.substring(i+1, j) else defaultDataset
-    val table = if (j > 0) tableSpec.substring(j+1, tableSpec.length) else tableSpec
+    val default = resolveDataset(defaultDataset, defaultProject)
+
+    val project =
+      if (i > 0) tableSpec.substring(0, i)
+      else default.getProject
+
+    val dataset =
+      if (j > 0) tableSpec.substring(i+1, j)
+      else default.getDataset
+
+    val table =
+      if (j > 0) tableSpec.substring(j+1, tableSpec.length)
+      else tableSpec
     TableId.of(project, dataset, table)
   }
 
