@@ -32,7 +32,7 @@ object Linux extends ZFileProvider with Logging {
   }
   override def readChannel(dd: String, copyBook: CopyBook): DDChannel = {
     val ddc = ddFile(dd)
-    require(ddc.lRecl == copyBook.LRECL)
+    require(ddc.lRecl == copyBook.LRECL, s"Copybook LRECL ${copyBook.LRECL} doesn't match LRECL ${ddc.lRecl}")
     ddc
   }
 

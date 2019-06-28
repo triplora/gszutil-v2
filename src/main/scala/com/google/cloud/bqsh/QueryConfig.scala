@@ -20,11 +20,11 @@ case class QueryConfig(
   // Custom Options
   timeoutMinutes: Int = 60,
   parametersFromFile: Seq[String] = Seq.empty,
-  createIfNeeded: Boolean = true,
+  createIfNeeded: Boolean = false,
   allowMultipleQueries: Boolean = false,
 
   // Standard Options
-  allowLargeResults: Boolean = true,
+  allowLargeResults: Boolean = false,
   appendTable: Boolean = false,
   batch: Boolean = false,
   clusteringFields: Seq[String] = Seq.empty,

@@ -30,13 +30,16 @@ class ZReader(private val copyBook: CopyBook, private val batchSize: Int) extend
   private val lRecl = copyBook.LRECL
   private val rowBatch: VectorizedRowBatch = {
     val batch = new VectorizedRowBatch(nCols, batchSize)
-    for (i <- decoders.indices)
-      batch.cols(i) = decoders(i).columnVector(batchSize)
+    for (i <- decoders.indices) {
+      val cv = decoders(i).columnVector(batchSize)
+      logger.debug(s"adding ${cv.getClass.getSimpleName} to VectorizedRowBatch")
+      batch.cols(i) = cv
+    }
     batch
   }
 
   def readOrc(buf: ByteBuffer, writer: Writer): Unit = {
-    while (buf.hasRemaining) {
+    while (buf.remaining >= lRecl) {
       val batch: VectorizedRowBatch = readBatch(buf)
       writer.addRowBatch(batch)
     }
@@ -59,7 +62,7 @@ class ZReader(private val copyBook: CopyBook, private val batchSize: Int) extend
   private def readBatch(buf: ByteBuffer): VectorizedRowBatch = {
     rowBatch.reset()
     var rowId = 0
-    while (rowId < batchSize && buf.remaining() >= lRecl){
+    while (rowId < batchSize && buf.remaining >= lRecl){
       readRecord(buf, rowBatch, rowId)
       rowId += 1
     }

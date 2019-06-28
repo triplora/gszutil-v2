@@ -38,27 +38,27 @@ object QueryOptionParser extends OptionParser[QueryConfig]("query") with ArgPars
     .text("Comma-separated query parameters in the form [NAME]:[TYPE]:[DDNAME]. An empty name creates a positional parameter. [TYPE] may be omitted to assume a STRING value in the form: name::ddname or ::ddname. NULL produces a null value.")
     .action((x,c) => c.copy(parametersFromFile = x))
 
-  opt[Boolean]("create_if_needed")
-    .text("When specified, create destination table. The default value is true.")
-    .action((x,c) => c.copy(createIfNeeded = x))
+  opt[Unit]("create_if_needed")
+    .text("When specified, create destination table. The default value is false.")
+    .action((x,c) => c.copy(createIfNeeded = true))
 
-  opt[Boolean]('m', "allow_multiple_queries")
+  opt[Unit]('m', "allow_multiple_queries")
     .text("When specified, allow multiple queries. The default value is false.")
-    .action((x,c) => c.copy(allowMultipleQueries = x))
+    .action((x,c) => c.copy(allowMultipleQueries = true))
 
   // Standard Options
 
-  opt[Boolean]("allow_large_results")
+  opt[Unit]("allow_large_results")
     .text("When specified, enables large destination table sizes for legacy SQL queries.")
-    .action((x,c) => c.copy(allowLargeResults = x))
+    .action((x,c) => c.copy(allowLargeResults = true))
 
-  opt[Boolean]("append_table")
+  opt[Unit]("append_table")
     .text("When specified, append data to a destination table. The default value is false.")
-    .action((x,c) => c.copy(appendTable = x))
+    .action((x,c) => c.copy(appendTable = true))
 
-  opt[Boolean]("batch")
+  opt[Unit]("batch")
     .text("When specified, run the query in batch mode. The default value is false.")
-    .action((x,c) => c.copy(batch = x))
+    .action((x,c) => c.copy(batch = true))
 
   opt[Seq[String]]("clustering_fields")
     .text("If specified, a comma-separated list of columns is used to cluster the destination table in a query. This flag must be used with the time partitioning flags to create either an ingestion-time partitioned table or a table partitioned on a DATE or TIMESTAMP column. When specified, the table is first partitioned, and then it is clustered using the supplied columns.")
@@ -76,9 +76,9 @@ object QueryOptionParser extends OptionParser[QueryConfig]("query") with ArgPars
     .text("The name of the destination table for writing query results. The default value is ''")
     .action((x,c) => c.copy(destinationTable = x))
 
-  opt[Boolean]("dryRun")
+  opt[Unit]("dryRun")
     .text("When specified, the query is validated but not run.")
-    .action((x,c) => c.copy(dryRun = x))
+    .action((x,c) => c.copy(dryRun = true))
 
   opt[String]("external_table_definition")
     .text("The table name and schema definition used in an external table query. The schema can be a path to a local JSON schema file or a comma-separated list of column definitions in the form [FIELD]:[DATA_TYPE],[FIELD]:[DATA_TYPE]. The format for supplying the table name and schema is: [TABLE]::[PATH_TO_FILE] or [TABLE]::[SCHEMA]@[SOURCE_FORMAT]=[CLOUD_STORAGE_URI]. Repeat this flag to query multiple tables.")
@@ -117,13 +117,13 @@ object QueryOptionParser extends OptionParser[QueryConfig]("query") with ArgPars
     }
     .action((x,c) => c.copy(parameters = x))
 
-  opt[Boolean]("replace")
+  opt[Unit]("replace")
     .text("If specified, overwrite the destination table with the query results. The default value is false.")
-    .action((x,c) => c.copy(replace = x))
+    .action((x,c) => c.copy(replace = true))
 
-  opt[Boolean]("require_cache")
+  opt[Unit]("require_cache")
     .text("If specified, run the query only if results can be retrieved from the cache.")
-    .action((x,c) => c.copy(requireCache = x))
+    .action((x,c) => c.copy(requireCache = true))
 
   opt[Boolean]("require_partition_filter")
     .text("If specified, a partition filter is required for queries over the supplied table. This flag can only be used with a partitioned table.")
@@ -164,18 +164,18 @@ object QueryOptionParser extends OptionParser[QueryConfig]("query") with ArgPars
     .text("When specified, caches the query results. The default value is true.")
     .action((x,c) => c.copy(useCache = x))
 
-  opt[Boolean]("use_legacy_sql")
+  opt[Unit]("use_legacy_sql")
     .text("When set to false, runs a standard SQL query. The default value is false (uses Standard SQL).")
-    .action((x,c) => c.copy(useLegacySql = x))
+    .action((x,c) => c.copy(useLegacySql = true))
 
   // Global options
   opt[String]("dataset_id")
     .text(GlobalConfig.datasetIdText)
     .action((x,c) => c.copy(datasetId = x))
 
-  opt[Boolean]("debug_mode")
+  opt[Unit]("debug_mode")
     .text(GlobalConfig.debugModeText)
-    .action((x,c) => c.copy(debugMode = x))
+    .action((x,c) => c.copy(debugMode = true))
 
   opt[String]("job_id")
     .text(GlobalConfig.jobIdText)

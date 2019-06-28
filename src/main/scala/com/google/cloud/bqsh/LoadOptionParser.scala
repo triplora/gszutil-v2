@@ -42,17 +42,17 @@ object LoadOptionParser extends OptionParser[LoadConfig]("load") with ArgParser 
     .text("""Comma-separated list of column definitions in the form [FIELD]:[DATA_TYPE],[FIELD]:[DATA_TYPE].""")
     .action((x,c) => c.copy(schema = x))
 
-  opt[Boolean]("allow_jagged_rows")
+  opt[Unit]("allow_jagged_rows")
     .text("""When specified, allow missing trailing optional columns in CSV data.""")
-    .action((x,c) => c.copy(allow_jagged_rows = x))
+    .action((x,c) => c.copy(allow_jagged_rows = true))
 
-  opt[Boolean]("allow_quoted_newlines")
+  opt[Unit]("allow_quoted_newlines")
     .text("""When specified, allow quoted newlines in CSV data.""")
-    .action((x,c) => c.copy(allow_quoted_newlines = x))
+    .action((x,c) => c.copy(allow_quoted_newlines = true))
 
-  opt[Boolean]("autodetect")
+  opt[Unit]("autodetect")
   .text("""When specified, enable schema auto-detection for CSV and JSON data.""")
-    .action((x,c) => c.copy(autodetect = x))
+    .action((x,c) => c.copy(autodetect = true))
 
   opt[String]("destination_kms_key")
     .text("""The Cloud KMS key for encryption of the destination table data.""")
@@ -67,9 +67,9 @@ ISO-8859-1 (also known as Latin-1) UTF-8""")
     .text("""The character that indicates the boundary between columns in the data. Both \t and tab are allowed for tab delimiters.""")
     .action((x,c) => c.copy(field_delimiter = x))
 
-  opt[Boolean]("ignore_unknown_values")
+  opt[Unit]("ignore_unknown_values")
     .text("""When specified, allow and ignore extra, unrecognized values in CSV or JSON data.""")
-    .action((x,c) => c.copy(ignore_unknown_values = x))
+    .action((x,c) => c.copy(ignore_unknown_values = true))
 
   opt[Int]("max_bad_records")
     .text("""An integer that specifies the maximum number of bad records allowed before the entire job fails. The default value is 0. At most, five errors of any type are returned regardless of the --max_bad_records value.""")
@@ -91,13 +91,13 @@ ISO-8859-1 (also known as Latin-1) UTF-8""")
     .text("""The quote character to use to enclose records. The default value is " which indicates no quote character.""")
     .action((x,c) => c.copy(quote = x))
 
-  opt[Boolean]("replace")
+  opt[Unit]("replace")
     .text("""When specified, existing data is erased when new data is loaded. The default value is false.""")
-    .action((x,c) => c.copy(replace = x))
+    .action((x,c) => c.copy(replace = true))
 
-  opt[Boolean]("append_table")
+  opt[Unit]("append_table")
     .text("When specified, append data to a destination table. The default value is false.")
-    .action((x,c) => c.copy(append = x))
+    .action((x,c) => c.copy(append = true))
 
   opt[Seq[String]]("schema")
     .text("""Comma-separated list of column definitions in the form [FIELD]:[DATA_TYPE],[FIELD]:[DATA_TYPE].""")

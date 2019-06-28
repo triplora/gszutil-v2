@@ -40,17 +40,20 @@ class ORCFileWriter(args: ORCFileWriterArgs) extends Actor with Logging {
   private var writer: Writer = _
   private val stats = new FileSystem.Statistics(SimpleGCSFileSystem.Scheme)
 
-  override def preStart(): Unit = {
+  private final val defaultConfig = {
     val c = new Configuration(false)
     OrcConf.COMPRESS.setString(c, "ZLIB")
+    OrcConf.COMPRESSION_STRATEGY.setString(c, "COMPRESSION")
     OrcConf.ENABLE_INDEXES.setBoolean(c, false)
     OrcConf.OVERWRITE_OUTPUT_FILE.setBoolean(c, true)
     OrcConf.MEMORY_POOL.setDouble(c, 0.5d)
     OrcConf.BUFFER_SIZE.setLong(c, 512*1024)
-    OrcConf.COMPRESSION_STRATEGY.setString(c, "COMPRESSION")
+    c
+  }
 
+  override def preStart(): Unit = {
     val writerOptions = OrcFile
-      .writerOptions(c)
+      .writerOptions(defaultConfig)
       .setSchema(copyBook.ORCSchema)
       .memory(NoOpMemoryManager)
       .compress(CompressionKind.ZLIB)
@@ -67,6 +70,9 @@ class ORCFileWriter(args: ORCFileWriterArgs) extends Actor with Logging {
       bytesSinceLastFlush += x.limit
       val t0 = System.currentTimeMillis
       reader.readOrc(x, writer)
+      if (x.remaining > 0) {
+        logger.warn(s"discarding ${x.remaining} bytes remaining in buffer")
+      }
       if (bytesSinceLastFlush > 32L * 1024L * 1024L) {
         writer match {
           case w: WriterImpl =>

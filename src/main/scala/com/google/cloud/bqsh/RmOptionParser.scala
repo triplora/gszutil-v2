@@ -40,24 +40,24 @@ object RmOptionParser extends OptionParser[RmConfig]("rm") with ArgParser[RmConf
     .text("[PROJECT_ID]:[DATASET].[TABLE]")
     .action((x,c) => c.copy(tablespec = x))
 
-  opt[Boolean]('d', "dataset")
+  opt[Unit]('d', "dataset")
     .text("When specified, deletes a dataset. The default value is false.")
-    .action((x,c) => c.copy(dataset = x))
+    .action((x,c) => c.copy(dataset = true))
 
-  opt[Boolean]('f', "force")
+  opt[Unit]('f', "force")
     .text("When specified, deletes a table, view, model, or dataset without prompting. The default value is false.")
 
   opt[Boolean]('m', "model")
     .text("When specified, deletes a BigQuery ML model.")
     .action((x,c) => c.copy(model = x))
 
-  opt[Boolean]('r', "recursive")
+  opt[Unit]('r', "recursive")
     .text("When specified, deletes a dataset and any tables, table data, or models in it. The default value is false.")
-    .action((x,c) => c.copy(recursive = x))
+    .action((x,c) => c.copy(recursive = true))
 
-  opt[Boolean]('t', "table")
+  opt[Unit]('t', "table")
     .text("When specified, deletes a table. The default value is false.")
-    .action((x,c) => c.copy(table = x))
+    .action((x,c) => c.copy(table = true))
 
   /*
   opt[Boolean]("transfer_config")
@@ -70,9 +70,9 @@ object RmOptionParser extends OptionParser[RmConfig]("rm") with ArgParser[RmConf
     .text(GlobalConfig.datasetIdText)
     .action((x,c) => c.copy(datasetId = x))
 
-  opt[Boolean]("debug_mode")
+  opt[Unit]("debug_mode")
     .text(GlobalConfig.debugModeText)
-    .action((x,c) => c.copy(debugMode = x))
+    .action((x,c) => c.copy(debugMode = true))
 
   opt[String]("job_id")
     .text(GlobalConfig.jobIdText)

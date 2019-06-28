@@ -18,6 +18,7 @@ package com.google.cloud.gszutil
 import java.nio.ByteBuffer
 import java.nio.charset.Charset
 
+import com.google.cloud.gszutil.Util.Logging
 import com.google.common.base.Charsets
 import org.apache.hadoop.hive.common.`type`.HiveDecimal
 import org.apache.hadoop.hive.ql.exec.vector.{BytesColumnVector, ColumnVector, DecimalColumnVector, LongColumnVector}
@@ -25,7 +26,7 @@ import org.apache.orc.TypeDescription
 import org.apache.orc.TypeDescription.Category
 
 
-object Decoding {
+object Decoding extends Logging {
   final val CP1047: Charset = Charset.forName("CP1047")
 
   final val EBCDIC: Array[Byte] = {
@@ -79,10 +80,6 @@ object Decoding {
     def typeDescription: TypeDescription
   }
 
-  final val StringTypeDescription = new TypeDescription(Category.STRING)
-  final val LongTypeDescription = new TypeDescription(Category.LONG)
-  final val DecimalTypeDescription = new TypeDescription(Category.DECIMAL)
-
   // decodes EBCDIC to UTF8 bytes
   case class StringDecoder(override val size: Int) extends Decoder[Array[Byte]] {
     override def get(buf: ByteBuffer, row: ColumnVector, i: Int): Unit = {
@@ -100,7 +97,7 @@ object Decoding {
       new BytesColumnVector(maxSize)
 
     override def typeDescription: TypeDescription =
-      StringTypeDescription
+      new TypeDescription(Category.STRING)
   }
 
   case class LongDecoder(override val size: Int) extends Decoder[Long] {
@@ -120,7 +117,7 @@ object Decoding {
       new LongColumnVector(maxSize)
 
     override def typeDescription: TypeDescription =
-      LongTypeDescription
+      new TypeDescription(Category.LONG)
   }
 
   case class DecimalDecoder(precision: Int, scale: Int) extends Decoder[BigDecimal] {
@@ -136,7 +133,7 @@ object Decoding {
       new DecimalColumnVector(maxSize, precision, scale)
 
     override def typeDescription: TypeDescription =
-      DecimalTypeDescription
+      new TypeDescription(Category.DECIMAL)
   }
 
   sealed trait PIC {
@@ -207,7 +204,9 @@ object Decoding {
         val typ1 = typ
           .replaceFirst("""\s+COMP""", " COMP")
           .replaceFirst("""\(0""", """\(""")
-        Option(CopyBookField(name.trim, typeMap(typ1)))
+        val pic = typeMap(typ1)
+        logger.debug(s"parsed $s as ${pic}")
+        Option(CopyBookField(name.trim, pic))
       case titleRegex(name) =>
         Option(CopyBookTitle(name))
       case titleRegex2(name) =>

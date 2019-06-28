@@ -66,9 +66,9 @@ object MkOptionParser extends OptionParser[MkConfig]("mk") with ArgParser[MkConf
         |The default value is ''.""".stripMargin)
   */
 
-  opt[Boolean]('d',"dataset")
+  opt[Unit]('d',"dataset")
     .text("When specified, creates a dataset. The default value is false.")
-    .action{(x,c) => c.copy(dataset = x)}
+    .action{(x,c) => c.copy(dataset = true)}
 
   opt[Int]("default_partition_expiration")
     .text("An integer that specifies the default expiration time, in seconds, for all partitions in newly-created partitioned tables in the dataset. A partition's expiration time is set to the partition's UTC date plus the integer value. If this property is set, it overrides the dataset-level default table expiration if it exists. If you supply the --time_partitioning_expiration flag when you create or update a partitioned table, the table-level partition expiration takes precedence over the dataset-level default partition expiration.")
@@ -121,9 +121,9 @@ object MkOptionParser extends OptionParser[MkConfig]("mk") with ArgParser[MkConf
       .filter(x => x.getScheme == "gs" && x.getAuthority.nonEmpty && x.getPath.nonEmpty)
   }
 
-  opt[Boolean]('f', "force")
+  opt[Unit]('f', "force")
     .text("When specified, if a resource already exists, the exit code is 0. The default value is false.")
-    .action{(x,c) => c.copy(force = x)}
+    .action{(x,c) => c.copy(force = true)}
 
   opt[Seq[String]]("label")
     .text("A label to set on the table. The format is [KEY]:[VALUE]. Repeat this flag to specify multiple labels.")
@@ -150,9 +150,9 @@ object MkOptionParser extends OptionParser[MkConfig]("mk") with ArgParser[MkConf
     .text("""A timestamp that specifies the start time for a range of transfer runs. The format for the timestamp is RFC3339 UTC "Zulu ".""")
   */
 
-  opt[Boolean]('t', "table")
+  opt[Unit]('t', "table")
     .text("When specified, create a table. The default value is false.")
-    .action{(x,c) => c.copy(table = x)}
+    .action{(x,c) => c.copy(table = true)}
 
   /*
   opt[String]("target_dataset")
@@ -179,13 +179,13 @@ object MkOptionParser extends OptionParser[MkConfig]("mk") with ArgParser[MkConf
     .text("When specified, creates transfer runs for a time range. The default value is false.")
   */
 
-  opt[Boolean]("use_legacy_sql")
+  opt[Unit]("use_legacy_sql")
     .text("When set to false, uses a standard SQL query to create a view. The default value is false (uses Standard SQL).")
-    .action{(x,c) => c.copy(useLegacySql = x)}
+    .action{(x,c) => c.copy(useLegacySql = true)}
 
-  opt[Boolean]("view")
+  opt[Unit]("view")
     .text("When specified, creates a view. The default value is false.")
-    .action{(x,c) => c.copy(view = x)}
+    .action{(x,c) => c.copy(view = true)}
 
   /*
   opt[Seq[String]]("view_udf_resource")
@@ -198,9 +198,9 @@ object MkOptionParser extends OptionParser[MkConfig]("mk") with ArgParser[MkConf
     .text(GlobalConfig.datasetIdText)
     .action((x,c) => c.copy(datasetId = x))
 
-  opt[Boolean]("debug_mode")
+  opt[Unit]("debug_mode")
     .text(GlobalConfig.debugModeText)
-    .action((x,c) => c.copy(debugMode = x))
+    .action((x,c) => c.copy(debugMode = true))
 
   opt[String]("job_id")
     .text(GlobalConfig.jobIdText)

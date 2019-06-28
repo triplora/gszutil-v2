@@ -35,8 +35,8 @@ object Util {
     protected lazy val logger: Logger = LogManager.getLogger(this.getClass.getCanonicalName.stripSuffix("$"))
   }
 
-  def configureLogging(): Unit = {
-    val debug = sys.env.getOrElse("BQSH_ROOT_LOGGER","").contains("DEBUG")
+  def configureLogging(debugOverride: Boolean = false): Unit = {
+    val debug = sys.env.getOrElse("BQSH_ROOT_LOGGER","").contains("DEBUG") || debugOverride
     val rootLogger = LogManager.getRootLogger
     rootLogger.addAppender(new ConsoleAppender(new PatternLayout("%d{ISO8601} %-5p %c %x - %m%n")))
     LogManager.getLogger("org.apache.orc.impl.MemoryManagerImpl").setLevel(Level.ERROR)

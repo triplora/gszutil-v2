@@ -32,51 +32,20 @@ object GsUtilOptionParser extends OptionParser[GsUtilConfig]("gsutil") with ArgP
   cmd("cp")
     .text("Upload Binary MVS Dataset to GCS")
 
-    .children(
-      arg[String]("source")
-        .required()
-        .text("Source DDNAME")
-        .action((x,c) => c.copy(source = x)),
-
-      arg[String]("destinationUri")
-        .required()
-        .text("Destination URI (gs://bucket/path)")
-        .validate{x =>
-          val uri = new URI(x)
-          if (uri.getScheme != "gs" || uri.getAuthority.isEmpty)
-            failure("invalid GCS URI")
-          else
-            success
-        }
-        .action((x, c) => c.copy(destinationUri = x))
-    )
-
-
   cmd("rm")
     .text("Delete objects in GCS")
 
-    .children(
-      arg[String]("destinationUri")
-        .required()
-        .text("Destination URI (gs://bucket/path)")
-        .validate{x =>
-          val uri = new URI(x)
-          if (uri.getScheme != "gs" || uri.getAuthority.isEmpty)
-            failure("invalid GCS URI")
-          else
-            success
-        }
-        .action((x, c) => c.copy(destinationUri = x)),
-
-      opt[Boolean]('r', "recursive")
-        .optional()
-        .text("Delete recursively (default: false")
-        .action((x, c) => c.copy(recursive = x)),
-
-      opt[Boolean]('f', "force")
-        .optional()
-        .text("Delete without interaction (default: true)")
-    )
+  arg[String]("destinationUri")
+    .required()
+    .text("Destination URI (gs://bucket/path)")
+    .validate{x =>
+      val uri = new URI(x)
+      if (uri.getScheme != "gs" || uri.getAuthority.isEmpty)
+        failure("invalid GCS URI")
+      else
+        success
+    }
+    .action((x, c) => c.copy(destinationUri = x))
 
   opt[Int]("partSizeMB")
     .action{(x,c) => c.copy(partSizeMB = x)}

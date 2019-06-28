@@ -19,27 +19,42 @@ package com.google.cloud.bqsh.cmd
 import com.google.cloud.bigquery.JobStatistics.LoadStatistics
 import com.google.cloud.bigquery._
 import com.google.cloud.bqsh.{ArgParser, BQ, Command, LoadConfig, LoadOptionParser}
+import com.google.cloud.gszutil.Util
+import com.google.cloud.gszutil.Util.Logging
+import com.google.common.base.Preconditions
 import com.ibm.jzos.ZFileProvider
 
-object Load extends Command[LoadConfig] {
+object Load extends Command[LoadConfig] with Logging {
   override val name: String = "bq load"
   override val parser: ArgParser[LoadConfig] = LoadOptionParser
 
   override def run(cfg: LoadConfig, zos: ZFileProvider): Result = {
     val creds = zos.getCredentialProvider().getCredentials
     val bq = BQ.defaultClient(cfg.projectId, cfg.location, creds)
-    val job = bq.create(JobInfo.of(configureLoadJob(cfg)))
-    job.getStatistics[JobStatistics] match {
-      case x: LoadStatistics =>
-        Result.withExportLong("ACTIVITYCOUNT",x.getOutputRows)
-      case _ =>
-        Result.Success
+    logger.info("configuring load job")
+    val jobConfig = configureLoadJob(cfg)
+    logger.info("submitting load job")
+    val jobId = JobId.of(s"bq_load_${System.currentTimeMillis()}_${Util.randString(5)}")
+    logger.info("submitting load job")
+    val job = bq.create(JobInfo.of(jobId, jobConfig))
+    val completed = BQ.await(job, jobId, 3600)
+    val status = completed.getStatus
+    if (status!= null) {
+      logger.info(s"job ${jobId.getJob} has status ${status.getState}")
+      if (status.getError != null){
+        if (status.getError.getMessage != null) {
+          logger.error(s"BigQuery error: ${status.getError.getMessage}")
+          return Result.Failure(status.getError.getMessage)
+        }
+      }
     }
+    Result.Success
   }
 
   def configureLoadJob(cfg: LoadConfig): LoadJobConfiguration = {
     import scala.collection.JavaConverters.seqAsJavaListConverter
     val destinationTable = BQ.resolveTableSpec(cfg.tablespec, cfg.projectId, cfg.datasetId)
+    logger.info(s"destination table=${destinationTable.getTable} sourceUris = ${cfg.path.mkString(",")}")
     val b = LoadJobConfiguration
       .newBuilder(destinationTable, cfg.path.asJava)
 
@@ -75,6 +90,7 @@ object Load extends Command[LoadConfig] {
           x
       }
 
+      logger.info(s"setting format options with type ${formatOptions.getType}")
       b.setFormatOptions(formatOptions)
 
       if (formatOptions.getType == "AVRO")
@@ -105,12 +121,12 @@ object Load extends Command[LoadConfig] {
       b.setTimePartitioning(timePartitioning.build())
     }
 
-    val writeDisposition =
-      if (cfg.replace) JobInfo.WriteDisposition.WRITE_TRUNCATE
-      else if (cfg.append) JobInfo.WriteDisposition.WRITE_APPEND
-      else JobInfo.WriteDisposition.WRITE_EMPTY
-
-    b.setWriteDisposition(writeDisposition)
+    if (cfg.replace)
+      b.setWriteDisposition(JobInfo.WriteDisposition.WRITE_TRUNCATE)
+    else if (cfg.append)
+      b.setWriteDisposition(JobInfo.WriteDisposition.WRITE_APPEND)
+    else
+      b.setWriteDisposition(JobInfo.WriteDisposition.WRITE_EMPTY)
 
     val schemaUpdateOptions = BQ.parseSchemaUpdateOption(cfg.schema_update_option)
     if (schemaUpdateOptions.size() > 0)

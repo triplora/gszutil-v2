@@ -23,6 +23,7 @@ import org.scalatest.FlatSpec
 
 class CopyBookSpec extends FlatSpec with Logging {
   "CopyBook" should "parse" in {
+    Util.configureLogging(true)
     for (name <- (1 to 4).map(i => s"test$i.cpy")){
       val cb1 = CopyBook(Util.readS(name))
       val s = cb1.Fields.map(_.toString).mkString("\n")
@@ -56,7 +57,8 @@ class CopyBookSpec extends FlatSpec with Logging {
       "PIC S9(6)V99 COMP-3." -> PicDecimal(6,2),
       "PIC S9(13)V99 COMP-3" -> PicDecimal(13,2),
       "PIC S9(7)V99 COMP-3" -> PicDecimal(7,2),
-      "PIC S9(7)V999 COMP-3" -> PicDecimal(7,3)
+      "PIC S9(7)V999 COMP-3" -> PicDecimal(7,3),
+      "PIC S9(16)V9(2) COMP-3" -> PicDecimal(16,2)
     ).foreach{x =>
       assert(Decoding.typeMap(x._1) == x._2)
     }

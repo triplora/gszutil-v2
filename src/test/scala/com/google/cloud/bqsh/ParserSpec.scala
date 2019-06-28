@@ -81,6 +81,30 @@ class ParserSpec extends FlatSpec {
     assert(parsed.isDefined)
   }
 
+  "GsUtilRmOptionParser" should "parse" in {
+    val args = Seq(
+      "gsutil",
+      "rm",
+      "gs://bucket/path"
+    )
+    val parsed1 = BqshParser.parse(args)
+    assert(parsed1.isDefined)
+    val parsed = GsUtilOptionParser.parse(parsed1.get.args.drop(1))
+    assert(parsed.isDefined)
+  }
+
+  "GsUtilCpOptionParser" should "parse" in {
+    val args = Seq(
+      "gsutil",
+      "cp",
+      "gs://bucket/path"
+    )
+    val parsed1 = BqshParser.parse(args)
+    assert(parsed1.isDefined)
+    val parsed = GsUtilOptionParser.parse(parsed1.get.args.drop(1))
+    assert(parsed.isDefined)
+  }
+
   "Bqsh" should "split SQL" in {
     val queryString =
       """-- comment

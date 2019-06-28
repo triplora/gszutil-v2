@@ -18,6 +18,7 @@ package com.google.cloud.bqsh.cmd
 
 import com.google.cloud.bigquery.JobStatistics.QueryStatistics
 import com.google.cloud.bigquery._
+import com.google.cloud.bqsh.BQ.resolveDataset
 import com.google.cloud.bqsh.{ArgParser, BQ, Bqsh, Command, QueryConfig, QueryOptionParser}
 import com.google.cloud.gszutil.Util
 import com.google.cloud.gszutil.Util.Logging
@@ -32,7 +33,7 @@ object Query extends Command[QueryConfig] with Logging {
     val bq = BQ.defaultClient(cfg.projectId, cfg.location, creds)
 
     logger.debug(s"Reading query from QUERY")
-    val queryString = zos.readDDString("QUERY", "\n")
+    val queryString = zos.readDDString("QUERY", " \n")
 
     logger.debug(s"Read query:\n$queryString")
     require(queryString.nonEmpty, "query must not be empty")
@@ -106,10 +107,14 @@ object Query extends Command[QueryConfig] with Logging {
 
     val b = QueryJobConfiguration.newBuilder(query)
       .setDryRun(cfg.dryRun)
-      .setDefaultDataset(cfg.datasetId)
       .setUseLegacySql(cfg.useLegacySql)
       .setUseQueryCache(cfg.useCache)
-      .setCreateDisposition(if (cfg.createIfNeeded) JobInfo.CreateDisposition.CREATE_IF_NEEDED else JobInfo.CreateDisposition.CREATE_NEVER)
+
+    if (cfg.datasetId.nonEmpty)
+      b.setDefaultDataset(resolveDataset(cfg.datasetId, cfg.projectId))
+
+    if (cfg.createIfNeeded)
+      b.setCreateDisposition(JobInfo.CreateDisposition.CREATE_IF_NEEDED)
 
     if (cfg.useLegacySql)
       b.setAllowLargeResults(cfg.allowLargeResults)

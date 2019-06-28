@@ -1,13 +1,22 @@
-     O   05 CUSTOMER-RCD.
-     IO    10 CUSTOMER-NAME.
-             15 LAST-NAME    PIC X(16).
-             15 FIRST-NAME   PIC X(16).
-           10 CUSTOMER-HOME-ADDRESS.
-             15 STREET       PIC X(30).
-             15 CITY         PIC X(20).
-             15 STATE        PIC X(2).
-             15 ZIP          PIC X(10).
-           10 CUSTOMER-PHONE-NUMBER    PIC X(10).
-           10 CUSTOMER-CREDIT-LIMIT    PIC S9(6)V99 COMP-3.
-           10 CUSTOMER-ACCT-BALANCE    PIC S9(13)V99 COMP-3.
-           10 CUSTOMER-INTEREST-RATE   PIC S9(7)V99 COMP-3.
+       01 STORE-ORDER-SUMRY-SOURCE.
+          03 STORE_NBR              PIC S9(9) COMP.
+          03 ORDER_DEPT_NBR         PIC S9(9) COMP.
+          03 WM_YR_WK               PIC S9(4) COMP.
+          03 SS_ORD_CNT             PIC S9(9) COMP.
+          03 SS_ORD_RETL_AMT        PIC S9(16)V9(2) COMP-3.
+          03 SS_ORD_COST_AMT        PIC S9(16)V9(2) COMP-3.
+          03 SS_MN_ORD_CNT          PIC S9(9) COMP.
+          03 SS_MN_ORD_RETL_AMT     PIC S9(16)V9(2) COMP-3.
+          03 SS_MN_ORD_COST_AMT     PIC S9(16)V9(2) COMP-3.
+          03 SS_REPL_ITEM_CNT       PIC S9(9) COMP.
+          03 ASM_INITL_ORD_CNT      PIC S9(9) COMP.
+          03 ASM_FINAL_ORD_CNT      PIC S9(9) COMP.
+          03 ASM_ORD_RETL_AMT       PIC S9(16)V9(2) COMP-3.
+          03 ASM_ORD_COST_AMT       PIC S9(16)V9(2) COMP-3.
+          03 ASM_MN_ORD_CNT         PIC S9(9) COMP.
+          03 ASM_MN_ORD_RETL_AMT    PIC S9(16)V9(2) COMP-3.
+          03 ASM_MN_ORD_COST_AMT    PIC S9(16)V9(2) COMP-3.
+          03 ASM_REPL_ITEM_CNT      PIC S9(9) COMP.
+          03 ASM_MN_DIFF_ORD_QTY    PIC S9(9) COMP.
+          03 ASM_MN_DIFF_RETL_AMT   PIC S9(16)V9(2) COMP-3.
+          03 ASM_MN_DIFF_COST_AMT   PIC S9(16)V9(2) COMP-3.

@@ -18,12 +18,13 @@ package com.google.cloud.bqsh
 
 import com.google.cloud.bqsh.cmd._
 import com.google.cloud.gszutil.Util
+import com.google.cloud.gszutil.Util.Logging
 import com.ibm.jzos.ZFileProvider
 
 import scala.collection.mutable
 import scala.collection.mutable.ListBuffer
 
-object Bqsh {
+object Bqsh extends Logging {
   def main(args: Array[String]): Unit = {
     val zos = ZFileProvider.getProvider()
     zos.init()
@@ -38,9 +39,12 @@ object Bqsh {
     def runWithArgs(args: Seq[String]): Result = {
       System.out.println(s"+ ${args.mkString(" ")}")
       val result = exec(args, env.toMap, zos)
+      val msg = s"${args.mkString(" ")} returned exit code ${result.exitCode}"
+      logger.info(msg)
       env ++= result.env
-      if (result.exitCode != 0 && throwOnError)
-        throw new RuntimeException(result.env.getOrElse("ERRMSG",s"${args.mkString(" ")} returned exit code ${result.exitCode}"))
+      if (result.exitCode != 0 && throwOnError) {
+        throw new RuntimeException(result.env.getOrElse("ERRMSG", msg))
+      }
       result.copy(env = env.toMap)
     }
 
