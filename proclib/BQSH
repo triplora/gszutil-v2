@@ -16,7 +16,8 @@
 //* limitations under the License.
 //*
 //*******************************************************************
-//JAVA EXEC PGM=JVMLDM86,PARM='/+I com.google.cloud.bqsh.Bqsh'
+//JAVA EXEC PGM=JVMLDM86,REGION=0M,
+//  PARM='/+I com.google.cloud.bqsh.Bqsh'
 //SYSPRINT DD SYSOUT=*
 //SYSOUT   DD SYSOUT=*
 //STDOUT   DD SYSOUT=*
@@ -33,6 +34,9 @@
 JH="/usr/lpp/java/alias"
 export JAVA_HOME="$JH"
 export PATH="/bin:$JH/bin"
+
+# Log Level
+export BQSH_ROOT_LOGGER=DEBUG
 
 # Native Libraries
 JL="$JH/lib"

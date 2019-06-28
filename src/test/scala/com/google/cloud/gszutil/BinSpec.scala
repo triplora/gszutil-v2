@@ -73,4 +73,16 @@ class BinSpec extends FlatSpec {
     decoder.get(buf, col, 0)
     assert(col.asInstanceOf[BytesColumnVector].vector(0).sameElements("UI".getBytes(Charsets.UTF_8)))
   }
+
+  it should "read dataset as string" in {
+    val data = Seq("SELECT    ","1         ","FROM DUAL ")
+      .mkString("")
+      .getBytes(Charsets.UTF_8)
+    val result = Util.records2string(data, 10, Charsets.UTF_8, "\n ")
+    val expected =
+      """SELECT
+        | 1
+        | FROM DUAL""".stripMargin
+    assert(result == expected)
+  }
 }

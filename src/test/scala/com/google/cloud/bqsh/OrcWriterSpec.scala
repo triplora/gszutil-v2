@@ -14,12 +14,11 @@
  * limitations under the License.
  */
 
-package com.google.cloud.pso
+package com.google.cloud.bqsh
 
 import java.io.ByteArrayInputStream
 import java.nio.channels.Channels
 
-import com.google.cloud.bqsh.GCS
 import com.google.cloud.gszutil.Util.{DefaultCredentialProvider, Logging}
 import com.google.cloud.gszutil._
 import com.google.cloud.gszutil.orc.WriteORCFile

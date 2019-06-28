@@ -22,7 +22,7 @@ import scopt.OptionParser
 
 import scala.util.Try
 
-object MkOptionParser extends OptionParser[MkConfig]("mk") {
+object MkOptionParser extends OptionParser[MkConfig]("mk") with ArgParser[MkConfig] {
   private val DefaultConfig = MkConfig()
   def parse(args: Seq[String]): Option[MkConfig] = parse(args, DefaultConfig)
 

@@ -15,15 +15,19 @@
  */
 package com.google.cloud.bqsh.cmd
 
-import com.google.auth.oauth2.GoogleCredentials
-import com.google.cloud.bqsh.{GCS, GsUtilConfig}
+import com.google.cloud.bqsh.{ArgParser, Command, GCS, GsUtilConfig, GsUtilOptionParser}
 import com.google.cloud.gszutil.Util.Logging
 import com.google.cloud.gszutil.orc.WriteORCFile
 import com.ibm.jzos.ZFileProvider
 
 
-object Cp extends Logging {
-  def run(c: GsUtilConfig, creds: GoogleCredentials, zos: ZFileProvider): Result = {
+object Cp extends Command[GsUtilConfig] with Logging {
+  override val name: String = "gsutil cp"
+  override val parser: ArgParser[GsUtilConfig] = GsUtilOptionParser
+  def run(c: GsUtilConfig, zos: ZFileProvider): Result = {
+    val creds = zos
+      .getCredentialProvider()
+      .getCredentials
     val copyBook = zos.loadCopyBook(c.copyBook)
     val in = zos.readChannel(c.source, copyBook)
     val batchSize = (c.blocksPerBatch * in.blkSize) / in.lRecl

@@ -65,12 +65,18 @@ protected object ZOS extends Logging {
   }
 
   def readDD(ddName: String): ZRecordReaderT = {
+    logger.debug(s"reading DD $ddName")
     if (!ZFile.ddExists(ddName))
       throw new RuntimeException(s"DD $ddName does not exist")
 
-    val reader: RecordReader = RecordReader.newReaderForDD(ddName)
-    logger.info(s"Reading DD $ddName ${reader.getDsn} with record format ${reader.getRecfm} BLKSIZE ${reader.getBlksize} LRECL ${reader.getLrecl}")
-    new WrappedRecordReader(reader)
+    try {
+      val reader: RecordReader = RecordReader.newReaderForDD(ddName)
+      logger.info(s"Reading DD $ddName ${reader.getDsn} with record format ${reader.getRecfm} BLKSIZE ${reader.getBlksize} LRECL ${reader.getLrecl}")
+      new WrappedRecordReader(reader)
+    } catch {
+      case e: ZFileException =>
+        throw new RuntimeException(s"Failed to open DD:'$ddName'", e)
+    }
   }
 
   def addCCAProvider(): Unit = {

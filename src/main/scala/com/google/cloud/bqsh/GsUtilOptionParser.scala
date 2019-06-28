@@ -21,7 +21,7 @@ import java.net.URI
 import scopt.OptionParser
 
 
-object GsUtilOptionParser extends OptionParser[GsUtilConfig]("gsutil") {
+object GsUtilOptionParser extends OptionParser[GsUtilConfig]("gsutil") with ArgParser[GsUtilConfig] {
   def parse(args: Seq[String]): Option[GsUtilConfig] =
     parse(args, GsUtilConfig())
 

@@ -16,12 +16,15 @@
 
 package com.google.cloud.bqsh.cmd
 
-import com.google.auth.oauth2.GoogleCredentials
 import com.google.cloud.bigquery.DatasetId
-import com.google.cloud.bqsh.{BQ, RmConfig}
+import com.google.cloud.bqsh.{ArgParser, BQ, Command, RmConfig, RmOptionParser}
+import com.ibm.jzos.ZFileProvider
 
-object Rm {
-  def run(c: RmConfig, creds: GoogleCredentials): Result = {
+object Rm extends Command[RmConfig] {
+  override val name: String = "bq rm"
+  override val parser: ArgParser[RmConfig] = RmOptionParser
+  override def run(c: RmConfig, zos: ZFileProvider): Result = {
+    val creds = zos.getCredentialProvider().getCredentials
     val bq = BQ.defaultClient(c.projectId, c.location, creds)
 
     if (c.dataset) {

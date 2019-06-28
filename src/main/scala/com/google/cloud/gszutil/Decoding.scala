@@ -79,6 +79,10 @@ object Decoding {
     def typeDescription: TypeDescription
   }
 
+  final val StringTypeDescription = new TypeDescription(Category.STRING)
+  final val LongTypeDescription = new TypeDescription(Category.LONG)
+  final val DecimalTypeDescription = new TypeDescription(Category.DECIMAL)
+
   // decodes EBCDIC to UTF8 bytes
   case class StringDecoder(override val size: Int) extends Decoder[Array[Byte]] {
     override def get(buf: ByteBuffer, row: ColumnVector, i: Int): Unit = {
@@ -96,7 +100,7 @@ object Decoding {
       new BytesColumnVector(maxSize)
 
     override def typeDescription: TypeDescription =
-      new TypeDescription(Category.STRING)
+      StringTypeDescription
   }
 
   case class LongDecoder(override val size: Int) extends Decoder[Long] {
@@ -116,7 +120,7 @@ object Decoding {
       new LongColumnVector(maxSize)
 
     override def typeDescription: TypeDescription =
-      new TypeDescription(Category.LONG)
+      LongTypeDescription
   }
 
   case class DecimalDecoder(precision: Int, scale: Int) extends Decoder[BigDecimal] {
@@ -132,7 +136,7 @@ object Decoding {
       new DecimalColumnVector(maxSize, precision, scale)
 
     override def typeDescription: TypeDescription =
-      new TypeDescription(Category.DECIMAL)
+      DecimalTypeDescription
   }
 
   sealed trait PIC {
@@ -148,23 +152,42 @@ object Decoding {
     override def getDecoder: Decoder[Array[Byte]] = StringDecoder(size)
   }
 
-  val typeMap: Map[String,PIC] = Map(
-    "PIC S9(4) COMP." -> PicInt(2),
-    "PIC S9(9) COMP." -> PicInt(4),
-    "PIC S9(9)V9(2) COMP-3." -> PicDecimal(9,2),
-    "PIC X." -> PicString(1),
-    "PIC X(8)." -> PicString(8),
-    "PIC X(16)." -> PicString(16),
-    "PIC X(30)." -> PicString(30),
-    "PIC X(20)." -> PicString(20),
-    "PIC X(2)." -> PicString(20),
-    "PIC X(10)." -> PicString(10),
-    "PIC S9(3) COMP-3." -> PicDecimal(9,3),
-    "PIC S9(7) COMP-3." -> PicDecimal(9,7),
-    "PIC S9(9) COMP-3." -> PicDecimal(9,9),
-    "PIC S9(9)V99 COMP-3." -> PicDecimal(9,2),
-    "PIC S9(6)V99." -> PicDecimal(9,2),
-    "PIC S9(13)V99 COMP-3" -> PicDecimal(9,2)
+  private val charRegex = """PIC X\((\d{1,3})\)""".r
+  private val intRegex = """PIC S9\((\d{1,3})\) COMP""".r
+  private val decRegex = """PIC S9\((\d{1,3})\) COMP-3""".r
+  private val decRegex2 = """PIC S9\((\d{1,3})\)V9\((\d{1,3})\) COMP-3""".r
+  private val decRegex3 = """PIC S9\((\d{1,3})\)V(9{1,6}) COMP-3""".r
+  def typeMap(typ: String): PIC = {
+    typ.stripSuffix(".") match {
+      case charRegex(size) =>
+        PicString(size.toInt)
+      case "PIC X" =>
+        PicString(1)
+      case decRegex(scale) =>
+        PicDecimal(9, scale.toInt)
+      case decRegex2(p,s) =>
+        PicDecimal(p.toInt, s.toInt)
+      case decRegex3(p,s) =>
+        PicDecimal(p.toInt, s.length)
+      case "PIC S9 COMP" =>
+        PicInt(2)
+      case intRegex(p) if p.toInt <= 18 =>
+        val x = p.toInt
+        if (x <= 4)
+          PicInt(2)
+        else if (x <= 9)
+          PicInt(4)
+        else
+          PicInt(8)
+      case x =>
+        types(x)
+    }
+  }
+
+  val types: Map[String,PIC] = Map(
+    "PIC S9(6)V99 COMP-3" -> PicDecimal(9,2),
+    "PIC S9(13)V99 COMP-3" -> PicDecimal(9,2),
+    "PIC S9(7)V99 COMP-3" -> PicDecimal(7,2)
   )
 
   sealed trait CopyBookLine
@@ -172,8 +195,9 @@ object Decoding {
   case class CopyBookField(name: String, typ: PIC) extends CopyBookLine
   case class Occurs(n: Int) extends CopyBookLine
 
-  private val titleRegex = """^\d{1,2}\s+([A-Z0-9-]*)\.$""".r
-  private val fieldRegex = """^\d{1,2}\s+([A-Z0-9-]*)\s*(PIC.*)$""".r
+  private val titleRegex = """^\d{1,2}\s+([A-Z0-9-_]*)\.$""".r
+  private val titleRegex2 = """^[A-Z]+\s+\d{1,2}\s+([A-Z0-9-_]*)\.$""".r
+  private val fieldRegex = """^\d{1,2}\s+([A-Z0-9-_]*)\s*(PIC.*)$""".r
   private val occursRegex = """^OCCURS (\d{1,2}) TIMES.$""".r
 
   def parseCopyBookLine(s: String): Option[CopyBookLine] = {
@@ -186,12 +210,14 @@ object Decoding {
         Option(CopyBookField(name.trim, typeMap(typ1)))
       case titleRegex(name) =>
         Option(CopyBookTitle(name))
+      case titleRegex2(name) =>
+        Option(CopyBookTitle(name))
       case occursRegex(n) if n.forall(Character.isDigit) =>
         Option(Occurs(n.toInt))
-      case x: String if x.isEmpty => None
-      case _ =>
-        System.out.println(s"'$f' did not match a regex")
+      case x: String if x.isEmpty =>
         None
+      case _ =>
+        throw new RuntimeException(s"'$f' did not match a regex")
     }
   }
 }

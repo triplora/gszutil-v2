@@ -22,9 +22,9 @@ class ParserSpec extends FlatSpec {
   "MkOptionParser" should "parse" in {
     val args = Seq(
       "bq",
+      "mk",
       "--project_id=project",
       "--dataset_id=dataset",
-      "mk",
       "--external_table_definition=ORC=gs://bucket/bucket/path.orc/*",
       "TABLE_NAME"
     )
@@ -37,9 +37,9 @@ class ParserSpec extends FlatSpec {
   "LoadOptionParser" should "parse" in {
     val args = Seq(
       "bq",
+      "load",
       "--project_id=project",
       "--dataset_id=dataset",
-      "load",
       "--source_format=ORC",
       "TABLE_NAME",
       "gs://bucket/bucket/path.orc/*"
@@ -53,31 +53,45 @@ class ParserSpec extends FlatSpec {
   "QueryOptionParser" should "parse" in {
     val args = Seq(
       "bq",
+      "query",
       "--project_id=project",
       "--dataset_id=dataset",
-      "query",
       "--replace=true",
       "--parameters_from_file=DATE::DDNAME",
       "--destination_table=TABLE_NAME"
     )
     val parsed1 = BqshParser.parse(args)
     assert(parsed1.isDefined)
-    val parsed = QueryOptionParser.parse(parsed1.get.args)
+    val parsed = QueryOptionParser.parse(parsed1.get.args.drop(1))
     assert(parsed.isDefined)
   }
 
   "RmOptionParser" should "parse" in {
     val args = Seq(
       "bq",
+      "rm",
       "--project_id=project",
       "--dataset_id=dataset",
-      "rm",
       "--table=true",
       "TABLE_NAME"
     )
     val parsed1 = BqshParser.parse(args)
     assert(parsed1.isDefined)
-    val parsed = RmOptionParser.parse(parsed1.get.args)
+    val parsed = RmOptionParser.parse(parsed1.get.args.drop(1))
     assert(parsed.isDefined)
+  }
+
+  "Bqsh" should "split SQL" in {
+    val queryString =
+      """-- comment
+        | SELECT 1 FROM DUAL;
+        | SELECT 2 FROM DUAL;
+        |""".stripMargin
+    val split = Bqsh.splitSQL(queryString)
+    val expected = Seq(
+      "-- comment\n SELECT 1 FROM DUAL",
+      "SELECT 2 FROM DUAL"
+    )
+    assert(split == expected)
   }
 }

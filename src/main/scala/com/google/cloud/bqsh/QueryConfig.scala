@@ -21,7 +21,7 @@ case class QueryConfig(
   timeoutMinutes: Int = 60,
   parametersFromFile: Seq[String] = Seq.empty,
   createIfNeeded: Boolean = true,
-  queryDD: String = "QUERY",
+  allowMultipleQueries: Boolean = false,
 
   // Standard Options
   allowLargeResults: Boolean = true,

@@ -14,4 +14,4 @@
           03 THU-QTY             PIC S9(9) COMP.
           03 FRI-QTY             PIC S9(9) COMP.
           03 DBC-LOCATION        PIC X.
-          03 PROCESS-TYPE-FLAG   PIC X.
+          03 PROCESS-TYPE-FLAG   PIC X(08).

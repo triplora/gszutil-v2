@@ -30,7 +30,7 @@ object IBM extends ZFileProvider with Logging {
   }
   override def readChannel(dd: String, copyBook: CopyBook): DDChannel = {
     val rr = ZOS.readDD(dd)
-    require(rr.lRecl == copyBook.LRECL)
+    require(rr.lRecl == copyBook.LRECL, s"Copybook LRECL ${copyBook.LRECL} doesn't match DSN LRECL ${rr.lRecl}")
     DDChannel(new ZChannel(rr), rr.lRecl, rr.blkSize)
   }
 
@@ -43,22 +43,26 @@ object IBM extends ZFileProvider with Logging {
     new String(in, Decoding.CP1047)
   }
 
-  override def readDDString(dd: String): String = {
+  override def readDDString(dd: String, recordSeparator: String): String = {
     val in = readDD(dd)
     val bytes = Util.readAllBytes(new ZChannel(in))
-    bytes.grouped(in.lRecl)
-      .map(new String(_, Decoding.CP1047).trim)
-      .mkString("\n")
+    Util.records2string(bytes, in.lRecl, Decoding.CP1047, recordSeparator)
   }
 
-  override def getCredentialProvider(keyFileDD: String): CredentialProvider = {
-    val in = Channels.newInputStream(new ZChannel(readDD(keyFileDD)))
-    val bytes = ByteStreams.toByteArray(in)
-    new GoogleCredentialsProvider(bytes)
+  private var cp: CredentialProvider = _
+
+  override def getCredentialProvider(): CredentialProvider = {
+    if (cp != null) cp
+    else {
+      val in = Channels.newInputStream(new ZChannel(readDD("KEYFILE")))
+      val bytes = ByteStreams.toByteArray(in)
+      cp = new GoogleCredentialsProvider(bytes)
+      cp
+    }
   }
 
   override def loadCopyBook(dd: String): CopyBook = {
-    val copyBook = CopyBook(readDDString(dd))
+    val copyBook = CopyBook(readDDString(dd, "\n"))
     logger.info(s"Loaded copy book with LRECL=${copyBook.LRECL} FIELDS=${copyBook.FieldNames.mkString(",")}```\n${copyBook.raw}\n```")
     copyBook
   }

@@ -18,32 +18,18 @@ package com.google.cloud.gszutil
 import java.io.{ByteArrayInputStream, ByteArrayOutputStream, InputStream}
 import java.nio.ByteBuffer
 import java.nio.channels.{Channels, ReadableByteChannel, WritableByteChannel}
-import java.nio.file.{Files, Paths}
-import java.security.MessageDigest
-import java.util.zip.GZIPOutputStream
+import java.nio.charset.Charset
 
 import com.google.auth.oauth2.GoogleCredentials
 import com.google.cloud.storage.BlobInfo
 import com.google.common.base.Charsets
 import com.google.common.collect.ImmutableSet
-import com.google.common.hash.HashCode
 import com.google.common.io.{BaseEncoding, Resources}
 import org.apache.log4j._
 
-import scala.util.{Failure, Random, Try}
+import scala.util.Random
 
 object Util {
-  def parseUri(gsUri: String): (String,String) = {
-    if (gsUri.substring(0, 5) != "gs://") {
-      ("", "")
-    } else {
-      val dest = gsUri.substring(5, gsUri.length)
-      val bucket = dest.substring(0, dest.indexOf('/'))
-      val path = dest.substring(dest.indexOf('/')+1, dest.length)
-      (bucket, path)
-    }
-  }
-
   trait Logging {
     @transient
     protected lazy val logger: Logger = LogManager.getLogger(this.getClass.getCanonicalName.stripSuffix("$"))
@@ -75,19 +61,6 @@ object Util {
   val BigQueryScope = "https://www.googleapis.com/auth/bigquery"
   final val Scopes = ImmutableSet.of(StorageScope, BigQueryScope)
 
-  def readNio(path: String): Array[Byte] = {
-    Files.readAllBytes(Paths.get(path))
-  }
-
-  def printException[T](x: Try[T]): Unit = {
-    x match {
-      case Failure(exception) =>
-        System.err.println(exception.getMessage)
-        exception.printStackTrace(System.err)
-      case _ =>
-    }
-  }
-
   trait CredentialProvider {
     def getCredentials: GoogleCredentials
   }
@@ -114,51 +87,6 @@ object Util {
     }
   }
 
-  class CountingChannel(out: WritableByteChannel) extends WritableByteChannel {
-    private var open: Boolean = true
-    private var bytesWritten: Long = 0
-    override def write(src: ByteBuffer): Int = {
-      val n = out.write(src)
-      bytesWritten += n
-      n
-    }
-
-    def getBytesWritten: Long = bytesWritten
-
-    override def isOpen: Boolean = open
-
-    override def close(): Unit = {
-      open = false
-      out.close()
-    }
-  }
-
-  class GZIPChannel(out: WritableByteChannel, size: Int) extends WritableByteChannel {
-    private val countingChannel = new CountingChannel(out)
-    private val gzip = new GZIPOutputStream(Channels.newOutputStream(countingChannel), size, true)
-    private val buf = new Array[Byte](size)
-    private var open: Boolean = true
-    def getBytesWritten: Long = countingChannel.getBytesWritten
-
-    override def write(src: ByteBuffer): Int = {
-      var n = 0
-      while (src.hasRemaining){
-        val m = math.min(src.remaining, buf.length)
-        src.get(buf,0, m)
-        gzip.write(buf, 0, m)
-        n += m
-      }
-      n
-    }
-
-    override def isOpen: Boolean = open
-
-    override def close(): Unit = {
-      gzip.close()
-      open = false
-    }
-  }
-
   def transfer(rc: ReadableByteChannel, wc: WritableByteChannel, chunkSize: Int = 4096): Unit = {
     val buf = ByteBuffer.allocate(chunkSize)
     while (rc.read(buf) > -1) {
@@ -170,52 +98,12 @@ object Util {
     wc.close()
   }
 
-  case class CopyResult(hash: String, start: Long, end: Long, bytes: Long) {
-    def duration: Long = end - start
-    def mbps: Double = Util.mbps(bytes, duration)
-    def fmbps: String = Util.fmbps(bytes, duration)
-  }
-
   def toUri(blobInfo: BlobInfo): String =
     s"gs://${blobInfo.getBlobId.getBucket}/${blobInfo.getBlobId.getName}"
 
   def fmbps(bytes: Long, milliseconds: Long): String = f"${mbps(bytes,milliseconds)}%1.2f"
 
   def mbps(bytes: Long, milliseconds: Long): Double = ((8.0d * bytes) / (milliseconds / 1000.0d)) / 1000000.0d
-
-  def transferStreamToChannel(in: InputStream, out: WritableByteChannel, compress: Boolean = false, chunkSize: Int = 65536): CopyResult = {
-    val rc = Channels.newChannel(in)
-    if (compress)
-      transferWithHash(rc, new GZIPChannel(out, chunkSize), chunkSize)
-    else transferWithHash(rc, out, chunkSize)
-  }
-
-  def transferWithHash(rc: ReadableByteChannel, wc: WritableByteChannel, chunkSize: Int = 4096): CopyResult = {
-    val t0 = System.currentTimeMillis
-    val buf = ByteBuffer.allocate(chunkSize)
-    val buf2 = buf.asReadOnlyBuffer()
-    val h = MessageDigest.getInstance("MD5")
-    var i = 0
-    var n = 0
-    var totalBytesRead = 0L
-    n = rc.read(buf)
-    while (n > -1) {
-      totalBytesRead += n
-      buf.flip()
-      buf2.position(buf.position)
-      buf2.limit(buf.limit)
-      h.update(buf2)
-      wc.write(buf)
-      buf.clear()
-      i += 1
-      n += rc.read(buf)
-    }
-    rc.close()
-    wc.close()
-    val t1 = System.currentTimeMillis
-    val hash = HashCode.fromBytes(h.digest()).toString
-    CopyResult(hash, t0, t1, totalBytesRead)
-  }
 
   def readS(x: String): String = {
     new String(Resources.toByteArray(Resources.getResource(x).toURI.toURL), Charsets.UTF_8)
@@ -224,9 +112,6 @@ object Util {
   def readB(x: String): Array[Byte] = {
     Resources.toByteArray(Resources.getResource(x).toURI.toURL)
   }
-
-  def readAllBytes(is: InputStream): Array[Byte] =
-    readAllBytes(Channels.newChannel(is))
 
   def readAllBytes(in: ReadableByteChannel): Array[Byte] = {
     val os = new ByteArrayOutputStream()
@@ -243,4 +128,20 @@ object Util {
 
   def randString(len: Int): String =
     BaseEncoding.base64Url().encode(randBytes(len)).substring(0,len)
+
+  def trimRight(s: String, c: Char): String = {
+    var i = s.length
+    while (i > 0 && s.charAt(i-1) == c) {
+      i -= 1
+    }
+    if (i < s.length)
+      s.substring(0,i)
+    else s
+  }
+
+  def records2string(bytes: Array[Byte], lRecl: Int, charset: Charset, recordSeparator: String): String = {
+    bytes.grouped(lRecl)
+      .map(b => trimRight(new String(b, charset),' '))
+      .mkString(recordSeparator)
+  }
 }

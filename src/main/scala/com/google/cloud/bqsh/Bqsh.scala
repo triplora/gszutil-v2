@@ -16,108 +16,83 @@
 
 package com.google.cloud.bqsh
 
-import com.google.auth.oauth2.GoogleCredentials
 import com.google.cloud.bqsh.cmd._
 import com.google.cloud.gszutil.Util
 import com.ibm.jzos.ZFileProvider
 
+import scala.collection.mutable
 import scala.collection.mutable.ListBuffer
 
 object Bqsh {
   def main(args: Array[String]): Unit = {
-    val ddName = args.headOption.getOrElse("")
     val zos = ZFileProvider.getProvider()
-    val script =
-      if (ddName.nonEmpty && zos.ddExists(ddName))
-        zos.readDDString(ddName)
-      else
-        zos.readStdin()
-
     zos.init()
+    val script = zos.readStdin()
     Util.configureLogging()
-    run(script, sys.env, zos)
+    val interpreter = new Interpreter(zos, sys.env,true, true)
+    interpreter.runScript(script)
   }
 
-  def run(script: String, env: Map[String,String], zos: ZFileProvider, throwOnError: Boolean = true): Result = {
-    val env1 = splitSH(script)
-      .map(readArgs)
-      .foldLeft(env){(a,b) =>
-        val result = exec(b, a, zos)
-        if (result.exitCode != 0 && throwOnError)
-          throw new RuntimeException(result.env.getOrElse("ERRMSG",s"${b.mkString(" ")} returned exit code ${result.exitCode}"))
-        a ++ result.env
-      }
-    Result(env = env1)
+  class Interpreter(zos: ZFileProvider, sysEnv: Map[String,String], var throwOnError: Boolean = true, var printCommands: Boolean = true){
+    val env: mutable.Map[String,String] = mutable.Map.empty ++ sysEnv
+    def runWithArgs(args: Seq[String]): Result = {
+      System.out.println(s"+ ${args.mkString(" ")}")
+      val result = exec(args, env.toMap, zos)
+      env ++= result.env
+      if (result.exitCode != 0 && throwOnError)
+        throw new RuntimeException(result.env.getOrElse("ERRMSG",s"${args.mkString(" ")} returned exit code ${result.exitCode}"))
+      result.copy(env = env.toMap)
+    }
+
+    def runScript(script: String): Result = {
+      splitSH(script)
+        .map(s => runWithArgs(readArgs(s)))
+        .lastOption
+        .getOrElse(Result.Success)
+    }
   }
 
-
+  def runCommand[T](cmd: Command[T], args: Seq[String], zos: ZFileProvider): Result = {
+    cmd.parser.parse(args) match {
+      case Some(c) =>
+        cmd.run(c, zos)
+      case _ =>
+        Result.Failure(s"Unable to parse args for ${cmd.name}: '${args.mkString(" ")}'")
+    }
+  }
 
   def exec(args: Seq[String], env: Map[String,String], zos: ZFileProvider): Result = {
-    lazy val fail = Result.Failure(s"invalid command '${args.mkString(" ")}'")
-
-    def creds: GoogleCredentials = zos
-      .getCredentialProvider(ZFileProvider.KeyFileDD)
-      .getCredentials
-
     BqshParser.parse(args, env) match {
       case Some(cmd) =>
+        val sub = cmd.args.headOption.getOrElse("")
+        val subArgs = cmd.args.drop(1)
         if (cmd.name == "bq"){
-          cmd.args.headOption.getOrElse("") match {
+          sub match {
             case "mk" =>
-              MkOptionParser.parse(cmd.args) match {
-                case Some(c) =>
-                  Mk.run(c, creds, zos)
-                case _ =>
-                  fail
-              }
+              runCommand(Mk, subArgs, zos)
             case "query" =>
-              QueryOptionParser.parse(cmd.args) match {
-                case Some(c) =>
-                  Query.run(c, creds, zos)
-                case _ =>
-                  fail
-              }
+              runCommand(Query, subArgs, zos)
             case "load" =>
-              LoadOptionParser.parse(cmd.args) match {
-                case Some(c) =>
-                  Load.run(c, creds)
-                case _ =>
-                  fail
-              }
+              runCommand(Load, subArgs, zos)
             case "rm" =>
-              RmOptionParser.parse(cmd.args) match {
-                case Some(c) =>
-                  Rm.run(c, creds)
-                case _ =>
-                  fail
-              }
+              runCommand(Rm, subArgs, zos)
             case _ =>
-              fail
+              Result.Failure(s"invalid command '${args.mkString(" ")}'")
           }
         } else if (cmd.name == "gsutil") {
-          cmd.args.headOption.getOrElse("") match {
+          sub match {
             case "cp" =>
-              GsUtilOptionParser.parse(cmd.args) match {
-                case Some(c) =>
-                  Cp.run(c, creds, zos)
-                case _ =>
-                  fail
-              }
+              runCommand(Cp, subArgs, zos)
             case "rm" =>
-              GsUtilOptionParser.parse(cmd.args) match {
-                case Some(c) =>
-                  GsUtilRm.run(c, creds)
-                case _ =>
-                  fail
-              }
+              runCommand(GsUtilRm, subArgs, zos)
             case _ =>
-              fail
+              Result.Failure(s"invalid command '${args.mkString(" ")}'")
           }
         } else {
           Bqsh.eval(cmd)
         }
       case _ =>
-        fail
+        Result.Failure(s"invalid command '${args.mkString(" ")}'")
     }
   }
 

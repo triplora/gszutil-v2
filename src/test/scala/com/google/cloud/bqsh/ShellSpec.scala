@@ -16,6 +16,7 @@
 
 package com.google.cloud.bqsh
 
+import com.google.cloud.gszutil.Util
 import com.ibm.jzos.ZFileProvider
 import org.scalatest.FlatSpec
 
@@ -30,7 +31,7 @@ class ShellSpec extends FlatSpec {
       "--project_id=project",
       "--dataset_id=dataset",
       "mk",
-      "--external_table_definition=ORC=gs://bucket/bucket/path.orc/*",
+      "--external_table_definition=ORC=gs://bucket/path.orc/*",
       "TABLE_NAME"
     )
     val parsed = Bqsh.readArgs(bqExample1)
@@ -68,11 +69,14 @@ class ShellSpec extends FlatSpec {
   }
 
   it should "maintain env" in {
+    Util.configureLogging()
+
     val script =
       """TABLE=project:dataset.table
         |SOURCE=gs://mybucket/path.orc/*
         |echo $TABLE $SOURCE""".stripMargin
-    val result = Bqsh.run(script, Map.empty, ZFileProvider.getProvider())
+    val interpreter = new Bqsh.Interpreter(ZFileProvider.getProvider(), Map.empty, true)
+    val result = interpreter.runScript(script)
     val expected = Map[String,String](
       "TABLE" -> "project:dataset.table",
       "SOURCE" -> "gs://mybucket/path.orc/*"

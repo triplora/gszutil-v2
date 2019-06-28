@@ -18,7 +18,7 @@ package com.google.cloud.bqsh
 
 import scopt.OptionParser
 
-object QueryOptionParser extends OptionParser[QueryConfig]("query"){
+object QueryOptionParser extends OptionParser[QueryConfig]("query") with ArgParser[QueryConfig] {
   def parse(args: Seq[String]): Option[QueryConfig] =
     parse(args, QueryConfig())
 
@@ -27,11 +27,12 @@ object QueryOptionParser extends OptionParser[QueryConfig]("query"){
   help("help")
     .text("prints this usage text")
 
+  /*
   arg[String]("queryDD")
     .optional()
     .text("DD containing query. If omitted, query is read from STDIN")
     .action((x,c) => c.copy(queryDD = x))
-
+  */
   // z/OS Options
   opt[Seq[String]]("parameters_from_file")
     .text("Comma-separated query parameters in the form [NAME]:[TYPE]:[DDNAME]. An empty name creates a positional parameter. [TYPE] may be omitted to assume a STRING value in the form: name::ddname or ::ddname. NULL produces a null value.")
@@ -40,6 +41,10 @@ object QueryOptionParser extends OptionParser[QueryConfig]("query"){
   opt[Boolean]("create_if_needed")
     .text("When specified, create destination table. The default value is true.")
     .action((x,c) => c.copy(createIfNeeded = x))
+
+  opt[Boolean]('m', "allow_multiple_queries")
+    .text("When specified, allow multiple queries. The default value is false.")
+    .action((x,c) => c.copy(allowMultipleQueries = x))
 
   // Standard Options
 

@@ -21,7 +21,6 @@ import com.google.cloud.gszutil.Util.CredentialProvider
 import com.google.cloud.gszutil.io.{DDChannel, ZRecordReaderT}
 
 object ZFileProvider {
-  val KeyFileDD = "KEYFILE"
   def getProvider(): ZFileProvider = {
     if (System.getProperty("java.vm.vendor").contains("IBM"))
       IBM
@@ -43,8 +42,8 @@ trait ZFileProvider {
   def ddExists(dd: String): Boolean
   def readDD(dd: String): ZRecordReaderT
   def readStdin(): String
-  def readDDString(dd: String): String
-  def getCredentialProvider(keyFileDD: String): CredentialProvider
+  def readDDString(dd: String, recordSeparator: String): String
+  def getCredentialProvider(): CredentialProvider
   def loadCopyBook(dd: String): CopyBook
 }
 

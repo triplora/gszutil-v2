@@ -16,80 +16,46 @@
 
 package com.google.cloud.bqsh.cmd
 
-import com.google.auth.oauth2.GoogleCredentials
 import com.google.cloud.bigquery.JobStatistics.QueryStatistics
 import com.google.cloud.bigquery._
-import com.google.cloud.bqsh.{BQ, QueryConfig}
+import com.google.cloud.bqsh.{ArgParser, BQ, Bqsh, Command, QueryConfig, QueryOptionParser}
 import com.google.cloud.gszutil.Util
 import com.google.cloud.gszutil.Util.Logging
 import com.ibm.jzos.ZFileProvider
 
-object Query extends Logging {
-  def run(cfg: QueryConfig, creds: GoogleCredentials, zos: ZFileProvider): Result = {
+object Query extends Command[QueryConfig] with Logging {
+  override val name: String = "bq query"
+  override val parser: ArgParser[QueryConfig] = QueryOptionParser
+
+  def run(cfg: QueryConfig, zos: ZFileProvider): Result = {
+    val creds = zos.getCredentialProvider().getCredentials
     val bq = BQ.defaultClient(cfg.projectId, cfg.location, creds)
-    val query = if (zos.ddExists(cfg.queryDD)) {
-      logger.debug(s"Reading query from ${cfg.queryDD}")
-      zos.readDDString(cfg.queryDD)
-    } else {
-      logger.debug(s"Reading query from STDIN")
-      zos.readStdin()
-    }
 
-    require(query.nonEmpty, "query must not be empty")
+    logger.debug(s"Reading query from QUERY")
+    val queryString = zos.readDDString("QUERY", "\n")
 
-    val jobConfiguration = configureQueryJob(query, cfg, zos)
-    val jobId = JobId.of(cfg.jobId + "_" + Util.randString(5))
+    logger.debug(s"Read query:\n$queryString")
+    require(queryString.nonEmpty, "query must not be empty")
 
-    val job = BQ.runJob(bq, jobConfiguration, jobId, cfg.timeoutMinutes * 60)
-    job.getStatistics[JobStatistics] match {
-      case x: QueryStatistics =>
-        Result.withExportLong("ACTIVITYCOUNT", x.getNumDmlAffectedRows)
-      case _ =>
-        Result.Success
-    }
-  }
+    val queries =
+      if (cfg.allowMultipleQueries) Bqsh.splitSQL(queryString)
+      else Seq(queryString)
 
-  def parseParametersFromFile(parameters: Seq[String], zos: ZFileProvider): (Seq[QueryParameterValue], Seq[(String,QueryParameterValue)]) = {
-    val params = parameters.map(_.split(':'))
+    var result: Result = null
+    for (query <- queries){
+      val jobConfiguration = configureQueryJob(query, cfg, zos)
+      val jobId = JobId.of(cfg.jobId + "_" + Util.randString(5))
 
-    val positionalValues = params.flatMap{x =>
-      if (x.head.nonEmpty) None
-      else {
-        val t = x(1)
-        val value = zos.readDDString(x(2))
-        val typeName =
-          if (t.nonEmpty) StandardSQLTypeName.valueOf(t)
-          else StandardSQLTypeName.STRING
-
-        scala.Option(
-          QueryParameterValue.newBuilder()
-            .setType(typeName)
-            .setValue(value)
-            .build()
-        )
+      val job = BQ.runJob(bq, jobConfiguration, jobId, cfg.timeoutMinutes * 60)
+      result = job.getStatistics[JobStatistics] match {
+        case x: QueryStatistics =>
+          Result.withExportLong("ACTIVITYCOUNT", x.getNumDmlAffectedRows)
+        case _ =>
+          Result.Success
       }
     }
-
-    val namedValues = params.flatMap{x =>
-      if (x.head.isEmpty) None
-      else {
-        val name = x(0)
-        val t = x(1)
-        val value = zos.readDDString(x(2))
-        val typeName =
-          if (t.nonEmpty) StandardSQLTypeName.valueOf(t)
-          else StandardSQLTypeName.STRING
-
-        val parameterValue = QueryParameterValue.newBuilder()
-          .setType(typeName)
-          .setValue(value)
-          .build()
-
-        scala.Option((name, parameterValue))
-      }
-    }
-
-    (positionalValues, namedValues)
+    if (result == null) Result.Failure("no queries")
+    else result
   }
 
   def parseParameters(parameters: Seq[String]): (Seq[QueryParameterValue], Seq[(String,QueryParameterValue)]) = {
@@ -166,11 +132,8 @@ object Query extends Logging {
       b.setTimePartitioning(timePartitioning)
     }
 
-    if (cfg.parameters.nonEmpty || cfg.parametersFromFile.nonEmpty){
-      val (positionalValues1, namedValues1) = parseParameters(cfg.parameters)
-      val (positionalValues2, namedValues2) = parseParametersFromFile(cfg.parametersFromFile, zos)
-      val positionalValues = positionalValues1 ++ positionalValues2
-      val namedValues = namedValues1 ++ namedValues2
+    if (cfg.parameters.nonEmpty){
+      val (positionalValues, namedValues) = parseParameters(cfg.parameters)
       if (positionalValues.nonEmpty)
         b.setPositionalParameters(positionalValues.asJava)
       if (namedValues.nonEmpty)

@@ -19,12 +19,17 @@ package com.google.cloud.bqsh.cmd
 import java.net.URI
 
 import com.google.auth.oauth2.GoogleCredentials
-import com.google.cloud.bqsh.{GCS, GsUtilConfig}
+import com.google.cloud.bqsh.{ArgParser, Command, GCS, GsUtilConfig, GsUtilOptionParser}
 import com.google.cloud.gszutil.Util.Logging
 import com.google.cloud.storage.{BlobId, Storage}
+import com.ibm.jzos.ZFileProvider
 
-object GsUtilRm extends Logging {
-  def run(c: GsUtilConfig, creds: GoogleCredentials): Result = {
+object GsUtilRm extends Command[GsUtilConfig] with Logging {
+  override val name: String = "gsutil rm"
+  override val parser: ArgParser[GsUtilConfig] = GsUtilOptionParser
+  override def run(c: GsUtilConfig, zos: ZFileProvider): Result = {
+    val creds = zos.getCredentialProvider()
+      .getCredentials
     logger.info(s"gsutil rm ${c.destinationUri}")
     val gcs = GCS.defaultClient(creds)
     val uri = new URI(c.destinationUri)

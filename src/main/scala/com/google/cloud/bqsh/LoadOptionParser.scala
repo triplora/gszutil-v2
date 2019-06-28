@@ -18,7 +18,7 @@ package com.google.cloud.bqsh
 
 import scopt.OptionParser
 
-object LoadOptionParser extends OptionParser[LoadConfig]("load") {
+object LoadOptionParser extends OptionParser[LoadConfig]("load") with ArgParser [LoadConfig] {
   def parse(args: Seq[String]): Option[LoadConfig] =
     parse(args, LoadConfig())
 

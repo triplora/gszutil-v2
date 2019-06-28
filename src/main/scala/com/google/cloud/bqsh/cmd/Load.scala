@@ -16,13 +16,17 @@
 
 package com.google.cloud.bqsh.cmd
 
-import com.google.auth.oauth2.GoogleCredentials
 import com.google.cloud.bigquery.JobStatistics.LoadStatistics
 import com.google.cloud.bigquery._
-import com.google.cloud.bqsh.{BQ, LoadConfig}
+import com.google.cloud.bqsh.{ArgParser, BQ, Command, LoadConfig, LoadOptionParser}
+import com.ibm.jzos.ZFileProvider
 
-object Load {
-  def run(cfg: LoadConfig, creds: GoogleCredentials): Result = {
+object Load extends Command[LoadConfig] {
+  override val name: String = "bq load"
+  override val parser: ArgParser[LoadConfig] = LoadOptionParser
+
+  override def run(cfg: LoadConfig, zos: ZFileProvider): Result = {
+    val creds = zos.getCredentialProvider().getCredentials
     val bq = BQ.defaultClient(cfg.projectId, cfg.location, creds)
     val job = bq.create(JobInfo.of(configureLoadJob(cfg)))
     job.getStatistics[JobStatistics] match {

@@ -16,13 +16,16 @@
 
 package com.google.cloud.bqsh.cmd
 
-import com.google.auth.oauth2.GoogleCredentials
 import com.google.cloud.bigquery._
-import com.google.cloud.bqsh.{BQ, MkConfig}
+import com.google.cloud.bqsh.{ArgParser, BQ, Command, MkConfig, MkOptionParser}
 import com.ibm.jzos.ZFileProvider
 
-object Mk {
-  def run(cfg: MkConfig, creds: GoogleCredentials, zos: ZFileProvider): Result = {
+object Mk extends Command[MkConfig]{
+  override val name: String = "bq mk"
+  override val parser: ArgParser[MkConfig] = MkOptionParser
+
+  def run(cfg: MkConfig, zos: ZFileProvider): Result = {
+    val creds = zos.getCredentialProvider().getCredentials
     val bq = BQ.defaultClient(cfg.projectId, cfg.location, creds)
     val tableId = BQ.resolveTableSpec(cfg.tablespec, cfg.projectId, cfg.datasetId)
 
@@ -31,7 +34,7 @@ object Mk {
     } else if (cfg.table) {
       createTable(bq, cfg, tableId)
     } else if (cfg.view) {
-      val query = zos.readDDString(cfg.queryDD)
+      val query = zos.readDDString(cfg.queryDD, " ")
       createView(bq, cfg, tableId, query)
     } else {
       throw new NotImplementedError(s"unsupported operation $cfg")

@@ -18,7 +18,7 @@ package com.google.cloud.bqsh
 
 import scopt.OptionParser
 
-object RmOptionParser extends OptionParser[RmConfig]("rm") {
+object RmOptionParser extends OptionParser[RmConfig]("rm") with ArgParser[RmConfig] {
   def parse(args: Seq[String]): Option[RmConfig] =
     parse(args, RmConfig())
 

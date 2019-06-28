@@ -17,6 +17,7 @@
 package com.ibm.jzos
 
 import java.nio.channels.FileChannel
+import java.nio.charset.Charset
 import java.nio.file.{Files, Paths, StandardOpenOption}
 
 import com.google.cloud.gszutil.{CopyBook, Util}
@@ -49,13 +50,13 @@ object Linux extends ZFileProvider with Logging {
     new String(in, Charsets.UTF_8)
   }
 
-  override def readDDString(dd: String): String = {
+  override def readDDString(dd: String, recordSeparator: String): String = {
     val in = readDD(dd)
     val bytes = Util.readAllBytes(new ZChannel(in))
-    new String(bytes, Charsets.UTF_8)
+    Util.records2string(bytes, in.lRecl, Charsets.UTF_8, recordSeparator)
   }
 
-  override def getCredentialProvider(keyFileDD: String): CredentialProvider = {
+  override def getCredentialProvider(): CredentialProvider = {
     new DefaultCredentialProvider
   }
 
