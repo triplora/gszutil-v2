@@ -53,6 +53,14 @@ public class PackedDecimal {
         return sb1.toString() + "\n" + sb2.toString();
     }
 
+    public static int sizeOf(int p, int s) {
+        return ((p + s) / 2) + 1;
+    }
+
+    public static int precisionOf(int size) {
+        return (size-1) * 2;
+    }
+
     public static long unpack(ByteBuffer buf, int len) {
         long x = 0;
         for (int i = 0; i < len - 1; i++) {
@@ -72,6 +80,24 @@ public class PackedDecimal {
             if (!relaxedParsing) {
                 throw new IllegalArgumentException("unexpected sign bits " + sign);
             }
+        }
+        return x;
+    }
+
+    /** Unpack without sign half-byte
+     *
+     * @param buf
+     * @param len
+     * @return
+     */
+    public static long unpack2(ByteBuffer buf, int len) {
+        long x = 0L;
+        for (int i = 0; i < len; i++) {
+            byte b = buf.get();
+            x += uint(b) >>> 4;
+            x *= 10L;
+            x += uint(b) & 0xF;
+            if (i < len-1) x *= 10L;
         }
         return x;
     }

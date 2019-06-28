@@ -34,11 +34,11 @@ case class CopyBook(raw: String) {
         None
     }
 
-  final val decoders: Array[Decoder[_]] = {
-    val buf = ArrayBuffer.empty[Decoder[_]]
+  final val decoders: Array[Decoder] = {
+    val buf = ArrayBuffer.empty[Decoder]
     Fields.foreach{
-      case CopyBookField(_, pic) =>
-        buf.append(pic.getDecoder)
+      case CopyBookField(_, decoder) =>
+        buf.append(decoder)
       case _ =>
     }
     buf.toArray

@@ -25,50 +25,46 @@ import org.apache.hadoop.hive.ql.exec.vector.VectorizedRowBatch
 import org.apache.orc.Writer
 
 class ZReader(private val copyBook: CopyBook, private val batchSize: Int) extends Logging {
-  private val decoders: Array[Decoder[_]] = copyBook.decoders
-  private val nCols = decoders.length
-  private val lRecl = copyBook.LRECL
-  private val rowBatch: VectorizedRowBatch = {
-    val batch = new VectorizedRowBatch(nCols, batchSize)
+  private final val decoders: Array[Decoder] = copyBook.decoders
+  private final val rowBatch: VectorizedRowBatch = {
+    val batch = new VectorizedRowBatch(copyBook.decoders.length, batchSize)
     for (i <- decoders.indices) {
-      val cv = decoders(i).columnVector(batchSize)
-      logger.debug(s"adding ${cv.getClass.getSimpleName} to VectorizedRowBatch")
-      batch.cols(i) = cv
+      batch.cols(i) = decoders(i).columnVector(batchSize)
     }
     batch
   }
 
   def readOrc(buf: ByteBuffer, writer: Writer): Unit = {
-    while (buf.remaining >= lRecl) {
-      val batch: VectorizedRowBatch = readBatch(buf)
-      writer.addRowBatch(batch)
+    while (buf.remaining >= copyBook.LRECL) {
+      ZReader.readBatch(decoders, buf, rowBatch, batchSize, copyBook.LRECL)
+      writer.addRowBatch(rowBatch)
     }
   }
+}
 
+object ZReader {
   /** Read
     *
     * @param buf byte array with multiple records
-    * @param batch VectorizedRowBatch
     * @param rowId index within the batch
     */
-  private def readRecord(buf: ByteBuffer,batch: VectorizedRowBatch, rowId: Int): Unit = {
+  private final def readRecord(decoders: Array[Decoder], buf: ByteBuffer, rowBatch: VectorizedRowBatch, rowId: Int): Unit = {
     var i = 0
     while (i < decoders.length){
-      decoders(i).get(buf, batch.cols(i), rowId)
+      decoders(i).get(buf, rowBatch.cols(i), rowId)
       i += 1
     }
   }
 
-  private def readBatch(buf: ByteBuffer): VectorizedRowBatch = {
+  private final def readBatch(decoders: Array[Decoder], buf: ByteBuffer, rowBatch: VectorizedRowBatch, batchSize: Int, lRecl: Int): Unit = {
     rowBatch.reset()
     var rowId = 0
     while (rowId < batchSize && buf.remaining >= lRecl){
-      readRecord(buf, rowBatch, rowId)
+      readRecord(decoders, buf, rowBatch, rowId)
       rowId += 1
     }
     rowBatch.size = rowId
     if (rowBatch.size == 0)
       rowBatch.endOfFile = true
-    rowBatch
   }
 }

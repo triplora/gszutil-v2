@@ -40,7 +40,7 @@ class ORCFileWriter(args: ORCFileWriterArgs) extends Actor with Logging {
   private var writer: Writer = _
   private val stats = new FileSystem.Statistics(SimpleGCSFileSystem.Scheme)
 
-  private final val defaultConfig = {
+  private final val orcConfig = {
     val c = new Configuration(false)
     OrcConf.COMPRESS.setString(c, "ZLIB")
     OrcConf.COMPRESSION_STRATEGY.setString(c, "COMPRESSION")
@@ -48,12 +48,13 @@ class ORCFileWriter(args: ORCFileWriterArgs) extends Actor with Logging {
     OrcConf.OVERWRITE_OUTPUT_FILE.setBoolean(c, true)
     OrcConf.MEMORY_POOL.setDouble(c, 0.5d)
     OrcConf.BUFFER_SIZE.setLong(c, 512*1024)
+    OrcConf.DIRECT_ENCODING_COLUMNS.setString(c, copyBook.FieldNames.mkString(","))
     c
   }
 
   override def preStart(): Unit = {
     val writerOptions = OrcFile
-      .writerOptions(defaultConfig)
+      .writerOptions(orcConfig)
       .setSchema(copyBook.ORCSchema)
       .memory(NoOpMemoryManager)
       .compress(CompressionKind.ZLIB)
@@ -61,7 +62,7 @@ class ORCFileWriter(args: ORCFileWriterArgs) extends Actor with Logging {
     writer = OrcFile.createWriter(path, writerOptions)
     context.parent ! pool.acquire()
     startTime = System.currentTimeMillis()
-    logger.info(s"Starting writer for ${args.path} ${Util.logMem()}")
+    logger.info(s"Starting writer for ${args.path} ${Util.logMem()}\nTypeDescription:\n${copyBook.ORCSchema.toJson}")
   }
 
   override def receive: Receive = {

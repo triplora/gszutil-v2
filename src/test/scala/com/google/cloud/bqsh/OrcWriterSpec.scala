@@ -26,7 +26,7 @@ import org.scalatest.FlatSpec
 
 class OrcWriterSpec extends FlatSpec with Logging {
   Util.configureLogging()
-  "OrcWriter" should "write" in {
+  "OrcWriter" should "write" ignore {
     val cp = new DefaultCredentialProvider
     val destinationUri = "gs://bucket/table.orc"
     val gcs = GCS.defaultClient(cp.getCredentials)
