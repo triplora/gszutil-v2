@@ -33,13 +33,14 @@ object Query extends Command[QueryConfig] with Logging {
     val bq = BQ.defaultClient(cfg.projectId, cfg.location, creds)
 
     logger.info(s"Reading query from QUERY")
-    val queryString = zos.readDDString("QUERY", " \n ")
+    val queryString = zos.readDDString("QUERY", " ")
 
-    val replaced = queryString.substring(0,1024)
-      .replaceAllLiterally(" ", ".")
-      .replaceAllLiterally("\n", "\\n")
-
-    logger.info(s"Read query:\n$replaced")
+    if (queryString.nonEmpty) {
+      val replaced = queryString.take(1000)
+        .replaceAllLiterally(" ", ".")
+        .replaceAllLiterally("\n", "\\n")
+      System.out.println(s"Read query:\n$replaced")
+    }
     require(queryString.nonEmpty, "query must not be empty")
 
     val queries =

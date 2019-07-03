@@ -14,12 +14,14 @@
  * limitations under the License.
  */
 
-package com.google.cloud.gszutil
+package com.ibm.jzos
 
 import java.nio.charset.StandardCharsets
 
 import com.google.cloud.gszutil.io._
+import com.google.cloud.gszutil.{Decoding, Util}
 import com.google.common.hash.Hashing
+import com.ibm.jzos.ZOS.WrappedRecordReader
 import org.scalatest.FlatSpec
 
 class ZReaderSpec extends FlatSpec {
@@ -32,15 +34,13 @@ class ZReaderSpec extends FlatSpec {
     assert(matches)
   }
 
-  "Decoding" should "transcode EBCDIC" in {
-    val test = Util.randString(10000)
-    val in = test.getBytes(Decoding.CP1047)
-    val expected = test.getBytes(StandardCharsets.UTF_8).toSeq
+  it should "succeed on non-FB record format" in {
+    val rr = new TestRecordReader(80, 8000, "FB")
+    new WrappedRecordReader(rr)
+  }
 
-    val got = in.map(Decoding.ebcdic2ascii)
-    val n = got.length
-
-    assert(n == expected.length)
-    assert(got.sameElements(expected))
+  it should "fail on non-FB record format" in {
+    val rr = new TestRecordReader(80, 8000, "VB")
+    assertThrows[IllegalArgumentException](new WrappedRecordReader(rr))
   }
 }

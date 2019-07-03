@@ -140,8 +140,14 @@ object Util {
   }
 
   def records2string(bytes: Array[Byte], lRecl: Int, charset: Charset, recordSeparator: String): String = {
+    val sb = new StringBuilder(bytes.length)
     bytes.grouped(lRecl)
-      .map(b => trimRight(new String(b, charset),' '))
-      .mkString(recordSeparator)
+      .foreach{b =>
+        val read = new String(b, charset)
+        val trimmed = trimRight(read,' ')
+        sb.append(trimmed)
+        sb.append(recordSeparator)
+      }
+    sb.result()
   }
 }

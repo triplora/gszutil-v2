@@ -39,6 +39,8 @@ protected object ZOS extends Logging {
   }
 
   class WrappedRecordReader(r: RecordReader) extends ZRecordReaderT with Logging {
+    require(r.getRecfm == "FB", s"${r.getDDName} record format must be FB - ${r.getRecfm} is not supported")
+
     // Ensure that reader is closed if job is killed
     Runtime.getRuntime.addShutdownHook(new RecordReaderCloser(r))
     private var open = true

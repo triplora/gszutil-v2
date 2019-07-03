@@ -18,6 +18,7 @@ package com.google.cloud.gszutil
 
 
 import java.nio.ByteBuffer
+import java.nio.charset.StandardCharsets
 
 import com.google.cloud.gszutil.Decoding._
 import com.google.common.base.Charsets
@@ -80,6 +81,18 @@ class DecodingSpec extends FlatSpec {
     decoder.get(buf, col, 0)
 
     assert(col.asInstanceOf[Decimal64ColumnVector].vector(0) == expected)
+  }
+
+  it should "transcode EBCDIC" in {
+    val test = Util.randString(10000)
+    val in = test.getBytes(Decoding.CP1047)
+    val expected = test.getBytes(StandardCharsets.UTF_8).toSeq
+
+    val got = in.map(Decoding.ebcdic2ascii)
+    val n = got.length
+
+    assert(n == expected.length)
+    assert(got.sameElements(expected))
   }
 
   it should "decode char" in {
