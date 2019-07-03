@@ -29,6 +29,7 @@ protected object ZOS extends Logging {
   class RecordReaderCloser(r: RecordReader) extends Thread {
     override def run(): Unit = {
       try {
+        logger.info("Closing " + r.getDDName + " " + r.getDsn)
         r.close()
       } catch {
         case e: ZFileException =>
@@ -49,9 +50,8 @@ protected object ZOS extends Logging {
     override def close(): Unit = {
       if (open) {
         open = false
-        Try(r.close())
-          .failed
-          .foreach(t => logger.error(t.getMessage))
+        logger.info("Closing " + r.getDDName + " " + r.getDsn)
+        Try(r.close()).failed.foreach(t => logger.error(t.getMessage))
       }
     }
 

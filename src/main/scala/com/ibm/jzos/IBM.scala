@@ -27,6 +27,7 @@ object IBM extends ZFileProvider with Logging {
   override def init(): Unit = {
     ZOS.addCCAProvider()
     System.setProperty("java.net.preferIPv4Stack" , "true")
+    System.setProperty("jzos.bsam.disable" , "true")
   }
   override def readChannel(dd: String, copyBook: CopyBook): DDChannel = {
     val rr = ZOS.readDD(dd)

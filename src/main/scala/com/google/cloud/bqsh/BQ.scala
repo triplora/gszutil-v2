@@ -57,7 +57,7 @@ object BQ {
       await(job, jobId, timeoutSeconds)
     } catch {
       case e: BigQueryException =>
-        if (e.getMessage.startsWith("Already Exists")) {
+        if (e.getReason == "duplicate" && e.getMessage.startsWith("Already Exists: Job")) {
           await(bq, jobId, timeoutSeconds)
         } else {
           throw new RuntimeException(e)
@@ -78,6 +78,43 @@ object BQ {
     } else {
       job.waitFor(RetryOption.totalTimeout(Duration.ofSeconds(timeoutSeconds)))
     }
+  }
+
+  def isDone(job: Job): Boolean = {
+    job.getStatus.getState == JobStatus.State.DONE
+  }
+
+  def hasError(job: Job): Boolean = {
+    job.getStatus.getError != null || hasExecutionErrors(job)
+  }
+
+  def hasExecutionErrors(job: Job): Boolean = {
+    val status = job.getStatus
+    val errors = status.getExecutionErrors
+    errors != null && errors.size() > 0
+  }
+
+  def throwOnError(job: Job): Unit = {
+    import scala.collection.JavaConverters.iterableAsScalaIterableConverter
+    val sb = new StringBuilder
+    if (hasError(job)) {
+      sb.append("Job Error:\n")
+      val error = job.getStatus.getError
+      val reason = error.getReason
+      val message = error.getMessage
+      sb.append(s"$reason : $message\n")
+    }
+    if (hasExecutionErrors(job)){
+      sb.append("Execution Errors:\n")
+      val errors = job.getStatus.getExecutionErrors
+      for (error <- errors.asScala) {
+        val reason = error.getReason
+        val message = error.getMessage
+        sb.append(s"$reason : $message\n")
+      }
+    }
+    if (sb.nonEmpty)
+      throw new RuntimeException(sb.result())
   }
 
   /**

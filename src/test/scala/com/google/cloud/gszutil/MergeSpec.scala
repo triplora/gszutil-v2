@@ -62,17 +62,4 @@ class MergeSpec extends FlatSpec {
         |INSERT ROW""".stripMargin
     assert(sql == expected)
   }
-
-  it should "parse args" in {
-    val args = "merge destProject destDataset destTable srcProject srcDataset srcTable a,b,c"
-    val config = GsUtilOptionParser.parse(args.split(" "))
-    assert(config.isDefined)
-    config match {
-      case Some(c) =>
-        assert(c.mode == "merge")
-        assert(c.nativeKeyColumns == Seq("a","b","c"))
-      case _ =>
-    }
-  }
-
 }

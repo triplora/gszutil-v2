@@ -186,7 +186,6 @@ object Decoding extends Logging {
     override def get(buf: ByteBuffer, row: ColumnVector, i: Int): Unit = {
       val r = row.asInstanceOf[Decimal64ColumnVector]
       val x = PackedDecimal.unpack(buf, size)
-      //val v = math.min(math.abs(x), 1+ 999999999999999999L)
       val w = r.getScratchWritable
       w.setFromLongAndScale(x, s)
       r.set(i, w)

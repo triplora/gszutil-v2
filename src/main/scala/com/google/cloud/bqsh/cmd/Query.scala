@@ -32,10 +32,14 @@ object Query extends Command[QueryConfig] with Logging {
     val creds = zos.getCredentialProvider().getCredentials
     val bq = BQ.defaultClient(cfg.projectId, cfg.location, creds)
 
-    logger.debug(s"Reading query from QUERY")
-    val queryString = zos.readDDString("QUERY", " \n")
+    logger.info(s"Reading query from QUERY")
+    val queryString = zos.readDDString("QUERY", " \n ")
 
-    logger.debug(s"Read query:\n$queryString")
+    val replaced = queryString.substring(0,1024)
+      .replaceAllLiterally(" ", ".")
+      .replaceAllLiterally("\n", "\\n")
+
+    logger.info(s"Read query:\n$replaced")
     require(queryString.nonEmpty, "query must not be empty")
 
     val queries =
@@ -48,11 +52,16 @@ object Query extends Command[QueryConfig] with Logging {
       val jobId = JobId.of(cfg.jobId + "_" + Util.randString(5))
 
       val job = BQ.runJob(bq, jobConfiguration, jobId, cfg.timeoutMinutes * 60)
-      result = job.getStatistics[JobStatistics] match {
-        case x: QueryStatistics =>
-          Result.withExportLong("ACTIVITYCOUNT", x.getNumDmlAffectedRows)
-        case _ =>
-          Result.Success
+      BQ.throwOnError(job)
+      if (job.getStatus.getState == JobStatus.State.DONE && job.getStatus.getError != null){
+        Result.Failure(job.getStatus.getError.getMessage)
+      } else {
+        result = job.getStatistics[JobStatistics] match {
+          case x: QueryStatistics =>
+            Result.withExportLong("ACTIVITYCOUNT", x.getNumDmlAffectedRows)
+          case _ =>
+            Result.Success
+        }
       }
     }
     if (result == null) Result.Failure("no queries")

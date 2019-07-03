@@ -15,9 +15,12 @@
  */
 package com.google.cloud.bqsh.cmd
 
+import java.net.URI
+
 import com.google.cloud.bqsh.{ArgParser, Command, GCS, GsUtilConfig, GsUtilOptionParser}
 import com.google.cloud.gszutil.Util.Logging
 import com.google.cloud.gszutil.orc.WriteORCFile
+import com.google.cloud.storage.Storage
 import com.ibm.jzos.ZFileProvider
 
 
@@ -31,10 +34,27 @@ object Cp extends Command[GsUtilConfig] with Logging {
     val copyBook = zos.loadCopyBook(c.copyBook)
     val in = zos.readChannel(c.source, copyBook)
     val batchSize = (c.blocksPerBatch * in.blkSize) / in.lRecl
+    val gcs = GCS.defaultClient(creds)
+    if (c.replace) {
+      GsUtilRm.run(c, zos)
+    } else {
+      val uri = new URI(c.destinationUri)
+      val withTrailingSlash = uri.getPath.stripPrefix("/") + (if (uri.getPath.last == '/') "" else "/")
+      val bucket = uri.getAuthority
+      val lsResult = gcs.list(bucket,
+        Storage.BlobListOption.prefix(withTrailingSlash),
+        Storage.BlobListOption.currentDirectory())
+      import scala.collection.JavaConverters.iterableAsScalaIterableConverter
+      val blobs = lsResult.getValues.asScala.toArray
+      if (blobs.nonEmpty) {
+        throw new RuntimeException("Data is already present at destination. Use --replace to delete existing files prior to upload.")
+      }
+    }
+
     WriteORCFile.run(gcsUri = c.destinationUri,
                      in = in.rc,
                      copyBook = copyBook,
-                     gcs = GCS.defaultClient(creds),
+                     gcs = gcs,
                      maxWriters = c.parallelism,
                      batchSize = batchSize,
                      partSizeMb = c.partSizeMB,

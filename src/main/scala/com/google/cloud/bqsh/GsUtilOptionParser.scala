@@ -31,9 +31,47 @@ object GsUtilOptionParser extends OptionParser[GsUtilConfig]("gsutil") with ArgP
 
   cmd("cp")
     .text("Upload Binary MVS Dataset to GCS")
+    .action((_,c) => c.copy(mode = "cp"))
+    .children(
+      opt[Unit]("replace")
+        .optional()
+        .action{(_,c) => c.copy(replace = true, recursive = true)}
+        .text("delete before uploading"),
+
+      opt[Int]("partSizeMB")
+        .optional()
+        .action{(x,c) => c.copy(partSizeMB = x)}
+        .text("target part size in megabytes (default: 256)"),
+
+      opt[Int]("batchSize")
+        .optional()
+        .action{(x,c) => c.copy(blocksPerBatch = x)}
+        .text("blocks per batch (default: 1000)"),
+
+      opt[Int]('p', "parallelism")
+        .optional()
+        .action{(x,c) => c.copy(parallelism = x)}
+        .text("number of concurrent writers (default: 6)"),
+
+      opt[Int]("timeOutMinutes")
+        .optional()
+        .action{(x,c) => c.copy(timeOutMinutes = x)}
+        .text("timeout in minutes (default: 60)")
+    )
 
   cmd("rm")
+    .action((_,c) => c.copy(mode = "rm"))
     .text("Delete objects in GCS")
+    .children(
+      opt[Unit]('r',"recursive")
+        .optional()
+        .action{(_,c) => c.copy(recursive = true)}
+        .text("delete directory"),
+
+      opt[Unit]('f',"force")
+        .optional()
+        .text("delete without use interaction (always true)")
+    )
 
   arg[String]("destinationUri")
     .required()
@@ -46,28 +84,4 @@ object GsUtilOptionParser extends OptionParser[GsUtilConfig]("gsutil") with ArgP
         success
     }
     .action((x, c) => c.copy(destinationUri = x))
-
-  opt[Int]("partSizeMB")
-    .action{(x,c) => c.copy(partSizeMB = x)}
-    .text("target part size in megabytes (default: 256)")
-
-  opt[Int]("batchSize")
-    .action{(x,c) => c.copy(blocksPerBatch = x)}
-    .text("blocks per batch (default: 1000)")
-
-  opt[Int]('p', "parallelism")
-    .action{(x,c) => c.copy(parallelism = x)}
-    .text("number of concurrent writers (default: 5)")
-
-  opt[Int]("timeOutMinutes")
-    .action{(x,c) => c.copy(timeOutMinutes = x)}
-    .text("timeout in minutes (default: 180)")
-
-  opt[String]("keyfile")
-    .action{(x,c) => c.copy(copyBook = x)}
-    .text("Keyfile DDNAME (default: KEYFILE)")
-
-  opt[String]("copybook")
-    .action{(x,c) => c.copy(copyBook = x)}
-    .text("Copybook DDNAME (default: COPYBOOK)")
 }
