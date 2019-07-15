@@ -34,7 +34,7 @@ object Mk extends Command[MkConfig]{
     } else if (cfg.table) {
       createTable(bq, cfg, tableId)
     } else if (cfg.view) {
-      val query = zos.readDDString(cfg.queryDD, " ")
+      val query = zos.readDDString("QUERY", " ")
       createView(bq, cfg, tableId, query)
     } else {
       throw new NotImplementedError(s"unsupported operation $cfg")

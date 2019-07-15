@@ -19,8 +19,6 @@ package com.google.cloud.bqsh
 import java.net.URI
 
 case class MkConfig (
-  queryDD: String = "QUERY",
-
   // Standard options
   clusteringFields: Seq[String] = Seq.empty,
   dataset: Boolean = false,

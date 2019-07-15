@@ -16,7 +16,6 @@
 
 package com.google.cloud.bqsh.cmd
 
-import com.google.cloud.bigquery.JobStatistics.QueryStatistics
 import com.google.cloud.bigquery._
 import com.google.cloud.bqsh.BQ.resolveDataset
 import com.google.cloud.bqsh.{ArgParser, BQ, Bqsh, Command, QueryConfig, QueryOptionParser}
@@ -34,13 +33,7 @@ object Query extends Command[QueryConfig] with Logging {
 
     logger.info(s"Reading query from QUERY")
     val queryString = zos.readDDString("QUERY", " ")
-
-    if (queryString.nonEmpty) {
-      val replaced = queryString.take(1000)
-        .replaceAllLiterally(" ", ".")
-        .replaceAllLiterally("\n", "\\n")
-      System.out.println(s"Read query:\n$replaced")
-    }
+    logger.info(s"Read query:\n$queryString")
     require(queryString.nonEmpty, "query must not be empty")
 
     val queries =
@@ -55,14 +48,9 @@ object Query extends Command[QueryConfig] with Logging {
       val job = BQ.runJob(bq, jobConfiguration, jobId, cfg.timeoutMinutes * 60)
       BQ.throwOnError(job)
       if (job.getStatus.getState == JobStatus.State.DONE && job.getStatus.getError != null){
-        Result.Failure(job.getStatus.getError.getMessage)
+        result = Result.Failure(job.getStatus.getError.getMessage)
       } else {
-        result = job.getStatistics[JobStatistics] match {
-          case x: QueryStatistics =>
-            Result.withExportLong("ACTIVITYCOUNT", x.getNumDmlAffectedRows)
-          case _ =>
-            Result.Success
-        }
+        result = Result.Success
       }
     }
     if (result == null) Result.Failure("no queries")

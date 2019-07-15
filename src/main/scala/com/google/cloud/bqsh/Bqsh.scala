@@ -39,12 +39,14 @@ object Bqsh extends Logging {
     def runWithArgs(args: Seq[String]): Result = {
       System.out.println(s"+ ${args.mkString(" ")}")
       val result = exec(args, env.toMap, zos)
-      val msg = s"${args.mkString(" ")} returned exit code ${result.exitCode}"
-      logger.info(msg)
-      env ++= result.env
-      if (result.exitCode != 0 && throwOnError) {
-        throw new RuntimeException(result.env.getOrElse("ERRMSG", msg))
+      if (result.exitCode != 0) {
+        val msg = s"${args.mkString(" ")} returned exit code ${result.exitCode}"
+        logger.info(msg)
+        if (throwOnError) {
+          throw new RuntimeException(result.env.getOrElse("ERRMSG", msg))
+        }
       }
+      env ++= result.env
       result.copy(env = env.toMap)
     }
 

@@ -55,9 +55,13 @@ class CCASSLSocketFactory extends SSLSocketFactory with Logging {
     val s = factory.createSocket(socket, host, port, autoClose)
     s match {
       case x: SSLSocket =>
+        x.setTcpNoDelay(true)
+        x.setKeepAlive(true)
+        x.setReceiveBufferSize(2 * 1024 * 1024)
+        x.setSendBufferSize(2 * 1024 * 1024)
         x.setEnabledCipherSuites(Ciphers)
         x.setEnabledProtocols(Protocols)
-        logger.debug("created " + x.getClass.getCanonicalName + " with " + x.getEnabledProtocols.mkString(",") + " Cipher Suites: "+x.getEnabledCipherSuites.mkString(","))
+        logger.debug("created " + x.getClass.getCanonicalName + " with Protocols: " + x.getEnabledProtocols.mkString(",") + " Cipher Suites: "+x.getEnabledCipherSuites.mkString(",") + " Send Buffer: " + x.getSendBufferSize + " Receive Buffer: " + x.getReceiveBufferSize + " local address: " + x.getLocalAddress + ":" + x.getLocalPort)
       case x =>
         logger.warn(s"${x.getClass.getCanonicalName} is not an instance of SSLSocket ")
     }

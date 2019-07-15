@@ -16,12 +16,10 @@
 
 package com.google.cloud.bqsh.cmd
 
-import com.google.cloud.bigquery.JobStatistics.LoadStatistics
 import com.google.cloud.bigquery._
 import com.google.cloud.bqsh.{ArgParser, BQ, Command, LoadConfig, LoadOptionParser}
 import com.google.cloud.gszutil.Util
 import com.google.cloud.gszutil.Util.Logging
-import com.google.common.base.Preconditions
 import com.ibm.jzos.ZFileProvider
 
 object Load extends Command[LoadConfig] with Logging {
