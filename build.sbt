@@ -42,7 +42,8 @@ assemblyMergeStrategy in assembly := {
 
 val ibmLibs = Set(
   "ibmjzos.jar",
-  "ibmjcecca.jar"
+  "ibmjcecca.jar",
+  "dataaccess.jar"
 )
 
 assemblyExcludedJars in assembly := {

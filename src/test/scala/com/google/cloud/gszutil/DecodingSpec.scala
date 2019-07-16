@@ -51,6 +51,29 @@ class DecodingSpec extends FlatSpec {
     assert(col.asInstanceOf[LongColumnVector].vector(0) == -174)
   }
 
+  it should "match daa" in {
+    import com.ibm.jzos.fields.daa
+    val a = Array[Byte](0x00.toByte,0x00.toByte,0x17.toByte, 0x4D.toByte)
+    val f = new daa.PackedSignedIntField(0, 7)
+    val v = f.getInt(a, 0)
+    val e = -174
+    assert(v == e)
+  }
+
+  it should "match daa 2" in {
+    val len = PackedDecimal.sizeOf(9,2)
+    assert(len == 6)
+    val a = Array.fill[Byte](len)(0x00.toByte)
+    a(len-2) = 0x12.toByte
+    a(len-1) = 0x8C.toByte
+    val e = 128L
+
+    import com.ibm.jzos.fields.daa
+    val f = new daa.PackedSignedLongField(0, 11)
+    val v = f.getLong(a, 0)
+    assert(v == e)
+  }
+
   it should "unpack 6 byte decimal" in {
     val len = PackedDecimal.sizeOf(9,2)
     assert(len == 6)
