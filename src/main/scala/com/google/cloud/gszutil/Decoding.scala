@@ -109,13 +109,7 @@ object Decoding extends Logging {
 
   case class LongDecoder(override val size: Int) extends Decoder {
     override def get(buf: ByteBuffer, row: ColumnVector, i: Int): Unit = {
-      var v: Long = 0x00
-      var j = 0
-      while (j < size){
-        v <<= 8
-        v |= (buf.get() & 0xFF)
-        j += 1
-      }
+      val v = PackedDecimal.unpack(buf, size)
       row.asInstanceOf[LongColumnVector]
         .vector.update(i, v)
     }
