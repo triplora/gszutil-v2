@@ -43,6 +43,14 @@ class DecodingSpec extends FlatSpec {
     assert(col.asInstanceOf[LongColumnVector].vector(0) == 11802921)
   }
 
+  it should "unpack 4 byte negative integer" in {
+    val buf = ByteBuffer.wrap(Array[Byte](0x00.toByte,0x00.toByte,0x17.toByte, 0x4D.toByte))
+    val decoder = LongDecoder(4)
+    val col = decoder.columnVector(1)
+    decoder.get(buf, col, 0)
+    assert(col.asInstanceOf[LongColumnVector].vector(0) == -174)
+  }
+
   it should "unpack 6 byte decimal" in {
     val len = PackedDecimal.sizeOf(9,2)
     assert(len == 6)
