@@ -9,14 +9,15 @@ version := "0.1.0-SNAPSHOT"
 val exGuava = ExclusionRule(organization = "com.google.guava")
 
 libraryDependencies ++= Seq(
-  "com.google.guava" % "guava" % "27.0.1-jre",
-  "com.fasterxml.jackson.dataformat" % "jackson-dataformat-xml" % "2.6.7"
+  "com.google.guava" % "guava" % "28.0-jre"
 )
 
 libraryDependencies ++= Seq(
-  "com.google.api-client" % "google-api-client" % "1.28.0",
-  "com.google.cloud" % "google-cloud-bigquery" % "1.71.0",
-  "com.google.cloud" % "google-cloud-storage" % "1.71.0",
+  "org.apache.httpcomponents" % "httpclient" % "4.5.9",
+  "com.google.http-client" % "google-http-client-apache-v2" % "1.30.2",
+  "com.google.api-client" % "google-api-client" % "1.30.2",
+  "com.google.cloud" % "google-cloud-bigquery" % "1.82.0",
+  "com.google.cloud" % "google-cloud-storage" % "1.82.0",
   "com.typesafe.akka" %% "akka-actor" % "2.5.22",
   "org.apache.orc" % "orc-core" % "1.5.5",
   "org.apache.hive" % "hive-storage-api" % "2.6.0",

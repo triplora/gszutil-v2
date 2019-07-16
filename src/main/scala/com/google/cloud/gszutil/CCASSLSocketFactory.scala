@@ -17,33 +17,42 @@
 package com.google.cloud.gszutil
 
 import java.net.{InetAddress, Socket}
+import java.security.SecureRandom
 
 import com.google.api.client.googleapis.GoogleUtils
 import com.google.api.client.util.SslUtils
 import com.google.cloud.gszutil.Util.Logging
 import javax.net.ssl.{SSLContext, SSLSocket, SSLSocketFactory}
 
-/** This SSLSocketFactory implementation is necessary to
-  * disable ECDHE ciphers which are not supported by
-  * IBM Crypto Cards.
-  */
-class CCASSLSocketFactory extends SSLSocketFactory with Logging {
-  private final val Protocols = Array("TLSv1.2")
-  private final val Ciphers = Array(
+object CCASSLSocketFactory {
+  final val Protocols = Array("TLSv1.2")
+  final val Ciphers = Array(
     "TLS_RSA_WITH_AES_256_GCM_SHA384",
     "TLS_RSA_WITH_AES_128_GCM_SHA256",
     "TLS_RSA_WITH_AES_256_CBC_SHA",
     "TLS_RSA_WITH_AES_128_CBC_SHA"
   )
+}
+
+/** This SSLSocketFactory implementation is necessary to
+  * disable ECDHE ciphers which are not supported by
+  * IBM Crypto Cards.
+  */
+class CCASSLSocketFactory extends SSLSocketFactory with Logging {
+  import CCASSLSocketFactory._
 
   private val factory: SSLSocketFactory = {
     val ciphers: String = Ciphers.mkString(",")
     System.setProperty("jdk.tls.client.cipherSuites", ciphers)
+    System.setProperty("https.cipherSuites", ciphers)
     System.setProperty("jdk.tls.client.protocols" , "TLSv1.2")
+    System.setProperty("https.protocols" , "TLSv1.2")
     val ctx = SSLContext.getInstance("TLSv1.2")
     val tmf = SslUtils.getPkixTrustManagerFactory
     tmf.init(GoogleUtils.getCertificateTrustStore)
-    ctx.init(null, tmf.getTrustManagers, null)
+    val secureRandom = new SecureRandom()
+    logger.debug(s"Initialized SSLSocketFactory with SecureRandom algorithm ${secureRandom.getAlgorithm} from provider ${secureRandom.getProvider.getName}")
+    ctx.init(null, tmf.getTrustManagers, secureRandom)
     ctx.getSocketFactory
   }
 

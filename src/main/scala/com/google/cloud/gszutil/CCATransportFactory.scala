@@ -16,13 +16,41 @@
 
 package com.google.cloud.gszutil
 
-import com.google.api.client.http.HttpTransport
-import com.google.api.client.http.javanet.NetHttpTransport
-import com.google.auth.http.HttpTransportFactory
+import java.net.ProxySelector
+import java.util.concurrent.TimeUnit
 
-class CCATransportFactory extends HttpTransportFactory{
-  override def create(): HttpTransport =
-    new NetHttpTransport.Builder()
-      .setSslSocketFactory(new CCASSLSocketFactory())
-      .build()
+import com.google.api.client.http.HttpTransport
+import com.google.api.client.http.apache.v2.ApacheHttpTransport
+import com.google.auth.http.HttpTransportFactory
+import org.apache.http.client.HttpClient
+import org.apache.http.config.SocketConfig
+import org.apache.http.conn.ssl.SSLConnectionSocketFactory
+import org.apache.http.impl.client.HttpClientBuilder
+import org.apache.http.impl.conn.SystemDefaultRoutePlanner
+
+
+object CCATransportFactory {
+  private val Instance = new ApacheHttpTransport(newDefaultHttpClient)
+
+  def newDefaultHttpClient: HttpClient = { // Set socket buffer sizes to 8192
+    val socketConfig = SocketConfig.custom
+      .setRcvBufSize(2*1024*1024)
+      .setSndBufSize(2*1024*1024)
+      .build
+    HttpClientBuilder.create
+      .useSystemProperties
+      .setSSLSocketFactory(new SSLConnectionSocketFactory(new CCASSLSocketFactory(), CCASSLSocketFactory.Protocols, CCASSLSocketFactory.Ciphers, Option[javax.net.ssl.HostnameVerifier](null).orNull))
+      .setDefaultSocketConfig(socketConfig)
+      .setMaxConnTotal(200)
+      .setMaxConnPerRoute(20)
+      .setConnectionTimeToLive(-1, TimeUnit.MILLISECONDS)
+      .setRoutePlanner(new SystemDefaultRoutePlanner(ProxySelector.getDefault))
+      .disableRedirectHandling
+      .disableAutomaticRetries
+      .build
+  }
+}
+
+class CCATransportFactory extends HttpTransportFactory {
+  override def create(): HttpTransport = CCATransportFactory.Instance
 }
