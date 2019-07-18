@@ -18,7 +18,7 @@ package com.ibm.jzos
 
 import com.google.cloud.gszutil.CopyBook
 import com.google.cloud.gszutil.Util.CredentialProvider
-import com.google.cloud.gszutil.io.{DDChannel, ZRecordReaderT}
+import com.google.cloud.gszutil.io.ZRecordReaderT
 
 object ZFileProvider {
   def getProvider(): ZFileProvider = {
@@ -38,7 +38,7 @@ trait ZFileProvider {
     * @param copyBook used to verify LRECL of the dataset
     * @return
     */
-  def readChannel(dd: String, copyBook: CopyBook): DDChannel
+  def readDDWithCopyBook(dd: String, copyBook: CopyBook): ZRecordReaderT
   def ddExists(dd: String): Boolean
   def readDD(dd: String): ZRecordReaderT
   def readStdin(): String

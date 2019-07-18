@@ -17,12 +17,11 @@
 package com.ibm.jzos
 
 import java.nio.channels.FileChannel
-import java.nio.charset.Charset
 import java.nio.file.{Files, Paths, StandardOpenOption}
 
-import com.google.cloud.gszutil.{CopyBook, Util}
 import com.google.cloud.gszutil.Util.{CredentialProvider, DefaultCredentialProvider, Logging}
-import com.google.cloud.gszutil.io.{ChannelRecordReader, DDChannel, ZChannel, ZRecordReaderT}
+import com.google.cloud.gszutil.io.{ChannelRecordReader, ZRecordReaderT}
+import com.google.cloud.gszutil.{CopyBook, Util}
 import com.google.common.base.Charsets
 import com.google.common.io.ByteStreams
 
@@ -30,20 +29,17 @@ object Linux extends ZFileProvider with Logging {
   override def init(): Unit = {
     System.setProperty("java.net.preferIPv4Stack" , "true")
   }
-  override def readChannel(dd: String, copyBook: CopyBook): DDChannel = {
-    val ddc = ddFile(dd)
-    require(ddc.lRecl == copyBook.LRECL, s"Copybook LRECL ${copyBook.LRECL} doesn't match LRECL ${ddc.lRecl}")
-    ddc
+  override def readDDWithCopyBook(dd: String, copyBook: CopyBook): ZRecordReaderT = {
+    val rr = readDD(dd)
+    require(rr.lRecl == copyBook.LRECL, s"Copybook LRECL ${copyBook.LRECL} doesn't match LRECL ${rr.lRecl}")
+    rr
   }
 
   override def ddExists(dd: String): Boolean = {
     sys.env.contains(dd) && sys.env.contains(dd+"_LRECL") && sys.env.contains(dd+"_BLKSIZE")
   }
 
-  override def readDD(dd: String): ZRecordReaderT = {
-    val ddc = ddFile(dd)
-    new ChannelRecordReader(ddc.rc, ddc.lRecl, ddc.blkSize)
-  }
+  override def readDD(dd: String): ZRecordReaderT = ddFile(dd)
 
   override def readStdin(): String = {
     val in = ByteStreams.toByteArray(System.in)
@@ -52,7 +48,7 @@ object Linux extends ZFileProvider with Logging {
 
   override def readDDString(dd: String, recordSeparator: String): String = {
     val in = readDD(dd)
-    val bytes = Util.readAllBytes(new ZChannel(in))
+    val bytes = Util.readAllBytes(in)
     Util.records2string(bytes, in.lRecl, Charsets.UTF_8, recordSeparator)
   }
 
@@ -70,7 +66,7 @@ object Linux extends ZFileProvider with Logging {
 
   /** On Linux DD is an environment variable pointing to a file
     */
-  protected def ddFile(dd: String): DDChannel = {
+  protected def ddFile(dd: String): ZRecordReaderT = {
     val ddPath = Paths.get(System.getenv(dd))
     logger.info(s"Opening $dd $ddPath")
     val lReclKey = dd + "_LRECL"
@@ -83,6 +79,6 @@ object Linux extends ZFileProvider with Logging {
     val ddFile = ddPath.toFile
     require(ddFile.exists, s"$dd $ddPath does not exist")
     require(ddFile.isFile, s"$dd $ddPath is not a file")
-    DDChannel(FileChannel.open(ddPath, StandardOpenOption.READ), lRecl, blkSize)
+    new ChannelRecordReader(FileChannel.open(ddPath, StandardOpenOption.READ), lRecl, blkSize)
   }
 }

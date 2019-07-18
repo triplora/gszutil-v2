@@ -16,23 +16,25 @@
 
 package com.ibm.jzos
 
-import java.nio.channels.Channels
-
-import com.google.cloud.gszutil.{CopyBook, Decoding, Util}
 import com.google.cloud.gszutil.Util.{CredentialProvider, GoogleCredentialsProvider, Logging}
-import com.google.cloud.gszutil.io.{DDChannel, ZChannel, ZRecordReaderT}
+import com.google.cloud.gszutil.io.ZRecordReaderT
+import com.google.cloud.gszutil.{CopyBook, Decoding, Util}
 import com.google.common.io.ByteStreams
 
 object IBM extends ZFileProvider with Logging {
   override def init(): Unit = {
     ZOS.addCCAProvider()
     System.setProperty("java.net.preferIPv4Stack" , "true")
-    System.setProperty("jzos.bsam.disable" , "true")
+    //System.setProperty("jzos.bsam.disable" , "true")
   }
-  override def readChannel(dd: String, copyBook: CopyBook): DDChannel = {
-    val rr = ZOS.readDD(dd)
+
+  override def readDDWithCopyBook(dd: String, copyBook: CopyBook): ZRecordReaderT = {
+    val rr = if (System.getProperty("jzos.bsam.disable", "false") != "true")
+      new BsamChannel(dd)
+    else ZOS.readDD(dd)
+
     require(rr.lRecl == copyBook.LRECL, s"Copybook LRECL ${copyBook.LRECL} doesn't match DSN LRECL ${rr.lRecl}")
-    DDChannel(new ZChannel(rr), rr.lRecl, rr.blkSize)
+    rr
   }
 
   override def ddExists(dd: String): Boolean = ZOS.ddExists(dd)
@@ -46,7 +48,7 @@ object IBM extends ZFileProvider with Logging {
 
   override def readDDString(dd: String, recordSeparator: String): String = {
     val in = readDD(dd)
-    val bytes = Util.readAllBytes(new ZChannel(in))
+    val bytes = Util.readAllBytes(in)
     Util.records2string(bytes, in.lRecl, Decoding.CP1047, recordSeparator)
   }
 
@@ -55,16 +57,22 @@ object IBM extends ZFileProvider with Logging {
   override def getCredentialProvider(): CredentialProvider = {
     if (cp != null) cp
     else {
-      val in = Channels.newInputStream(new ZChannel(readDD("KEYFILE")))
-      val bytes = ByteStreams.toByteArray(in)
+      val bytes = Util.readAllBytes(readDD("KEYFILE"))
       cp = new GoogleCredentialsProvider(bytes)
       cp
     }
   }
 
   override def loadCopyBook(dd: String): CopyBook = {
-    val copyBook = CopyBook(readDDString(dd, "\n"))
-    logger.info(s"Loaded copy book with LRECL=${copyBook.LRECL} FIELDS=${copyBook.FieldNames.mkString(",")}```\n${copyBook.raw}\n```")
-    copyBook
+    val raw = readDDString(dd, "\n")
+    logger.debug(s"Parsing copy book:\n$raw")
+    try {
+      val copyBook = CopyBook(raw)
+      logger.info(s"Loaded copy book with LRECL=${copyBook.LRECL} FIELDS=${copyBook.FieldNames.mkString(",")}```\n${copyBook.raw}\n```")
+      copyBook
+    } catch {
+      case e: Exception =>
+        throw new RuntimeException("Failed to parse copybook", e)
+    }
   }
 }

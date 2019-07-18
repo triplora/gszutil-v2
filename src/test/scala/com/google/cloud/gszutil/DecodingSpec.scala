@@ -24,79 +24,145 @@ import com.google.cloud.gszutil.Decoding._
 import com.google.common.base.Charsets
 import org.apache.hadoop.hive.ql.exec.vector.{BytesColumnVector, Decimal64ColumnVector, DecimalColumnVector, LongColumnVector}
 import org.scalatest.FlatSpec
-
+import com.ibm.jzos.fields.daa
 
 class DecodingSpec extends FlatSpec {
-  "Decoder" should "unpack 2 byte binary integer" in {
-    val buf = ByteBuffer.wrap(Array[Byte](20.toByte, 140.toByte))
+  "Decoder" should "decode 2 byte binary integer" in {
+    val f = new daa.BinarySignedIntL2Field(0)
+    val a = Array[Byte](20.toByte, 140.toByte)
+    val buf = ByteBuffer.wrap(a)
     val decoder = LongDecoder(2)
     val col = decoder.columnVector(1)
-    decoder.get(buf, col, 0)
-    assert(col.asInstanceOf[LongColumnVector].vector(0) == 5260)
+    System.out.println(Binary.binValue(a))
+    val testValues = Seq(-32768, -1, 0, 1, 5260, 32767)
+    for (x <- testValues){
+      f.putInt(x, a,0)
+      System.out.println(s"$x:\n${Binary.binValue(a)}\n${PackedDecimal.hexValue(a)}")
+      buf.clear()
+      decoder.get(buf, col, 0)
+      assert(col.asInstanceOf[LongColumnVector].vector(0) == x)
+    }
   }
 
-  it should "unpack 4 byte integer" in {
-    val buf = ByteBuffer.wrap(Array[Byte](0.toByte,180.toByte, 25.toByte, 41.toByte))
+  it should "decode 4 byte binary integer" in {
+    val f = new daa.BinarySignedIntL4Field(0)
+    val a = new Array[Byte](4)
+    val buf = ByteBuffer.wrap(a)
     val decoder = LongDecoder(4)
     val col = decoder.columnVector(1)
-    decoder.get(buf, col, 0)
-    assert(col.asInstanceOf[LongColumnVector].vector(0) == 11802921)
+
+    val testValues = Seq(-174, -1, 1, 0, 11802921, Int.MinValue, Int.MaxValue)
+    for (x <- testValues) {
+      f.putInt(x, a, 0)
+      System.out.println(s"$x:\n${Binary.binValue(a)}\n${PackedDecimal.hexValue(a)}")
+      buf.clear()
+      decoder.get(buf, col, 0)
+      assert(col.asInstanceOf[LongColumnVector].vector(0) == x)
+    }
   }
 
-  it should "unpack 4 byte negative integer" in {
-    val buf = ByteBuffer.wrap(Array[Byte](0x00.toByte,0x00.toByte,0x17.toByte, 0x4D.toByte))
+  it should "decode 8 byte binary long" in {
+    val f = new daa.BinarySignedLongL8Field(0)
+    val a = new Array[Byte](8)
+    val buf = ByteBuffer.wrap(a)
+    val decoder = LongDecoder(8)
+    val col = decoder.columnVector(1)
+
+    val testValues = Seq(Long.MinValue, -174, -1, 1, 0, Long.MaxValue)
+    for (x <- testValues) {
+      f.putLong(x, a, 0)
+      System.out.println(s"$x:\n${Binary.binValue(a)}\n${PackedDecimal.hexValue(a)}")
+      buf.clear()
+      decoder.get(buf, col, 0)
+      assert(col.asInstanceOf[LongColumnVector].vector(0) == x)
+    }
+  }
+
+  it should "decode 4 byte binary unsigned integer" in {
+    val f = new daa.BinaryUnsignedIntL4Field(0)
+    val a = new Array[Byte](4)
+    val buf = ByteBuffer.wrap(a)
     val decoder = LongDecoder(4)
     val col = decoder.columnVector(1)
-    decoder.get(buf, col, 0)
-    assert(col.asInstanceOf[LongColumnVector].vector(0) == -174)
+
+    val testValues = Seq(0, 1, Int.MaxValue)
+    for (x <- testValues) {
+      f.putInt(x, a, 0)
+      System.out.println(s"$x:\n${Binary.binValue(a)}\n${PackedDecimal.hexValue(a)}")
+      buf.clear()
+      decoder.get(buf, col, 0)
+      assert(col.asInstanceOf[LongColumnVector].vector(0) == x)
+    }
   }
 
-  it should "match daa" in {
-    import com.ibm.jzos.fields.daa
+  it should "decode 8 byte binary unsigned long" in {
+    val f = new daa.BinaryUnsignedLongL8Field(0)
+    val a = new Array[Byte](8)
+    val buf = ByteBuffer.wrap(a)
+    val decoder = LongDecoder(8)
+    val col = decoder.columnVector(1)
+
+    val testValues = Seq(0, 1, Long.MaxValue)
+    for (x <- testValues) {
+      f.putLong(x, a, 0)
+      System.out.println(s"$x:\n${Binary.binValue(a)}\n${PackedDecimal.hexValue(a)}")
+      buf.clear()
+      decoder.get(buf, col, 0)
+      assert(col.asInstanceOf[LongColumnVector].vector(0) == x)
+    }
+  }
+
+  it should "unpack 4 byte decimal" in {
+    val f = new daa.PackedSignedIntP7Field(0)
     val a = Array[Byte](0x00.toByte,0x00.toByte,0x17.toByte, 0x4D.toByte)
-    val f = new daa.PackedSignedIntField(0, 7)
-    val v = f.getInt(a, 0)
-    val e = -174
-    assert(v == e)
-  }
-
-  it should "match daa 2" in {
-    val len = PackedDecimal.sizeOf(9,2)
-    assert(len == 6)
-    val a = Array.fill[Byte](len)(0x00.toByte)
-    a(len-2) = 0x12.toByte
-    a(len-1) = 0x8C.toByte
-    val e = 128L
-
-    import com.ibm.jzos.fields.daa
-    val f = new daa.PackedSignedLongField(0, 11)
-    val v = f.getLong(a, 0)
-    assert(v == e)
+    val buf = ByteBuffer.wrap(a)
+    val decoder = Decimal64Decoder(7,0)
+    val col = decoder.columnVector(1)
+    val testValues = Seq(-9999999, 0, 1, 9999999)
+    for (x <- testValues) {
+      f.putInt(x, a, 0)
+      buf.clear()
+      decoder.get(buf, col, 0)
+      System.out.println(s"$x:\n${Binary.binValue(a)}\n${PackedDecimal.hexValue(a)}")
+      assert(col.asInstanceOf[LongColumnVector].vector(0) == x)
+    }
   }
 
   it should "unpack 6 byte decimal" in {
-    val len = PackedDecimal.sizeOf(9,2)
-    assert(len == 6)
-    val a = Array.fill[Byte](len)(0)
-    a(len-2) = 0x12.toByte
-    a(len-1) = 0x8C.toByte
-    val expected = 128L
-
-    val unpackedLong = PackedDecimal.unpack(ByteBuffer.wrap(a), a.length)
-    assert(unpackedLong == expected)
-    System.out.println("Unpacked:\n"+PackedDecimal.hexValue(a))
-    assert(PackedDecimal.sizeOf(9,2) == 6)
+    val f = new daa.PackedSignedLongP11Field(0)
+    val a = new Array[Byte](6)
+    val buf = ByteBuffer.wrap(a)
     val decoder = Decimal64Decoder(9,2)
     val col = decoder.columnVector(1)
-    decoder.get(ByteBuffer.wrap(a), col, 0)
+    val testValues = Seq(-99999999999L, 0, 1, 128, 99999999999L)
+    for (x <- testValues) {
+      f.putLong(x, a, 0)
+      buf.clear()
+      decoder.get(buf, col, 0)
+      System.out.println(s"$x:\n${Binary.binValue(a)}\n${PackedDecimal.hexValue(a)}")
+      assert(col.asInstanceOf[LongColumnVector].vector(0) == x)
+    }
+  }
 
-    val vec = col.asInstanceOf[Decimal64ColumnVector].vector
-    val got = vec(0)
-    assert(got == expected)
+  it should "unpack 10 byte long" in {
+    val f = new daa.PackedSignedLongP18Field(0)
+    val a = new Array[Byte](10)
+    val buf = ByteBuffer.wrap(a)
+    val decoder = Decimal64Decoder(16,2)
+    val col = decoder.columnVector(1)
+    val testValues = Seq(-999999999999999999L, -100000000000000001L, 0, 1, 100000000000000001L, 999999999999999999L)
+    for (x <- testValues) {
+      f.putLong(x, a, 0)
+      buf.clear()
+      decoder.get(buf, col, 0)
+      System.out.println(s"$x:\n${Binary.binValue(a)}\n${PackedDecimal.hexValue(a)}")
+      assert(col.asInstanceOf[LongColumnVector].vector(0) == x)
+    }
   }
 
   it should "unpack 18 digit decimal" in {
     val len = PackedDecimal.sizeOf(16,2)
+    System.out.println(s"$len")
     val a = Array.fill[Byte](len)(0x00.toByte)
     a(0) = 0x01.toByte
     a(len-1) = 0x1C.toByte

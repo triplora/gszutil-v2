@@ -15,12 +15,13 @@
  */
 package com.google.cloud.gszutil
 
-import java.io.{ByteArrayInputStream, ByteArrayOutputStream, InputStream}
+import java.io.{ByteArrayInputStream, ByteArrayOutputStream}
 import java.nio.ByteBuffer
 import java.nio.channels.{Channels, ReadableByteChannel, WritableByteChannel}
 import java.nio.charset.Charset
 
 import com.google.auth.oauth2.GoogleCredentials
+import com.google.cloud.gszutil.io.ZRecordReaderT
 import com.google.cloud.storage.BlobInfo
 import com.google.common.base.Charsets
 import com.google.common.collect.ImmutableSet
@@ -39,7 +40,12 @@ object Util {
     val debug = sys.env.getOrElse("BQSH_ROOT_LOGGER","").contains("DEBUG") || debugOverride
     val rootLogger = LogManager.getRootLogger
     rootLogger.addAppender(new ConsoleAppender(new PatternLayout("%d{ISO8601} %-5p %c %x - %m%n")))
-    LogManager.getLogger("org.apache.orc.impl.MemoryManagerImpl").setLevel(Level.ERROR)
+    LogManager
+      .getLogger("org.apache.orc.impl.MemoryManagerImpl")
+      .setLevel(Level.ERROR)
+    LogManager
+      .getLogger("org.apache.http")
+      .setLevel(Level.WARN)
 
     if (debug) {
       rootLogger.setLevel(Level.DEBUG)
@@ -114,9 +120,15 @@ object Util {
   }
 
   def readAllBytes(in: ReadableByteChannel): Array[Byte] = {
+    val chunkSize = in match {
+      case x: ZRecordReaderT =>
+        x.blkSize
+      case _ =>
+        4096
+    }
     val os = new ByteArrayOutputStream()
     val out = Channels.newChannel(os)
-    transfer(in, out)
+    transfer(in, out, chunkSize)
     os.toByteArray
   }
 
@@ -140,14 +152,8 @@ object Util {
   }
 
   def records2string(bytes: Array[Byte], lRecl: Int, charset: Charset, recordSeparator: String): String = {
-    val sb = new StringBuilder(bytes.length)
     bytes.grouped(lRecl)
-      .foreach{b =>
-        val read = new String(b, charset)
-        val trimmed = trimRight(read,' ')
-        sb.append(trimmed)
-        sb.append(recordSeparator)
-      }
-    sb.result()
+      .map{b => trimRight(new String(b, charset),' ')}
+      .mkString(recordSeparator)
   }
 }

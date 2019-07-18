@@ -36,6 +36,7 @@ class DatasetReader(args: DatasetReaderArgs) extends Actor with Logging {
   private var activeTime: Long = 0
   private var nSent = 0L
   private var totalBytes = 0L
+  private var continue = true
   import args._
 
   override def preStart(): Unit = {
@@ -48,10 +49,10 @@ class DatasetReader(args: DatasetReaderArgs) extends Actor with Logging {
     case bb: ByteBuffer =>
       lastRecv = System.currentTimeMillis
       bb.clear()
-      while (bb.hasRemaining && in.isOpen) {
+      while (bb.hasRemaining && continue) {
         if (in.read(bb) < 0){
-          logger.info(s"closing ${in.getClass.getSimpleName}")
-          in.close()
+          logger.info(s"${in.getClass.getSimpleName} reached end of input")
+          continue = false
         }
       }
 
@@ -61,7 +62,7 @@ class DatasetReader(args: DatasetReaderArgs) extends Actor with Logging {
       nSent += 1
       lastSend = System.currentTimeMillis
       activeTime += (lastSend - lastRecv)
-      if (!in.isOpen) {
+      if (!continue) {
         val mbps = Util.fmbps(totalBytes,activeTime)
         logger.info(s"Finished reading $nSent chunks with $totalBytes bytes in $activeTime ms ($mbps mbps)")
         context.become(finished)

@@ -30,7 +30,7 @@ class ParserSpec extends FlatSpec {
     )
     val parsed1 = BqshParser.parse(args)
     assert(parsed1.isDefined)
-    val parsed = MkOptionParser.parse(parsed1.get.args)
+    val parsed = MkOptionParser.parse(parsed1.get.args.drop(1))
     assert(parsed.isDefined)
   }
 
@@ -46,7 +46,7 @@ class ParserSpec extends FlatSpec {
     )
     val parsed1 = BqshParser.parse(args)
     assert(parsed1.isDefined)
-    val parsed = LoadOptionParser.parse(parsed1.get.args)
+    val parsed = LoadOptionParser.parse(parsed1.get.args.drop(1))
     assert(parsed.isDefined)
   }
 
@@ -92,6 +92,7 @@ class ParserSpec extends FlatSpec {
     val parsed = GsUtilOptionParser.parse(parsed1.get.args)
     assert(parsed.isDefined)
     assert(parsed.get.mode == "rm")
+    assert(parsed.get.destinationUri == "gs://bucket/path")
   }
 
   "GsUtilCpOptionParser" should "parse" in {
@@ -108,6 +109,8 @@ class ParserSpec extends FlatSpec {
     assert(parsed.isDefined)
     assert(parsed.get.replace)
     assert(parsed.get.mode == "cp")
+    assert(parsed.get.replace)
+    assert(parsed.get.destinationUri == "gs://bucket/path")
   }
 
   "Bqsh" should "split SQL" in {

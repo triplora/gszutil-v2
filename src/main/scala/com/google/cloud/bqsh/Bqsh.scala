@@ -31,7 +31,9 @@ object Bqsh extends Logging {
     val script = zos.readStdin()
     Util.configureLogging()
     val interpreter = new Interpreter(zos, sys.env,true, true)
-    interpreter.runScript(script)
+    val result = interpreter.runScript(script)
+    if (result.exitCode != 0)
+      System.exit(result.exitCode)
   }
 
   class Interpreter(zos: ZFileProvider, sysEnv: Map[String,String], var throwOnError: Boolean = true, var printCommands: Boolean = true){
@@ -51,10 +53,13 @@ object Bqsh extends Logging {
     }
 
     def runScript(script: String): Result = {
-      splitSH(script)
-        .map(s => runWithArgs(readArgs(s)))
-        .lastOption
-        .getOrElse(Result.Success)
+      for (s <- splitSH(script)) {
+        val result = runWithArgs(readArgs(s))
+        if (result.exitCode != 0 && throwOnError) {
+          return result
+        }
+      }
+      Result(env.toMap)
     }
   }
 

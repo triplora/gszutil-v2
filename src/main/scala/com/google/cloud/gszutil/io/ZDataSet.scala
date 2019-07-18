@@ -41,4 +41,11 @@ class ZDataSet(srcBytes: Array[Byte], recordLength: Int, blockSize: Int, limit: 
   override def close(): Unit = open = false
   override val lRecl: Int = recordLength
   override val blkSize: Int = blockSize
+
+  override def read(dst: ByteBuffer): Int = {
+    val i = dst.position
+    val n = read(dst.array, i, dst.remaining)
+    if (n > 0) dst.position(i + n)
+    n
+  }
 }

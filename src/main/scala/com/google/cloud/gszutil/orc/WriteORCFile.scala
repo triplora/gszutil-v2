@@ -20,7 +20,6 @@ import java.net.URI
 import java.nio.channels.ReadableByteChannel
 
 import akka.actor.{ActorSystem, Props}
-import akka.io.ByteBufferPool
 import com.google.cloud.gszutil.CopyBook
 import com.google.cloud.gszutil.Util.Logging
 import com.google.cloud.storage.Storage

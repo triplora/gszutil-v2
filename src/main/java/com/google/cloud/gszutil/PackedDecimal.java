@@ -78,7 +78,12 @@ public class PackedDecimal {
         else if (sign == 0xF) { /*unsigned*/ }
         else {
             if (!relaxedParsing) {
-                throw new IllegalArgumentException("unexpected sign bits " + sign);
+                byte[] a = new byte[len];
+                int startPos = buf.position() - len;
+                buf.position(startPos);
+                buf.get(a);
+                String hex = hexValue(a);
+                throw new IllegalArgumentException("unexpected sign bits " + sign + "\n" + hex);
             }
         }
         return x;

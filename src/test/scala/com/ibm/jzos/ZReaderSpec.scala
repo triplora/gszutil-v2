@@ -28,7 +28,7 @@ class ZReaderSpec extends FlatSpec {
   "RecordReader" should "read" in {
     val testBytes = Util.randString(100000).getBytes(StandardCharsets.UTF_8)
     val reader = new ZDataSet(testBytes, 135, 135 * 10)
-    val readBytes = Util.readAllBytes(new ZChannel(reader))
+    val readBytes = Util.readAllBytes(reader)
     assert(readBytes.length == testBytes.length)
     val matches = Hashing.sha256().hashBytes(testBytes).toString == Hashing.sha256().hashBytes(readBytes).toString
     assert(matches)

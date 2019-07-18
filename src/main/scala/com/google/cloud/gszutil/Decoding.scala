@@ -15,20 +15,18 @@
  */
 package com.google.cloud.gszutil
 
-import java.math.BigInteger
 import java.nio.ByteBuffer
 import java.nio.charset.Charset
 
 import com.google.cloud.gszutil.Util.Logging
 import com.google.common.base.Charsets
-import org.apache.hadoop.hive.common.`type`.HiveDecimal
-import org.apache.hadoop.hive.ql.exec.vector.{BytesColumnVector, ColumnVector, Decimal64ColumnVector, DecimalColumnVector, LongColumnVector}
+import com.ibm.jzos.fields.daa
+import com.ibm.jzos.fields.daa.BinarySignedIntField
+import org.apache.hadoop.hive.ql.exec.vector._
 import org.apache.hadoop.hive.serde2.io.HiveDecimalWritable
 import org.apache.orc.TypeDescription
-import org.apache.orc.TypeDescription.Category
 
 import scala.collection.mutable.ArrayBuffer
-import scala.compat.java8.functionConverterImpls.AsJavaSupplier
 
 
 object Decoding extends Logging {
@@ -109,9 +107,21 @@ object Decoding extends Logging {
 
   case class LongDecoder(override val size: Int) extends Decoder {
     override def get(buf: ByteBuffer, row: ColumnVector, i: Int): Unit = {
-      val v = PackedDecimal.unpack(buf, size)
       row.asInstanceOf[LongColumnVector]
-        .vector.update(i, v)
+        .vector.update(i, Binary.decode(buf, size))
+    }
+
+    override def columnVector(maxSize: Int): ColumnVector =
+      new LongColumnVector(maxSize)
+
+    override def typeDescription: TypeDescription =
+      TypeDescription.createLong
+  }
+
+  case class UnsignedLongDecoder(override val size: Int) extends Decoder {
+    override def get(buf: ByteBuffer, row: ColumnVector, i: Int): Unit = {
+      row.asInstanceOf[LongColumnVector]
+        .vector.update(i, Binary.decodeUnsigned(buf, size))
     }
 
     override def columnVector(maxSize: Int): ColumnVector =
@@ -131,7 +141,8 @@ object Decoding extends Logging {
     * @param s decimal scaling positions
     */
   case class DecimalDecoder(p: Int, s: Int) extends Decoder {
-    require(p + s <= 31 && p + s > 18, "precision must be in range [19,31]")
+    private val precision = p+s
+    require(p + s <= 31 && p + s > 18, s"precision $precision not in range [19,31]")
     override val size: Int = PackedDecimal.sizeOf(p,s)
 
     override def get(buf: ByteBuffer, row: ColumnVector, i: Int): Unit = {
@@ -174,7 +185,7 @@ object Decoding extends Logging {
   }
 
   case class Decimal64Decoder(p: Int, s: Int) extends Decoder {
-    require(p+s <= 18 && p+s > 0, "precision must be in range [1,18]")
+    require(p+s <= 18 && p+s > 0, s"precision ${p+s} not in range [1,18]")
     override val size: Int = PackedDecimal.sizeOf(p,s)
 
     override def get(buf: ByteBuffer, row: ColumnVector, i: Int): Unit = {
@@ -196,6 +207,7 @@ object Decoding extends Logging {
 
   private val charRegex = """PIC X\((\d{1,3})\)""".r
   private val intRegex = """PIC S9\((\d{1,3})\) COMP""".r
+  private val uintRegex = """PIC 9\((\d{1,3})\) COMP""".r
   private val decRegex = """PIC S9\((\d{1,3})\) COMP-3""".r
   private val decRegex2 = """PIC S9\((\d{1,3})\)V9\((\d{1,3})\) COMP-3""".r
   private val decRegex3 = """PIC S9\((\d{1,3})\)V(9{1,6}) COMP-3""".r
@@ -205,25 +217,32 @@ object Decoding extends Logging {
         StringDecoder(size.toInt)
       case "PIC X" =>
         StringDecoder(1)
-      case decRegex(scale) =>
-        Decimal64Decoder(9, scale.toInt)
-      case decRegex2(p,s) =>
+      case decRegex(p) if p.toInt >= 1 =>
         p.toInt match {
-          case x if x < 18 =>
-            Decimal64Decoder(p.toInt, s.toInt)
+          case x if x <= 18 =>
+            Decimal64Decoder(p.toInt, 0)
           case _ =>
-            DecimalDecoder(p.toInt, s.toInt)
+            DecimalDecoder(p.toInt, 0)
         }
-      case decRegex3(p,s) =>
-        p.toInt match {
-          case x if x < 18 =>
-            Decimal64Decoder(p.toInt, s.length)
-          case _ =>
-            DecimalDecoder(p.toInt, s.length)
+      case decRegex2(p,s) if p.toInt >= 1 =>
+        (p.toInt, s.toInt) match {
+          case (p1,s1) if p1+s1 <= 18 =>
+            Decimal64Decoder(p1, s1)
+          case (p1,s1) =>
+            DecimalDecoder(p1, s1)
+        }
+      case decRegex3(p,s) if p.toInt >= 1 =>
+        (p.toInt, s.length) match {
+          case (p1,s1) if p1+s1 <= 18 =>
+            Decimal64Decoder(p1, s1)
+          case (p1,s1) =>
+            DecimalDecoder(p1, s1)
         }
       case "PIC S9 COMP" =>
         LongDecoder(2)
-      case intRegex(p) if p.toInt <= 18 =>
+      case "PIC 9 COMP" =>
+        UnsignedLongDecoder(2)
+      case intRegex(p) if p.toInt <= 18 && p.toInt >= 1 =>
         val x = p.toInt
         if (x <= 4)
           LongDecoder(2)
@@ -231,6 +250,15 @@ object Decoding extends Logging {
           LongDecoder(4)
         else
           LongDecoder(8)
+
+      case uintRegex(p) if p.toInt <= 18 && p.toInt >= 1 =>
+        val x = p.toInt
+        if (x <= 4)
+          UnsignedLongDecoder(2)
+        else if (x <= 9)
+          UnsignedLongDecoder(4)
+        else
+          UnsignedLongDecoder(8)
       case x =>
         types(x)
     }

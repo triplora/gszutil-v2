@@ -17,7 +17,7 @@ package com.google.cloud.bqsh.cmd
 
 import java.net.URI
 
-import com.google.cloud.bqsh.{ArgParser, Command, GCS, GsUtilConfig, GsUtilOptionParser}
+import com.google.cloud.bqsh._
 import com.google.cloud.gszutil.Util.Logging
 import com.google.cloud.gszutil.orc.WriteORCFile
 import com.google.cloud.storage.Storage
@@ -32,7 +32,7 @@ object Cp extends Command[GsUtilConfig] with Logging {
       .getCredentialProvider()
       .getCredentials
     val copyBook = zos.loadCopyBook(c.copyBook)
-    val in = zos.readChannel(c.source, copyBook)
+    val in = zos.readDDWithCopyBook(c.source, copyBook)
     val batchSize = (c.blocksPerBatch * in.blkSize) / in.lRecl
     val gcs = GCS.defaultClient(creds)
     if (c.replace) {
@@ -52,7 +52,7 @@ object Cp extends Command[GsUtilConfig] with Logging {
     }
 
     WriteORCFile.run(gcsUri = c.destinationUri,
-                     in = in.rc,
+                     in = in,
                      copyBook = copyBook,
                      gcs = gcs,
                      maxWriters = c.parallelism,
@@ -60,6 +60,7 @@ object Cp extends Command[GsUtilConfig] with Logging {
                      partSizeMb = c.partSizeMB,
                      timeoutMinutes = c.timeOutMinutes,
                      compress = c.compress)
+    in.close()
     Result.Success
   }
 }

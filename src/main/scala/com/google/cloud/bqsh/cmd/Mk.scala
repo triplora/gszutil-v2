@@ -17,7 +17,7 @@
 package com.google.cloud.bqsh.cmd
 
 import com.google.cloud.bigquery._
-import com.google.cloud.bqsh.{ArgParser, BQ, Command, MkConfig, MkOptionParser}
+import com.google.cloud.bqsh._
 import com.ibm.jzos.ZFileProvider
 
 object Mk extends Command[MkConfig]{

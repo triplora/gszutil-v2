@@ -24,6 +24,11 @@ import com.google.cloud.gszutil.Util.Logging
 import org.apache.hadoop.hive.ql.exec.vector.VectorizedRowBatch
 import org.apache.orc.Writer
 
+/** Uses a Copy Book to convert MVS data set records into an ORC row batch
+  *
+  * @param copyBook
+  * @param batchSize
+  */
 class ZReader(private val copyBook: CopyBook, private val batchSize: Int) extends Logging {
   private final val decoders: Array[Decoder] = copyBook.decoders
   private final val rowBatch: VectorizedRowBatch = {

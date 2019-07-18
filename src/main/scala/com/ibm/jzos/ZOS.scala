@@ -15,6 +15,8 @@
  */
 package com.ibm.jzos
 
+import java.nio.ByteBuffer
+import java.nio.channels.ReadableByteChannel
 import java.security.Security
 
 import com.google.cloud.gszutil.Util.Logging
@@ -38,7 +40,7 @@ protected object ZOS extends Logging {
     }
   }
 
-  class WrappedRecordReader(r: RecordReader) extends ZRecordReaderT with Logging {
+  class WrappedRecordReader(r: RecordReader) extends ZRecordReaderT with ReadableByteChannel with Logging {
     require(r.getRecfm == "FB", s"${r.getDDName} record format must be FB - ${r.getRecfm} is not supported")
 
     // Ensure that reader is closed if job is killed
@@ -60,6 +62,13 @@ protected object ZOS extends Logging {
     override def isOpen: Boolean = open
     override val lRecl: Int = r.getLrecl
     override val blkSize: Int = r.getBlksize
+
+    override def read(dst: ByteBuffer): Int = {
+      val i = dst.position
+      val n = read(dst.array, i, dst.remaining)
+      if (n > 0) dst.position(i + n)
+      n
+    }
   }
 
   def ddExists(ddName: String): Boolean = {

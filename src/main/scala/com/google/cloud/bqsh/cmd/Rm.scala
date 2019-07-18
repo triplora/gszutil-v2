@@ -17,7 +17,7 @@
 package com.google.cloud.bqsh.cmd
 
 import com.google.cloud.bigquery.DatasetId
-import com.google.cloud.bqsh.{ArgParser, BQ, Command, RmConfig, RmOptionParser}
+import com.google.cloud.bqsh._
 import com.ibm.jzos.ZFileProvider
 
 object Rm extends Command[RmConfig] {

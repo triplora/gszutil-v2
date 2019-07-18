@@ -17,7 +17,7 @@
 package com.google.cloud.bqsh.cmd
 
 import com.google.cloud.bigquery._
-import com.google.cloud.bqsh.{ArgParser, BQ, Command, LoadConfig, LoadOptionParser}
+import com.google.cloud.bqsh._
 import com.google.cloud.gszutil.Util
 import com.google.cloud.gszutil.Util.Logging
 import com.ibm.jzos.ZFileProvider

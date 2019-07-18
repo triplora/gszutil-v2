@@ -51,4 +51,6 @@ class ChannelRecordReader(rc: ReadableByteChannel, recordLength: Int, blockSize:
   override val lRecl: Int = recordLength
 
   override val blkSize: Int = blockSize
+
+  override def read(dst: ByteBuffer): Int = rc.read(dst)
 }

@@ -14,18 +14,35 @@
  * limitations under the License.
  */
 
-package com.google.cloud.gszutil.io
+package com.ibm.jzos
 
+import java.nio.ByteBuffer
 import java.nio.channels.ReadableByteChannel
 
-trait ZRecordReaderT extends ReadableByteChannel {
+import com.google.cloud.gszutil.io.ZRecordReaderT
+
+class BsamChannel(dd: String) extends ZRecordReaderT with ReadableByteChannel {
+
+  private val bsam = new Bsam(dd, Bsam.OPEN_INPUT)
+  require(bsam.getRecfm == "FB", "RECFM must be FB")
+  require(bsam.getBlksize % bsam.getLrecl == 0, "BLKSIZE is not a multiple of LRECL")
+
+  def free(): Unit = {
+    try {
+      ZFile.bpxwdyn(s"free fi($dd) msg(2)")
+    } catch {
+      case e: RcException =>
+        ZUtil.logDiagnostic(1, s"RecordReader: Error freeing DD:$dd - ${e.getMessage}")
+    }
+  }
 
   /** Read a record from the dataset into a buffer.
     *
     * @param buf - the byte array into which the bytes will be read
     * @return the number of bytes read, -1 if EOF encountered.
     */
-  def read(buf: Array[Byte]): Int
+  override def read(buf: Array[Byte]): Int =
+    bsam.readBlock(buf)
 
   /** Read a record from the dataset into a buffer.
     *
@@ -34,25 +51,38 @@ trait ZRecordReaderT extends ReadableByteChannel {
     * @param len the number of bytes to read
     * @return the number of bytes read, -1 if EOF encountered.
     */
-  def read(buf: Array[Byte], off: Int, len: Int): Int
+  override def read(buf: Array[Byte], off: Int, len: Int): Int =
+    bsam.readBlock(buf, off, len)
 
   /** Close the reader and underlying native file.
     * This will also free the associated DD if getAutoFree() is true.
     * Must be issued by the same thread as the factory method.
     */
-  def close(): Unit
+  override def close(): Unit = bsam.close()
 
-  def isOpen: Boolean
+  override def isOpen: Boolean = bsam.isOpen
 
   /** LRECL is the maximum record length for variable length files.
     *
     * @return
     */
-  val lRecl: Int
+  override val lRecl: Int = bsam.getLrecl
 
   /** Maximum block size
     *
     * @return
     */
-  val blkSize: Int
+  override val blkSize: Int = bsam.getBlksize
+
+  override def read(dst: ByteBuffer): Int = {
+    val i = dst.position
+    val remaining = dst.remaining
+    if (remaining >= blkSize) {
+      val n = read(dst.array(), i, remaining)
+      if (n > 0) dst.position(i + n)
+      n
+    } else {
+      throw new RuntimeException(s"insufficient space in buffer (remaining=$remaining but BLKSIZE=$blkSize)")
+    }
+  }
 }

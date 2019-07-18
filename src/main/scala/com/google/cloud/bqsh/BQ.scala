@@ -49,9 +49,9 @@ object BQ {
   }
 
   def runJob(bq: BigQuery, cfg: QueryJobConfiguration, jobId: JobId, timeoutSeconds: Long): Job = {
-    Preconditions.checkNotNull(bq)
-    Preconditions.checkNotNull(cfg)
-    Preconditions.checkNotNull(jobId)
+    require(bq != null, "BigQuery must not be null")
+    require(cfg != null, "QueryJobConfiguration must not be null")
+    require(jobId != null, "JobId must not be null")
     try {
       val job = bq.create(JobInfo.of(jobId, cfg))
       await(job, jobId, timeoutSeconds)
