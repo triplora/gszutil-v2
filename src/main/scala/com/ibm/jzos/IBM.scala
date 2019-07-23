@@ -29,9 +29,7 @@ object IBM extends ZFileProvider with Logging {
   }
 
   override def readDDWithCopyBook(dd: String, copyBook: CopyBook): ZRecordReaderT = {
-    val rr = if (System.getProperty("jzos.bsam.disable", "false") != "true")
-      new BsamChannel(dd)
-    else ZOS.readDD(dd)
+    val rr = ZOS.readDD(dd)
 
     require(rr.lRecl == copyBook.LRECL, s"Copybook LRECL ${copyBook.LRECL} doesn't match DSN LRECL ${rr.lRecl}")
     rr
