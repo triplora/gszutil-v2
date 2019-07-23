@@ -212,6 +212,20 @@ class DecodingSpec extends FlatSpec {
     assert(chars == expected)
   }
 
+  it should "remove non-ascii characters" in {
+    val a = (0 until 256)
+      .map(x => (x, ebcdic2SafeUtf8(Array(x.toByte))))
+
+    a.foreach{x => System.out.println(s"${x._1} -> '${x._2}'")}
+
+    (
+      (0 to 74) ++ (81 to 90) ++ (98 to 106) ++
+      (112 to 120) ++ (138 to 144) ++ (154 to 160) ++ (170 to 172) ++
+      (174 to 188) ++ (190 to 191) ++ (202 to 207) ++ (218 to 223) ++
+      Seq(128, 225) ++ (234 to 239) ++ (234 to 239) ++ (250 to 255)
+    ).foreach{i => assert(a(i)._2 == " ")}
+  }
+
   it should "read dataset as string" in {
     val data = Seq("SELECT    ","1         ","FROM DUAL ")
       .mkString("")

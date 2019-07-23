@@ -15,13 +15,11 @@
  */
 package com.google.cloud.gszutil
 
-import java.nio.ByteBuffer
-import java.nio.charset.Charset
+import java.nio.{ByteBuffer, CharBuffer}
+import java.nio.charset.{Charset, CodingErrorAction}
 
 import com.google.cloud.gszutil.Util.Logging
 import com.google.common.base.Charsets
-import com.ibm.jzos.fields.daa
-import com.ibm.jzos.fields.daa.BinarySignedIntField
 import org.apache.hadoop.hive.ql.exec.vector._
 import org.apache.hadoop.hive.serde2.io.HiveDecimalWritable
 import org.apache.orc.TypeDescription
@@ -31,6 +29,51 @@ import scala.collection.mutable.ArrayBuffer
 
 object Decoding extends Logging {
   final val CP1047: Charset = Charset.forName("CP1047")
+
+  // EBCDIC decimal byte values that map to valid ASCII characters
+  private val validAscii = Array(
+    75,76,77,78,79,80,
+    91,92,93,94,95,96,97,
+    107,108,109,110,111,
+    121,122,123,124,125,126,127,
+    129,130,131,132,133,134,135,136,137,
+    145,146,147,148,149,150,151,152,153,
+    161,162,163,164,165,166,167,168,169,
+    173,
+    189,
+    192,193,194,195,196,197,198,199,200,201,
+    208,209,210,211,212,213,214,215,216,217,
+    224,
+    226,227,228,229,230,231,232,233,
+    240,241,242,243,244,245,246,247,248,249
+  )
+
+  final val Space: Byte = " ".getBytes(Charsets.US_ASCII).head
+
+  final val EBCDIC2ASCII: Array[Byte] = {
+    val buf = ByteBuffer.wrap((0 until 256).map(_.toByte).toArray)
+    val cb = CP1047.decode(buf)
+    val a = Array.fill(256)(Space)
+    val b = cb.toString.toCharArray.map(_.toByte)
+    for (i <- validAscii) a(i) = b(i)
+    a
+  }
+
+  def ebcdic2SafeAscii(b: Byte): Byte = EBCDIC2ASCII(uint(b))
+
+  def ebcdic2SafeAscii(a: Array[Byte]): Array[Byte] = {
+    val a1 = new Array[Byte](a.length)
+    var i = 0
+    while (i < a.length){
+      a1(i) = EBCDIC2ASCII(uint(a(i)))
+      i += 1
+    }
+    a1
+  }
+
+  def ebcdic2SafeUtf8(a: Array[Byte]): String = {
+    new String(ebcdic2SafeAscii(a), Charsets.UTF_8)
+  }
 
   final val EBCDIC: Array[Byte] = {
     val buf = ByteBuffer.wrap((0 until 256).map(_.toByte).toArray)
@@ -82,14 +125,15 @@ object Decoding extends Logging {
     def typeDescription: TypeDescription
   }
 
-  case class StringDecoder(override val size: Int) extends Decoder {
+  case class StringDecoder(override val size: Int, ascii: Boolean = true) extends Decoder {
+    private final val charMap = if (ascii) EBCDIC2ASCII else EBCDIC
     override def get(buf: ByteBuffer, row: ColumnVector, i: Int): Unit = {
       val bcv = row.asInstanceOf[BytesColumnVector]
       val res = bcv.getValPreallocatedBytes
       var j = bcv.getValPreallocatedStart
       val j1 = j + size
       while (j < j1){
-        res(j) = EBCDIC(uint(buf.get))
+        res(j) = charMap(uint(buf.get))
         j += 1
       }
       bcv.setValPreallocated(i, size)
