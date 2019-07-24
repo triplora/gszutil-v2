@@ -55,4 +55,9 @@ trait ZRecordReaderT extends ReadableByteChannel {
     * @return
     */
   val blkSize: Int
+
+  /** Number of records read
+    *
+    */
+  def count(): Long
 }

@@ -17,6 +17,7 @@ package com.google.cloud.bqsh.cmd
 
 import java.net.URI
 
+import com.google.cloud.bigquery.{StatsUtil, TableId}
 import com.google.cloud.bqsh._
 import com.google.cloud.gszutil.Util.Logging
 import com.google.cloud.gszutil.orc.WriteORCFile
@@ -31,6 +32,8 @@ object Cp extends Command[GsUtilConfig] with Logging {
     val creds = zos
       .getCredentialProvider()
       .getCredentials
+
+    val bq = BQ.defaultClient(c.projectId, c.location, creds)
     val copyBook = zos.loadCopyBook(c.copyBook)
     val in = zos.readDDWithCopyBook(c.source, copyBook)
     val batchSize = (c.blocksPerBatch * in.blkSize) / in.lRecl
@@ -61,6 +64,10 @@ object Cp extends Command[GsUtilConfig] with Logging {
                      timeoutMinutes = c.timeOutMinutes,
                      compress = c.compress)
     in.close()
+    val nRead = in.count()
+
+    StatsUtil.insertJobStats(c.jesJobName, c.jesJobDate, job=None, bq = bq, BQ.resolveTableSpec(c.statsTable, c.projectId, c.datasetId), "cp", c.source, c.destinationUri, recordsIn = nRead)
+
     Result.Success
   }
 }

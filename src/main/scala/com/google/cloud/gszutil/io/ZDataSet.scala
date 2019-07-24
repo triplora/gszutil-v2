@@ -22,6 +22,8 @@ class ZDataSet(srcBytes: Array[Byte], recordLength: Int, blockSize: Int, limit: 
   private val buf = ByteBuffer.wrap(srcBytes)
   private var open = true
   private var bytesRead: Long = 0
+  private var nRecordsRead: Long = 0
+
   buf.position(position)
   if (limit >= 0) buf.limit(limit)
 
@@ -33,6 +35,8 @@ class ZDataSet(srcBytes: Array[Byte], recordLength: Int, blockSize: Int, limit: 
       val n = math.min(buf.remaining, len)
       buf.get(bytes, off, n)
       bytesRead += n
+      if (n >= lRecl)
+        nRecordsRead += n / lRecl
       n
     } else -1
   }
@@ -48,4 +52,9 @@ class ZDataSet(srcBytes: Array[Byte], recordLength: Int, blockSize: Int, limit: 
     if (n > 0) dst.position(i + n)
     n
   }
+
+  /** Number of records read
+    *
+    */
+  override def count(): Long = nRecordsRead
 }

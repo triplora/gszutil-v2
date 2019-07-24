@@ -41,7 +41,7 @@ object Load extends Command[LoadConfig] with Logging {
 
     if (cfg.statsTable.nonEmpty){
       val statsTable = BQ.resolveTableSpec(cfg.statsTable, cfg.datasetId, cfg.projectId)
-      StatsUtil.insertJobStats(cfg.jesJobName, cfg.jesJobDate, job, statsTable, jobType = "query", source = cfg.path.mkString(","), dest = cfg.tablespec)
+      StatsUtil.insertJobStats(cfg.jesJobName, cfg.jesJobDate, scala.Option(completed), bq, statsTable, jobType = "query", source = cfg.path.mkString(","), dest = cfg.tablespec)
     }
 
     val state = status.map(_.getState.toString).getOrElse("UNKNOWN")

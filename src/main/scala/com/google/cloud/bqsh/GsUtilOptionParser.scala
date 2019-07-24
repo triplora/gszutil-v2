@@ -85,10 +85,28 @@ object GsUtilOptionParser extends OptionParser[GsUtilConfig]("gsutil") with ArgP
     }
     .action((x, c) => c.copy(destinationUri = x))
 
+  // Global Options from BigQuery
+  opt[String]("dataset_id")
+    .text(GlobalConfig.datasetIdText)
+    .action((x,c) => c.copy(datasetId = x))
+
+  opt[String]("location")
+    .text(GlobalConfig.locationText)
+    .action((x,c) => c.copy(location = x))
+
+  opt[String]("project_id")
+    .text(GlobalConfig.projectIdText)
+    .action((x,c) => c.copy(projectId = x))
+
   // Custom Options
   opt[Unit]("allow_non_ascii")
     .text("allow non ascii characters")
     .action((_,c) => c.copy(allowNonAscii = true))
+
+  opt[String]("jes_job_date")
+    .optional()
+    .text("JES Job Date (used for logging and publishing stats)")
+    .action((x,c) => c.copy(jesJobDate = x))
 
   opt[String]("jes_job_name")
     .optional()

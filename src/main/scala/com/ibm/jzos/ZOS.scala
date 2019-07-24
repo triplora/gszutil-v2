@@ -46,11 +46,17 @@ protected object ZOS extends Logging {
     // Ensure that reader is closed if job is killed
     Runtime.getRuntime.addShutdownHook(new RecordReaderCloser(r))
     private var open = true
+    private var nRecordsRead: Long = 0
 
-    override def read(buf: Array[Byte]): Int =
-      r.read(buf)
-    override def read(buf: Array[Byte], off: Int, len: Int): Int =
-      r.read(buf, off, len)
+    override def read(buf: Array[Byte]): Int = read(buf, 0, buf.length)
+
+    override def read(buf: Array[Byte], off: Int, len: Int): Int = {
+      val n = r.read(buf, off, len)
+      if (n >= lRecl)
+        nRecordsRead += n / lRecl
+      n
+    }
+
     override def close(): Unit = {
       if (open) {
         open = false
@@ -69,6 +75,11 @@ protected object ZOS extends Logging {
       if (n > 0) dst.position(i + n)
       n
     }
+
+    /** Number of records read
+      *
+      */
+    override def count(): Long = nRecordsRead
   }
 
   def ddExists(ddName: String): Boolean = {

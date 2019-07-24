@@ -29,5 +29,13 @@ case class GsUtilConfig(source: String = "INFILE",
                         timeOutMinutes: Int = 60,
                         nativeKeyColumns: Seq[String] = Seq.empty,
 
+                        // Global
+                        datasetId: String = "",
+                        location: String = "US",
+                        projectId: String = "",
+
+                        // Custom
                         allowNonAscii: Boolean = false,
+                        statsTable: String = "",
+                        jesJobDate: String = "",
                         jesJobName: String = "")

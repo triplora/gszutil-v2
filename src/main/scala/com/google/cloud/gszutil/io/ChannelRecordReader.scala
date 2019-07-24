@@ -23,16 +23,9 @@ class ChannelRecordReader(rc: ReadableByteChannel, recordLength: Int, blockSize:
 
   private var a: Array[Byte] = _
   private var b: ByteBuffer = _
+  private var nRecordsRead: Long = 0
 
-  override def read(buf: Array[Byte]): Int = {
-    if (a != null && buf.equals(a)) {
-      b.clear()
-    } else {
-      a = buf
-      b = ByteBuffer.wrap(a)
-    }
-    rc.read(b)
-  }
+  override def read(buf: Array[Byte]): Int = read(buf, 0, buf.length)
 
   override def read(buf: Array[Byte], off: Int, len: Int): Int = {
     if (a == null || !buf.equals(a)) {
@@ -41,7 +34,10 @@ class ChannelRecordReader(rc: ReadableByteChannel, recordLength: Int, blockSize:
     }
     b.position(off)
     b.limit(off + len)
-    rc.read(b)
+    val n = rc.read(b)
+    if (n >= lRecl)
+      nRecordsRead += n / lRecl
+    n
   }
 
   override def close(): Unit = rc.close()
@@ -53,4 +49,6 @@ class ChannelRecordReader(rc: ReadableByteChannel, recordLength: Int, blockSize:
   override val blkSize: Int = blockSize
 
   override def read(dst: ByteBuffer): Int = rc.read(dst)
+
+  override def count(): Long = nRecordsRead
 }

@@ -21,9 +21,9 @@ import com.google.common.collect.ImmutableMap
 
 
 object StatsUtil extends Logging {
-  def insertJobStats(jobName: String, jobDate: String, job: Job, tableId: TableId, jobType: String = "", source: String = "", dest: String = ""): Unit = {
-    val bq = job.getBigQuery
-    val id = job.getJobId.getJob
+  def insertJobStats(jobName: String, jobDate: String, job: scala.Option[Job], bq: BigQuery, tableId: TableId, jobType: String = "", source: String = "", dest: String = "", recordsIn: Long = -1): Unit = {
+
+    val id = job.map(_.getJobId.getJob).getOrElse(jobName+jobDate)
 
     val row = ImmutableMap.builder[String,Any]()
     row.put("jobName", jobName)
@@ -36,14 +36,17 @@ object StatsUtil extends Logging {
       row.put("source", source)
     if (dest.nonEmpty)
       row.put("destination", dest)
-    row.put("jobJSON", job.toPb.toString)
+    if (job.isDefined)
+      row.put("jobJSON", job.get.toPb.toString)
+    if (recordsIn >= 0)
+      row.put("recordsIn", recordsIn)
+    row.build()
 
     val request = InsertAllRequest.newBuilder(tableId)
         .addRow(id, row.build)
         .build()
     val response = bq.insertAll(request)
     if (response.hasErrors){
-      val id = scala.Option(job.getJobId).flatMap(x => scala.Option(x.getJob)).getOrElse("")
       logger.error(s"failed to insert stats for Job ID $id")
     }
   }

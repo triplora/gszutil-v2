@@ -50,7 +50,7 @@ object Query extends Command[QueryConfig] with Logging {
       // Publish results
       if (cfg.statsTable.nonEmpty){
         val statsTable = BQ.resolveTableSpec(cfg.statsTable, cfg.datasetId, cfg.projectId)
-        StatsUtil.insertJobStats(cfg.jesJobName, cfg.jesJobDate, job, statsTable, jobType = "query", dest = cfg.destinationTable)
+        StatsUtil.insertJobStats(cfg.jesJobName, cfg.jesJobDate, scala.Option(job), bq, statsTable, jobType = "query", dest = cfg.destinationTable)
       }
 
       BQ.throwOnError(job)
