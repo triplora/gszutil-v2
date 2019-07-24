@@ -54,5 +54,9 @@ case class QueryConfig(
   location: String = "",
   projectId: String = "",
   synchronousMode: Boolean = true,
-  sync: Boolean = true
+  sync: Boolean = true,
+
+  statsTable: String = "",
+  jesJobDate: String = "",
+  jesJobName: String = ""
 )

@@ -46,6 +46,13 @@ object Query extends Command[QueryConfig] with Logging {
       val jobId = JobId.of(cfg.jobId + "_" + Util.randString(5))
 
       val job = BQ.runJob(bq, jobConfiguration, jobId, cfg.timeoutMinutes * 60)
+
+      // Publish results
+      if (cfg.statsTable.nonEmpty){
+        val statsTable = BQ.resolveTableSpec(cfg.statsTable, cfg.datasetId, cfg.projectId)
+        StatsUtil.insertJobStats(cfg.jesJobName, cfg.jesJobDate, job, statsTable, jobType = "query", dest = cfg.destinationTable)
+      }
+
       BQ.throwOnError(job)
       if (job.getStatus.getState == JobStatus.State.DONE && job.getStatus.getError != null){
         result = Result.Failure(job.getStatus.getError.getMessage)

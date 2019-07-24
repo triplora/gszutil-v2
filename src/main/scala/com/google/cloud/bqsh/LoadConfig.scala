@@ -52,5 +52,9 @@ jobProperties: Map[String,String] = Map.empty,
 location: String = "US",
 projectId: String = "",
 synchronousMode: Boolean = true,
-sync: Boolean = true
+sync: Boolean = true,
+
+statsTable: String = "",
+jesJobDate: String = "",
+jesJobName: String = ""
                      )

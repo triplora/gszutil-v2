@@ -27,4 +27,7 @@ case class GsUtilConfig(source: String = "INFILE",
                         partSizeMB: Int = 256,
                         parallelism: Int = 6,
                         timeOutMinutes: Int = 60,
-                        nativeKeyColumns: Seq[String] = Seq.empty)
+                        nativeKeyColumns: Seq[String] = Seq.empty,
+
+                        allowNonAscii: Boolean = false,
+                        jesJobName: String = "")

@@ -168,4 +168,15 @@ Repeat this flag to specify multiple schema update options.""")
   opt[Boolean]("sync")
     .text(GlobalConfig.syncText)
     .action((x,c) => c.copy(sync = x))
+
+  // Custom Options
+  opt[String]("jes_job_date")
+    .optional()
+    .text("JES Job Date (used for logging and publishing stats)")
+    .action((x,c) => c.copy(jesJobDate = x))
+
+  opt[String]("jes_job_name")
+    .optional()
+    .text("JES Job Name (used for logging and publishing stats)")
+    .action((x,c) => c.copy(jesJobName = x))
 }

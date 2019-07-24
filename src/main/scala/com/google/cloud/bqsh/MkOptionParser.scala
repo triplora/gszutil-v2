@@ -216,4 +216,10 @@ object MkOptionParser extends OptionParser[MkConfig]("mk") with ArgParser[MkConf
   opt[Boolean]("sync")
     .text(GlobalConfig.syncText)
     .action((x,c) => c.copy(sync = x))
+
+  // Custom Options
+  opt[String]("jes_job_name")
+    .optional()
+    .text("JES Job Name (used for logging and publishing stats)")
+    .action((x,c) => c.copy(jesJobName = x))
 }

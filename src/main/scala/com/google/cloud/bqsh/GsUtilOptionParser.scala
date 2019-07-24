@@ -84,4 +84,14 @@ object GsUtilOptionParser extends OptionParser[GsUtilConfig]("gsutil") with ArgP
         success
     }
     .action((x, c) => c.copy(destinationUri = x))
+
+  // Custom Options
+  opt[Unit]("allow_non_ascii")
+    .text("allow non ascii characters")
+    .action((_,c) => c.copy(allowNonAscii = true))
+
+  opt[String]("jes_job_name")
+    .optional()
+    .text("JES Job Name (used for logging and publishing stats)")
+    .action((x,c) => c.copy(jesJobName = x))
 }

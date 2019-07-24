@@ -16,6 +16,7 @@
 
 package com.google.cloud.bqsh.cmd
 
+import com.google.cloud.bigquery.JobStatistics.LoadStatistics
 import com.google.cloud.bigquery._
 import com.google.cloud.bqsh._
 import com.google.cloud.gszutil.Util
@@ -36,15 +37,21 @@ object Load extends Command[LoadConfig] with Logging {
     logger.info("submitting load job")
     val job = bq.create(JobInfo.of(jobId, jobConfig))
     val completed = BQ.await(job, jobId, 3600)
-    val status = completed.getStatus
-    if (status!= null) {
-      logger.info(s"job ${jobId.getJob} has status ${status.getState}")
-      if (status.getError != null){
-        if (status.getError.getMessage != null) {
-          logger.error(s"BigQuery error: ${status.getError.getMessage}")
-          return Result.Failure(status.getError.getMessage)
-        }
-      }
+    val status = scala.Option(completed.getStatus)
+
+    if (cfg.statsTable.nonEmpty){
+      val statsTable = BQ.resolveTableSpec(cfg.statsTable, cfg.datasetId, cfg.projectId)
+      StatsUtil.insertJobStats(cfg.jesJobName, cfg.jesJobDate, job, statsTable, jobType = "query", source = cfg.path.mkString(","), dest = cfg.tablespec)
+    }
+
+    val state = status.map(_.getState.toString).getOrElse("UNKNOWN")
+    logger.info(s"job ${jobId.getJob} has status $state")
+    val err = status.map(_.getError)
+    if (err.nonEmpty){
+      val msg = err.map(_.getMessage).getOrElse("")
+      val rsn = err.map(_.getReason).getOrElse("")
+      logger.error(s"BigQuery error: reason: $rsn message: $msg")
+      return Result.Failure(msg)
     }
     Result.Success
   }

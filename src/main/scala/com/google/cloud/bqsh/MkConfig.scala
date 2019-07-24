@@ -50,5 +50,7 @@ case class MkConfig (
   location: String = "US",
   projectId: String = "",
   synchronousMode: Boolean = true,
-  sync: Boolean = true
+  sync: Boolean = true,
+
+  jesJobName: String = ""
 )
