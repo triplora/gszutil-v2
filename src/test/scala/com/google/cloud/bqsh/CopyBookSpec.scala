@@ -22,12 +22,13 @@ import com.google.cloud.gszutil.{CopyBook, Decoding, Util}
 import org.scalatest.FlatSpec
 
 class CopyBookSpec extends FlatSpec with Logging {
+  Util.configureLogging(true)
   "CopyBook" should "parse" in {
-    Util.configureLogging(true)
-    for (name <- (1 to 4).map(i => s"test$i.cpy")){
-      val cb1 = CopyBook(Util.readS(name))
-      val s = cb1.Fields.map(_.toString).mkString("\n")
+    for (name <- (1 to 5).map(i => s"test$i.cpy")){
+      val cb = CopyBook(Util.readS(name))
+      val s = cb.Fields.map(_.toString).mkString("\n")
       System.out.println("\n*********************************\n")
+      System.out.println(s"LRECL=${cb.LRECL}")
       System.out.println(s)
       System.out.println("\n*********************************\n")
     }
@@ -63,10 +64,10 @@ class CopyBookSpec extends FlatSpec with Logging {
       "PIC S9(9) COMP-3." -> Decimal64Decoder(9,0),
       "PIC S9(9)V99 COMP-3." -> Decimal64Decoder(9,2),
       "PIC S9(6)V99 COMP-3." -> Decimal64Decoder(6,2),
-      "PIC S9(13)V99 COMP-3" -> Decimal64Decoder(13,2),
-      "PIC S9(7)V99 COMP-3" -> Decimal64Decoder(7,2),
-      "PIC S9(7)V999 COMP-3" -> Decimal64Decoder(7,3),
-      "PIC S9(16)V9(2) COMP-3" -> Decimal64Decoder(16,2)
+      "PIC S9(13)V99 COMP-3." -> Decimal64Decoder(13,2),
+      "PIC S9(7)V99 COMP-3." -> Decimal64Decoder(7,2),
+      "PIC S9(7)V999 COMP-3." -> Decimal64Decoder(7,3),
+      "PIC S9(16)V9(2) COMP-3." -> Decimal64Decoder(16,2)
     ).foreach{x =>
       assert(Decoding.typeMap(x._1) == x._2)
     }

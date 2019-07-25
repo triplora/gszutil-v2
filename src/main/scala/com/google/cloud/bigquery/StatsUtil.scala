@@ -16,6 +16,7 @@
 
 package com.google.cloud.bigquery
 
+import com.google.api.client.json.jackson2.JacksonFactory
 import com.google.cloud.gszutil.Util.Logging
 import com.google.common.collect.ImmutableMap
 
@@ -37,7 +38,7 @@ object StatsUtil extends Logging {
     if (dest.nonEmpty)
       row.put("destination", dest)
     if (job.isDefined)
-      row.put("jobJSON", job.get.toPb.toString)
+      row.put("jobJSON", JacksonFactory.getDefaultInstance.toString(job.get.toPb))
     if (recordsIn >= 0)
       row.put("recordsIn", recordsIn)
     row.build()

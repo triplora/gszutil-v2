@@ -19,7 +19,7 @@
 //          DCB=(BUFNO=32,DSORG=PS)
 //KEYFILE DD DISP=SHR,DSNAME=LIB.NAME.KEYFILE
 //COPYBOOK DD DISP=SHR,DSNAME=LIB.NAME.COPYBOOK
-//STDENV DD *
+//STDENV DD *,SYMBOLS=
 
 . /etc/profile
 BUCKET=""
@@ -31,6 +31,9 @@ export JZOS_MAIN_ARGS="$ARGS"
 
 export JAVA_HOME="/usr/lpp/java/J8.0_64"
 export PATH="/bin:${JAVA_HOME}/bin:"
+export JOBNAME=&JOBNAME
+export JOBDATE=&YYMMDD
+export JOBTIME=&HHMMSS
 
 LIBPATH="/lib:/usr/lib:${JAVA_HOME}/bin"
 LIBPATH="$LIBPATH:${JAVA_HOME}/lib/s390x"

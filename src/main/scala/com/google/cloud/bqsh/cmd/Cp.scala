@@ -17,7 +17,7 @@ package com.google.cloud.bqsh.cmd
 
 import java.net.URI
 
-import com.google.cloud.bigquery.{StatsUtil, TableId}
+import com.google.cloud.bigquery.StatsUtil
 import com.google.cloud.bqsh._
 import com.google.cloud.gszutil.Util.Logging
 import com.google.cloud.gszutil.orc.WriteORCFile
@@ -53,6 +53,7 @@ object Cp extends Command[GsUtilConfig] with Logging {
         throw new RuntimeException("Data is already present at destination. Use --replace to delete existing files prior to upload.")
       }
     }
+    val sourceDSN = in.getDsn
 
     WriteORCFile.run(gcsUri = c.destinationUri,
                      in = in,
@@ -66,7 +67,19 @@ object Cp extends Command[GsUtilConfig] with Logging {
     in.close()
     val nRead = in.count()
 
-    StatsUtil.insertJobStats(c.jesJobName, c.jesJobDate, job=None, bq = bq, BQ.resolveTableSpec(c.statsTable, c.projectId, c.datasetId), "cp", c.source, c.destinationUri, recordsIn = nRead)
+    if (c.statsTable.nonEmpty){
+      logger.debug("writing stats")
+      StatsUtil.insertJobStats(
+        jobName=zos.jobName,
+        jobDate=zos.jobDate,
+        job=None,
+        bq=bq,
+        tableId=BQ.resolveTableSpec(c.statsTable, c.projectId, c.datasetId),
+        jobType="cp",
+        source=sourceDSN,
+        dest=c.destinationUri,
+        recordsIn=nRead)
+    }
 
     Result.Success
   }

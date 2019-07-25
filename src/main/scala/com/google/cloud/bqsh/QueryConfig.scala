@@ -56,7 +56,5 @@ case class QueryConfig(
   synchronousMode: Boolean = true,
   sync: Boolean = true,
 
-  statsTable: String = "",
-  jesJobDate: String = "",
-  jesJobName: String = ""
+  statsTable: String = ""
 )

@@ -25,6 +25,8 @@ class ChannelRecordReader(rc: ReadableByteChannel, recordLength: Int, blockSize:
   private var b: ByteBuffer = _
   private var nRecordsRead: Long = 0
 
+  override def getDsn: String = "DUMMY"
+
   override def read(buf: Array[Byte]): Int = read(buf, 0, buf.length)
 
   override def read(buf: Array[Byte], off: Int, len: Int): Int = {

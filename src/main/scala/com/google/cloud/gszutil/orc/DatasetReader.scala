@@ -37,6 +37,7 @@ class DatasetReader(args: DatasetReaderArgs) extends Actor with Logging {
   private var nSent = 0L
   private var totalBytes = 0L
   private var continue = true
+  private var x = 0
   import args._
 
   override def preStart(): Unit = {
@@ -47,14 +48,24 @@ class DatasetReader(args: DatasetReaderArgs) extends Actor with Logging {
 
   override def receive: Receive = {
     case bb: ByteBuffer =>
+      if (logger.isDebugEnabled && x < 1) {
+        logger.debug("received ByteBuffer")
+        x += 1
+      }
       lastRecv = System.currentTimeMillis
       bb.clear()
-      while (bb.hasRemaining && continue) {
-        if (in.read(bb) < 0){
+      var k = 0 // attempts to read from input
+      var n = 0
+      while (bb.hasRemaining && k < 10 && continue) {
+        n = in.read(bb)
+        if (n <= 0){
+          if (n == 0) k += 1
           logger.info(s"${in.getClass.getSimpleName} reached end of input")
           continue = false
         }
       }
+      if (k >= 10)
+        logger.debug(s"0 bytes read from $k read attempts")
 
       totalBytes += bb.position
       bb.flip()

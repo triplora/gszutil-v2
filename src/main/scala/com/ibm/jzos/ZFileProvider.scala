@@ -45,5 +45,8 @@ trait ZFileProvider {
   def readDDString(dd: String, recordSeparator: String): String
   def getCredentialProvider(): CredentialProvider
   def loadCopyBook(dd: String): CopyBook
+  def jobName: String = sys.env.getOrElse("JOBNAME","UNKNOWN")
+  def jobDate: String = sys.env.getOrElse("JOBDATE","UNKNOWN")
+  def jobTime: String = sys.env.getOrElse("JOBTIME","UNKNOWN")
 }
 

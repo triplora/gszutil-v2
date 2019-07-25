@@ -33,27 +33,27 @@ object Load extends Command[LoadConfig] with Logging {
     logger.info("configuring load job")
     val jobConfig = configureLoadJob(cfg)
     logger.info("submitting load job")
-    val jobId = JobId.of(s"bq_load_${System.currentTimeMillis()}_${Util.randString(5)}")
-    logger.info("submitting load job")
+
+    val jobId = JobId.of(s"${zos.jobName}_${zos.jobDate}_bq_load_${System.currentTimeMillis()}_${Util.randString(5)}")
     val job = bq.create(JobInfo.of(jobId, jobConfig))
     val completed = BQ.await(job, jobId, 3600)
-    val status = scala.Option(completed.getStatus)
 
     if (cfg.statsTable.nonEmpty){
       val statsTable = BQ.resolveTableSpec(cfg.statsTable, cfg.datasetId, cfg.projectId)
-      StatsUtil.insertJobStats(cfg.jesJobName, cfg.jesJobDate, scala.Option(completed), bq, statsTable, jobType = "query", source = cfg.path.mkString(","), dest = cfg.tablespec)
+      StatsUtil.insertJobStats(zos.jobName, zos.jobDate, scala.Option(completed), bq, statsTable, jobType = "load", source = cfg.path.mkString(","), dest = cfg.tablespec)
     }
 
-    val state = status.map(_.getState.toString).getOrElse("UNKNOWN")
-    logger.info(s"job ${jobId.getJob} has status $state")
-    val err = status.map(_.getError)
-    if (err.nonEmpty){
-      val msg = err.map(_.getMessage).getOrElse("")
-      val rsn = err.map(_.getReason).getOrElse("")
-      logger.error(s"BigQuery error: reason: $rsn message: $msg")
-      return Result.Failure(msg)
+    BQ.getStatus(completed) match {
+      case Some(status) =>
+        logger.info(s"job ${jobId.getJob} has status ${status.state}")
+        if (status.hasError) {
+          val msg = s"Error:\n${status.error}\nExecutionErrors: ${status.executionErrors.mkString("\n")}"
+          logger.error(msg)
+          Result.Failure(msg)
+        } else Result.Success
+      case _ =>
+        Result.Failure("missing status")
     }
-    Result.Success
   }
 
   def configureLoadJob(cfg: LoadConfig): LoadJobConfiguration = {

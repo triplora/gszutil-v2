@@ -147,6 +147,8 @@ object Decoding extends Logging {
 
     override def typeDescription: TypeDescription =
       TypeDescription.createChar().withMaxLength(size)
+
+    override def toString: String = s"$size byte STRING"
   }
 
   case class LongDecoder(override val size: Int) extends Decoder {
@@ -160,6 +162,8 @@ object Decoding extends Logging {
 
     override def typeDescription: TypeDescription =
       TypeDescription.createLong
+
+    override def toString: String = s"$size byte INT64"
   }
 
   case class UnsignedLongDecoder(override val size: Int) extends Decoder {
@@ -173,6 +177,8 @@ object Decoding extends Logging {
 
     override def typeDescription: TypeDescription =
       TypeDescription.createLong
+
+    override def toString: String = s"$size byte INT64"
   }
 
   /** The maximum length of a computational item is 18 decimal digits,
@@ -226,6 +232,8 @@ object Decoding extends Logging {
       TypeDescription.createDecimal
         .withScale(s)
         .withPrecision(p+s)
+
+    override def toString: String = s"$size byte DECIMAL($p,$s)"
   }
 
   case class Decimal64Decoder(p: Int, s: Int) extends Decoder {
@@ -247,6 +255,8 @@ object Decoding extends Logging {
       TypeDescription.createDecimal
         .withScale(s)
         .withPrecision(p+s)
+
+    override def toString: String = s"$size byte DECIMAL($p,$s)"
   }
 
   private val charRegex = """PIC X\((\d{1,3})\)""".r
@@ -315,8 +325,12 @@ object Decoding extends Logging {
   )
 
   sealed trait CopyBookLine
-  case class CopyBookTitle(name: String) extends CopyBookLine
-  case class CopyBookField(name: String, decoder: Decoder) extends CopyBookLine
+  case class CopyBookTitle(name: String) extends CopyBookLine {
+    override def toString: String = name
+  }
+  case class CopyBookField(name: String, decoder: Decoder) extends CopyBookLine {
+    override def toString: String = s"${decoder.size}\t$name\t$decoder"
+  }
   case class Occurs(n: Int) extends CopyBookLine
 
   private val titleRegex = """^\d{1,2}\s+([A-Z0-9-_]*)\.$""".r
@@ -332,7 +346,8 @@ object Decoding extends Logging {
           .replaceFirst("""\s+COMP""", " COMP")
           .replaceFirst("""\(0""", """\(""")
         val decoder = typeMap(typ1)
-        logger.debug(s"parsed $s as $decoder")
+        if (logger.isDebugEnabled)
+          System.out.println(s"$name\t$decoder\t'$typ'")
         Option(CopyBookField(name.trim, decoder))
       case titleRegex(name) =>
         Option(CopyBookTitle(name))

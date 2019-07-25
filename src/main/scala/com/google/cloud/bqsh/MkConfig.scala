@@ -52,5 +52,5 @@ case class MkConfig (
   synchronousMode: Boolean = true,
   sync: Boolean = true,
 
-  jesJobName: String = ""
+  statsTable: String = ""
 )

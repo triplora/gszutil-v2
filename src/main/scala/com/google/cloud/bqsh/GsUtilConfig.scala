@@ -36,6 +36,5 @@ case class GsUtilConfig(source: String = "INFILE",
 
                         // Custom
                         allowNonAscii: Boolean = false,
-                        statsTable: String = "",
-                        jesJobDate: String = "",
-                        jesJobName: String = "")
+                        statsTable: String = ""
+)

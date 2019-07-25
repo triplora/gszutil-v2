@@ -54,7 +54,5 @@ projectId: String = "",
 synchronousMode: Boolean = true,
 sync: Boolean = true,
 
-statsTable: String = "",
-jesJobDate: String = "",
-jesJobName: String = ""
+statsTable: String = ""
                      )

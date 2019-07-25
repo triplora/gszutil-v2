@@ -41,7 +41,7 @@ object Util {
     val rootLogger = LogManager.getRootLogger
     rootLogger.addAppender(new ConsoleAppender(new PatternLayout("%d{ISO8601} %-5p %c %x - %m%n")))
     LogManager
-      .getLogger("org.apache.orc.impl.MemoryManagerImpl")
+      .getLogger("org.apache.orc.impl")
       .setLevel(Level.ERROR)
     LogManager
       .getLogger("org.apache.http")

@@ -21,9 +21,15 @@ import java.nio.ByteBuffer;
 public class Binary {
     /**
      * Picture	Storage representation	Numeric values
-     * S9(1) to S9(4)	Binary halfword (2 bytes)	-32768 through +32767
-     * S9(5) to S9(9)	Binary fullword (4 bytes)	-2,147,483,648 through +2,147,483,647
-     * S9(10) to S9(18)	Binary doubleword (8 bytes)	-9,223,372,036,854,775,808 through +9,223,372,036,854,775,807
+     * S9(1)  to S9(4) COMP.  Binary halfword (2 bytes)
+     *   -32768
+     *   +32767
+     * S9(5)  to S9(9) COMP.  Binary fullword (4 bytes)
+     *   -2,147,483,648
+     *   +2,147,483,647
+     * S9(10) to S9(18) COMP. Binary doubleword (8 bytes)
+     *   -9,223,372,036,854,775,808
+     *   +9,223,372,036,854,775,807
      */
     public static long decode(ByteBuffer buf, int size) {
         long v = 0;

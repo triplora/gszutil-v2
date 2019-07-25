@@ -66,7 +66,7 @@ object IBM extends ZFileProvider with Logging {
     logger.debug(s"Parsing copy book:\n$raw")
     try {
       val copyBook = CopyBook(raw)
-      logger.info(s"Loaded copy book with LRECL=${copyBook.LRECL} FIELDS=${copyBook.FieldNames.mkString(",")}```\n${copyBook.raw}\n```")
+      logger.info(s"Loaded copy book:\n$copyBook")
       copyBook
     } catch {
       case e: Exception =>

@@ -50,14 +50,20 @@ object Query extends Command[QueryConfig] with Logging {
       // Publish results
       if (cfg.statsTable.nonEmpty){
         val statsTable = BQ.resolveTableSpec(cfg.statsTable, cfg.datasetId, cfg.projectId)
-        StatsUtil.insertJobStats(cfg.jesJobName, cfg.jesJobDate, scala.Option(job), bq, statsTable, jobType = "query", dest = cfg.destinationTable)
+        StatsUtil.insertJobStats(zos.jobName, zos.jobDate, scala.Option(job), bq, statsTable, jobType = "query", dest = cfg.destinationTable)
       }
 
-      BQ.throwOnError(job)
-      if (job.getStatus.getState == JobStatus.State.DONE && job.getStatus.getError != null){
-        result = Result.Failure(job.getStatus.getError.getMessage)
-      } else {
-        result = Result.Success
+      BQ.getStatus(job) match {
+        case Some(status) =>
+          logger.info(s"job ${jobId.getJob} has status ${status.state}")
+          if (status.hasError) {
+            val msg = s"Error:\n${status.error}\nExecutionErrors: ${status.executionErrors.mkString("\n")}"
+            logger.error(msg)
+            result = Result.Failure(msg)
+          } else result = Result.Success
+          BQ.throwOnError(status)
+        case _ =>
+          result = Result.Failure("missing status")
       }
     }
     if (result == null) Result.Failure("no queries")

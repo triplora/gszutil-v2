@@ -53,6 +53,8 @@ class ZDataSet(srcBytes: Array[Byte], recordLength: Int, blockSize: Int, limit: 
     n
   }
 
+  override def getDsn: String = "DUMMY"
+
   /** Number of records read
     *
     */

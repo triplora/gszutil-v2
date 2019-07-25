@@ -218,8 +218,8 @@ object MkOptionParser extends OptionParser[MkConfig]("mk") with ArgParser[MkConf
     .action((x,c) => c.copy(sync = x))
 
   // Custom Options
-  opt[String]("jes_job_name")
+  opt[String]("stats_table")
     .optional()
-    .text("JES Job Name (used for logging and publishing stats)")
-    .action((x,c) => c.copy(jesJobName = x))
+    .text("tablespec of table to insert stats")
+    .action((x,c) => c.copy(statsTable = x))
 }

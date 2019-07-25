@@ -26,6 +26,7 @@ import com.google.cloud.http.HttpTransportOptions
 import com.google.common.base.Preconditions
 import com.google.common.collect.ImmutableList
 import org.threeten.bp.Duration
+import scala.collection.JavaConverters._
 
 object BQ {
   def defaultClient(project: String, location: String, credentials: Credentials): BigQuery = {
@@ -94,27 +95,69 @@ object BQ {
     errors != null && errors.size() > 0
   }
 
-  def throwOnError(job: Job): Unit = {
-    import scala.collection.JavaConverters.iterableAsScalaIterableConverter
+  case class BQError(message: scala.Option[String],
+                     reason: scala.Option[String],
+                     location: scala.Option[String]) {
+    override def toString: String = {
+      s"BigQueryError:\nreason: ${reason.getOrElse("no reason given")}\nmessage: ${message.getOrElse("no message given")}"
+    }
+  }
+
+  case class BQStatus(state: JobStatus.State,
+                      error: scala.Option[BQError],
+                      executionErrors: Seq[BQError]) {
+    def hasError: Boolean = error.isDefined || executionErrors.nonEmpty
+  }
+
+  def getExecutionErrors(status: JobStatus): Seq[BQError] = {
+    val e = status.getExecutionErrors
+    if (e == null) Seq.empty
+    else e.asScala.flatMap(toBQError)
+  }
+
+  def toBQError(error: BigQueryError): scala.Option[BQError] = {
+    if (error == null) None
+    else scala.Option(BQError(
+        message = scala.Option(error.getMessage)
+        ,reason = scala.Option(error.getReason)
+        ,location = scala.Option(error.getLocation)
+      ))
+  }
+
+  def getStatus(job: Job): scala.Option[BQStatus] = {
+    val status = job.getStatus
+    if (status == null) None
+    else {
+      scala.Option(BQStatus(
+        state = status.getState,
+        error = toBQError(status.getError),
+        executionErrors = getExecutionErrors(status)))
+    }
+  }
+
+  def throwOnError(status: BQStatus): Unit = {
     val sb = new StringBuilder
-    if (hasError(job)) {
-      sb.append("Job Error:\n")
-      val error = job.getStatus.getError
-      val reason = error.getReason
-      val message = error.getMessage
-      sb.append(s"$reason : $message\n")
-    }
-    if (hasExecutionErrors(job)){
-      sb.append("Execution Errors:\n")
-      val errors = job.getStatus.getExecutionErrors
-      for (error <- errors.asScala) {
-        val reason = error.getReason
-        val message = error.getMessage
-        sb.append(s"$reason : $message\n")
+    if (status.hasError) {
+      status.error.foreach { err =>
+        sb.append(err.toString)
       }
-    }
-    if (sb.nonEmpty)
+      if (status.executionErrors.nonEmpty) {
+        sb.append("Execution Errors:\n")
+      }
+      status.executionErrors.foreach { err =>
+        sb.append(err.toString)
+      }
       throw new RuntimeException(sb.result())
+    }
+  }
+
+  def throwOnError(job: Job): Unit = {
+    getStatus(job) match {
+      case Some(status) =>
+        throwOnError(status)
+      case _ =>
+        throw new RuntimeException("missing job status")
+    }
   }
 
   /**

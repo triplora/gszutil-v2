@@ -31,7 +31,5 @@ case class RmConfig (
   location: String = "",
   projectId: String = "",
   synchronousMode: Boolean = true,
-  sync: Boolean = true,
-
-  jesJobName: String = ""
+  sync: Boolean = true
 )

@@ -40,13 +40,15 @@ protected object ZOS extends Logging {
     }
   }
 
-  class WrappedRecordReader(r: RecordReader) extends ZRecordReaderT with ReadableByteChannel with Logging {
+  class WrappedRecordReader(private val r: RecordReader) extends ZRecordReaderT with Logging {
     require(r.getRecfm == "FB", s"${r.getDDName} record format must be FB - ${r.getRecfm} is not supported")
 
     // Ensure that reader is closed if job is killed
     Runtime.getRuntime.addShutdownHook(new RecordReaderCloser(r))
     private var open = true
     private var nRecordsRead: Long = 0
+
+    override def getDsn: String = r.getDsn
 
     override def read(buf: Array[Byte]): Int = read(buf, 0, buf.length)
 
@@ -68,10 +70,12 @@ protected object ZOS extends Logging {
     override def isOpen: Boolean = open
     override val lRecl: Int = r.getLrecl
     override val blkSize: Int = r.getBlksize
+    private val blockMode = r.getClass.getSimpleName.contains("Bsam")
+    private val maxRead = if (blockMode) blkSize else lRecl
 
     override def read(dst: ByteBuffer): Int = {
       val i = dst.position
-      val n = read(dst.array, i, dst.remaining)
+      val n = read(dst.array, i, math.min(maxRead, dst.remaining))
       if (n > 0) dst.position(i + n)
       n
     }
