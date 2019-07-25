@@ -71,12 +71,15 @@ protected object ZOS extends Logging {
     override val lRecl: Int = r.getLrecl
     override val blkSize: Int = r.getBlksize
     private val blockMode = r.getClass.getSimpleName.contains("Bsam")
-    private val maxRead = if (blockMode) blkSize else lRecl
+    private val readLen = if (blockMode) blkSize else lRecl
 
     override def read(dst: ByteBuffer): Int = {
       val i = dst.position
-      val n = read(dst.array, i, math.min(maxRead, dst.remaining))
+      val n = read(dst.array, i, readLen)
       if (n > 0) dst.position(i + n)
+
+      // Prevent partial read
+      if (dst.remaining < readLen) dst.limit(dst.position)
       n
     }
 

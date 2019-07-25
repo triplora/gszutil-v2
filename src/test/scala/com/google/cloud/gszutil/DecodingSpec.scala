@@ -195,6 +195,8 @@ class DecodingSpec extends FlatSpec {
   it should "decode char" in {
     assert(Decoding.ebcdic2ascii(228.toByte) == "U".getBytes(Charsets.UTF_8).head)
     assert(Decoding.ebcdic2ascii(201.toByte) == "I".getBytes(Charsets.UTF_8).head)
+    assert(Decoding.ebcdic2SafeAscii(173.toByte) == "[".getBytes(Charsets.UTF_8).head)
+    assert(Decoding.ebcdic2SafeAscii(189.toByte) == "]".getBytes(Charsets.UTF_8).head)
   }
 
   it should "decode string" in {

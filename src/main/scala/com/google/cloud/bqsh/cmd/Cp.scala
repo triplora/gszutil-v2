@@ -72,6 +72,7 @@ object Cp extends Command[GsUtilConfig] with Logging {
       StatsUtil.insertJobStats(
         jobName=zos.jobName,
         jobDate=zos.jobDate,
+        jobTime=zos.jobTime,
         job=None,
         bq=bq,
         tableId=BQ.resolveTableSpec(c.statsTable, c.projectId, c.datasetId),

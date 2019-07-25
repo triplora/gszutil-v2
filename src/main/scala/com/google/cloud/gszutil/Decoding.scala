@@ -233,7 +233,7 @@ object Decoding extends Logging {
         .withScale(s)
         .withPrecision(p+s)
 
-    override def toString: String = s"$size byte DECIMAL($p,$s)"
+    override def toString: String = s"$size byte NUMERIC($p,$s)"
   }
 
   case class Decimal64Decoder(p: Int, s: Int) extends Decoder {
@@ -256,7 +256,7 @@ object Decoding extends Logging {
         .withScale(s)
         .withPrecision(p+s)
 
-    override def toString: String = s"$size byte DECIMAL($p,$s)"
+    override def toString: String = s"$size byte NUMERIC($p,$s)"
   }
 
   private val charRegex = """PIC X\((\d{1,3})\)""".r

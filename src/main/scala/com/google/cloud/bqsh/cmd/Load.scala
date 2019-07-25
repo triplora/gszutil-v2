@@ -40,7 +40,7 @@ object Load extends Command[LoadConfig] with Logging {
 
     if (cfg.statsTable.nonEmpty){
       val statsTable = BQ.resolveTableSpec(cfg.statsTable, cfg.datasetId, cfg.projectId)
-      StatsUtil.insertJobStats(zos.jobName, zos.jobDate, scala.Option(completed), bq, statsTable, jobType = "load", source = cfg.path.mkString(","), dest = cfg.tablespec)
+      StatsUtil.insertJobStats(zos.jobName, zos.jobDate, zos.jobTime, scala.Option(completed), bq, statsTable, jobType = "load", source = cfg.path.mkString(","), dest = cfg.tablespec)
     }
 
     BQ.getStatus(completed) match {
