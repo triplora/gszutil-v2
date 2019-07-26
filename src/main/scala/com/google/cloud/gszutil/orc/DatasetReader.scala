@@ -49,7 +49,7 @@ class DatasetReader(args: DatasetReaderArgs) extends Actor with Logging {
   override def receive: Receive = {
     case bb: ByteBuffer =>
       if (logger.isDebugEnabled && debugLogCount < 1) {
-        logger.debug("received ByteBuffer")
+        logger.debug(s"Received $bb")
         debugLogCount += 1
       }
       lastRecv = System.currentTimeMillis
@@ -59,12 +59,13 @@ class DatasetReader(args: DatasetReaderArgs) extends Actor with Logging {
       while (bb.hasRemaining && k < 5 && continue) {
         n = in.read(bb)
         if (n == 0) k += 1
+        logger.debug(s"read returned $n after returning 0 $k times")
         if (n < 0){
           logger.info(s"${in.getClass.getSimpleName} reached end of input")
           continue = false
         }
       }
-      if (k >= 5 && debugLogCount < 2) {
+      if (k > 0 && debugLogCount < 2) {
         logger.debug(s"0 bytes read from $k read attempts")
         debugLogCount += 1
       }

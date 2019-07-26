@@ -54,8 +54,7 @@ protected object ZOS extends Logging {
 
     override def read(buf: Array[Byte], off: Int, len: Int): Int = {
       val n = r.read(buf, off, len)
-      if (n >= lRecl)
-        nRecordsRead += n / lRecl
+      if (n > 0) nRecordsRead += 1
       n
     }
 
