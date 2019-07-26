@@ -70,17 +70,20 @@ protected object ZOS extends Logging {
     override def isOpen: Boolean = open
     override val lRecl: Int = r.getLrecl
     override val blkSize: Int = r.getBlksize
-    private val blockMode = r.getClass.getSimpleName.contains("Bsam")
-    private val readLen = if (blockMode) blkSize else lRecl
 
     override def read(dst: ByteBuffer): Int = {
       val i = dst.position
-      val n = read(dst.array, i, readLen)
-      if (n > 0) dst.position(i + n)
-
-      // Prevent partial read
-      if (dst.remaining < readLen) dst.limit(dst.position)
-      n
+      if (dst.remaining >= lRecl) {
+        // Read a single record
+        val n = read(dst.array, i, lRecl)
+        if (n > 0) dst.position(i + n)
+        n
+      } else {
+        // Prevent partial read
+        logger.debug("Adjusting buffer limit to avoid partial read")
+        dst.limit(i)
+        0
+      }
     }
 
     /** Number of records read
@@ -100,7 +103,7 @@ protected object ZOS extends Logging {
 
     try {
       val reader: RecordReader = RecordReader.newReaderForDD(ddName)
-      logger.info(s"Reading DD $ddName ${reader.getDsn} with record format ${reader.getRecfm} BLKSIZE ${reader.getBlksize} LRECL ${reader.getLrecl}")
+      logger.info(s"Reading DD $ddName with ${reader.getClass.getSimpleName}\nDSN=${reader.getDsn}\nRECFM=${reader.getRecfm}\nBLKSIZE=${reader.getBlksize}\nLRECL=${reader.getLrecl}")
       new WrappedRecordReader(reader)
     } catch {
       case e: ZFileException =>

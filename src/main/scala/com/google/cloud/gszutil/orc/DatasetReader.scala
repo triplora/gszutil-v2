@@ -85,7 +85,8 @@ class DatasetReader(args: DatasetReaderArgs) extends Actor with Logging {
       writers.remove(w)
       newPart()
 
-    case _ =>
+    case msg =>
+      logger.error(s"Unhandled message: $msg")
   }
 
   def finished: Receive = {
