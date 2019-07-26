@@ -16,11 +16,9 @@
 
 package com.ibm.jzos
 
-import java.util.jar.Pack200.Packer
-
 import com.google.cloud.gszutil.Util.{CredentialProvider, GoogleCredentialsProvider, Logging}
 import com.google.cloud.gszutil.io.ZRecordReaderT
-import com.google.cloud.gszutil.{CopyBook, Decoding, PackedDecimal, Util}
+import com.google.cloud.gszutil.{CopyBook, Decoding, Util}
 import com.google.common.base.Charsets
 import com.google.common.io.ByteStreams
 
@@ -29,7 +27,7 @@ object IBM extends ZFileProvider with Logging {
     ZOS.addCCAProvider()
     System.setProperty("java.net.preferIPv4Stack" , "true")
     //System.setProperty("jzos.bsam.disable" , "true")
-    System.out.println("")
+    System.out.println("Build Time: 20190726 09:40")
   }
 
   override def readDDWithCopyBook(dd: String, copyBook: CopyBook): ZRecordReaderT = {
@@ -50,13 +48,8 @@ object IBM extends ZFileProvider with Logging {
 
   override def readDDString(dd: String, recordSeparator: String): String = {
     val in = readDD(dd)
-    val decoded = Util.readAllBytes(in).map{b =>
-      val b1 = Decoding.EBCDIC2ASCII(b)
-      if (b1 == Decoding.Space)
-        if (logger.isDebugEnabled)
-          System.out.println(PackedDecimal.hexValue(new Array(b)))
-      b1
-    }
+    val bytes = Util.readAllBytes(in)
+    val decoded = Decoding.ebcdic2ASCIIBytes(bytes)
     Util.records2string(decoded, in.lRecl, Charsets.UTF_8, recordSeparator)
   }
 

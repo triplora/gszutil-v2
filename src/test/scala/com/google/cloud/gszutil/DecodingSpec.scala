@@ -185,7 +185,7 @@ class DecodingSpec extends FlatSpec {
     val in = test.getBytes(Decoding.CP1047)
     val expected = test.getBytes(StandardCharsets.UTF_8).toSeq
 
-    val got = in.map(Decoding.ebcdic2ascii)
+    val got = in.map(Decoding.ebcdic2utf8byte)
     val n = got.length
 
     assert(n == expected.length)
@@ -193,10 +193,10 @@ class DecodingSpec extends FlatSpec {
   }
 
   it should "decode char" in {
-    assert(Decoding.ebcdic2ascii(228.toByte) == "U".getBytes(Charsets.UTF_8).head)
-    assert(Decoding.ebcdic2ascii(201.toByte) == "I".getBytes(Charsets.UTF_8).head)
-    assert(Decoding.ebcdic2SafeAscii(173.toByte) == "[".getBytes(Charsets.UTF_8).head)
-    assert(Decoding.ebcdic2SafeAscii(189.toByte) == "]".getBytes(Charsets.UTF_8).head)
+    assert(Decoding.ebcdic2utf8byte(228.toByte) == "U".getBytes(Charsets.UTF_8).head)
+    assert(Decoding.ebcdic2utf8byte(201.toByte) == "I".getBytes(Charsets.UTF_8).head)
+    assert(Decoding.ebcdic2ASCIIByte(173.toByte) == "[".getBytes(Charsets.UTF_8).head)
+    assert(Decoding.ebcdic2ASCIIByte(189.toByte) == "]".getBytes(Charsets.UTF_8).head)
   }
 
   it should "decode string" in {
@@ -216,7 +216,7 @@ class DecodingSpec extends FlatSpec {
 
   it should "remove non-ascii characters" in {
     val a = (0 until 256)
-      .map(x => (x, ebcdic2SafeUtf8(Array(x.toByte))))
+      .map(x => (x, ebcdic2ASCIIString(Array(x.toByte))))
 
     a.foreach{x => System.out.println(s"${x._1} -> '${x._2}'")}
 

@@ -15,8 +15,8 @@
  */
 package com.google.cloud.gszutil
 
-import java.nio.{ByteBuffer, CharBuffer}
-import java.nio.charset.{Charset, CodingErrorAction}
+import java.nio.ByteBuffer
+import java.nio.charset.Charset
 
 import com.google.cloud.gszutil.Util.Logging
 import com.google.common.base.Charsets
@@ -56,12 +56,15 @@ object Decoding extends Logging {
     val a = Array.fill(256)(Space)
     val b = cb.toString.toCharArray.map(_.toByte)
     for (i <- validAscii) a(i) = b(i)
+
+    a(0xBA) = uint(91).toByte // EBCDIC [ is not the same as CP1047
+    a(0xBB) = uint(93).toByte // EBCDIC ] is not the same as CP1047
     a
   }
 
-  def ebcdic2SafeAscii(b: Byte): Byte = EBCDIC2ASCII(uint(b))
+  def ebcdic2ASCIIByte(b: Byte): Byte = EBCDIC2ASCII(uint(b))
 
-  def ebcdic2SafeAscii(a: Array[Byte]): Array[Byte] = {
+  def ebcdic2ASCIIBytes(a: Array[Byte]): Array[Byte] = {
     val a1 = new Array[Byte](a.length)
     var i = 0
     while (i < a.length){
@@ -71,27 +74,32 @@ object Decoding extends Logging {
     a1
   }
 
-  def ebcdic2SafeUtf8(a: Array[Byte]): String = {
-    new String(ebcdic2SafeAscii(a), Charsets.UTF_8)
+  def ebcdic2ASCIIString(a: Array[Byte]): String = {
+    new String(ebcdic2ASCIIBytes(a), Charsets.UTF_8)
   }
 
   final val EBCDIC: Array[Byte] = {
     val buf = ByteBuffer.wrap((0 until 256).map(_.toByte).toArray)
-    val cb = CP1047.decode(buf)
-    cb.toString.toCharArray.map(_.toByte)
+    val a: Array[Byte] = CP1047.decode(buf)
+      .toString
+      .toCharArray
+      .map(_.toByte)
+    a(0xBA) = uint(91).toByte // [
+    a(0xBB) = uint(93).toByte // ]
+    a
   }
 
-  def ebcdic2ascii(b: Byte): Byte = EBCDIC(uint(b))
+  def ebcdic2utf8byte(b: Byte): Byte = EBCDIC(uint(b))
 
-  def ebcdic2utf8(a: Array[Byte]): String = {
-    new String(ebcdic2ascii(a), Charsets.UTF_8)
+  def ebcdic2utf8string(a: Array[Byte]): String = {
+    new String(ebcdic2utf8bytes(a), Charsets.UTF_8)
   }
 
-  def ebcdic2ascii(a: Array[Byte]): Array[Byte] = {
+  def ebcdic2utf8bytes(a: Array[Byte]): Array[Byte] = {
     val a1 = new Array[Byte](a.length)
     var i = 0
     while (i < a.length){
-      a1(i) = ebcdic2ascii(a(i))
+      a1(i) = ebcdic2utf8byte(a(i))
       i += 1
     }
     a1
@@ -260,6 +268,7 @@ object Decoding extends Logging {
   }
 
   private val charRegex = """PIC X\((\d{1,3})\)""".r
+  private val numStrRegex = """PIC 9\((\d{1,3})\)""".r
   private val intRegex = """PIC S9\((\d{1,3})\) COMP""".r
   private val uintRegex = """PIC 9\((\d{1,3})\) COMP""".r
   private val decRegex = """PIC S9\((\d{1,3})\) COMP-3""".r
@@ -271,6 +280,8 @@ object Decoding extends Logging {
         StringDecoder(size.toInt)
       case "PIC X" =>
         StringDecoder(1)
+      case numStrRegex(size) =>
+        StringDecoder(size.toInt)
       case decRegex(p) if p.toInt >= 1 =>
         p.toInt match {
           case x if x <= 18 =>

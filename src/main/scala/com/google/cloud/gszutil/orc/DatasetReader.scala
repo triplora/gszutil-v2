@@ -58,8 +58,8 @@ class DatasetReader(args: DatasetReaderArgs) extends Actor with Logging {
       var n = 0 // number of bytes read
       while (bb.hasRemaining && k < 5 && continue) {
         n = in.read(bb)
-        if (n <= 0){
-          if (n == 0) k += 1
+        if (n == 0) k += 1
+        if (n < 0){
           logger.info(s"${in.getClass.getSimpleName} reached end of input")
           continue = false
         }

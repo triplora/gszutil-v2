@@ -86,6 +86,7 @@ object StatsUtil extends Logging {
     if (job.isDefined) {
       val jobData = job.get.toPb
       row.put("job_json", JacksonFactory.getDefaultInstance.toString(jobData))
+      logger.info(s"Job Data:\n${JacksonFactory.getDefaultInstance.toPrettyString(jobData)}")
       if (jobType == "query") {
         val stats = jobData.getStatistics.getQuery
         if (stats != null) {
