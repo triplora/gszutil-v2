@@ -44,7 +44,7 @@ protected object ZOS extends Logging {
     require(r.getRecfm == "FB", s"${r.getDDName} record format must be FB - ${r.getRecfm} is not supported")
 
     // Ensure that reader is closed if job is killed
-    Runtime.getRuntime.addShutdownHook(new RecordReaderCloser(r))
+    //Runtime.getRuntime.addShutdownHook(new RecordReaderCloser(r))
     private var open = true
     private var nRecordsRead: Long = 0
 
@@ -103,6 +103,7 @@ protected object ZOS extends Logging {
     try {
       val reader: RecordReader = RecordReader.newReaderForDD(ddName)
       logger.info(s"Reading DD $ddName with ${reader.getClass.getSimpleName}\nDSN=${reader.getDsn}\nRECFM=${reader.getRecfm}\nBLKSIZE=${reader.getBlksize}\nLRECL=${reader.getLrecl}")
+
       new WrappedRecordReader(reader)
     } catch {
       case e: ZFileException =>

@@ -57,6 +57,6 @@ case class CopyBook(raw: String) {
   final val LRECL: Int = decoders.foldLeft(0){_ + _.size}
 
   override def toString: String =
-    s"LRECL=$LRECL\nFIELDS=${FieldNames.mkString(",")}\n$raw"
+    s"LRECL=$LRECL\nFIELDS=${FieldNames.mkString(",")}\n$raw\n\nORC TypeDescription:\n${ORCSchema.toJson}"
 }
 

@@ -31,5 +31,10 @@ import com.google.cloud.storage.Storage
   * @param maxBytes input bytes per part
   * @param nWorkers worker count
   * @param copyBook CopyBook
+  * @param gcs Storage client
+  * @param compress whether to enable compression
+  * @param compressBuffer size of compression buffer
+  * @param pool BufferPool providing ByteBuffer instances
+  * @param maxErrorPct maximum proportion of invalid rows
   */
-case class DatasetReaderArgs(in: ReadableByteChannel, batchSize: Int, uri: URI, maxBytes: Long, nWorkers: Int, copyBook: CopyBook, gcs: Storage, compress: Boolean, pool: BufferPool)
+case class DatasetReaderArgs(in: ReadableByteChannel, batchSize: Int, uri: URI, maxBytes: Long, nWorkers: Int, copyBook: CopyBook, gcs: Storage, compress: Boolean, compressBuffer: Int, pool: BufferPool, maxErrorPct: Double)

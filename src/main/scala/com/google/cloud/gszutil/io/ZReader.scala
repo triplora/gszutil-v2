@@ -21,7 +21,7 @@ import java.nio.ByteBuffer
 import com.google.cloud.gszutil.CopyBook
 import com.google.cloud.gszutil.Decoding.Decoder
 import com.google.cloud.gszutil.Util.Logging
-import org.apache.hadoop.hive.ql.exec.vector.VectorizedRowBatch
+import org.apache.hadoop.hive.ql.exec.vector.{ColumnVector, VectorizedRowBatch}
 import org.apache.orc.Writer
 
 /** Uses a Copy Book to convert MVS data set records into an ORC row batch
@@ -39,15 +39,35 @@ class ZReader(private val copyBook: CopyBook, private val batchSize: Int) extend
     batch
   }
 
-  def readOrc(buf: ByteBuffer, writer: Writer): Unit = {
+  /** Reads COBOL and writes ORC
+    *
+    * @param buf ByteBuffer containing data
+    * @param writer ORC Writer
+    * @param err ByteBuffer to receive rows with decoding errors
+    * @return number of errors
+    */
+  def readOrc(buf: ByteBuffer, writer: Writer, err: ByteBuffer): Long = {
+    var errors: Long = 0
     while (buf.remaining >= copyBook.LRECL) {
-      ZReader.readBatch(decoders, buf, rowBatch, batchSize, copyBook.LRECL)
+      errors += ZReader.readBatch(decoders, buf, rowBatch, batchSize, copyBook.LRECL, err)
       writer.addRowBatch(rowBatch)
     }
+    errors
   }
 }
 
 object ZReader {
+  /**
+    *
+    * @param decoder Decoder instance
+    * @param buf ByteBuffer with position at column to be decoded
+    * @param col ColumnVector to receive decoded value
+    * @param rowId index within ColumnVector to store decoded value
+    */
+  private final def readColumn(decoder: Decoder, buf: ByteBuffer, col: ColumnVector, rowId: Int): Unit = {
+    decoder.get(buf, col, rowId)
+  }
+
   /** Read
     *
     * @param buf byte array with multiple records
@@ -56,20 +76,43 @@ object ZReader {
   private final def readRecord(decoders: Array[Decoder], buf: ByteBuffer, rowBatch: VectorizedRowBatch, rowId: Int): Unit = {
     var i = 0
     while (i < decoders.length){
-      decoders(i).get(buf, rowBatch.cols(i), rowId)
+      readColumn(decoders(i), buf, rowBatch.cols(i), rowId)
       i += 1
     }
   }
 
-  private final def readBatch(decoders: Array[Decoder], buf: ByteBuffer, rowBatch: VectorizedRowBatch, batchSize: Int, lRecl: Int): Unit = {
+  /**
+    *
+    * @param decoders Decoder instances
+    * @param buf ByteBuffer containing data
+    * @param rowBatch VectorizedRowBatch
+    * @param batchSize rows per batch
+    * @param lRecl size of each row in bytes
+    * @param err ByteBuffer to receive failed rows
+    * @return number of errors encountered
+    */
+  private final def readBatch(decoders: Array[Decoder], buf: ByteBuffer, rowBatch: VectorizedRowBatch, batchSize: Int, lRecl: Int, err: ByteBuffer): Int = {
     rowBatch.reset()
+    err.clear()
+    var errors: Int = 0
     var rowId = 0
+    var rowStart = 0
     while (rowId < batchSize && buf.remaining >= lRecl){
-      readRecord(decoders, buf, rowBatch, rowId)
-      rowId += 1
+      rowStart = buf.position()
+      try {
+        readRecord(decoders, buf, rowBatch, rowId)
+        rowId += 1
+      } catch {
+        case _: IllegalArgumentException =>
+          errors += 1
+          buf.position(rowStart)
+          err.put(buf)
+        case _ =>
+      }
     }
     rowBatch.size = rowId
     if (rowBatch.size == 0)
       rowBatch.endOfFile = true
+    errors
   }
 }

@@ -26,5 +26,11 @@ import org.apache.hadoop.fs.Path
   * @param copyBook CopyBook
   * @param maxBytes number of bytes to accept before closing the writer
   * @param batchSize records per batch
+  * @param path
+  * @param gcs
+  * @param compress
+  * @param compressBuffer size of compression buffer
+  * @param pool
+  * @param maxErrorPct proportion of acceptable row decoding errors
   */
-case class ORCFileWriterArgs(copyBook: CopyBook, maxBytes: Long, batchSize: Int, path: Path, gcs: Storage, compress: Boolean, pool: BufferPool)
+case class ORCFileWriterArgs(copyBook: CopyBook, maxBytes: Long, batchSize: Int, path: Path, gcs: Storage, compress: Boolean, compressBuffer: Int, pool: BufferPool, maxErrorPct: Double)

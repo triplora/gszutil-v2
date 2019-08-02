@@ -63,7 +63,9 @@ object Cp extends Command[GsUtilConfig] with Logging {
                      batchSize = batchSize,
                      partSizeMb = c.partSizeMB,
                      timeoutMinutes = c.timeOutMinutes,
-                     compress = c.compress)
+                     compress = c.compress,
+                     compressBuffer = c.compressBuffer,
+                     maxErrorPct = c.maxErrorPct)
     in.close()
     val nRead = in.count()
 

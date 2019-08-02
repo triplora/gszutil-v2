@@ -59,7 +59,6 @@ class DatasetReader(args: DatasetReaderArgs) extends Actor with Logging {
       while (bb.hasRemaining && k < 5 && continue) {
         n = in.read(bb)
         if (n == 0) k += 1
-        logger.debug(s"read returned $n after returning 0 $k times")
         if (n < 0){
           logger.info(s"${in.getClass.getSimpleName} reached end of input")
           continue = false
@@ -108,7 +107,7 @@ class DatasetReader(args: DatasetReaderArgs) extends Actor with Logging {
   private def newPart(): Unit = {
     val partName = f"$partId%05d"
     val path = new Path(s"gs://${uri.getAuthority}/${uri.getPath.stripPrefix("/") + s"/part-$partName.orc"}")
-    val args = ORCFileWriterArgs(copyBook, maxBytes, batchSize, path, gcs, compress, pool)
+    val args: ORCFileWriterArgs = ORCFileWriterArgs(copyBook, maxBytes, batchSize, path, gcs, compress, compressBuffer, pool, maxErrorPct)
     val w = context.actorOf(Props(classOf[ORCFileWriter], args), s"OrcWriter-$partName")
     context.watch(w)
     writers.add(w)

@@ -43,7 +43,7 @@ object Query extends Command[QueryConfig] with Logging {
     var result: Result = null
     for (query <- queries){
       val jobConfiguration = configureQueryJob(query, cfg, zos)
-      val jobId = JobId.of(cfg.jobId + "_" + Util.randString(5))
+      val jobId = JobId.of(s"${zos.jobName}_${zos.jobDate}_${zos.jobTime}_query_${System.currentTimeMillis()}_${Util.randString(5)}")
 
       val job = BQ.runJob(bq, jobConfiguration, jobId, cfg.timeoutMinutes * 60)
 

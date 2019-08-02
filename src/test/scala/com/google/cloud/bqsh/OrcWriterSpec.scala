@@ -42,6 +42,8 @@ class OrcWriterSpec extends FlatSpec with Logging {
                      batchSize = 1024,
                      partSizeMb = 128,
                      timeoutMinutes = 3,
-                     compress = false)
+                     compress = false,
+                     compressBuffer = 2*1024*1024,
+                     maxErrorPct = 0)
   }
 }

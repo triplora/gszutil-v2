@@ -37,7 +37,9 @@ object WriteORCFile extends Logging {
           batchSize: Int,
           partSizeMb: Long,
           timeoutMinutes: Int,
-          compress: Boolean): Unit = {
+          compress: Boolean,
+          compressBuffer: Int,
+          maxErrorPct: Double): Unit = {
     import scala.concurrent.duration._
     val conf = ConfigFactory.parseMap(ImmutableMap.of(
       "akka.actor.guardian-supervisor-strategy","akka.actor.EscalatingSupervisorStrategy"))
@@ -45,7 +47,7 @@ object WriteORCFile extends Logging {
     val bufSize = copyBook.LRECL * batchSize
     //val pool = ByteBufferPool.allocate(bufSize, maxWriters)
     val pool = new NoOpHeapBufferPool(bufSize, maxWriters)
-    val args = DatasetReaderArgs(
+    val args: DatasetReaderArgs = DatasetReaderArgs(
       in = in,
       batchSize = batchSize,
       uri = new URI(gcsUri),
@@ -54,7 +56,9 @@ object WriteORCFile extends Logging {
       copyBook = copyBook,
       gcs = gcs,
       compress = compress,
-      pool = pool)
+      compressBuffer = compressBuffer,
+      pool = pool,
+      maxErrorPct = maxErrorPct)
     sys.actorOf(Props(classOf[DatasetReader], args), "ZReader")
     Await.result(sys.whenTerminated, atMost = FiniteDuration(timeoutMinutes, MINUTES))
   }

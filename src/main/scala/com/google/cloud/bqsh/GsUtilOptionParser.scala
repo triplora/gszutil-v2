@@ -107,4 +107,9 @@ object GsUtilOptionParser extends OptionParser[GsUtilConfig]("gsutil") with ArgP
     .optional()
     .text("tablespec of table to insert stats")
     .action((x,c) => c.copy(statsTable = x))
+
+  opt[Double]("max_error_pct")
+    .optional()
+    .text("job failure threshold for row decoding errors (default: 0.0")
+    .action((x,c) => c.copy(maxErrorPct = x))
 }
