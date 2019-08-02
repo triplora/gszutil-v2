@@ -19,7 +19,7 @@ package com.google.cloud.gszutil.orc
 import java.nio.ByteBuffer
 
 import akka.actor.Actor
-import com.google.cloud.gszutil.Util
+import com.google.cloud.gszutil.{PackedDecimal, Util}
 import com.google.cloud.gszutil.Util.Logging
 import com.google.cloud.gszutil.io.ZReader
 import org.apache.hadoop.conf.Configuration
@@ -77,6 +77,12 @@ class ORCFileWriter(args: ORCFileWriterArgs) extends Actor with Logging {
       bytesSinceLastFlush += x.limit
       val t0 = System.currentTimeMillis
       errorCount += reader.readOrc(x, writer, errBuf)
+      if (errBuf.position > 0){
+        errBuf.flip()
+        val a = new Array[Byte](copyBook.LRECL)
+        errBuf.get(a)
+        System.err.println(s"Failed to read row:\n${PackedDecimal.hexValue(a)}")
+      }
       if (x.remaining > 0) {
         logger.warn(s"discarding ${x.remaining} bytes remaining in buffer")
       }

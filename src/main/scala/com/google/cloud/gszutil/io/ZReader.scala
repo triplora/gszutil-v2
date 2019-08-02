@@ -107,7 +107,6 @@ object ZReader {
           errors += 1
           buf.position(rowStart)
           err.put(buf)
-        case _ =>
       }
     }
     rowBatch.size = rowId
