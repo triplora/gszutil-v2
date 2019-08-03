@@ -21,6 +21,7 @@ import java.nio.ByteBuffer
 import akka.actor.{Actor, ActorRef, EscalatingSupervisorStrategy, Props, SupervisorStrategy, Terminated}
 import com.google.cloud.gszutil.Util
 import com.google.cloud.gszutil.Util.Logging
+import com.google.cloud.gszutil.orc.Protocol.{PartComplete, PartFailed, UploadComplete}
 import org.apache.hadoop.fs.Path
 
 import scala.collection.mutable
@@ -35,7 +36,8 @@ class DatasetReader(args: DatasetReaderArgs) extends Actor with Logging {
   private var lastRecv: Long = -1
   private var activeTime: Long = 0
   private var nSent = 0L
-  private var totalBytes = 0L
+  private var totalBytesRead = 0L
+  private var totalBytesWritten: Long = 0
   private var continue = true
   private var debugLogCount = 0
   import args._
@@ -69,21 +71,27 @@ class DatasetReader(args: DatasetReaderArgs) extends Actor with Logging {
         debugLogCount += 1
       }
 
-      totalBytes += bb.position
+      totalBytesRead += bb.position
       bb.flip()
       sender ! bb
       nSent += 1
       lastSend = System.currentTimeMillis
       activeTime += (lastSend - lastRecv)
       if (!continue) {
-        val mbps = Util.fmbps(totalBytes,activeTime)
-        logger.info(s"Finished reading $nSent chunks with $totalBytes bytes in $activeTime ms ($mbps mbps)")
+        val mbps = Util.fmbps(totalBytesRead,activeTime)
+        logger.info(s"Finished reading $nSent chunks with $totalBytesRead bytes in $activeTime ms ($mbps mbps)")
         context.become(finished)
       }
 
     case Terminated(w) =>
       writers.remove(w)
       newPart()
+
+    case msg: PartComplete =>
+      totalBytesWritten += msg.bytesWritten
+
+    case msg: PartFailed =>
+      notifyActor ! msg
 
     case msg =>
       logger.error(s"Unhandled message: $msg")
@@ -95,8 +103,9 @@ class DatasetReader(args: DatasetReaderArgs) extends Actor with Logging {
 
     case Terminated(w) =>
       writers.remove(w)
-      if (writers.isEmpty)
-        context.stop(self)
+      if (writers.isEmpty) {
+        notifyActor ! UploadComplete(totalBytesRead, totalBytesWritten)
+      }
 
     case _ =>
   }
@@ -117,10 +126,9 @@ class DatasetReader(args: DatasetReaderArgs) extends Actor with Logging {
   override def postStop(): Unit = {
     endTime = System.currentTimeMillis
     val totalTime = endTime - startTime
-    val mbps = Util.fmbps(totalBytes, totalTime)
+    val mbps = Util.fmbps(totalBytesWritten, totalTime)
     val wait = totalTime - activeTime
-    logger.info(s"Finished writing $totalBytes bytes; $nSent chunks; $totalTime ms; $mbps mbps; active $activeTime ms; wait $wait ms")
-    context.system.terminate()
+    logger.info(s"Finished reading $totalBytesRead writing $totalBytesWritten bytes; $nSent chunks; $totalTime ms; $mbps mbps; active $activeTime ms; wait $wait ms")
   }
 
   override def supervisorStrategy: SupervisorStrategy = new EscalatingSupervisorStrategy().create()

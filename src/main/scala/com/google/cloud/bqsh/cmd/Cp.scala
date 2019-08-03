@@ -55,7 +55,7 @@ object Cp extends Command[GsUtilConfig] with Logging {
     }
     val sourceDSN = in.getDsn
 
-    WriteORCFile.run(gcsUri = c.destinationUri,
+    val result = WriteORCFile.run(gcsUri = c.destinationUri,
                      in = in,
                      copyBook = copyBook,
                      gcs = gcs,
@@ -84,6 +84,6 @@ object Cp extends Command[GsUtilConfig] with Logging {
         recordsIn=nRead)
     }
 
-    Result.Success
+    result
   }
 }

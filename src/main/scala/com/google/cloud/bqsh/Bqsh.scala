@@ -36,17 +36,16 @@ object Bqsh extends Logging {
       System.exit(result.exitCode)
   }
 
-  class Interpreter(zos: ZFileProvider, sysEnv: Map[String,String], var throwOnError: Boolean = true, var printCommands: Boolean = true){
+  class Interpreter(zos: ZFileProvider, sysEnv: Map[String,String], var exitOnError: Boolean = true, var printCommands: Boolean = true){
     val env: mutable.Map[String,String] = mutable.Map.empty ++ sysEnv
     def runWithArgs(args: Seq[String]): Result = {
       System.out.println(s"+ ${args.mkString(" ")}")
       val result = exec(args, env.toMap, zos)
       if (result.exitCode != 0) {
         val msg = s"${args.mkString(" ")} returned exit code ${result.exitCode}"
-        logger.info(msg)
-        if (throwOnError) {
-          throw new RuntimeException(result.env.getOrElse("ERRMSG", msg))
-        }
+        logger.error(msg)
+        if (exitOnError)
+          System.exit(result.exitCode)
       }
       env ++= result.env
       result.copy(env = env.toMap)
@@ -55,7 +54,7 @@ object Bqsh extends Logging {
     def runScript(script: String): Result = {
       for (s <- splitSH(script)) {
         val result = runWithArgs(readArgs(s))
-        if (result.exitCode != 0 && throwOnError) {
+        if (result.exitCode != 0 && exitOnError) {
           return result
         }
       }

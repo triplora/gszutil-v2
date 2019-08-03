@@ -22,6 +22,7 @@ import akka.actor.Actor
 import com.google.cloud.gszutil.{PackedDecimal, Util}
 import com.google.cloud.gszutil.Util.Logging
 import com.google.cloud.gszutil.io.ZReader
+import com.google.cloud.gszutil.orc.Protocol.{PartComplete, PartFailed}
 import org.apache.hadoop.conf.Configuration
 import org.apache.hadoop.fs.{FileSystem, SimpleGCSFileSystem}
 import org.apache.orc._
@@ -101,6 +102,7 @@ class ORCFileWriter(args: ORCFileWriterArgs) extends Actor with Logging {
         sender ! x
       } else {
         pool.release(x)
+        context.parent ! PartComplete(path.toString, stats.getBytesWritten)
         context.stop(self)
       }
     case _ =>
@@ -123,7 +125,7 @@ class ORCFileWriter(args: ORCFileWriterArgs) extends Actor with Logging {
     if (errorPct > maxErrorPct) {
       val msg = s"error percent $errorPct exceeds threshold of $maxErrorPct"
       logger.error(msg)
-      throw new RuntimeException(msg)
+      context.parent ! PartFailed(msg)
     }
   }
 }
