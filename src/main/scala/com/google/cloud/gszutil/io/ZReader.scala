@@ -97,6 +97,7 @@ object ZReader {
     var errors: Int = 0
     var rowId = 0
     var rowStart = 0
+    val errRecord = new Array[Byte](lRecl)
     while (rowId < batchSize && buf.remaining >= lRecl){
       rowStart = buf.position()
       try {
@@ -106,7 +107,8 @@ object ZReader {
         case _: IllegalArgumentException =>
           errors += 1
           buf.position(rowStart)
-          err.put(buf)
+          buf.get(errRecord)
+          err.put(errRecord)
       }
     }
     rowBatch.size = rowId

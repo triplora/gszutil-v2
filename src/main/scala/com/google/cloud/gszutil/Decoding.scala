@@ -20,6 +20,7 @@ import java.nio.charset.Charset
 
 import com.google.cloud.gszutil.Util.Logging
 import com.google.common.base.Charsets
+import com.ibm.jzos.fields.daa
 import org.apache.hadoop.hive.ql.exec.vector._
 import org.apache.hadoop.hive.serde2.io.HiveDecimalWritable
 import org.apache.orc.TypeDescription
@@ -203,33 +204,17 @@ object Decoding extends Logging {
     require(p + s <= 31 && p + s > 18, s"precision $precision not in range [19,31]")
     override val size: Int = PackedDecimal.sizeOf(p,s)
 
+    // Use scale 0 to avoid rounding when converting to BigInteger for HiveDecimal
+    private val field = new daa.PackedBigDecimalField(0, precision, 0)
+
     override def get(buf: ByteBuffer, row: ColumnVector, i: Int): Unit = {
       val r = row.asInstanceOf[DecimalColumnVector]
-      var remaining = size
-      var remainingPrecision = p + s
-      val b = ArrayBuffer.empty[String]
-      val sub = PackedDecimal.sizeOf(18-2,0)
-      while (remaining > sub) {
-        val u = PackedDecimal.unpack2(buf, sub)
-        val s = f"$u%018d"
-        b.append(s)
-        remaining -= sub
-        remainingPrecision -= 18
-      }
-      val u1 = PackedDecimal.unpack(buf, remaining)
-      val s1 = u1.toString
-
-      if (s1.length < remainingPrecision) {
-        val s1a = new String(Array.fill[Char](remainingPrecision - s1.length)('0'))
-        b.append(s1a)
-      }
-      b.append(s1)
-      val s2 = b.result().toArray
-        .map(a => a.toString).mkString("")
-        .getBytes(Charsets.UTF_8)
-
+      val bigIntegerBytes = field.getBigDecimal(buf.array, buf.position)
+        .toBigIntegerExact
+        .toByteArray
+      buf.position(buf.position + size)
       val w = new HiveDecimalWritable()
-      w.setFromDigitsOnlyBytesWithScale(false, s2, 0, s2.length, 2)
+      w.setFromBigIntegerBytesAndScale(bigIntegerBytes, s)
       r.set(i, w)
     }
 
@@ -249,11 +234,8 @@ object Decoding extends Logging {
     override val size: Int = PackedDecimal.sizeOf(p,s)
 
     override def get(buf: ByteBuffer, row: ColumnVector, i: Int): Unit = {
-      val r = row.asInstanceOf[Decimal64ColumnVector]
-      val x = PackedDecimal.unpack(buf, size)
-      val w = r.getScratchWritable
-      w.setFromLongAndScale(x, s)
-      r.set(i, w)
+      row.asInstanceOf[Decimal64ColumnVector]
+        .vector.update(i, PackedDecimal.unpack(buf, size))
     }
 
     override def columnVector(maxSize: Int): ColumnVector =

@@ -25,6 +25,7 @@ import com.google.common.base.Charsets
 import org.apache.hadoop.hive.ql.exec.vector.{BytesColumnVector, Decimal64ColumnVector, DecimalColumnVector, LongColumnVector}
 import org.scalatest.FlatSpec
 import com.ibm.jzos.fields.daa
+import org.apache.hadoop.hive.serde2.io.HiveDecimalWritable
 
 class DecodingSpec extends FlatSpec {
   "Decoder" should "decode 2 byte binary integer" in {
@@ -134,13 +135,18 @@ class DecodingSpec extends FlatSpec {
     val buf = ByteBuffer.wrap(a)
     val decoder = Decimal64Decoder(9,2)
     val col = decoder.columnVector(1)
+    val w = new HiveDecimalWritable()
     val testValues = Seq(-99999999999L, 0, 1, 128, 99999999999L)
     for (x <- testValues) {
       f.putLong(x, a, 0)
       buf.clear()
       decoder.get(buf, col, 0)
       System.out.println(s"$x:\n${Binary.binValue(a)}\n${PackedDecimal.hexValue(a)}")
-      assert(col.asInstanceOf[LongColumnVector].vector(0) == x)
+      val got = col.asInstanceOf[LongColumnVector].vector(0)
+      assert(got == x)
+      w.setFromLongAndScale(x, 2)
+      val fromHiveDecimal = w.serialize64(2)
+      assert(fromHiveDecimal == x)
     }
   }
 
@@ -151,12 +157,18 @@ class DecodingSpec extends FlatSpec {
     val decoder = Decimal64Decoder(16,2)
     val col = decoder.columnVector(1)
     val testValues = Seq(-999999999999999999L, -100000000000000001L, 0, 1, 100000000000000001L, 999999999999999999L)
+
+    val w = new HiveDecimalWritable()
     for (x <- testValues) {
       f.putLong(x, a, 0)
       buf.clear()
       decoder.get(buf, col, 0)
       System.out.println(s"$x:\n${Binary.binValue(a)}\n${PackedDecimal.hexValue(a)}")
-      assert(col.asInstanceOf[LongColumnVector].vector(0) == x)
+      val got = col.asInstanceOf[LongColumnVector].vector(0)
+      assert(got == x)
+      w.setFromLongAndScale(x, 2)
+      val fromHiveDecimal = w.serialize64(2)
+      assert(fromHiveDecimal == x)
     }
   }
 
@@ -177,7 +189,15 @@ class DecodingSpec extends FlatSpec {
     val col = decoder.columnVector(1)
     decoder.get(buf, col, 0)
 
-    assert(col.asInstanceOf[Decimal64ColumnVector].vector(0) == expected)
+    val got = col.asInstanceOf[Decimal64ColumnVector].vector(0)
+
+    assert(got == expected)
+
+    val w = new HiveDecimalWritable()
+    w.setFromLongAndScale(expected, 2)
+
+    val fromHiveDecimal = w.serialize64(2)
+    assert(fromHiveDecimal == expected)
   }
 
   it should "transcode EBCDIC" in {
@@ -223,9 +243,12 @@ class DecodingSpec extends FlatSpec {
     (
       (0 to 74) ++ (81 to 90) ++ (98 to 106) ++
       (112 to 120) ++ (138 to 144) ++ (154 to 160) ++ (170 to 172) ++
-      (174 to 188) ++ (190 to 191) ++ (202 to 207) ++ (218 to 223) ++
-      Seq(128, 225) ++ (234 to 239) ++ (234 to 239) ++ (250 to 255)
-    ).foreach{i => assert(a(i)._2 == " ")}
+      (174 to 185) ++ (190 to 191) ++ (202 to 207) ++ (218 to 223) ++
+      Seq(128, 188, 225) ++ (234 to 239) ++ (234 to 239) ++ (250 to 255)
+    ).foreach{i =>
+      if (a(i)._2 != " ") System.out.println(i)
+      assert(a(i)._2 == " ")
+    }
   }
 
   it should "read dataset as string" in {
@@ -250,12 +273,9 @@ class DecodingSpec extends FlatSpec {
     val decoder = DecimalDecoder(29,2)
     val col = decoder.columnVector(1)
     decoder.get(ByteBuffer.wrap(a), col, 0)
-    val expectedDecimal = "10000000000000000000000000000.01"
-
-    assert(col.asInstanceOf[DecimalColumnVector].vector.length == 1)
-    val hiveDecimal = col.asInstanceOf[DecimalColumnVector].vector(0)
-    val string = hiveDecimal.toString
-    System.out.println(string)
-    assert(string == expectedDecimal)
+    val expected = "10000000000000000000000000000.01"
+    val got = col.asInstanceOf[DecimalColumnVector].vector(0).toString
+    System.out.println(got)
+    assert(got == expected)
   }
 }

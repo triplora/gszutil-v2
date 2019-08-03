@@ -25,13 +25,12 @@ import com.google.cloud.gszutil.Util.Logging
 import javax.net.ssl.{SSLContext, SSLSocket, SSLSocketFactory}
 
 object CCASSLSocketFactory {
-  final val Protocols = Array("TLSv1.2")
-  final val Ciphers = Array(
-    //"TLS_RSA_WITH_AES_256_GCM_SHA384",
-    //"TLS_RSA_WITH_AES_128_GCM_SHA256",
-    //"TLS_RSA_WITH_AES_256_CBC_SHA",
-    "TLS_RSA_WITH_AES_128_CBC_SHA"
-  )
+  final val TLS_1_2 = "TLSv1.2"
+  final val Protocols = Array(TLS_1_2)
+  final val Ciphers = Array("TLS_RSA_WITH_AES_128_CBC_SHA")
+  final val Cipher2 = Array("TLS_RSA_WITH_AES_256_CBC_SHA")
+  final val Cipher3 = Array("TLS_RSA_WITH_AES_128_GCM_SHA256")
+  final val Cipher4 = Array("TLS_RSA_WITH_AES_256_GCM_SHA384")
 }
 
 /** This SSLSocketFactory implementation is necessary to
@@ -45,9 +44,9 @@ class CCASSLSocketFactory extends SSLSocketFactory with Logging {
     val ciphers: String = Ciphers.mkString(",")
     System.setProperty("jdk.tls.client.cipherSuites", ciphers)
     System.setProperty("https.cipherSuites", ciphers)
-    System.setProperty("jdk.tls.client.protocols" , "TLSv1.2")
-    System.setProperty("https.protocols" , "TLSv1.2")
-    val ctx = SSLContext.getInstance("TLSv1.2")
+    System.setProperty("jdk.tls.client.protocols" , TLS_1_2)
+    System.setProperty("https.protocols" , TLS_1_2)
+    val ctx = SSLContext.getInstance(TLS_1_2)
     val tmf = SslUtils.getPkixTrustManagerFactory
     tmf.init(GoogleUtils.getCertificateTrustStore)
     val secureRandom = new SecureRandom()
