@@ -26,8 +26,7 @@ object IBM extends ZFileProvider with Logging {
   override def init(): Unit = {
     ZOS.addCCAProvider()
     System.setProperty("java.net.preferIPv4Stack" , "true")
-    //System.setProperty("jzos.bsam.disable" , "true")
-    System.out.println("Build Time: 20190802 12:57")
+    System.out.println("Build Time: 20190815 11:25")
   }
 
   override def readDDWithCopyBook(dd: String, copyBook: CopyBook): ZRecordReaderT = {

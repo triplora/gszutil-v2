@@ -16,7 +16,6 @@
 package com.ibm.jzos
 
 import java.nio.ByteBuffer
-import java.nio.channels.ReadableByteChannel
 import java.security.Security
 
 import com.google.cloud.gszutil.Util.Logging
