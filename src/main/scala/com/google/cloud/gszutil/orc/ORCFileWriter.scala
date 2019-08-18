@@ -47,8 +47,12 @@ class ORCFileWriter(args: ORCFileWriterArgs) extends Actor with Logging {
 
   private final val orcConfig = {
     val c = new Configuration(false)
-    OrcConf.COMPRESS.setString(c, "ZLIB")
-    OrcConf.COMPRESSION_STRATEGY.setString(c, "COMPRESSION")
+    if (compress){
+      OrcConf.COMPRESS.setString(c, "ZLIB")
+      OrcConf.COMPRESSION_STRATEGY.setString(c, "SPEED")
+    } else {
+      OrcConf.COMPRESS.setString(c, "NONE")
+    }
     OrcConf.ENABLE_INDEXES.setBoolean(c, false)
     OrcConf.OVERWRITE_OUTPUT_FILE.setBoolean(c, true)
     OrcConf.MEMORY_POOL.setDouble(c, 0.5d)
@@ -62,8 +66,8 @@ class ORCFileWriter(args: ORCFileWriterArgs) extends Actor with Logging {
       .writerOptions(orcConfig)
       .setSchema(copyBook.ORCSchema)
       .memory(NoOpMemoryManager)
-      .compress(CompressionKind.ZLIB)
-      .bufferSize(args.compressBuffer)
+      .compress(if (compress) CompressionKind.ZLIB else CompressionKind.NONE)
+      .bufferSize(compressBuffer)
       .enforceBufferSize()
       .fileSystem(new SimpleGCSFileSystem(gcs, stats))
     writer = OrcFile.createWriter(path, writerOptions)

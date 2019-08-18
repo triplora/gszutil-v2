@@ -93,7 +93,7 @@ object StatsUtil extends Logging {
           val plan = stats.getQueryPlan
           if (plan != null && plan.size > 0){
             val stages = plan.asScala
-            val in = stages.head.getRecordsRead
+            val in = stages.last.getRecordsRead
             val out = stages.last.getRecordsWritten
             row.put("records_in", in)
             row.put("records_out", out)
