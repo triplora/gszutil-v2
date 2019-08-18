@@ -1,5 +1,5 @@
 /*
- * Copyright 2019 Google Inc. All Rights Reserved.
+ * Copyright 2019 Google LLC All Rights Reserved.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -22,7 +22,7 @@ object LoadOptionParser extends OptionParser[LoadConfig]("load") with ArgParser 
   def parse(args: Seq[String]): Option[LoadConfig] =
     parse(args, LoadConfig())
 
-  head("load")
+  head("load", Bqsh.Version)
 
   help("help")
     .text("prints this usage text")

@@ -1,5 +1,5 @@
 /*
- * Copyright 2019 Google Inc. All Rights Reserved.
+ * Copyright 2019 Google LLC All Rights Reserved.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -234,8 +234,15 @@ object Decoding extends Logging {
     override val size: Int = PackedDecimal.sizeOf(p,s)
 
     override def get(buf: ByteBuffer, row: ColumnVector, i: Int): Unit = {
-      row.asInstanceOf[Decimal64ColumnVector]
-        .vector.update(i, PackedDecimal.unpack(buf, size))
+      val x = PackedDecimal.unpack(buf, size)
+      val vec: Array[Long] = row.asInstanceOf[Decimal64ColumnVector].vector
+      if (x > TypeDescription.MAX_DECIMAL64 && PackedDecimal.relaxedParsing) {
+        vec.update(i, TypeDescription.MAX_DECIMAL64)
+      } else if (x < TypeDescription.MIN_DECIMAL64 && PackedDecimal.relaxedParsing) {
+        vec.update(i, TypeDescription.MIN_DECIMAL64)
+      } else {
+        vec.update(i, x)
+      }
     }
 
     override def columnVector(maxSize: Int): ColumnVector =

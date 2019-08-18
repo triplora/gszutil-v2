@@ -4,13 +4,11 @@ scalaVersion := "2.11.8"
 
 organization := "com.google.cloud"
 
-version := "0.1.0-SNAPSHOT"
+version := "1.0.0"
 
 val exGuava = ExclusionRule(organization = "com.google.guava")
 
-libraryDependencies ++= Seq(
-  "com.google.guava" % "guava" % "28.0-jre"
-)
+libraryDependencies ++= Seq("com.google.guava" % "guava" % "28.0-jre")
 
 libraryDependencies ++= Seq(
   "org.apache.httpcomponents" % "httpclient" % "4.5.9",
@@ -40,15 +38,11 @@ assemblyMergeStrategy in assembly := {
   case _ => MergeStrategy.first
 }
 
-val ibmLibs = Set(
-  "ibmjzos.jar",
-  "ibmjcecca.jar",
-  "dataaccess.jar",
-  "rt.jar"
-)
-
+// Exclude IBM jars from assembly jar since they will be provided
 assemblyExcludedJars in assembly := {
-  (fullClasspath in assembly).value.filter(x => ibmLibs.contains(x.data.getName))
+  val IBMJars = Set("ibmjzos.jar", "ibmjcecca.jar", "dataaccess.jar")
+  (fullClasspath in assembly).value
+    .filter(file => IBMJars.contains(file.data.getName))
 }
 
 publishMavenStyle := false

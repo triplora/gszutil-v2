@@ -1,5 +1,5 @@
 /*
- * Copyright 2019 Google Inc. All Rights Reserved.
+ * Copyright 2019 Google LLC All Rights Reserved.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -25,6 +25,8 @@ import scala.collection.mutable
 import scala.collection.mutable.ListBuffer
 
 object Bqsh extends Logging {
+  val Version = "(gszutil-1.0.0)"
+
   def main(args: Array[String]): Unit = {
     val zos = ZFileProvider.getProvider()
     zos.init()

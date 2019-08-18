@@ -1,5 +1,5 @@
 /*
- * Copyright 2019 Google Inc. All Rights Reserved.
+ * Copyright 2019 Google LLC All Rights Reserved.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -26,7 +26,7 @@ object MkOptionParser extends OptionParser[MkConfig]("mk") with ArgParser[MkConf
   private val DefaultConfig = MkConfig()
   def parse(args: Seq[String]): Option[MkConfig] = parse(args, DefaultConfig)
 
-  head("mk", "1.0")
+  head("mk", Bqsh.Version)
 
   help("help")
     .text("prints this usage text")
