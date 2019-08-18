@@ -1,22 +1,13 @@
-       01 STORE-ORDER-SUMRY-SOURCE.
-          03 STORE_NBR              PIC S9(9) COMP.
-          03 ORDER_DEPT_NBR         PIC S9(9) COMP.
-          03 WM_YR_WK               PIC S9(4) COMP.
-          03 SS_ORD_CNT             PIC S9(9) COMP.
-          03 SS_ORD_RETL_AMT        PIC S9(16)V9(2) COMP-3.
-          03 SS_ORD_COST_AMT        PIC S9(16)V9(2) COMP-3.
-          03 SS_MN_ORD_CNT          PIC S9(9) COMP.
-          03 SS_MN_ORD_RETL_AMT     PIC S9(16)V9(2) COMP-3.
-          03 SS_MN_ORD_COST_AMT     PIC S9(16)V9(2) COMP-3.
-          03 SS_REPL_ITEM_CNT       PIC S9(9) COMP.
-          03 ASM_INITL_ORD_CNT      PIC S9(9) COMP.
-          03 ASM_FINAL_ORD_CNT      PIC S9(9) COMP.
-          03 ASM_ORD_RETL_AMT       PIC S9(16)V9(2) COMP-3.
-          03 ASM_ORD_COST_AMT       PIC S9(16)V9(2) COMP-3.
-          03 ASM_MN_ORD_CNT         PIC S9(9) COMP.
-          03 ASM_MN_ORD_RETL_AMT    PIC S9(16)V9(2) COMP-3.
-          03 ASM_MN_ORD_COST_AMT    PIC S9(16)V9(2) COMP-3.
-          03 ASM_REPL_ITEM_CNT      PIC S9(9) COMP.
-          03 ASM_MN_DIFF_ORD_QTY    PIC S9(9) COMP.
-          03 ASM_MN_DIFF_RETL_AMT   PIC S9(16)V9(2) COMP-3.
-          03 ASM_MN_DIFF_COST_AMT   PIC S9(16)V9(2) COMP-3.
+       01 TEST-TABLE-THREE.
+          03 COL_1      PIC S9(9) COMP.
+          03 COL_2      PIC S9(9) COMP.
+          03 COL_3      PIC S9(4) COMP.
+          03 COL_4      PIC S9(9) COMP.
+          03 COL_5      PIC S9(16)V9(2) COMP-3.
+          03 COL_6      PIC S9(16)V9(2) COMP-3.
+          03 COL_7      PIC S9(9) COMP.
+          03 COL_8      PIC S9(16)V9(2) COMP-3.
+          03 COL_9      PIC S9(16)V9(2) COMP-3.
+          03 COL_10     PIC S9(9) COMP.
+          03 COL_11     PIC S9(9) COMP.
+          03 COL_12     PIC S9(9) COMP.
