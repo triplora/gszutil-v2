@@ -80,7 +80,7 @@ object WriteORCFile extends Logging {
       pool = pool,
       maxErrorPct = maxErrorPct,
       notifyActor = inbox.getRef())
-    val reader = sys.actorOf(Props(classOf[DatasetReader], args), "ZReader")
+    val reader = sys.actorOf(Props(classOf[DatasetReader], args), "DatasetReader")
     inbox.watch(reader)
 
     try {

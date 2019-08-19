@@ -22,7 +22,7 @@ import akka.actor.Actor
 import com.google.cloud.gszutil.{PackedDecimal, Util}
 import com.google.cloud.gszutil.Util.Logging
 import com.google.cloud.gszutil.io.ZReader
-import com.google.cloud.gszutil.orc.Protocol.{PartComplete, PartFailed}
+import com.google.cloud.gszutil.orc.Protocol.{Close, PartComplete, PartFailed}
 import org.apache.hadoop.conf.Configuration
 import org.apache.hadoop.fs.{FileSystem, SimpleGCSFileSystem}
 import org.apache.orc._
@@ -109,6 +109,11 @@ class ORCFileWriter(args: ORCFileWriterArgs) extends Actor with Logging {
         context.parent ! PartComplete(path.toString, stats.getBytesWritten)
         context.stop(self)
       }
+
+    case Close =>
+      context.parent ! PartComplete(path.toString, stats.getBytesWritten)
+      context.stop(self)
+
     case _ =>
   }
 

@@ -21,7 +21,7 @@ import java.nio.ByteBuffer
 import akka.actor.{Actor, ActorRef, EscalatingSupervisorStrategy, Props, SupervisorStrategy, Terminated}
 import com.google.cloud.gszutil.Util
 import com.google.cloud.gszutil.Util.Logging
-import com.google.cloud.gszutil.orc.Protocol.{PartComplete, PartFailed, UploadComplete}
+import com.google.cloud.gszutil.orc.Protocol.{Close, PartComplete, PartFailed, UploadComplete}
 import org.apache.hadoop.fs.Path
 
 import scala.collection.mutable
@@ -80,6 +80,7 @@ class DatasetReader(args: DatasetReaderArgs) extends Actor with Logging {
       if (!continue) {
         val mbps = Util.fmbps(totalBytesRead,activeTime)
         logger.info(s"Finished reading $nSent chunks with $totalBytesRead bytes in $activeTime ms ($mbps mbps)")
+        for (w <- writers) w ! Close
         context.become(finished)
       }
 
@@ -98,16 +99,21 @@ class DatasetReader(args: DatasetReaderArgs) extends Actor with Logging {
   }
 
   def finished: Receive = {
-    case _: ByteBuffer =>
-      context.stop(sender)
+    case msg: PartComplete =>
+      totalBytesWritten += msg.bytesWritten
+
+    case msg: PartFailed =>
+      notifyActor ! msg
 
     case Terminated(w) =>
       writers.remove(w)
-      if (writers.isEmpty) {
+      if (writers.isEmpty)
         notifyActor ! UploadComplete(totalBytesRead, totalBytesWritten)
-      }
+      else
+        logger.debug(s"$w Terminated - ${writers.size} writers remaining")
 
-    case _ =>
+    case msg =>
+      logger.warn(s"Ignoring ${msg.getClass.getSimpleName} from $sender")
   }
 
   private var partId = 0

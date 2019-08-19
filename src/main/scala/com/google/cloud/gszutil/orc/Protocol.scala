@@ -19,5 +19,6 @@ package com.google.cloud.gszutil.orc
 object Protocol {
   case class PartComplete(path: String, bytesWritten: Long)
   case class PartFailed(msg: String)
+  case object Close
   case class UploadComplete(totalBytesRead: Long, totalBytesWritten: Long)
 }
