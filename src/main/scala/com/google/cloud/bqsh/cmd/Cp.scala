@@ -36,6 +36,8 @@ object Cp extends Command[GsUtilConfig] with Logging {
     val bq = BQ.defaultClient(c.projectId, c.location, creds)
     val copyBook = zos.loadCopyBook(c.copyBook)
     val in = zos.readDDWithCopyBook(c.source, copyBook)
+    logger.info(s"gsutil cp ${in.getDsn} ${c.destinationUri}")
+
     val batchSize = (c.blocksPerBatch * in.blkSize) / in.lRecl
     val gcs = GCS.defaultClient(creds)
     if (c.replace) {
@@ -55,6 +57,7 @@ object Cp extends Command[GsUtilConfig] with Logging {
     }
     val sourceDSN = in.getDsn
 
+    logger.info("Starting ORC Upload")
     val result = WriteORCFile.run(gcsUri = c.destinationUri,
                      in = in,
                      copyBook = copyBook,
@@ -66,6 +69,7 @@ object Cp extends Command[GsUtilConfig] with Logging {
                      compress = c.compress,
                      compressBuffer = c.compressBuffer,
                      maxErrorPct = c.maxErrorPct)
+    logger.info("ORC Upload Complete")
     in.close()
     val nRead = in.count()
 

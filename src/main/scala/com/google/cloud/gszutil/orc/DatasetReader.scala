@@ -134,7 +134,7 @@ class DatasetReader(args: DatasetReaderArgs) extends Actor with Logging {
     val totalTime = endTime - startTime
     val mbps = Util.fmbps(totalBytesWritten, totalTime)
     val wait = totalTime - activeTime
-    logger.info(s"Finished reading $totalBytesRead writing $totalBytesWritten bytes; $nSent chunks; $totalTime ms; $mbps mbps; active $activeTime ms; wait $wait ms")
+    logger.info(s"DatasetReader stopping after $totalBytesRead bytes read $totalBytesWritten bytes written; $nSent chunks; $totalTime ms; $mbps mbps; active $activeTime ms; wait $wait ms")
   }
 
   override def supervisorStrategy: SupervisorStrategy = new EscalatingSupervisorStrategy().create()

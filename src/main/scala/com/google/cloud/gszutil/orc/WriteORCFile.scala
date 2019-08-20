@@ -34,8 +34,8 @@ import scala.concurrent.duration.{FiniteDuration, MINUTES}
 
 object WriteORCFile extends Logging {
 
-  def cleanup(sys: ActorSystem, reader: ActorRef): Unit = {
-    reader ! PoisonPill
+  def cleanup(sys: ActorSystem): Unit = {
+    logger.info("Cleaning up ActorSystem")
     sys.terminate()
     try {
       Await.result(sys.whenTerminated, atMost = FiniteDuration(1, MINUTES))
@@ -85,8 +85,8 @@ object WriteORCFile extends Logging {
 
     try {
       inbox.receive(FiniteDuration(timeoutMinutes, MINUTES)) match {
-        case UploadComplete =>
-          logger.info("Upload complete")
+        case UploadComplete(read, written) =>
+          logger.info(s"Upload complete $read bytes read $written bytes written")
           Result.Success
         case PartFailed(msg) =>
           logger.error("Upload failed")
@@ -105,7 +105,8 @@ object WriteORCFile extends Logging {
         logger.error(s"Timed out after $timeoutMinutes minutes waiting for upload to complete")
         Result.Failure(s"Upload timed out after $timeoutMinutes minutes")
     } finally {
-      cleanup(sys, reader)
+      sys.stop(reader)
+      cleanup(sys)
     }
   }
 }
