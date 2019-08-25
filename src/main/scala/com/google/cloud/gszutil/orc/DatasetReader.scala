@@ -107,10 +107,13 @@ class DatasetReader(args: DatasetReaderArgs) extends Actor with Logging {
 
     case Terminated(w) =>
       writers.remove(w)
-      if (writers.isEmpty)
+      logger.debug(s"$w Terminated - ${writers.size} writers remaining")
+      if (writers.isEmpty) {
+        logger.info("Sending UploadComplete")
         notifyActor ! UploadComplete(totalBytesRead, totalBytesWritten)
-      else
-        logger.debug(s"$w Terminated - ${writers.size} writers remaining")
+      }
+
+    case _: ByteBuffer =>
 
     case msg =>
       logger.warn(s"Ignoring ${msg.getClass.getSimpleName} from $sender")

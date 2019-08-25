@@ -22,6 +22,7 @@ import java.util.concurrent.TimeUnit
 import com.google.api.client.http.HttpTransport
 import com.google.api.client.http.apache.v2.ApacheHttpTransport
 import com.google.auth.http.HttpTransportFactory
+import org.apache.http.HttpHost
 import org.apache.http.client.HttpClient
 import org.apache.http.config.SocketConfig
 import org.apache.http.conn.ssl.SSLConnectionSocketFactory
@@ -32,22 +33,30 @@ import org.apache.http.impl.conn.SystemDefaultRoutePlanner
 object CCATransportFactory {
   private val Instance = new ApacheHttpTransport(newDefaultHttpClient)
 
-  def newDefaultHttpClient: HttpClient = { // Set socket buffer sizes to 8192
+  def newDefaultHttpClient: HttpClient = {
     val socketConfig = SocketConfig.custom
-      .setRcvBufSize(2*1024*1024)
-      .setSndBufSize(2*1024*1024)
+      .setRcvBufSize(256*1024)
+      .setSndBufSize(256*1024)
       .build
-    HttpClientBuilder.create
+
+    val builder = HttpClientBuilder.create
       .useSystemProperties
       .setSSLSocketFactory(new SSLConnectionSocketFactory(new CCASSLSocketFactory(), CCASSLSocketFactory.Protocols, CCASSLSocketFactory.Ciphers, Option[javax.net.ssl.HostnameVerifier](null).orNull))
       .setDefaultSocketConfig(socketConfig)
-      .setMaxConnTotal(200)
+      .setMaxConnTotal(40)
       .setMaxConnPerRoute(20)
       .setConnectionTimeToLive(-1, TimeUnit.MILLISECONDS)
       .setRoutePlanner(new SystemDefaultRoutePlanner(ProxySelector.getDefault))
       .disableRedirectHandling
       .disableAutomaticRetries
-      .build
+
+    sys.env.get("http_proxy") match {
+      case Some(httpProxy) =>
+        builder.setProxy(HttpHost.create(httpProxy))
+      case _ =>
+    }
+
+    builder.build
   }
 }
 

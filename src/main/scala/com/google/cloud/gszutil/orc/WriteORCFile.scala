@@ -29,8 +29,9 @@ import com.google.cloud.storage.Storage
 import com.google.common.collect.ImmutableMap
 import com.typesafe.config.ConfigFactory
 
-import scala.concurrent.Await
+import scala.concurrent.{Await, ExecutionContext}
 import scala.concurrent.duration.{FiniteDuration, MINUTES}
+import scala.util.{Failure, Success}
 
 object WriteORCFile extends Logging {
 
@@ -83,29 +84,37 @@ object WriteORCFile extends Logging {
     val reader = sys.actorOf(Props(classOf[DatasetReader], args), "DatasetReader")
     inbox.watch(reader)
 
+    sys.whenTerminated.onComplete{
+        case Success(_) =>
+          logger.info(s"Actor System terminated with Success")
+        case Failure(e) =>
+          logger.info(s"ActorSystem terminated with Failure\n${e.getMessage}\n${e.getCause}")
+    }(ExecutionContext.global)
+
     try {
       inbox.receive(FiniteDuration(timeoutMinutes, MINUTES)) match {
         case UploadComplete(read, written) =>
-          logger.info(s"Upload complete $read bytes read $written bytes written")
+          logger.info(s"Upload complete:\n$read bytes read\n$written bytes written")
           Result.Success
         case PartFailed(msg) =>
-          logger.error("Upload failed")
-          Result.Failure(msg)
-        case Terminated =>
-          val msg = "Reader terminated unexpectedly"
+          logger.error(s"Upload failed: $msg")
+          Result.Failure(msg, 2)
+        case x: Terminated =>
+          val msg = s"${x.actor} terminated"
           logger.error(msg)
-          Result.Failure(msg)
+          Result.Failure(msg, 3)
         case msg =>
           val errMsg = s"Unrecognized message type ${msg.getClass.getSimpleName}: $msg"
           logger.error(errMsg)
-          Result.Failure(errMsg, 2)
+          Result.Failure(errMsg)
       }
     } catch {
-      case e: TimeoutException =>
+      case _: TimeoutException =>
         logger.error(s"Timed out after $timeoutMinutes minutes waiting for upload to complete")
         Result.Failure(s"Upload timed out after $timeoutMinutes minutes")
     } finally {
       sys.stop(reader)
+      sys.stop(inbox.getRef)
       cleanup(sys)
     }
   }

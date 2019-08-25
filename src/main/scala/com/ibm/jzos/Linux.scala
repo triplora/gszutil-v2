@@ -28,6 +28,7 @@ import com.google.common.io.ByteStreams
 object Linux extends ZFileProvider with Logging {
   override def init(): Unit = {
     System.setProperty("java.net.preferIPv4Stack" , "true")
+    System.out.println("Build Info:\n" + Util.readS("build.txt"))
   }
   override def readDDWithCopyBook(dd: String, copyBook: CopyBook): ZRecordReaderT = {
     val rr = readDD(dd)
