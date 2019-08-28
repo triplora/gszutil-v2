@@ -22,15 +22,16 @@ import java.util.concurrent.TimeUnit
 import com.google.api.client.http.HttpTransport
 import com.google.api.client.http.apache.v2.ApacheHttpTransport
 import com.google.auth.http.HttpTransportFactory
+import com.google.cloud.gszutil.Util.Logging
 import org.apache.http.HttpHost
 import org.apache.http.client.HttpClient
 import org.apache.http.config.SocketConfig
 import org.apache.http.conn.ssl.SSLConnectionSocketFactory
 import org.apache.http.impl.client.HttpClientBuilder
-import org.apache.http.impl.conn.SystemDefaultRoutePlanner
+import org.apache.http.impl.conn.DefaultProxyRoutePlanner
 
 
-object CCATransportFactory {
+object CCATransportFactory extends Logging {
   private val Instance = new ApacheHttpTransport(newDefaultHttpClient)
 
   def newDefaultHttpClient: HttpClient = {
@@ -46,13 +47,14 @@ object CCATransportFactory {
       .setMaxConnTotal(40)
       .setMaxConnPerRoute(20)
       .setConnectionTimeToLive(-1, TimeUnit.MILLISECONDS)
-      .setRoutePlanner(new SystemDefaultRoutePlanner(ProxySelector.getDefault))
       .disableRedirectHandling
       .disableAutomaticRetries
 
-    sys.env.get("http_proxy") match {
+    sys.env.get("https_proxy") match {
       case Some(httpProxy) =>
-        builder.setProxy(HttpHost.create(httpProxy))
+        logger.info(s"Configuring https_proxy=$httpProxy")
+        val proxy = HttpHost.create(httpProxy)
+        builder.setRoutePlanner(new DefaultProxyRoutePlanner(proxy))
       case _ =>
     }
 
