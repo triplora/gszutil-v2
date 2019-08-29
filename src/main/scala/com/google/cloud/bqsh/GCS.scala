@@ -38,7 +38,7 @@ object GCS {
         .setMaxRetryDelay(Duration.ofSeconds(30))
         .setRetryDelayMultiplier(2.0d)
         .build())
-      .setHeaderProvider(FixedHeaderProvider.create("user-agent", "gszutil-0.1"))
+      .setHeaderProvider(FixedHeaderProvider.create("user-agent", "google-pso-tool/gszutil/1.0"))
       .build()
       .getService
   }

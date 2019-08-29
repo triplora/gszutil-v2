@@ -44,7 +44,7 @@ object BQ {
         .setMaxRetryDelay(Duration.ofSeconds(32))
         .setRetryDelayMultiplier(2.0d)
         .build())
-      .setHeaderProvider(FixedHeaderProvider.create("user-agent", "gszutil-1.0"))
+      .setHeaderProvider(FixedHeaderProvider.create("user-agent", "google-pso-tool/gszutil/1.0"))
       .build()
       .getService
   }

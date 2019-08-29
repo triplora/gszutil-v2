@@ -16,7 +16,6 @@
 
 package com.google.cloud.gszutil
 
-import java.net.ProxySelector
 import java.util.concurrent.TimeUnit
 
 import com.google.api.client.http.HttpTransport
