@@ -26,20 +26,20 @@ import org.threeten.bp.Duration
 
 object GCS {
   def defaultClient(credentials: Credentials): Storage = {
-    StorageOptions.newBuilder()
+    StorageOptions.newBuilder
       .setCredentials(credentials)
-      .setTransportOptions(HttpTransportOptions.newBuilder()
+      .setTransportOptions(HttpTransportOptions.newBuilder
         .setHttpTransportFactory(new CCATransportFactory)
-        .build())
-      .setRetrySettings(RetrySettings.newBuilder()
+        .build)
+      .setRetrySettings(RetrySettings.newBuilder
         .setMaxAttempts(100)
         .setTotalTimeout(Duration.ofMinutes(30))
         .setInitialRetryDelay(Duration.ofSeconds(2))
         .setMaxRetryDelay(Duration.ofSeconds(30))
         .setRetryDelayMultiplier(2.0d)
-        .build())
-      .setHeaderProvider(FixedHeaderProvider.create("user-agent", "google-pso-tool/gszutil/1.0"))
-      .build()
+        .build)
+      .setHeaderProvider(FixedHeaderProvider.create("user-agent", Bqsh.UserAgent))
+      .build
       .getService
   }
 }

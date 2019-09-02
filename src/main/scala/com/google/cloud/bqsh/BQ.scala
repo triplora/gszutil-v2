@@ -20,7 +20,7 @@ import com.google.api.gax.retrying.RetrySettings
 import com.google.api.gax.rpc.FixedHeaderProvider
 import com.google.auth.Credentials
 import com.google.cloud.RetryOption
-import com.google.cloud.bigquery._
+import com.google.cloud.bigquery.{BigQuery,BigQueryError,BigQueryException,BigQueryOptions,DatasetId,Field,FieldList,JobInfo,Job,JobId,JobStatus,QueryJobConfiguration,Schema,StandardSQLTypeName,TableId}
 import com.google.cloud.gszutil.CCATransportFactory
 import com.google.cloud.http.HttpTransportOptions
 import com.google.common.base.Preconditions
@@ -30,32 +30,33 @@ import scala.collection.JavaConverters._
 
 object BQ {
   def defaultClient(project: String, location: String, credentials: Credentials): BigQuery = {
-    BigQueryOptions.newBuilder()
+    BigQueryOptions.newBuilder
       .setLocation(location)
       .setProjectId(project)
       .setCredentials(credentials)
-      .setTransportOptions(HttpTransportOptions.newBuilder()
+      .setTransportOptions(HttpTransportOptions.newBuilder
         .setHttpTransportFactory(new CCATransportFactory)
-        .build())
-      .setRetrySettings(RetrySettings.newBuilder()
+        .build)
+      .setRetrySettings(RetrySettings.newBuilder
         .setMaxAttempts(8)
         .setTotalTimeout(Duration.ofMinutes(30))
         .setInitialRetryDelay(Duration.ofSeconds(8))
         .setMaxRetryDelay(Duration.ofSeconds(32))
         .setRetryDelayMultiplier(2.0d)
-        .build())
-      .setHeaderProvider(FixedHeaderProvider.create("user-agent", "google-pso-tool/gszutil/1.0"))
-      .build()
+        .build)
+      .setHeaderProvider(FixedHeaderProvider.create("user-agent", Bqsh.UserAgent))
+      .build
       .getService
   }
 
-  def runJob(bq: BigQuery, cfg: QueryJobConfiguration, jobId: JobId, timeoutSeconds: Long): Job = {
+  def runJob(bq: BigQuery, cfg: QueryJobConfiguration, jobId: JobId, timeoutSeconds: Long, sync: Boolean): Job = {
     require(bq != null, "BigQuery must not be null")
     require(cfg != null, "QueryJobConfiguration must not be null")
     require(jobId != null, "JobId must not be null")
     try {
       val job = bq.create(JobInfo.of(jobId, cfg))
-      await(job, jobId, timeoutSeconds)
+      if (sync) await(job, jobId, timeoutSeconds)
+      else job
     } catch {
       case e: BigQueryException =>
         if (e.getReason == "duplicate" && e.getMessage.startsWith("Already Exists: Job")) {
@@ -118,10 +119,10 @@ object BQ {
   def toBQError(error: BigQueryError): scala.Option[BQError] = {
     if (error == null) None
     else scala.Option(BQError(
-        message = scala.Option(error.getMessage)
-        ,reason = scala.Option(error.getReason)
-        ,location = scala.Option(error.getLocation)
-      ))
+      message = scala.Option(error.getMessage),
+      reason = scala.Option(error.getReason),
+      location = scala.Option(error.getLocation)
+    ))
   }
 
   def getStatus(job: Job): scala.Option[BQStatus] = {
@@ -210,14 +211,14 @@ object BQ {
       schemaUpdateOptionsBuilder
         .add(JobInfo.SchemaUpdateOption.ALLOW_FIELD_RELAXATION)
     }
-    schemaUpdateOptionsBuilder.build()
+    schemaUpdateOptionsBuilder.build
   }
 
   def parseField(s: String): Field = {
     val Array(field,dataType) = s.split(':')
     val fieldList = FieldList.of()
     val typeName = StandardSQLTypeName.valueOf(dataType)
-    Field.newBuilder(field,typeName,fieldList).build()
+    Field.newBuilder(field,typeName,fieldList).build
   }
 
   def parseSchema(s: Seq[String]): Schema = {

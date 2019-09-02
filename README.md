@@ -289,9 +289,16 @@ gunzip -c SDK8_64bit_SR5_FP30.PAX.Z | pax -r
 
 ## Building
 
+Build application jar
+
+```sh
+sbt package
+```
+
+Build dependencies jar
+
 ```sh
 sbt assemblyPackageDependency
-sbt package
 ```
 
 
@@ -301,6 +308,17 @@ sbt package
 2. Deploy `<userid>.HOSTS.LOCAL` or `<userid>.ETC.IPNODES` if you need to send API requests to the `restricted.googleapis.com` VPC-SC endpoint.
 3. Deploy `gszutil.dep.jar` and `gszutil.jar` to `/opt/google/lib` unix filesystem directory (or directory chosen by your z/OS administrator)
 4. Deploy [proclib/BQSH](proclib/BQSH) to a PROCLIB MVS dataset on the mainframe. If you deployed the jar files to a path other than `/opt/google/lib`, you will need to modify `BQSH` to reflect the correct path.
+
+
+## Limitations
+
+The current COBOL Copy Book parser may not support all possible PIC strings.
+Not all gsutil and bq functionality is implemented by the emulators included in this utility. Command-line argument compatibility is made on a best-effort basis.
+
+
+## Future Work
+
+Future versions of this utility will provide enhanced offload functionality with deployment of an intermediate VM between the mainframe and GCS. CPU consumption on the mainframe may be slightly reduced by performing streaming transcoding from COBOL encodings to ORC on the VM.
 
 
 ## Disclaimer

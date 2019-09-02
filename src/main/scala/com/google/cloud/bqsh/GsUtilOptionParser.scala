@@ -25,7 +25,7 @@ object GsUtilOptionParser extends OptionParser[GsUtilConfig]("gsutil") with ArgP
   def parse(args: Seq[String]): Option[GsUtilConfig] =
     parse(args, GsUtilConfig())
 
-  head("gsutil", Bqsh.Version)
+  head("gsutil", Bqsh.UserAgent)
 
   help("help").text("prints this usage text")
 
@@ -48,10 +48,15 @@ object GsUtilOptionParser extends OptionParser[GsUtilConfig]("gsutil") with ArgP
         .action{(x,c) => c.copy(blocksPerBatch = x)}
         .text("blocks per batch (default: 1000)"),
 
+      opt[Unit]('m', "parallel")
+        .optional()
+        .action{(_,c) => c.copy(parallelism = 4)}
+        .text("number of concurrent writers (default: 4)"),
+
       opt[Int]('p', "parallelism")
         .optional()
         .action{(x,c) => c.copy(parallelism = x)}
-        .text("number of concurrent writers (default: 6)"),
+        .text("number of concurrent writers (default: 4)"),
 
       opt[Int]("timeOutMinutes")
         .optional()

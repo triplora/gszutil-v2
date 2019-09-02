@@ -25,6 +25,10 @@ class ParserSpec extends FlatSpec {
       "mk",
       "--project_id=project",
       "--dataset_id=dataset",
+      "--clustering_fields=id1,id2",
+      "--time_partitioning_field=date",
+      "--time_partitioning_expiration=31536000",
+      "--description=\"this is a table\"",
       "--external_table_definition=ORC=gs://bucket/bucket/path.orc/*",
       "TABLE_NAME"
     )
@@ -32,6 +36,10 @@ class ParserSpec extends FlatSpec {
     assert(parsed1.isDefined)
     val parsed = MkOptionParser.parse(parsed1.get.args.drop(1))
     assert(parsed.isDefined)
+    assert(parsed.get.timePartitioningExpiration == 31536000)
+    assert(parsed.get.timePartitioningField == "date")
+    assert(parsed.get.clusteringFields == Seq("id1","id2"))
+    assert(parsed.get.description == "this is a table")
   }
 
   "LoadOptionParser" should "parse" in {
@@ -41,6 +49,10 @@ class ParserSpec extends FlatSpec {
       "--project_id=project",
       "--dataset_id=dataset",
       "--source_format=ORC",
+      "--replace",
+      "--clustering_fields=id1,id2",
+      "--time_partitioning_field=date",
+      "--time_partitioning_expiration=31536000",
       "TABLE_NAME",
       "gs://bucket/bucket/path.orc/*"
     )
@@ -48,6 +60,12 @@ class ParserSpec extends FlatSpec {
     assert(parsed1.isDefined)
     val parsed = LoadOptionParser.parse(parsed1.get.args.drop(1))
     assert(parsed.isDefined)
+    val opts = parsed.get
+    assert(opts.replace)
+    assert(opts.clusteringFields == Seq("id1","id2"))
+    assert(opts.time_partitioning_expiration == 31536000)
+    assert(opts.time_partitioning_field == "date")
+    assert(opts.source_format == "ORC")
   }
 
   "QueryOptionParser" should "parse" in {
@@ -56,9 +74,44 @@ class ParserSpec extends FlatSpec {
       "query",
       "--project_id=project",
       "--dataset_id=dataset",
-      "--replace=true",
+      "--replace",
       "--parameters_from_file=DATE::DDNAME",
       "--destination_table=TABLE_NAME"
+    )
+    val parsed1 = BqshParser.parse(args)
+    assert(parsed1.isDefined)
+    val parsed = QueryOptionParser.parse(parsed1.get.args.drop(1))
+    assert(parsed.isDefined)
+  }
+
+  it should "parse asynchronous batch mode" in {
+    val args = Seq(
+      "bq",
+      "query",
+      "--project_id=project",
+      "--dataset_id=dataset",
+      "--replace",
+      "--sync=false",
+      "--batch",
+      "--parameters_from_file=DATE::DDNAME",
+      "--destination_table=TABLE_NAME"
+    )
+    val parsed1 = BqshParser.parse(args)
+    assert(parsed1.isDefined)
+    val parsed = QueryOptionParser.parse(parsed1.get.args.drop(1))
+    assert(parsed.isDefined)
+    assert(!parsed.get.sync)
+  }
+
+  it should "parse with spaces" in {
+    val args = Seq(
+      "bq",
+      "query",
+      "--project_id", "project",
+      "--dataset_id", "dataset",
+      "--replace",
+      "--parameters_from_file", "DATE::DDNAME",
+      "--destination_table", "TABLE_NAME"
     )
     val parsed1 = BqshParser.parse(args)
     assert(parsed1.isDefined)
@@ -72,7 +125,7 @@ class ParserSpec extends FlatSpec {
       "rm",
       "--project_id=project",
       "--dataset_id=dataset",
-      "--table=true",
+      "--table",
       "TABLE_NAME"
     )
     val parsed1 = BqshParser.parse(args)
@@ -99,7 +152,10 @@ class ParserSpec extends FlatSpec {
     val args = Seq(
       "gsutil",
       "cp",
+      "-m",
+      "--parallelism=4",
       "--replace",
+      "--timeOutMinutes=120",
       "gs://bucket/path"
     )
     val parsed1 = BqshParser.parse(args)
@@ -109,6 +165,8 @@ class ParserSpec extends FlatSpec {
     assert(parsed.isDefined)
     assert(parsed.get.replace)
     assert(parsed.get.mode == "cp")
+    assert(parsed.get.parallelism == 4)
+    assert(parsed.get.timeOutMinutes == 120)
     assert(parsed.get.replace)
     assert(parsed.get.destinationUri == "gs://bucket/path")
   }
@@ -127,11 +185,22 @@ class ParserSpec extends FlatSpec {
     assert(split == expected)
   }
 
-  "parsers" should "print help" in {
-    System.out.println(GsUtilOptionParser.usage)
-    System.out.println(LoadOptionParser.usage)
-    System.out.println(MkOptionParser.usage)
-    System.out.println(QueryOptionParser.usage)
-    System.out.println(RmOptionParser.usage)
+  it should "split SQL with backticks and quotes" in {
+    // see https://cloud.google.com/bigquery/docs/reference/standard-sql/lexical for allowed quoting styles
+    val bs = "\\"
+    val tq = "\"\"\""
+    val newline = "\n"
+    val line2 = s""" SELECT "abc","it's",'it${bs}'s','Title: "Boy"',${tq}abc${tq},'''it's''','''Title:"Boy"''','''two${newline}lines''','''why${bs}?''' FROM `my-project.dataset.table1`"""
+    val queryString =
+      s"""-- comment
+        |$line2;
+        | SELECT 2 FROM `my-project.dataset.table2`;
+        |""".stripMargin
+    val split = Bqsh.splitSQL(queryString)
+    val expected = Seq(
+      s"""-- comment$newline$line2""",
+      "SELECT 2 FROM `my-project.dataset.table2`"
+    )
+    assert(split == expected)
   }
 }

@@ -25,7 +25,7 @@ import scala.collection.mutable
 import scala.collection.mutable.ListBuffer
 
 object Bqsh extends Logging {
-  val Version = "(gszutil-1.0.0)"
+  val UserAgent = "google-pso-tool/gszutil/1.0"
 
   def main(args: Array[String]): Unit = {
     val zos = ZFileProvider.getProvider()
@@ -104,7 +104,7 @@ object Bqsh extends Logging {
           Bqsh.eval(cmd)
         }
       case _ =>
-        Result.Failure(s"invalid command '${args.mkString(" ")}'")
+        Result.Failure(s"-bqsh: ${args.head}: command not found")
     }
   }
 
@@ -131,18 +131,18 @@ object Bqsh extends Logging {
         if (bracket && next == '}') {
           variable = false
           bracket = false
-          if (!(c.isLetterOrDigit || c == '_')) {
-            throw new IllegalArgumentException("invalid variable")
-          }
           varName.append(c)
+          if (!(c.isLetterOrDigit || c == '_')) {
+            throw new IllegalArgumentException(s"invalid variable ${varName.result}")
+          }
           sb.append(env.getOrElse(varName.result(), ""))
           varName.clear()
         } else if (!(next.isLetterOrDigit || next == '_')) {
           variable = false
-          if (!(c.isLetterOrDigit || c == '_')) {
-            throw new IllegalArgumentException("invalid variable")
-          }
           varName.append(c)
+          if (!(c.isLetterOrDigit || c == '_')) {
+            throw new IllegalArgumentException(s"invalid variable ${varName.result}")
+          }
           sb.append(env.getOrElse(varName.result(), ""))
           varName.clear()
         } else {

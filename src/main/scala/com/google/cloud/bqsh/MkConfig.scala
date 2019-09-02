@@ -26,7 +26,6 @@ case class MkConfig (
   defaultTableExpiration: Int = -1,
   description: String = "",
   destinationKmsKey: String = "",
-  displayName: String = "",
   expiration: Long = -1,
   externalTableDefinition: String = "",
   externalTableUri: Seq[URI] = Seq.empty,

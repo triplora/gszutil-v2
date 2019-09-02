@@ -26,7 +26,7 @@ object MkOptionParser extends OptionParser[MkConfig]("mk") with ArgParser[MkConf
   private val DefaultConfig = MkConfig()
   def parse(args: Seq[String]): Option[MkConfig] = parse(args, DefaultConfig)
 
-  head("mk", Bqsh.Version)
+  head("mk", Bqsh.UserAgent)
 
   help("help")
     .text("prints this usage text")
@@ -39,27 +39,6 @@ object MkOptionParser extends OptionParser[MkConfig]("mk") with ArgParser[MkConf
   opt[Seq[String]]("clustering_fields")
     .text("A comma-separated list of column names used to cluster a table. This flag is currently available only for partitioned tables. When specified, the table is partitioned and then clustered using these columns.")
     .action{(x,c) => c.copy(clusteringFields = x)}
-
-  /*
-  opt[String]("data_location")
-    .text("(Legacy) Specifies the location of the dataset. Use the --location global flag instead.")
-  */
-
-  /*
-  opt[String]("data_source")
-    .text(
-      """Specifies the data source for a transfer configuration. Possible values include:
-        |
-        |dcm_dt: Campaign Manager
-        |google_cloud_storage: Cloud Storage
-        |dfp_dt: Google Ad Manager
-        |adwords: Google Ads
-        |merchant_center: Google Merchant Center
-        |play: Google Play
-        |youtube_channel: YouTube Channel reports
-        |youtube_content_owner: YouTube Content Owner reports
-        |The default value is ''.""".stripMargin)
-  */
 
   opt[Unit]('d',"dataset")
     .text("When specified, creates a dataset. The default value is false.")
@@ -80,15 +59,6 @@ object MkOptionParser extends OptionParser[MkConfig]("mk") with ArgParser[MkConf
   opt[String]("destination_kms_key")
     .text("The Cloud KMS key used to encrypt the table data.")
     .action{(x,c) => c.copy(destinationKmsKey = x)}
-
-  opt[String]("display_name")
-    .text("The display name for the transfer configuration. The default value is ''.")
-    .action{(x,c) => c.copy(displayName = x)}
-
-  /*
-  opt[String]("end_time")
-    .text("""A timestamp that specifies the end time for a range of transfer runs. The format for the timestamp is RFC3339 UTC "Zulu ".""")
-  */
 
   opt[Long]("expiration")
     .text("An integer that specifies the table or view's lifetime in milliseconds. The expiration time is set to the current UTC time plus this value.")
@@ -124,14 +94,6 @@ object MkOptionParser extends OptionParser[MkConfig]("mk") with ArgParser[MkConf
     .text("A label to set on the table. The format is [KEY]:[VALUE]. Repeat this flag to specify multiple labels.")
     .action{(x,c) => c.copy(label = x)}
 
-  /*
-  opt[String]('p', "params")
-    .text("""The parameters for a transfer configuration in JSON format: {"[PARAMETER]":"[VALUE]"}. The parameters vary depending on the data source. For more information, see Introduction to BigQuery Data Transfer Service.""")
-
-  opt[Int]("refresh_window_days")
-    .text("An integer that specifies the refresh window for a transfer configuration in days. The default value is 0.")
-  */
-
   opt[Boolean]("require_partition_filter")
     .text("When specified, this flag determines whether to require a partition filter for queries over the supplied table. This flag only applies to partitioned tables. The default value is true.")
     .action{(x,c) => c.copy(requirePartitionFilter = x)}
@@ -140,19 +102,9 @@ object MkOptionParser extends OptionParser[MkConfig]("mk") with ArgParser[MkConf
     .text("The path to a local JSON schema file or a comma-separated list of column definitions in the form [FIELD]:[DATA_TYPE],[FIELD]:[DATA_TYPE]. The default value is ''.")
     .action{(x,c) => c.copy(schema = x)}
 
-  /*
-  opt[String]("start_time")
-    .text("""A timestamp that specifies the start time for a range of transfer runs. The format for the timestamp is RFC3339 UTC "Zulu ".""")
-  */
-
   opt[Unit]('t', "table")
     .text("When specified, create a table. The default value is false.")
     .action{(_,c) => c.copy(table = true)}
-
-  /*
-  opt[String]("target_dataset")
-    .text("The target dataset for a transfer configuration. The default value is ''.")
-  */
 
   opt[Long]("time_partitioning_expiration")
     .text("An integer that specifies (in seconds) when a time-based partition should be deleted. The expiration time evaluates to the partition's UTC date plus the integer value. A negative number indicates no expiration.")
@@ -163,16 +115,8 @@ object MkOptionParser extends OptionParser[MkConfig]("mk") with ArgParser[MkConf
     .action{(x,c) => c.copy(timePartitioningField = x)}
 
   opt[String]("time_partitioning_type")
-    .text("Enables time-based partitioning on a table and sets the partition type. Currently, the only possible value is DAY which generates one partition per day.")
+    .text("Enables time-based partitioning on a table and sets the partition type. Currently, the only possible value is DAY which generates one partition per day. (default: DAY")
     .action{(x,c) => c.copy(timePartitioningType = x)}
-
-  /*
-  opt[String]("transfer_config")
-    .text("When specified, creates a transfer configuration. When using this flag, you must also specify the params: --data_source, --display_name, --target_dataset and --params. Options for --params vary by the specific data_source. The default value is false.")
-
-  opt[Boolean]("transfer_run")
-    .text("When specified, creates transfer runs for a time range. The default value is false.")
-  */
 
   opt[Unit]("use_legacy_sql")
     .text("When set to false, uses a standard SQL query to create a view. The default value is false (uses Standard SQL).")
@@ -181,11 +125,6 @@ object MkOptionParser extends OptionParser[MkConfig]("mk") with ArgParser[MkConf
   opt[Unit]("view")
     .text("When specified, creates a view. The default value is false.")
     .action{(_,c) => c.copy(view = true)}
-
-  /*
-  opt[Seq[String]]("view_udf_resource")
-    .text("The Cloud Storage URI or the path to a local code file that is loaded and evaluated immediately as a user-defined function resource used by a view's SQL query. Repeat this flag to specify multiple files.")
-  */
 
   // Global options
 

@@ -38,6 +38,23 @@ class ShellSpec extends FlatSpec {
     assert(parsed == expected)
   }
 
+  it should "parse shell with spaces" in {
+    val bqExample1 =
+      """bq --project_id project --dataset_id dataset mk \
+        |  --external_table_definition "ORC=gs://bucket/path.orc/*" \
+        |  TABLE_NAME""".stripMargin
+    val expected = Seq(
+      "bq",
+      "--project_id","project",
+      "--dataset_id","dataset",
+      "mk",
+      "--external_table_definition","ORC=gs://bucket/path.orc/*",
+      "TABLE_NAME"
+    )
+    val parsed = Bqsh.readArgs(bqExample1)
+    assert(parsed == expected)
+  }
+
   it should "split commands" in {
     val in =
       """gsutil cp INFILE gs://bucket/path.orc

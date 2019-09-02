@@ -35,12 +35,12 @@ class ZReaderSpec extends FlatSpec {
   }
 
   it should "succeed on non-FB record format" in {
-    val rr = new TestRecordReader(80, 8000, "FB")
+    val rr = new MockRecordReader(80, 8000, "FB")
     new WrappedRecordReader(rr)
   }
 
   it should "fail on non-FB record format" in {
-    val rr = new TestRecordReader(80, 8000, "VB")
+    val rr = new MockRecordReader(80, 8000, "VB")
     assertThrows[IllegalArgumentException](new WrappedRecordReader(rr))
   }
 }

@@ -60,7 +60,7 @@ object GsUtilRm extends Command[GsUtilConfig] with Logging {
         logger.info(s"deleted $uri")
         Result.withExportLong("ACTIVITYCOUNT", 1)
       } else {
-        logger.info(s"$uri was not found. Use --recursive=true to delete a directory")
+        logger.info(s"$uri was not found. Use --recursive=true to delete all objects with a given prefix")
         Result.withExportLong("ACTIVITYCOUNT", 0, 1)
       }
     }

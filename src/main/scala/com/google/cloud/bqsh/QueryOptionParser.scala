@@ -22,17 +22,11 @@ object QueryOptionParser extends OptionParser[QueryConfig]("query") with ArgPars
   def parse(args: Seq[String]): Option[QueryConfig] =
     parse(args, QueryConfig())
 
-  head("query", Bqsh.Version)
+  head("query", Bqsh.UserAgent)
 
   help("help")
     .text("prints this usage text")
 
-  /*
-  arg[String]("queryDD")
-    .optional()
-    .text("DD containing query. If omitted, query is read from STDIN")
-    .action((x,c) => c.copy(queryDD = x))
-  */
   // z/OS Options
   opt[Seq[String]]("parameters_from_file")
     .text("Comma-separated query parameters in the form [NAME]:[TYPE]:[DDNAME]. An empty name creates a positional parameter. [TYPE] may be omitted to assume a STRING value in the form: name::ddname or ::ddname. NULL produces a null value.")
@@ -58,7 +52,7 @@ object QueryOptionParser extends OptionParser[QueryConfig]("query") with ArgPars
 
   opt[Unit]("batch")
     .text("When specified, run the query in batch mode. The default value is false.")
-    .action((x,c) => c.copy(batch = true))
+    .action((_,c) => c.copy(batch = true))
 
   opt[Seq[String]]("clustering_fields")
     .text("If specified, a comma-separated list of columns is used to cluster the destination table in a query. This flag must be used with the time partitioning flags to create either an ingestion-time partitioned table or a table partitioned on a DATE or TIMESTAMP column. When specified, the table is first partitioned, and then it is clustered using the supplied columns.")
@@ -76,36 +70,21 @@ object QueryOptionParser extends OptionParser[QueryConfig]("query") with ArgPars
     .text("The name of the destination table for writing query results. The default value is ''")
     .action((x,c) => c.copy(destinationTable = x))
 
-  opt[Unit]("dryRun")
+  opt[Unit]("dry_run")
     .text("When specified, the query is validated but not run.")
-    .action((x,c) => c.copy(dryRun = true))
+    .action((_,c) => c.copy(dryRun = true))
 
   opt[String]("external_table_definition")
     .text("The table name and schema definition used in an external table query. The schema can be a path to a local JSON schema file or a comma-separated list of column definitions in the form [FIELD]:[DATA_TYPE],[FIELD]:[DATA_TYPE]. The format for supplying the table name and schema is: [TABLE]::[PATH_TO_FILE] or [TABLE]::[SCHEMA]@[SOURCE_FORMAT]=[CLOUD_STORAGE_URI]. Repeat this flag to query multiple tables.")
     .action((x,c) => c.copy(externalTableDefinition = x))
 
-  /*
-  opt[Boolean]("flattenResults")
-    .text("When specified, flatten nested and repeated fields in the results for legacy SQL queries. The default value is true.")
-  */
-
   opt[String]("label")
     .text("A label to apply to a query job in the form [KEY]:[VALUE]. Repeat this flag to specify multiple labels.")
     .action((x,c) => c.copy(label = x))
 
-  /*
-  opt[Int]('n', "maxRows")
-    .text("An integer specifying the number of rows to return in the query results. The default value is 100.")
-  */
-
   opt[Long]("maximum_bytes_billed")
     .text("An integer that limits the bytes billed for the query. If the query goes beyond the limit, it fails (without incurring a charge). If not specified, the bytes billed is set to the project default.")
     .action((x,c) => c.copy(maximumBytesBilled = x))
-
-  /*
-  opt[Double]("minCompletionRatio")
-    .text("[Experimental] A number between 0 and 1.0 that specifies the minimum fraction of data that must be scanned before a query returns. If not set, the default server value 1.0 is used.")
-  */
 
   opt[Seq[String]]("parameters")
     .text("comma-separated query parameters in the form [NAME]:[TYPE]:[VALUE]. An empty name creates a positional parameter. [TYPE] may be omitted to assume a STRING value in the form: name::value or ::value. NULL produces a null value.")
@@ -119,29 +98,19 @@ object QueryOptionParser extends OptionParser[QueryConfig]("query") with ArgPars
 
   opt[Unit]("replace")
     .text("If specified, overwrite the destination table with the query results. The default value is false.")
-    .action((x,c) => c.copy(replace = true))
+    .action((_,c) => c.copy(replace = true))
 
   opt[Unit]("require_cache")
     .text("If specified, run the query only if results can be retrieved from the cache.")
-    .action((x,c) => c.copy(requireCache = true))
+    .action((_,c) => c.copy(requireCache = true))
 
   opt[Boolean]("require_partition_filter")
     .text("If specified, a partition filter is required for queries over the supplied table. This flag can only be used with a partitioned table.")
     .action((x,c) => c.copy(requirePartitionFilter = x))
 
-  /*
-  opt[Boolean]("rpc")
-    .text("If specified, use the rpc-style query API instead of the REST API jobs.insert method. The default value is false.")
-  */
-
   opt[Seq[String]]("schema_update_option")
     .text("When appending data to a table (in a load job or a query job), or when overwriting a table partition, specifies how to update the schema of the destination table. Possible values include:\n\n ALLOW_FIELD_ADDITION: Allow\nnew fields to be added\n ALLOW_FIELD_RELAXATION: Allow relaxing REQUIRED fields to NULLABLE")
     .action((x,c) => c.copy(schemaUpdateOption = x))
-
-  /*
-  opt[Int]('s', "startRow")
-    .text("An integer that specifies the first row to return in the query result. The default value is 0.")
-  */
 
   opt[Long]("time_partitioning_expiration")
     .text("An integer that specifies (in seconds) when a time-based partition should be deleted. The expiration time evaluates to the partition's UTC date plus the integer value. A negative number indicates no expiration.")
@@ -154,11 +123,6 @@ object QueryOptionParser extends OptionParser[QueryConfig]("query") with ArgPars
   opt[String]("time_partitioning_type")
     .text("Enables time-based partitioning on a table and sets the partition type. Currently, the only possible value is DAY which generates one partition per day.")
     .action((x,c) => c.copy(timePartitioningType = x))
-
-  /*
-  opt[String]("udfResource")
-    .text("This flag applies only to legacy SQL queries. When specified, this is the Cloud Storage URI or the path to a local code file that is loaded and evaluated immediately as a user-defined function resource used by a legacy SQL query. Repeat this flag to specify multiple files.")
-  */
 
   opt[Boolean]("use_cache")
     .text("When specified, caches the query results. The default value is true.")
@@ -191,7 +155,7 @@ object QueryOptionParser extends OptionParser[QueryConfig]("query") with ArgPars
 
   opt[Boolean]("synchronous_mode")
     .text(GlobalConfig.synchronousModeText)
-    .action((x,c) => c.copy(synchronousMode = x))
+    .action((x,c) => c.copy(sync = x))
 
   opt[Boolean]("sync")
     .text(GlobalConfig.syncText)

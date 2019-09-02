@@ -26,18 +26,18 @@ class ConfigSpec extends FlatSpec {
     assert(parsed.isDefined)
 
     parsed match {
-      case Some(c) =>
-        assert(c.name == "bq")
-        val opts = LoadOptionParser.parse(c.args.drop(1))
+      case Some(command) =>
+        assert(command.name == "bq")
+        val opts = LoadOptionParser.parse(command.args.drop(1))
         assert(opts.isDefined)
         opts match {
-          case Some(x) =>
-            assert(x.location == "EU")
-            assert(x.source_format == "ORC")
-            assert(x.tablespec == "project:dataset.table")
-            assert(x.projectId == "project")
-            assert(x.datasetId == "dataset")
-            assert(x.path == Seq("gs://mybucket/00/*.orc","gs://mybucket/01/*.orc"))
+          case Some(config) =>
+            assert(config.location == "EU")
+            assert(config.source_format == "ORC")
+            assert(config.tablespec == "project:dataset.table")
+            assert(config.projectId == "project")
+            assert(config.datasetId == "dataset")
+            assert(config.path == Seq("gs://mybucket/00/*.orc","gs://mybucket/01/*.orc"))
           case _ =>
         }
       case _ =>

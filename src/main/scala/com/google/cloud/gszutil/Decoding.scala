@@ -346,8 +346,6 @@ object Decoding extends Logging {
           .replaceFirst("""\s+COMP""", " COMP")
           .replaceFirst("""\(0""", """\(""")
         val decoder = typeMap(typ1)
-        if (logger.isDebugEnabled)
-          System.out.println(s"$name\t$decoder\t'$typ'")
         Option(CopyBookField(name.trim, decoder))
       case titleRegex(name) =>
         Option(CopyBookTitle(name))

@@ -22,7 +22,7 @@ object LoadOptionParser extends OptionParser[LoadConfig]("load") with ArgParser 
   def parse(args: Seq[String]): Option[LoadConfig] =
     parse(args, LoadConfig())
 
-  head("load", Bqsh.Version)
+  head("load", Bqsh.UserAgent)
 
   help("help")
     .text("prints this usage text")
@@ -69,7 +69,7 @@ ISO-8859-1 (also known as Latin-1) UTF-8""")
 
   opt[Unit]("ignore_unknown_values")
     .text("""When specified, allow and ignore extra, unrecognized values in CSV or JSON data.""")
-    .action((x,c) => c.copy(ignore_unknown_values = true))
+    .action((_,c) => c.copy(ignore_unknown_values = true))
 
   opt[Int]("max_bad_records")
     .text("""An integer that specifies the maximum number of bad records allowed before the entire job fails. The default value is 0. At most, five errors of any type are returned regardless of the --max_bad_records value.""")
@@ -93,11 +93,11 @@ ISO-8859-1 (also known as Latin-1) UTF-8""")
 
   opt[Unit]("replace")
     .text("""When specified, existing data is erased when new data is loaded. The default value is false.""")
-    .action((x,c) => c.copy(replace = true))
+    .action((_,c) => c.copy(replace = true))
 
   opt[Unit]("append_table")
     .text("When specified, append data to a destination table. The default value is false.")
-    .action((x,c) => c.copy(append = true))
+    .action((_,c) => c.copy(append = true))
 
   opt[Seq[String]]("schema")
     .text("""Comma-separated list of column definitions in the form [FIELD]:[DATA_TYPE],[FIELD]:[DATA_TYPE].""")
@@ -137,7 +137,6 @@ Repeat this flag to specify multiple schema update options.""")
   opt[Boolean]("use_avro_logical_types")
     .text("""If sourceFormat is set to AVRO, indicates whether to convert logical types into their corresponding types (such as TIMESTAMP) instead of only using their raw types (such as INTEGER).""")
     .action((x,c) => c.copy(use_avro_logical_types = x))
-
 
   // Global options
 

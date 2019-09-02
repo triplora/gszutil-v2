@@ -24,13 +24,66 @@ import org.scalatest.FlatSpec
 class CopyBookSpec extends FlatSpec with Logging {
   Util.configureLogging(true)
   "CopyBook" should "parse" in {
-    for (name <- (1 to 5).map(i => s"test$i.cpy")){
-      val cb = CopyBook(Util.readS(name))
-      val s = cb.Fields.map(_.toString).mkString("\n")
-      System.out.println("\n*********************************\n")
-      System.out.println(s"LRECL=${cb.LRECL}")
-      System.out.println(s)
-      System.out.println("\n*********************************\n")
+    val examples = Seq(
+      """       01 DAILY-ITEMS.
+        |          03 STORE               PIC S9(4) COMP.
+        |          03 ITEM                PIC S9(9) COMP.
+        |          03 WEEK                PIC S9(4) COMP.
+        |          03 PRICE               PIC S9(9)V9(2) COMP-3.
+        |          03 SALES               PIC S9(9)V9(2) COMP-3.
+        |          03 QTY                 PIC S9(9) COMP.
+        |          03 LOCATION            PIC X.
+        |          03 TYPE-CODE           PIC X(08).
+      """.stripMargin,
+      """        03  STOREKEY.
+        |            05 CODE            PIC X(08).
+        |            05 STORE-NO        PIC S9(03)   COMP-3.
+        |        03  DATE               PIC S9(07)   COMP-3.
+        |        03  DEPT-NO            PIC S9(03)   COMP-3.
+        |        03  QTY-SOLD           PIC S9(9)    COMP-3.
+        |        03  SALE-PRICE         PIC S9(9)V99 COMP-3.
+      """.stripMargin,
+      """       01 TEST-TABLE-THREE.
+        |          03 COL_1      PIC S9(9) COMP.
+        |          03 COL_2      PIC S9(9) COMP.
+        |          03 COL_3      PIC S9(4) COMP.
+        |          03 COL_4      PIC S9(9) COMP.
+        |          03 COL_5      PIC S9(16)V9(2) COMP-3.
+        |          03 COL_6      PIC S9(16)V9(2) COMP-3.
+        |          03 COL_7      PIC S9(9) COMP.
+        |          03 COL_8      PIC S9(16)V9(2) COMP-3.
+        |          03 COL_9      PIC S9(16)V9(2) COMP-3.
+        |          03 COL_10     PIC S9(9) COMP.
+        |          03 COL_11     PIC S9(9) COMP.
+        |          03 COL_12     PIC S9(9) COMP.
+      """.stripMargin,
+      """       01 EXAMPLE-DATA-REC.
+        |          03 DEPT_NBR   PIC X(02).
+        |          03 ITEM_CODE  PIC X(04).
+        |          03 VEN_NBR    PIC X(06).
+      """.stripMargin,
+      """    01  TEST-LAYOUT-FIVE.
+        |        03  COL-A                    PIC S9(9) COMP.
+        |        03  COL-B                    PIC S9(4) COMP.
+        |        03  COL-C                    PIC S9(4) COMP.
+        |        03  COL-D                    PIC X(01).
+        |        03  COL-E                    PIC S9(9) COMP.
+        |        03  COL-F                    PIC S9(07)V9(2) COMP-3.
+        |        03  COL-G                    PIC S9(05)V9(4) COMP-3.
+        |        03  COL-H                    PIC S9(9) COMP.
+        |        03  COL-I                    PIC S9(9) COMP.
+        |        03  COL-J                    PIC S9(4) COMP.
+        |        03  COL-K                    PIC S9(16)V9(2) COMP-3.
+        |        03  COL-L                    PIC S9(16)V9(2) COMP-3.
+        |        03  COL-M                    PIC S9(16)V9(2) COMP-3.
+      """.stripMargin
+    )
+    val expectedLRECL = Seq(33, 27, 70, 12, 63)
+    val expectedFieldCount = Seq(8, 6, 12, 3, 13)
+    examples.indices.foreach{i =>
+      val cb = CopyBook(examples(i))
+      assert(cb.LRECL == expectedLRECL(i))
+      assert(cb.FieldNames.length == expectedFieldCount(i))
     }
   }
 
@@ -69,7 +122,9 @@ class CopyBookSpec extends FlatSpec with Logging {
       "PIC S9(7)V999 COMP-3." -> Decimal64Decoder(7,3),
       "PIC S9(16)V9(2) COMP-3." -> Decimal64Decoder(16,2)
     ).foreach{x =>
-      assert(Decoding.typeMap(x._1) == x._2)
+      val picString = x._1
+      val expectedDecoder = x._2
+      assert(Decoding.typeMap(picString) == expectedDecoder)
     }
   }
 

@@ -22,7 +22,7 @@ object RmOptionParser extends OptionParser[RmConfig]("rm") with ArgParser[RmConf
   def parse(args: Seq[String]): Option[RmConfig] =
     parse(args, RmConfig())
 
-  head("rm", Bqsh.Version)
+  head("rm", Bqsh.UserAgent)
 
   help("help")
     .text("prints this usage text")
@@ -53,16 +53,11 @@ object RmOptionParser extends OptionParser[RmConfig]("rm") with ArgParser[RmConf
 
   opt[Unit]('r', "recursive")
     .text("When specified, deletes a dataset and any tables, table data, or models in it. The default value is false.")
-    .action((x,c) => c.copy(recursive = true))
+    .action((_,c) => c.copy(recursive = true))
 
   opt[Unit]('t', "table")
     .text("When specified, deletes a table. The default value is false.")
-    .action((x,c) => c.copy(table = true))
-
-  /*
-  opt[Boolean]("transfer_config")
-    .text("When specified, deletes a transfer configuration. The default value is false.")
-  */
+    .action((_,c) => c.copy(table = true))
 
   // Global options
 
@@ -93,6 +88,4 @@ object RmOptionParser extends OptionParser[RmConfig]("rm") with ArgParser[RmConf
   opt[Boolean]("sync")
     .text(GlobalConfig.syncText)
     .action((x,c) => c.copy(sync = x))
-
-  // Custom Options
 }

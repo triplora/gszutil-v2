@@ -16,7 +16,7 @@
 
 package com.ibm.jzos
 
-class TestRecordReader(lRecl: Int, blkSize: Int, recFm: String) extends RecordReader {
+class MockRecordReader(lRecl: Int, blkSize: Int, recFm: String) extends RecordReader {
   override def read(bytes: Array[Byte]): Int = -1
 
   override def read(bytes: Array[Byte], i: Int, i1: Int): Int = -1

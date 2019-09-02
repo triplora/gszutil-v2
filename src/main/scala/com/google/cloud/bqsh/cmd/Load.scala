@@ -104,10 +104,8 @@ object Load extends Command[LoadConfig] with Logging {
         b.setAutodetect(cfg.autodetect)
           .setIgnoreUnknownValues(cfg.ignore_unknown_values)
 
-        if (formatOptions.getType == "CSV") {
-          if (cfg.null_marker.nonEmpty)
+        if (formatOptions.getType == "CSV" && cfg.null_marker.nonEmpty)
             b.setNullMarker(cfg.null_marker)
-        }
       }
     }
 

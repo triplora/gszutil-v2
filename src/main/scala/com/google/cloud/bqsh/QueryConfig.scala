@@ -53,7 +53,6 @@ case class QueryConfig(
   jobProperties: Map[String,String] = Map.empty,
   location: String = "",
   projectId: String = "",
-  synchronousMode: Boolean = true,
   sync: Boolean = true,
 
   statsTable: String = ""
