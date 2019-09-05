@@ -85,6 +85,7 @@ object StatsUtil extends Logging {
       row.put("destination", dest)
     if (job.isDefined) {
       val jobData = job.get.toPb
+      jobData.setFactory(JacksonFactory.getDefaultInstance)
       row.put("job_json", JacksonFactory.getDefaultInstance.toString(jobData))
       logger.info(s"Job Data:\n${JacksonFactory.getDefaultInstance.toPrettyString(jobData)}")
       if (jobType == "query") {
@@ -95,15 +96,21 @@ object StatsUtil extends Logging {
             val stages = plan.asScala
             val in = stages.last.getRecordsRead
             val out = stages.last.getRecordsWritten
-            row.put("records_in", in)
-            row.put("records_out", out)
+            if (in != null)
+              row.put("records_in", in)
+            if (out != null)
+              row.put("records_out", out)
           }
         }
       } else if (jobType == "load") {
         val stats = jobData.getStatistics.getLoad
         if (stats != null) {
-          row.put("records_in", stats.getBadRecords + stats.getOutputRows)
-          row.put("records_out", stats.getOutputRows)
+          if (stats.getOutputRows != null){
+            row.put("records_out", stats.getOutputRows)
+            if (stats.getBadRecords != null) {
+              row.put("records_in", stats.getBadRecords + stats.getOutputRows)
+            }
+          }
         }
       }
     }

@@ -61,7 +61,7 @@ object GsUtilOptionParser extends OptionParser[GsUtilConfig]("gsutil") with ArgP
       opt[Int]("timeOutMinutes")
         .optional()
         .action{(x,c) => c.copy(timeOutMinutes = x)}
-        .text("timeout in minutes (default: 60)")
+        .text("(optional) Timeout in minutes. (default: 1 day)")
     )
 
   cmd("rm")

@@ -19,7 +19,7 @@ package com.google.cloud.gszutil
 import java.nio.ByteBuffer
 import java.nio.charset.StandardCharsets
 
-import com.google.cloud.gszutil.Decoding.{ebcdic2ASCIIString,DecimalDecoder,Decimal64Decoder,LongDecoder,StringDecoder}
+import com.google.cloud.gszutil.Decoding.{Decimal64Decoder, DecimalDecoder, LongDecoder, StringDecoder, ebcdic2ASCIIString, validAscii}
 import com.google.common.base.Charsets
 import com.ibm.jzos.fields.daa
 import org.apache.hadoop.hive.ql.exec.vector.{BytesColumnVector, Decimal64ColumnVector, DecimalColumnVector, LongColumnVector}

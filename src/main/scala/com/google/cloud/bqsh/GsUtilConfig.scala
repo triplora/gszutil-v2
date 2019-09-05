@@ -28,8 +28,7 @@ case class GsUtilConfig(source: String = "INFILE",
                         blocksPerBatch: Int = 128,
                         partSizeMB: Int = 256,
                         parallelism: Int = 4,
-                        timeOutMinutes: Int = 60,
-                        nativeKeyColumns: Seq[String] = Seq.empty,
+                        timeOutMinutes: Int = -1,
 
                         // Global
                         datasetId: String = "",

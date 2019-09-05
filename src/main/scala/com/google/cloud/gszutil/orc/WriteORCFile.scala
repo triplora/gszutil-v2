@@ -92,7 +92,13 @@ object WriteORCFile extends Logging {
     }(ExecutionContext.global)
 
     try {
-      inbox.receive(FiniteDuration(timeoutMinutes, MINUTES)) match {
+      val timeout =
+        if (timeoutMinutes > 0)
+          FiniteDuration(timeoutMinutes, MINUTES)
+        else
+          FiniteDuration(1, DAYS)
+
+      inbox.receive(timeout) match {
         case UploadComplete(read, written) =>
           logger.info(s"Upload complete:\n$read bytes read\n$written bytes written")
           Result.Success

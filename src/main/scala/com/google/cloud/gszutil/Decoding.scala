@@ -32,7 +32,7 @@ object Decoding extends Logging {
   final val CP1047: Charset = Charset.forName("CP1047")
 
   // EBCDIC decimal byte values that map to valid ASCII characters
-  private val validAscii = Array(
+  private final val validAscii: Array[Int] = Array(
     75,76,77,78,79,80,
     91,92,93,94,95,96,97,
     107,108,109,110,111,
