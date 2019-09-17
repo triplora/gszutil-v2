@@ -25,41 +25,57 @@ import org.scalatest.FlatSpec
 
 class ZChannelSpec extends FlatSpec {
   "ZChannel" should "rw" in {
-    val parallelism = 1
-    val executorService = MoreExecutors.listeningDecorator(new ForkJoinPool(parallelism + 2))
-    val frontEnd = "tcp://127.0.0.1:5570"
-    val backend = "inproc://backend"
+    val parallelism = 4
+    val executorService = MoreExecutors.listeningDecorator(new ForkJoinPool(parallelism*2 + 2))
+    val frontendUri = "tcp://127.0.0.1:5570"
+    val backendUri = "inproc://backend"
     val blkSize = 32*1024
+    val inSize = 32 * blkSize
 
     val ctx = new ZContext()
 
-    executorService.submit(new Service.Router(ctx, 5570, backend))
+    executorService.submit(new Service.Router(ctx, frontendUri, backendUri))
 
     val sinks = (0 until parallelism).map{_ =>
-      executorService.submit(new Service.Sink(ctx, backend))
+      val socket = ctx.createSocket(SocketType.REP)
+      socket.connect(backendUri)
+      executorService.submit(new Service.Sink(socket))
     }
 
     val t0 = System.currentTimeMillis()
 
-    val src = executorService.submit(new Service.Source(
-      new Service.RandomBytes(32 * blkSize),
-      blkSize))
+    val sockets = (0 until parallelism).map{_ =>
+      val socket = ctx.createSocket(SocketType.DEALER)
+      socket.connect(frontendUri)
+      socket.setLinger(-1)
+      socket.setHWM(32)
+      socket
+    }.toArray
 
-    val bytesRead = src.get(1, TimeUnit.SECONDS).getBytesOut
+    val src = executorService.submit(
+      new Service.Source(
+        new Service.RandomBytes(inSize),
+        blkSize,
+        sockets))
+
+    val bytesRead = src.get(30, TimeUnit.SECONDS).getBytesIn
     System.out.println(s"$bytesRead bytes read")
 
-    val s = ctx.createSocket(SocketType.DEALER)
-    s.connect(frontEnd)
-    (0 until parallelism).foreach{_ =>
-      s.send(Array.empty[Byte], ZMQ.SNDMORE) // null frame removed by REP
-      s.send(Array.empty[Byte], 0) // null frame indicating end of data
+    (0 until parallelism*4).foreach{i =>
+      sockets.head.send(Array.empty[Byte], ZMQ.SNDMORE) // null frame removed by REP
+      sockets.head.send(Array.empty[Byte], 0) // null frame indicating end of data
     }
 
-    val bytesWritten = sinks.foldLeft(0L){(a,b) => a + b.get(1, TimeUnit.SECONDS).getBytesIn}
+    val bytesWritten = sinks.foldLeft(0L){(a,b) =>
+      a + b.get(30, TimeUnit.SECONDS).getBytesIn
+    }
 
     val t1 = System.currentTimeMillis()
     val dt = t1-t0
+    ctx.close()
     System.out.println(s"$bytesWritten bytes written in $dt ms")
+    assert(bytesWritten < bytesRead, "r/w bytes must match")
+    assert(bytesRead == inSize)
   }
 
 }

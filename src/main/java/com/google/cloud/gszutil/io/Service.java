@@ -33,6 +33,8 @@ import java.nio.channels.ReadableByteChannel;
 import java.util.Arrays;
 import java.util.Random;
 import java.util.concurrent.Callable;
+import java.util.concurrent.ExecutorService;
+import java.util.zip.Deflater;
 
 public class Service {
     public static class UploadResult {
@@ -57,41 +59,48 @@ public class Service {
         private long bytesIn = 0;
         private long bytesOut = 0;
         private final int blkSize;
+        private final Socket[] sockets;
 
-        public Source(ReadableByteChannel in, int blkSize){
+        public Source(ReadableByteChannel in, int blkSize,Socket[] sockets){
             this.in = in;
             this.blkSize = blkSize;
+            this.sockets = sockets;
         }
 
         @Override
         public UploadResult call() throws IOException {
-            byte[] data = new byte[blkSize];
-            ByteBuffer bb = ByteBuffer.wrap(data);
-            try (ZContext ctx = new ZContext()){
-                try (Socket client = ctx.createSocket(SocketType.DEALER)){
-                    client.connect("tcp://127.0.0.1:5570");
-                    client.setLinger(-1);
-                    client.setHWM(64);
-                    while (!Thread.currentThread().isInterrupted()) {
-                        bb.clear();
-                        if (in.read(bb) < 0) {
-                            break;
-                        }
+            final byte[] data = new byte[blkSize];
+            final ByteBuffer bb = ByteBuffer.wrap(data);
+            final byte[] buf = new byte[blkSize*2];
+            final Deflater deflater = new Deflater();
+            deflater.setLevel(2);
 
-                        if (bb.position() > 0) {
-                            byte[] payload = Arrays.copyOf(data, bb.position());
+            int compressed;
+            int i = 0;
+            while (!Thread.currentThread().isInterrupted()) {
+                bb.clear();
+                if (in.read(bb) < 0) {
+                    break;
+                }
 
-                            // Send Null Frame to be removed by REP
-                            client.send(new byte[0], ZMQ.SNDMORE);
+                if (bb.position() > 0) {
+                    bytesIn += bb.position();
+                    deflater.setInput(data, 0, bb.position());
+                    compressed = deflater.deflate(buf, 0, buf.length, Deflater.SYNC_FLUSH);
 
-                            // Send payload
-                            client.send(payload, 0);
+                    i++;
+                    if (i >= sockets.length)
+                        i = 0;
 
-                            // Increment counters
-                            bytesOut += payload.length;
-                            bytesIn += payload.length;
-                        }
-                    }
+                    Socket socket = sockets[i];
+                    // Send Null Frame to be removed by REP
+                    socket.send(new byte[0], ZMQ.SNDMORE);
+
+                    // Send payload
+                    socket.send(Arrays.copyOf(buf, compressed), 0);
+
+                    // Increment counters
+                    bytesOut += compressed;
                 }
             }
             return new UploadResult(bytesIn, bytesOut);
@@ -99,25 +108,25 @@ public class Service {
     }
 
     public static class Router implements Runnable {
-        private String uri;
+        private String frontendUri;
         private String backendUri;
         private ZContext ctx;
-        public Router(ZContext ctx, int port, String backendUri){
-            this.uri = "tcp://*:" + port;
+        public Router(ZContext ctx, String frontendUri, String backendUri){
+            this.frontendUri = frontendUri;
             this.backendUri = backendUri;
             this.ctx = ctx;
         }
         @Override
         public void run() {
-            //  Frontend socket talks to clients over TCP
+            // Frontend socket talks to clients over TCP
             Socket frontend = ctx.createSocket(SocketType.ROUTER);
-            frontend.bind(uri);
+            frontend.bind(frontendUri);
 
-            //  Backend socket talks to workers over inproc
+            // Backend socket talks to workers over inproc
             Socket backend = ctx.createSocket(SocketType.DEALER);
             backend.bind(backendUri);
 
-            //  Connect backend to frontend via a proxy
+            // Connect backend to frontend via a proxy
             ZMQ.proxy(frontend, backend, null);
         }
     }
@@ -134,55 +143,57 @@ public class Service {
     }
 
     public static class Sink implements Callable<WriteResult> {
-        private ZContext ctx;
         private long bytesIn = 0L;
-        private String uri;
+        private final Socket socket;
 
-        public Sink(ZContext ctx, String uri) {
-            this.ctx = ctx;
-            this.uri = uri;
+        public Sink(Socket socket) {
+            Preconditions.checkArgument(socket.getSocketType() == SocketType.REP, "SocketType must be REP");
+            this.socket = socket;
         }
 
         @Override
         public WriteResult call() {
-            try (Socket socket = ctx.createSocket(SocketType.REP)) {
-                socket.connect(uri);
-                while (!Thread.currentThread().isInterrupted()) {
-                    byte[] data = socket.recv(0);
-                    if (data != null && data.length > 0) {
-                        bytesIn += data.length;
-                    } else break;
-                }
+            while (!Thread.currentThread().isInterrupted()) {
+                byte[] data = socket.recv(0);
+                if (data != null && data.length > 0) {
+                    bytesIn += data.length;
+                } else return new WriteResult(bytesIn);
             }
-            return new WriteResult(bytesIn);
+            return null;
         }
     }
 
     // start client and server
     // wait for server to finish
-
     public static class RandomBytes implements ReadableByteChannel {
         private final long size;
-        private final Random random = new Random();
         private long consumed = 0;
         public RandomBytes(long size){
             this.size = size;
         }
 
         @Override
-        public int read(ByteBuffer dst) throws IOException {
-            if (consumed > size)
+        public int read(ByteBuffer dst) {
+            if (consumed >= size)
                 return -1;
-            random.nextBytes(dst.array());
-            consumed += dst.capacity();
-            dst.position(dst.limit());
-            return dst.capacity();
+            while(dst.remaining() >= 4096){
+                dst.putLong(88);
+                dst.putLong(42);
+            }
+            while(dst.remaining() >= 8){
+                dst.putLong(21);
+            }
+            while (dst.hasRemaining()){
+                dst.putChar('x');
+            }
+            consumed += dst.position();
+            return dst.position();
         }
 
         private boolean open = true;
 
         @Override
-        public void close() throws IOException {
+        public void close() {
             open = false;
         }
 
