@@ -24,7 +24,7 @@ class ZDataSet(srcBytes: Array[Byte], recordLength: Int, blockSize: Int, limit: 
   private var bytesRead: Long = 0
   private var nRecordsRead: Long = 0
 
-  buf.position(position)
+  if (position > 0) buf.position(position)
   if (limit >= 0) buf.limit(limit)
 
   override def read(bytes: Array[Byte]): Int =

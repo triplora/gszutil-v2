@@ -17,7 +17,6 @@
 package com.google.cloud.gszutil.orc
 
 import java.nio.ByteBuffer
-
 import akka.actor.{Actor, ActorRef, EscalatingSupervisorStrategy, Props, SupervisorStrategy, Terminated}
 import com.google.cloud.gszutil.Util
 import com.google.cloud.gszutil.Util.Logging

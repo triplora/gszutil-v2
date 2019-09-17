@@ -19,7 +19,7 @@ scalaVersion := "2.11.8"
 
 organization := "com.google.cloud"
 
-version := "1.0.0"
+version := "2.0.0-SNAPSHOT"
 
 val exGuava = ExclusionRule(organization = "com.google.guava")
 
@@ -29,14 +29,16 @@ libraryDependencies ++= Seq(
   "com.github.scopt" %% "scopt" % "3.7.1",
   "com.google.api-client" % "google-api-client" % "1.30.2",
   "com.google.http-client" % "google-http-client-apache-v2" % "1.30.2",
-  "com.google.cloud" % "google-cloud-bigquery" % "1.82.0",
-  "com.google.cloud" % "google-cloud-storage" % "1.82.0",
+  "com.google.cloud" % "google-cloud-bigquery" % "1.89.0",
+  "com.google.cloud" % "google-cloud-storage" % "1.89.0",
   "com.google.protobuf" % "protobuf-java" % "3.7.1",
   "com.google.protobuf" % "protobuf-java-util" % "3.7.1",
   "com.typesafe.akka" %% "akka-actor" % "2.5.22",
   "org.apache.hive" % "hive-storage-api" % "2.6.0",
   "org.apache.httpcomponents" % "httpclient" % "4.5.9",
   "org.apache.orc" % "orc-core" % "1.5.5",
+  "org.zeromq" % "jeromq" % "0.5.1",
+  "net.openhft" % "chronicle-bytes" % "2.17.36",
   "org.scalatest" %% "scalatest" % "3.0.5" % Test
 ).map(_ excludeAll exGuava)
 

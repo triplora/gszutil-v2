@@ -20,7 +20,7 @@ import java.net.URI
 import java.nio.channels.ReadableByteChannel
 import java.util.concurrent.TimeoutException
 
-import akka.actor.{ActorRef, ActorSystem, Inbox, PoisonPill, Props, Terminated}
+import akka.actor.{ActorSystem, Inbox, Props, Terminated}
 import com.google.cloud.bqsh.cmd.Result
 import com.google.cloud.gszutil.CopyBook
 import com.google.cloud.gszutil.Util.Logging
@@ -29,8 +29,8 @@ import com.google.cloud.storage.Storage
 import com.google.common.collect.ImmutableMap
 import com.typesafe.config.ConfigFactory
 
-import scala.concurrent.{Await, ExecutionContext}
 import scala.concurrent.duration.{FiniteDuration, MINUTES}
+import scala.concurrent.{Await, ExecutionContext}
 import scala.util.{Failure, Success}
 
 object WriteORCFile extends Logging {

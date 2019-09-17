@@ -16,7 +16,6 @@
 
 package com.google.cloud.bqsh.cmd
 
-import com.google.cloud.bigquery.JobStatistics.LoadStatistics
 import com.google.cloud.bigquery._
 import com.google.cloud.bqsh._
 import com.google.cloud.gszutil.Util
