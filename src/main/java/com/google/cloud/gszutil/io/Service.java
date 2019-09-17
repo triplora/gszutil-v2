@@ -17,23 +17,16 @@
 package com.google.cloud.gszutil.io;
 
 import com.google.common.base.Preconditions;
-import com.google.common.base.Strings;
-import com.google.common.util.concurrent.ListeningExecutorService;
-import com.google.common.util.concurrent.MoreExecutors;
 import org.zeromq.SocketType;
 import org.zeromq.ZContext;
-import org.zeromq.ZFrame;
 import org.zeromq.ZMQ;
 import org.zeromq.ZMQ.Socket;
-import org.zeromq.ZMsg;
 
 import java.io.IOException;
 import java.nio.ByteBuffer;
 import java.nio.channels.ReadableByteChannel;
 import java.util.Arrays;
-import java.util.Random;
 import java.util.concurrent.Callable;
-import java.util.concurrent.ExecutorService;
 import java.util.zip.Deflater;
 
 public class Service {
@@ -62,6 +55,12 @@ public class Service {
         private final Socket[] sockets;
 
         public Source(ReadableByteChannel in, int blkSize,Socket[] sockets){
+            for (Socket s : sockets){
+                Preconditions.checkArgument(
+                    s.getSocketType() == SocketType.DEALER,
+                    "SocketType must be DEALER"
+                );
+            }
             this.in = in;
             this.blkSize = blkSize;
             this.sockets = sockets;
@@ -71,7 +70,7 @@ public class Service {
         public UploadResult call() throws IOException {
             final byte[] data = new byte[blkSize];
             final ByteBuffer bb = ByteBuffer.wrap(data);
-            final byte[] buf = new byte[blkSize*2];
+            final byte[] buf = new byte[blkSize+4096];
             final Deflater deflater = new Deflater();
             deflater.setLevel(2);
 
@@ -88,46 +87,22 @@ public class Service {
                     deflater.setInput(data, 0, bb.position());
                     compressed = deflater.deflate(buf, 0, buf.length, Deflater.SYNC_FLUSH);
 
-                    i++;
-                    if (i >= sockets.length)
-                        i = 0;
+                    if (compressed > 0) {
+                        i++;
+                        if (i >= sockets.length)
+                            i = 0;
 
-                    Socket socket = sockets[i];
-                    // Send Null Frame to be removed by REP
-                    socket.send(new byte[0], ZMQ.SNDMORE);
+                        Socket socket = sockets[i];
 
-                    // Send payload
-                    socket.send(Arrays.copyOf(buf, compressed), 0);
+                        // Send payload
+                        socket.send(Arrays.copyOf(buf, compressed), 0);
 
-                    // Increment counters
-                    bytesOut += compressed;
+                        // Increment counters
+                        bytesOut += compressed;
+                    }
                 }
             }
             return new UploadResult(bytesIn, bytesOut);
-        }
-    }
-
-    public static class Router implements Runnable {
-        private String frontendUri;
-        private String backendUri;
-        private ZContext ctx;
-        public Router(ZContext ctx, String frontendUri, String backendUri){
-            this.frontendUri = frontendUri;
-            this.backendUri = backendUri;
-            this.ctx = ctx;
-        }
-        @Override
-        public void run() {
-            // Frontend socket talks to clients over TCP
-            Socket frontend = ctx.createSocket(SocketType.ROUTER);
-            frontend.bind(frontendUri);
-
-            // Backend socket talks to workers over inproc
-            Socket backend = ctx.createSocket(SocketType.DEALER);
-            backend.bind(backendUri);
-
-            // Connect backend to frontend via a proxy
-            ZMQ.proxy(frontend, backend, null);
         }
     }
 
@@ -147,7 +122,7 @@ public class Service {
         private final Socket socket;
 
         public Sink(Socket socket) {
-            Preconditions.checkArgument(socket.getSocketType() == SocketType.REP, "SocketType must be REP");
+            Preconditions.checkArgument(socket.getSocketType() == SocketType.ROUTER, "SocketType must be ROUTER");
             this.socket = socket;
         }
 

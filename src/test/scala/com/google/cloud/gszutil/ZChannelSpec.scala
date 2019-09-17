@@ -28,19 +28,15 @@ class ZChannelSpec extends FlatSpec {
     val parallelism = 4
     val executorService = MoreExecutors.listeningDecorator(new ForkJoinPool(parallelism*2 + 2))
     val frontendUri = "tcp://127.0.0.1:5570"
-    val backendUri = "inproc://backend"
+    //val backendUri = "inproc://backend"
     val blkSize = 32*1024
     val inSize = 32 * blkSize
 
     val ctx = new ZContext()
 
-    executorService.submit(new Service.Router(ctx, frontendUri, backendUri))
-
-    val sinks = (0 until parallelism).map{_ =>
-      val socket = ctx.createSocket(SocketType.REP)
-      socket.connect(backendUri)
-      executorService.submit(new Service.Sink(socket))
-    }
+    val sinkSocket = ctx.createSocket(SocketType.ROUTER)
+    sinkSocket.bind(frontendUri)
+    val sink = executorService.submit(new Service.Sink(sinkSocket))
 
     val t0 = System.currentTimeMillis()
 
@@ -61,14 +57,12 @@ class ZChannelSpec extends FlatSpec {
     val bytesRead = src.get(30, TimeUnit.SECONDS).getBytesIn
     System.out.println(s"$bytesRead bytes read")
 
-    (0 until parallelism*4).foreach{i =>
+    (0 until parallelism*4).foreach{_ =>
       sockets.head.send(Array.empty[Byte], ZMQ.SNDMORE) // null frame removed by REP
       sockets.head.send(Array.empty[Byte], 0) // null frame indicating end of data
     }
 
-    val bytesWritten = sinks.foldLeft(0L){(a,b) =>
-      a + b.get(30, TimeUnit.SECONDS).getBytesIn
-    }
+    val bytesWritten = sink.get(30, TimeUnit.SECONDS).getBytesIn
 
     val t1 = System.currentTimeMillis()
     val dt = t1-t0
