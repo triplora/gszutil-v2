@@ -29,6 +29,9 @@ case class GsUtilConfig(source: String = "INFILE",
                         partSizeMB: Int = 256,
                         parallelism: Int = 4,
                         timeOutMinutes: Int = -1,
+                        remote: Boolean = false,
+                        remoteHost: String = "",
+                        remotePort: Int = -1,
 
                         // Global
                         datasetId: String = "",

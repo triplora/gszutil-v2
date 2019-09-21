@@ -16,13 +16,14 @@
 
 package com.google.cloud.bigquery
 
+import java.text.SimpleDateFormat
+import java.util.{Date, TimeZone}
+
 import com.google.api.client.json.jackson2.JacksonFactory
 import com.google.cloud.gszutil.Util.Logging
 import com.google.common.collect.ImmutableMap
 
 import scala.collection.JavaConverters._
-import java.text.SimpleDateFormat
-import java.util.{Date, TimeZone}
 
 object StatsUtil extends Logging {
   private def sdf(f: String): SimpleDateFormat = {

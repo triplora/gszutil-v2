@@ -14,25 +14,28 @@
  * limitations under the License.
  */
 
-package com.google.cloud.gszutil.orc
+package com.google.cloud.gszutil.io
 
 import akka.io.BufferPool
 import com.google.cloud.gszutil.CopyBook
 import com.google.cloud.storage.Storage
 import org.apache.hadoop.fs.Path
+import org.zeromq.ZMQ.Socket
 
 /**
   *
+  * @param socket org.zeromq.ZMQ.Socket
+  * @param blkSize block size
+  * @param nWriters number of writers
   * @param copyBook CopyBook
-  * @param maxBytes number of bytes to accept before closing the writer
-  * @param batchSize records per batch
-  * @param path Hadoop FileSystem Path gs://bucket/object
+  * @param maxBytes number of bytes per partition
+  * @param path org.apache.hadoop.fs.Path gs://bucket/prefix
   * @param gcs Storage client
   * @param compress if set, compression will be used
-  * @param compressBuffer size of compression buffer
   * @param pool BufferPool
   * @param maxErrorPct proportion of acceptable row decoding errors
   */
-case class ORCFileWriterArgs(copyBook: CopyBook, maxBytes: Long, batchSize: Int, path: Path,
-                             gcs: Storage, compress: Boolean, compressBuffer: Int, pool: BufferPool,
-                             maxErrorPct: Double)
+case class V2ActorArgs(socket: Socket, blkSize: Int, nWriters: Int,
+                       copyBook: CopyBook, maxBytes: Long, path: Path,
+                       gcs: Storage, compress: Boolean, pool: BufferPool,
+                       maxErrorPct: Double)

@@ -16,9 +16,9 @@
 
 package com.google.cloud.bqsh.cmd
 
-import com.google.cloud.bigquery.{JobId,StatsUtil,BigQueryException,QueryParameterValue,StandardSQLTypeName,QueryJobConfiguration,JobInfo,Clustering,TimePartitioning}
+import com.google.cloud.bigquery.{BigQueryException, Clustering, JobId, JobInfo, QueryJobConfiguration, QueryParameterValue, StandardSQLTypeName, StatsUtil, TimePartitioning}
 import com.google.cloud.bqsh.BQ.resolveDataset
-import com.google.cloud.bqsh.{ArgParser,BQ,Bqsh,Command,QueryConfig,QueryOptionParser}
+import com.google.cloud.bqsh.{ArgParser, BQ, Bqsh, Command, QueryConfig, QueryOptionParser}
 import com.google.cloud.gszutil.Util
 import com.google.cloud.gszutil.Util.Logging
 import com.ibm.jzos.ZFileProvider

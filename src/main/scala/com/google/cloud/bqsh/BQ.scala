@@ -20,12 +20,13 @@ import com.google.api.gax.retrying.RetrySettings
 import com.google.api.gax.rpc.FixedHeaderProvider
 import com.google.auth.Credentials
 import com.google.cloud.RetryOption
-import com.google.cloud.bigquery.{BigQuery,BigQueryError,BigQueryException,BigQueryOptions,DatasetId,Field,FieldList,JobInfo,Job,JobId,JobStatus,QueryJobConfiguration,Schema,StandardSQLTypeName,TableId}
+import com.google.cloud.bigquery.{BigQuery, BigQueryError, BigQueryException, BigQueryOptions, DatasetId, Field, FieldList, Job, JobId, JobInfo, JobStatus, QueryJobConfiguration, Schema, StandardSQLTypeName, TableId}
 import com.google.cloud.gszutil.CCATransportFactory
 import com.google.cloud.http.HttpTransportOptions
 import com.google.common.base.Preconditions
 import com.google.common.collect.ImmutableList
 import org.threeten.bp.Duration
+
 import scala.collection.JavaConverters._
 
 object BQ {

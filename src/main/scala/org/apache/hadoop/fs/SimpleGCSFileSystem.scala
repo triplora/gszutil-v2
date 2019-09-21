@@ -45,26 +45,38 @@ object SimpleGCSFileSystem {
   * @param storage Cloud Storage Client
   * @param stats FileSystem.Statistics used to count bytes written
   */
-class SimpleGCSFileSystem(storage: Storage, stats: FileSystem.Statistics) extends FileSystem {
-  import SimpleGCSFileSystem._
+class SimpleGCSFileSystem(private val storage: Storage,
+                          private var stats: FileSystem.Statistics)
+  extends FileSystem {
+  import SimpleGCSFileSystem.{Scheme,toBlobId}
+
+  def resetStats(): Unit = stats.reset()
+
+  def getBytesWritten(): Long = stats.getBytesWritten
 
   override def getUri: URI = new URI(s"$Scheme://")
 
   override def getScheme: String = Scheme
 
-  override def open(f: Path, bufferSize: Int): FSDataInputStream = throw new UnsupportedOperationException()
+  override def open(f: Path, bufferSize: Int): FSDataInputStream =
+    throw new UnsupportedOperationException()
 
-  override def create(f: Path, permission: FsPermission, overwrite: Boolean, bufferSize: Int, replication: Short, blockSize: Long, progress: Progressable): FSDataOutputStream = {
+  override def create(f: Path, permission: FsPermission, overwrite: Boolean,
+                      bufferSize: Int, replication: Short, blockSize: Long,
+                      progress: Progressable): FSDataOutputStream = {
     val w = storage.writer(BlobInfo.newBuilder(toBlobId(f)).build())
     val os = Channels.newOutputStream(w)
     new FSDataOutputStream(os, stats, 0)
   }
 
-  override def append(f: Path, bufferSize: Int, progress: Progressable): FSDataOutputStream = throw new UnsupportedOperationException()
+  override def append(f: Path, bufferSize: Int, progress: Progressable): FSDataOutputStream =
+    throw new UnsupportedOperationException()
 
-  override def rename(src: Path, dst: Path): Boolean = throw new UnsupportedOperationException()
+  override def rename(src: Path, dst: Path): Boolean =
+    throw new UnsupportedOperationException()
 
-  override def delete(f: Path, recursive: Boolean): Boolean = throw new UnsupportedOperationException()
+  override def delete(f: Path, recursive: Boolean): Boolean =
+    throw new UnsupportedOperationException()
 
   override def listStatus(f: Path): Array[FileStatus] = Array.empty
 
@@ -72,7 +84,9 @@ class SimpleGCSFileSystem(storage: Storage, stats: FileSystem.Statistics) extend
 
   override def getWorkingDirectory: Path = new Path("gs://bucket/")
 
-  override def mkdirs(f: Path, permission: FsPermission): Boolean = throw new UnsupportedOperationException()
+  override def mkdirs(f: Path, permission: FsPermission): Boolean =
+    throw new UnsupportedOperationException()
 
-  override def getFileStatus(f: Path): FileStatus = throw new UnsupportedOperationException()
+  override def getFileStatus(f: Path): FileStatus =
+    throw new UnsupportedOperationException()
 }

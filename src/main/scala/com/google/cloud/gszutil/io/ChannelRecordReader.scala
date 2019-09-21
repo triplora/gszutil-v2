@@ -19,7 +19,8 @@ package com.google.cloud.gszutil.io
 import java.nio.ByteBuffer
 import java.nio.channels.ReadableByteChannel
 
-class ChannelRecordReader(rc: ReadableByteChannel, recordLength: Int, blockSize: Int) extends ZRecordReaderT {
+class ChannelRecordReader(rc: ReadableByteChannel, recordLength: Int, blockSize: Int)
+  extends ZRecordReaderT {
 
   private var a: Array[Byte] = _
   private var b: ByteBuffer = _

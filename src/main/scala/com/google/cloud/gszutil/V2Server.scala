@@ -14,75 +14,79 @@
  * limitations under the License.
  */
 
-package com.google.cloud.gszutil.orc
+package com.google.cloud.gszutil
 
-import java.net.URI
-import java.nio.channels.ReadableByteChannel
+import java.nio.ByteBuffer
 import java.util.concurrent.TimeoutException
 
 import akka.actor.{ActorSystem, Inbox, Props, Terminated}
+import com.google.api.services.storage.StorageScopes
+import com.google.auth.oauth2.GoogleCredentials
+import com.google.cloud.bqsh.GCS
 import com.google.cloud.bqsh.cmd.Result
-import com.google.cloud.gszutil.CopyBook
 import com.google.cloud.gszutil.Util.Logging
-import com.google.cloud.gszutil.io.NoOpHeapBufferPool
+import com.google.cloud.gszutil.io.{BlockingBoundedBufferPool, V2ActorArgs, V2ReceiveActor, V2ReceiveCallable}
 import com.google.cloud.gszutil.orc.Protocol.{PartFailed, UploadComplete}
 import com.google.cloud.storage.Storage
+import com.google.common.base.Charsets
 import com.google.common.collect.ImmutableMap
 import com.typesafe.config.ConfigFactory
+import org.apache.hadoop.fs.Path
+import org.zeromq.ZContext
 
-import scala.concurrent.duration.{FiniteDuration, MINUTES}
+import scala.concurrent.duration.{DAYS, FiniteDuration, MINUTES}
 import scala.concurrent.{Await, ExecutionContext}
 import scala.util.{Failure, Success}
 
-object WriteORCFile extends Logging {
+object V2Server extends Logging {
+  private val BatchSize = 1024
+  private val PartSizeMB: Long = 128
 
-  def cleanup(sys: ActorSystem): Unit = {
-    logger.info("Cleaning up ActorSystem")
-    sys.terminate()
-    try {
-      Await.result(sys.whenTerminated, atMost = FiniteDuration(1, MINUTES))
-    } catch {
-      case e: InterruptedException =>
-        logger.warn("Interrupted waiting for ActorSystem cleanup")
-      case e: TimeoutException =>
-        logger.warn("Timed out waiting for ActorSystem cleanup")
+  case class V2Config(host: String = "0.0.0.0",
+                      port: Int = 8443,
+                      gcs: Storage = GCS.defaultClient(GoogleCredentials
+                        .getApplicationDefault
+                        .createScoped(StorageScopes.DEVSTORAGE_READ_WRITE)),
+                      destinationUri: String = "",
+                      nWriters: Int = 4,
+                      timeoutMinutes: Int = 300,
+                      compress: Boolean = true,
+                      maxErrorPct: Double = 0.00d)
+
+  def main(args: Array[String]): Unit = {
+    V2ConfigParser.parse(args) match {
+      case Some(opts) =>
+        run(opts)
     }
   }
 
-  def run(gcsUri: String,
-          in: ReadableByteChannel,
-          copyBook: CopyBook,
-          gcs: Storage,
-          maxWriters: Int,
-          batchSize: Int,
-          partSizeMb: Long,
-          timeoutMinutes: Int,
-          compress: Boolean,
-          compressBuffer: Int,
-          maxErrorPct: Double): Result = {
-    import scala.concurrent.duration._
+  def run(config: V2Config): Result = {
+    import config._
     val conf = ConfigFactory.parseMap(ImmutableMap.of(
       "akka.actor.guardian-supervisor-strategy","akka.actor.EscalatingSupervisorStrategy"))
-    val sys = ActorSystem("gsz", conf)
-    val bufSize = copyBook.LRECL * batchSize
-    //val pool = ByteBufferPool.allocate(bufSize, maxWriters)
+    val sys = ActorSystem("gReceiver", conf)
     val inbox = Inbox.create(sys)
 
-    val pool = new NoOpHeapBufferPool(bufSize, maxWriters)
-    val args: DatasetReaderArgs = DatasetReaderArgs(
-      in = in,
-      batchSize = batchSize,
-      uri = new URI(gcsUri),
-      maxBytes = partSizeMb*1024*1024,
-      nWorkers = maxWriters,
-      copyBook = copyBook,
-      gcs = gcs,
-      compress = compress,
-      compressBuffer = compressBuffer,
-      pool = pool,
-      maxErrorPct = maxErrorPct,
-      notifyActor = inbox.getRef())
-    val reader = sys.actorOf(Props(classOf[DatasetReader], args), "DatasetReader")
+    val ctx = new ZContext()
+    val socket = V2ReceiveCallable.createSocket(ctx, host, port)
+
+    val id = socket.recv(0)
+    val init = socket.recv(0)
+    val init2 = socket.recv(0)
+    val init3 = socket.recv(0)
+    val copyBook = CopyBook(new String(init, Charsets.UTF_8))
+    val gcsUri = new String(init2, Charsets.UTF_8)
+    val blkSize = ByteBuffer.wrap(init3).getInt
+
+    val bufSize = copyBook.LRECL * BatchSize
+    val pool = new BlockingBoundedBufferPool(bufSize, nWriters)
+
+    val wArgs = V2ActorArgs(
+      socket, blkSize, nWriters, copyBook,
+      PartSizeMB*1024*1024, new Path(gcsUri),
+      gcs, compress, pool, maxErrorPct)
+
+    val reader = sys.actorOf(Props(classOf[V2ReceiveActor], wArgs), "DatasetReader")
     inbox.watch(reader)
 
     sys.whenTerminated.onComplete{
@@ -123,6 +127,19 @@ object WriteORCFile extends Logging {
       sys.stop(reader)
       sys.stop(inbox.getRef)
       cleanup(sys)
+    }
+  }
+
+  def cleanup(sys: ActorSystem): Unit = {
+    logger.info("Cleaning up ActorSystem")
+    sys.terminate()
+    try {
+      Await.result(sys.whenTerminated, atMost = FiniteDuration(1, MINUTES))
+    } catch {
+      case e: InterruptedException =>
+        logger.warn("Interrupted waiting for ActorSystem cleanup")
+      case e: TimeoutException =>
+        logger.warn("Timed out waiting for ActorSystem cleanup")
     }
   }
 }

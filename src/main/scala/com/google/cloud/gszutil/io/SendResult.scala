@@ -14,13 +14,6 @@
  * limitations under the License.
  */
 
-package com.google.cloud.gszutil.orc
+package com.google.cloud.gszutil.io
 
-import java.nio.ByteBuffer
-
-import akka.io.BufferPool
-
-class NoOpHeapBufferPool(bufSize: Int, poolCapacity: Int) extends BufferPool{
-  override def acquire(): ByteBuffer = ByteBuffer.allocate(bufSize)
-  override def release(buf: ByteBuffer): Unit = {}
-}
+case class SendResult(bytesIn: Long, bytesOut: Long, msgCount: Long)

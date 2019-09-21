@@ -25,8 +25,6 @@ import org.apache.hadoop.hive.ql.exec.vector._
 import org.apache.hadoop.hive.serde2.io.HiveDecimalWritable
 import org.apache.orc.TypeDescription
 
-import scala.collection.mutable.ArrayBuffer
-
 
 object Decoding extends Logging {
   final val CP1047: Charset = Charset.forName("CP1047")

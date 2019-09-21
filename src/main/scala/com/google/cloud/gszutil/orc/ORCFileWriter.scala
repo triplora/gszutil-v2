@@ -19,10 +19,10 @@ package com.google.cloud.gszutil.orc
 import java.nio.ByteBuffer
 
 import akka.actor.Actor
-import com.google.cloud.gszutil.{PackedDecimal, Util}
 import com.google.cloud.gszutil.Util.Logging
 import com.google.cloud.gszutil.io.ZReader
 import com.google.cloud.gszutil.orc.Protocol.{Close, PartComplete, PartFailed}
+import com.google.cloud.gszutil.{PackedDecimal, Util}
 import org.apache.hadoop.conf.Configuration
 import org.apache.hadoop.fs.{FileSystem, SimpleGCSFileSystem}
 import org.apache.orc._

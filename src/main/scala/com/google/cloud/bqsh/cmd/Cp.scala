@@ -20,9 +20,12 @@ import java.net.URI
 import com.google.cloud.bigquery.StatsUtil
 import com.google.cloud.bqsh._
 import com.google.cloud.gszutil.Util.Logging
+import com.google.cloud.gszutil.io.V2SendCallable
+import com.google.cloud.gszutil.io.V2SendCallable.ReaderOpts
 import com.google.cloud.gszutil.orc.WriteORCFile
 import com.google.cloud.storage.Storage
 import com.ibm.jzos.ZFileProvider
+import org.zeromq.ZContext
 
 
 object Cp extends Command[GsUtilConfig] with Logging {
@@ -57,19 +60,35 @@ object Cp extends Command[GsUtilConfig] with Logging {
     }
     val sourceDSN = in.getDsn
 
-    logger.info("Starting ORC Upload")
-    val result = WriteORCFile.run(gcsUri = c.destinationUri,
-                     in = in,
-                     copyBook = copyBook,
-                     gcs = gcs,
-                     maxWriters = c.parallelism,
-                     batchSize = batchSize,
-                     partSizeMb = c.partSizeMB,
-                     timeoutMinutes = c.timeOutMinutes,
-                     compress = c.compress,
-                     compressBuffer = c.compressBuffer,
-                     maxErrorPct = c.maxErrorPct)
-    logger.info("ORC Upload Complete")
+    var result = Result.Failure("")
+    if (c.remote){
+      logger.info("Starting Dataset Upload")
+      val nConnections = c.parallelism
+      val opts = ReaderOpts(in, in.blkSize, new ZContext(), nConnections,
+        c.remoteHost, c.remotePort)
+      val res = V2SendCallable(opts).call()
+      if (res.isDefined) {
+        logger.info("Dataset Upload Complete")
+        result = Result.Success
+      } else {
+        logger.error("Dataset Upload Failed")
+        result = Result.Failure("")
+      }
+    } else {
+      logger.info("Starting ORC Upload")
+      result = WriteORCFile.run(gcsUri = c.destinationUri,
+                       in = in,
+                       copyBook = copyBook,
+                       gcs = gcs,
+                       maxWriters = c.parallelism,
+                       batchSize = batchSize,
+                       partSizeMb = c.partSizeMB,
+                       timeoutMinutes = c.timeOutMinutes,
+                       compress = c.compress,
+                       compressBuffer = c.compressBuffer,
+                       maxErrorPct = c.maxErrorPct)
+      logger.info("ORC Upload Complete")
+    }
     in.close()
     val nRead = in.count()
 
