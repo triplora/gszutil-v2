@@ -27,23 +27,20 @@ import org.zeromq.ZMQ.Socket
 import org.zeromq.{SocketType, ZContext}
 
 object V2ReceiveCallable {
+  val TwoMegaBytes: Int = 2*1024*1024
+  val ReceiveQueueSize: Int = 8*1024
   case class ReceiverOpts(ctx: ZContext, host: String, port: Int, blkSize: Int, compress: Boolean,
                           bufferPool: BufferPool, router: Router, context: ActorContext)
 
   def createSocket(ctx: ZContext, host: String, port: Int): Socket = {
     val socket = ctx.createSocket(SocketType.ROUTER)
     socket.bind(s"tcp://$host:$port")
-    socket.setReceiveBufferSize(2*1024*1024)
-    socket.setRcvHWM(8*1024)
+    socket.setReceiveBufferSize(TwoMegaBytes)
+    socket.setRcvHWM(ReceiveQueueSize)
     socket.setImmediate(false)
     socket.setIPv6(false)
     socket.setLinger(-1)
     socket
-  }
-
-  def apply(opts: ReceiverOpts): V2ReceiveCallable = {
-    val socket = createSocket(opts.ctx, opts.host, opts.port)
-    new V2ReceiveCallable(socket, opts.blkSize, opts.compress, opts.bufferPool, opts.router, opts.context)
   }
 }
 

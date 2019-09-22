@@ -48,5 +48,6 @@ trait ZFileProvider {
   def jobName: String = sys.env.getOrElse("JOBNAME","UNKNOWN")
   def jobDate: String = sys.env.getOrElse("JOBDATE","UNKNOWN")
   def jobTime: String = sys.env.getOrElse("JOBTIME","UNKNOWN")
+  def jobId: String = jobName+jobDate+jobTime
 }
 

@@ -63,9 +63,18 @@ object Cp extends Command[GsUtilConfig] with Logging {
     var result = Result.Failure("")
     if (c.remote){
       logger.info("Starting Dataset Upload")
+      val remoteHost = if (c.remoteHost.isEmpty) {
+        val instanceId = s"grecv-${zos.jobId}"
+        logger.info(s"Creating Compute Instance $instanceId")
+        val gce = GCE.defaultClient(creds)
+        Option(GCE.createVM(instanceId, c.pkgUri, c.serviceAccount,
+          c.projectId, c.zone, c.subnet, gce, c.machineType))
+      } else None
+      val host = remoteHost.map(_.ip).getOrElse(c.remoteHost)
       val nConnections = c.parallelism
-      val opts = ReaderOpts(in, in.blkSize, new ZContext(), nConnections,
-        c.remoteHost, c.remotePort)
+      val opts = ReaderOpts(in, copyBook, c.destinationUri, in.blkSize,
+        new ZContext(), nConnections, host, c.remotePort)
+      logger.info("Starting Send...")
       val res = V2SendCallable(opts).call()
       if (res.isDefined) {
         logger.info("Dataset Upload Complete")

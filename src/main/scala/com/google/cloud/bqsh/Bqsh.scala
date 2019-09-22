@@ -25,7 +25,7 @@ import scala.collection.mutable
 import scala.collection.mutable.ListBuffer
 
 object Bqsh extends Logging {
-  val UserAgent = "google-pso-tool/gszutil/1.0"
+  val UserAgent = "google-pso-tool/gszutil/2.0"
 
   def main(args: Array[String]): Unit = {
     val zos = ZFileProvider.getProvider()

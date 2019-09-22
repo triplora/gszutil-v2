@@ -16,9 +16,14 @@
 
 package com.google.cloud.gszutil.orc
 
+import com.google.common.base.Charsets
+
 object Protocol {
+  val Ack: Seq[Byte] = "ACK".getBytes(Charsets.UTF_8).toSeq
   case class PartComplete(path: String, bytesWritten: Long)
+  case class FinishedWriting(bytesIn: Long, bytesOut: Long)
   case class PartFailed(msg: String)
   case object Close
   case class UploadComplete(totalBytesRead: Long, totalBytesWritten: Long)
+  case object Failed
 }

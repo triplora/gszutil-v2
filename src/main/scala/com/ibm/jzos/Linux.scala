@@ -18,6 +18,7 @@ package com.ibm.jzos
 
 import java.nio.channels.FileChannel
 import java.nio.file.{Files, Paths, StandardOpenOption}
+import java.util.{Calendar, Date}
 
 import com.google.cloud.gszutil.Util.{CredentialProvider, DefaultCredentialProvider, Logging}
 import com.google.cloud.gszutil.io.{ChannelRecordReader, ZRecordReaderT}
@@ -82,4 +83,16 @@ object Linux extends ZFileProvider with Logging {
     require(ddFile.isFile, s"$dd $ddPath is not a file")
     new ChannelRecordReader(FileChannel.open(ddPath, StandardOpenOption.READ), lRecl, blkSize)
   }
+
+  override def jobDate: String = {
+    val c = Calendar.getInstance()
+    s"${c.get(Calendar.DAY_OF_MONTH)}${c.get(Calendar.MONTH)}${c.get(Calendar.YEAR)}"
+  }
+
+  override def jobTime: String = {
+    val c = Calendar.getInstance()
+    s"${c.get(Calendar.HOUR_OF_DAY)}${c.get(Calendar.MINUTE)}${c.get(Calendar.SECOND)}"
+  }
+
+  override def jobId: String = s"${System.currentTimeMillis()/1000L}"
 }

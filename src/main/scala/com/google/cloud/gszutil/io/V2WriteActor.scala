@@ -21,13 +21,14 @@ import java.nio.ByteBuffer
 import akka.actor.Actor
 import com.google.cloud.gszutil.PackedDecimal
 import com.google.cloud.gszutil.Util.Logging
+import com.google.cloud.gszutil.orc.Protocol
 import com.google.cloud.gszutil.orc.Protocol.PartFailed
 
 /** Responsible for writing a single output partition
   */
 final class V2WriteActor(args: V2ActorArgs) extends Actor with Logging {
   private val orc = new OrcContext(args.gcs, args.copyBook.ORCSchema, args.compress,
-    args.path, self.path.name, args.maxBytes, args.pool)
+    args.path, self.path.name, args.partitionBytes, args.pool)
   private val BatchSize = 1024
   private val codec = new ZReader(args.copyBook, BatchSize)
   private val errBuf = ByteBuffer.allocate(args.copyBook.LRECL * BatchSize)
@@ -56,6 +57,7 @@ final class V2WriteActor(args: V2ActorArgs) extends Actor with Logging {
 
     case s: String if s == "finished" =>
       orc.close()
+      context.parent ! Protocol.FinishedWriting(bytesIn, orc.getBytesWritten)
       context.stop(self)
 
     case _ =>

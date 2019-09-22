@@ -29,9 +29,6 @@ case class GsUtilConfig(source: String = "INFILE",
                         partSizeMB: Int = 256,
                         parallelism: Int = 4,
                         timeOutMinutes: Int = -1,
-                        remote: Boolean = false,
-                        remoteHost: String = "",
-                        remotePort: Int = -1,
 
                         // Global
                         datasetId: String = "",
@@ -40,5 +37,14 @@ case class GsUtilConfig(source: String = "INFILE",
 
                         // Custom
                         allowNonAscii: Boolean = false,
-                        statsTable: String = ""
+                        statsTable: String = "",
+                        remote: Boolean = false,
+                        remoteHost: String = "",
+                        remotePort: Int = -1,
+                        nConnections: Int = 6,
+                        pkgUri: String = "",
+                        zone: String = "",
+                        subnet: String = "",
+                        serviceAccount: String = "",
+                        machineType: String = "n1-standard-8"
 )

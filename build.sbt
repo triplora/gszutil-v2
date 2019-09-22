@@ -30,6 +30,7 @@ libraryDependencies ++= Seq(
   "com.google.api-client" % "google-api-client" % "1.30.2",
   "com.google.http-client" % "google-http-client-apache-v2" % "1.30.2",
   "com.google.cloud" % "google-cloud-bigquery" % "1.89.0",
+  "com.google.cloud" % "google-cloud-compute" % "0.110.0-alpha",
   "com.google.cloud" % "google-cloud-storage" % "1.89.0",
   "com.google.protobuf" % "protobuf-java" % "3.7.1",
   "com.google.protobuf" % "protobuf-java-util" % "3.7.1",

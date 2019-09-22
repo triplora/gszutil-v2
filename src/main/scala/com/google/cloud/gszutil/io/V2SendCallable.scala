@@ -21,31 +21,63 @@ import java.nio.channels.ReadableByteChannel
 import java.util.concurrent.Callable
 import java.util.zip.Deflater
 
+import com.google.cloud.gszutil.CopyBook
 import com.google.cloud.gszutil.Util.Logging
+import com.google.cloud.gszutil.orc.Protocol
+import com.google.common.base.Charsets
 import org.zeromq.ZMQ.Socket
 import org.zeromq.{SocketType, ZContext}
 
-object V2SendCallable {
-  case class ReaderOpts(in: ReadableByteChannel, blkSize: Int,
+object V2SendCallable extends Logging {
+  final val FiveMinutesInMillis: Int = 5*60*1000
+  case class ReaderOpts(in: ReadableByteChannel,
+                        copyBook: CopyBook,
+                        gcsUri: String,
+                        blkSize: Int,
                         ctx: ZContext, nConnections: Int, host: String, port: Int)
   def apply(opts: ReaderOpts): V2SendCallable = {
-    import opts._
-    val uri = s"tcp://$host:$port"
-    val sockets = (1 to nConnections).map{ i =>
-      val socket = ctx.createSocket(SocketType.DEALER)
+    val uri = s"tcp://${opts.host}:${opts.port}"
+    logger.debug(s"Opening ${opts.nConnections} connections to $uri...")
+    val n = math.min(1,opts.nConnections)
+    val sockets = (1 to n).map{i =>
+      val socket = opts.ctx.createSocket(SocketType.DEALER)
       socket.setSendBufferSize(256*1024)
       socket.setIPv6(false)
       socket.setImmediate(false)
       socket.connect(uri)
       socket.setLinger(-1)
       socket.setHWM(1024)
-      val identity = ByteBuffer.allocate(5)
-      identity.put(0.toByte)
-      identity.putInt(i)
-      socket.setIdentity(identity.array())
+      socket.setIdentity(mkId(i))
       socket
     }
-    new V2SendCallable(in, blkSize, sockets)
+    val socket = sockets.head
+    socket.setReceiveTimeOut(FiveMinutesInMillis)
+    logger.debug("Sending CopyBook, GCS prefix and block size")
+    socket.send(opts.copyBook.raw.getBytes(Charsets.UTF_8), 0)
+    socket.send(opts.gcsUri.getBytes(Charsets.UTF_8), 0)
+    socket.send(encodeInt(opts.blkSize), 0)
+    logger.debug("Waiting for ACK")
+    val ack = socket.recv(0)
+    if (ack.toSeq == Protocol.Ack){
+      logger.debug("Received ACK")
+      new V2SendCallable(opts.in, opts.blkSize, sockets)
+    } else {
+      throw new RuntimeException("Receiver failed to send ACK message from Receiver")
+    }
+  }
+
+  private def encodeInt(x: Int): Array[Byte] = {
+    val buf = ByteBuffer.allocate(5)
+    buf.put(0.toByte)
+    buf.putInt(x)
+    buf.array()
+  }
+
+  private def mkId(i: Int): Array[Byte] = {
+    val identity = ByteBuffer.allocate(5)
+    identity.put(0.toByte)
+    identity.putInt(i)
+    identity.array()
   }
 }
 

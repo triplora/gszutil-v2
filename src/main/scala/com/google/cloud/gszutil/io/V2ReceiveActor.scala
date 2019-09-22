@@ -16,16 +16,22 @@
 
 package com.google.cloud.gszutil.io
 
-import akka.actor.{Actor, Props}
+import akka.actor.{Actor, ActorRef, Props, Terminated}
 import akka.routing.{ActorRefRoutee, Broadcast, RoundRobinRoutingLogic, Router}
 import com.google.cloud.gszutil.Util.Logging
+import com.google.cloud.gszutil.orc.Protocol
+import com.google.cloud.gszutil.orc.Protocol.UploadComplete
+
+import scala.collection.mutable
 
 class V2ReceiveActor(args: V2ActorArgs) extends Actor with Logging {
   private val timer = new WriteTimer
+  private val writers = mutable.Set[ActorRef]()
 
   override def preStart(): Unit = {
     val routees = (1 to args.nWriters).map{ i =>
       val r = context.actorOf(Props(classOf[V2WriteActor], args), s"w$i")
+      writers.add(r)
       context.watch(r)
       ActorRefRoutee(r)
     }.toArray.toIndexedSeq
@@ -43,15 +49,33 @@ class V2ReceiveActor(args: V2ActorArgs) extends Actor with Logging {
   def active(router: Router, receiver: V2ReceiveCallable): Receive = {
     case s: String if s == "start" =>
       self ! timer.timed(() => receiver.call())
-      router.route(Broadcast("finished"), self)
 
     case r: Option[ReceiveResult] =>
-      timer.close(logger,
-        "Finished Receiving",
-        r.map(_.bytesIn).getOrElse(-1),
-        r.map(_.bytesOut).getOrElse(-1))
-      context.stop(self)
+      r match {
+        case Some(result) =>
+          timer.close(logger, "Finished Receiving", result.bytesIn, result.bytesOut)
+          context.become(stopping(result.bytesIn, result.bytesOut, success = true))
+          router.route(Broadcast("finished"), self)
+        case _ =>
+          timer.close(logger, "Receive failed", -1,-1)
+          context.become(stopping(-1, -1, success = false))
+          router.route(Broadcast("finished"), self)
+      }
 
+    case Terminated(ref) =>
+      writers.remove(ref)
+
+    case _ =>
+  }
+
+  def stopping(bytesIn: Long, bytesOut: Long, success: Boolean): Receive = {
+    case Terminated(ref) =>
+      writers.remove(ref)
+      if (writers.isEmpty)
+        if (success)
+          args.notifyActor ! Protocol.UploadComplete(bytesIn, bytesOut)
+        else
+          args.notifyActor ! Protocol.Failed
     case _ =>
   }
 }
