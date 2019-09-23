@@ -48,7 +48,10 @@ class V2ReceiveActor(args: V2ActorArgs) extends Actor with Logging {
 
   def active(router: Router, receiver: V2ReceiveCallable): Receive = {
     case s: String if s == "start" =>
-      self ! timer.timed(() => receiver.call())
+      timer.start()
+      val result = receiver.call()
+      timer.end()
+      self ! result
 
     case r: Option[ReceiveResult] =>
       r match {

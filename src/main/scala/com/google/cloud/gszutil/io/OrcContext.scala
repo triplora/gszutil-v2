@@ -66,7 +66,9 @@ final class OrcContext(private val gcs: Storage, schema: TypeDescription, compre
 
   override def close(): Unit = {
     if (writer != null){
-      timer.timed(() => writer.close())
+      timer.start()
+      writer.close()
+      timer.end()
       bytesOut + fs.getBytesWritten()
       fs.resetStats()
       timer.close(logger, s"Stopping writer for $currentPath", bytesIn, getBytesWritten)
@@ -89,9 +91,14 @@ final class OrcContext(private val gcs: Storage, schema: TypeDescription, compre
   def write(reader: ZReader, buf: ByteBuffer, err: ByteBuffer): Long = {
     bytesIn += buf.limit
     bytesSinceLastFlush += buf.limit
-    val errorCount = timer.timed(() => reader.readOrc(buf, writer, err))
-    if (bytesSinceLastFlush > BytesBetweenFlush)
-      timer.timed(() => flush())
+    timer.start()
+    val errorCount = reader.readOrc(buf, writer, err)
+    timer.end()
+    if (bytesSinceLastFlush > BytesBetweenFlush) {
+      timer.start()
+      flush()
+      timer.end()
+    }
     if (maxBytes - fs.getBytesWritten() < 1) next()
     pool.release(buf)
     errorCount
@@ -100,7 +107,9 @@ final class OrcContext(private val gcs: Storage, schema: TypeDescription, compre
   def flush(): Unit = {
     writer match {
       case w: WriterImpl =>
-        timer.timed(() => w.checkMemory(1.0d))
+        timer.start()
+        w.checkMemory(1.0d)
+        timer.end()
         bytesSinceLastFlush = 0
       case _ =>
     }

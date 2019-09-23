@@ -16,56 +16,65 @@
 
 package com.google.cloud.gszutil.io
 
-import java.util.concurrent.{ForkJoinPool, TimeUnit}
+import java.nio.ByteBuffer
+import java.util.concurrent.{Callable, ForkJoinPool, TimeUnit}
 
-import com.google.cloud.gszutil.Util
+import com.google.cloud.bqsh.cmd.Result
+import com.google.cloud.gszutil.{CopyBook, Util, V2Server}
+import com.google.cloud.gszutil.Util.Logging
+import com.google.cloud.gszutil.V2Server.V2Config
 import com.google.cloud.gszutil.io.V2SendCallable.ReaderOpts
-import com.google.cloud.gszutil.io.V2ReceiveCallable.ReceiverOpts
+import com.google.common.base.Charsets
 import com.google.common.util.concurrent.MoreExecutors
 import org.scalatest.FlatSpec
 import org.zeromq.ZContext
+import org.zeromq.ZMQ.Socket
 
-class ZChannelSpec extends FlatSpec {
+class ZChannelSpec extends FlatSpec with Logging {
   Util.configureLogging(true)
 
   "ZChannel" should "rw" in {
     val sendParallelism = 6
-    val readExecutor = MoreExecutors.listeningDecorator(new ForkJoinPool(1))
-    val executorService = MoreExecutors.listeningDecorator(new ForkJoinPool(1))
-    val blkSize = 32*1024
-    val inSize: Long = 1L*1024*1024*1024
+    val readExecutor = MoreExecutors.listeningDecorator(new ForkJoinPool(4))
     val timeout = 5
-    val compress = true
     val ctx = new ZContext()
-    val t0 = System.currentTimeMillis()
-    val bufferPool = new BlockingBoundedBufferPool(blkSize, sendParallelism)
-    val receiverOpts =
-      ReceiverOpts(ctx, "127.0.0.1", 5570, blkSize, compress, bufferPool, null, null)
-    val sink = executorService.submit(V2ReceiveCallable(receiverOpts))
-    val readerOpts = ReaderOpts(new RandomBytes(inSize), blkSize, ctx, sendParallelism, "127.0.0.1", 5570)
+    val blkSize: Int = 32*1024
+    val inSize: Long = 256L*blkSize
+
+    val gcsUri = "gs://token-broker-poc/grecv"
+    val copyBook = CopyBook(
+      """    01  TEST-LAYOUT-FIVE.
+        |        03  COL-A                    PIC S9(9) COMP.
+        |        03  COL-B                    PIC S9(4) COMP.
+        |        03  COL-C                    PIC S9(4) COMP.
+        |        03  COL-D                    PIC X(01).
+        |        03  COL-E                    PIC S9(9) COMP.
+        |        03  COL-F                    PIC S9(07)V9(2) COMP-3.
+        |        03  COL-G                    PIC S9(05)V9(4) COMP-3.
+        |        03  COL-H                    PIC S9(9) COMP.
+        |        03  COL-I                    PIC S9(9) COMP.
+        |        03  COL-J                    PIC S9(4) COMP.
+        |        03  COL-K                    PIC S9(16)V9(2) COMP-3.
+        |        03  COL-L                    PIC S9(16)V9(2) COMP-3.
+        |        03  COL-M                    PIC S9(16)V9(2) COMP-3.
+        |""".stripMargin)
+    val host = "127.0.0.1"
+    val port = 5570
+    val result = readExecutor.submit(new Callable[Result]{
+      private val serverCfg = V2Config(host, port, gcsUri)
+      override def call(): Result = V2Server.run(serverCfg)
+    })
+
+    val readerOpts = ReaderOpts(new RandomBytes(inSize), copyBook, gcsUri, blkSize,
+      ctx, sendParallelism, host, port)
     val src = readExecutor.submit(V2SendCallable(readerOpts))
+
     val readResult = src.get(timeout, TimeUnit.MINUTES)
     System.out.println(readResult)
 
-    val writeResult = sink.get(timeout, TimeUnit.MINUTES)
-    System.out.println(writeResult)
-    assert(writeResult.isDefined)
-
-    val bytesWritten = writeResult.get.bytesIn
-    val bytesDecompressed = writeResult.get.bytesOut
-
-    val t1 = System.currentTimeMillis()
-    val dt = t1-t0
-    val mbps = ((inSize*8d)/(1024L*1024L)) / (dt*0.001d - 2d)
-    System.out.println(s"$mbps mbps")
-    assert(mbps > 50)
+    assert(result.get().exitCode == 0)
     ctx.close()
-    System.out.println(s"$bytesWritten bytes written in $dt ms")
     assert(readResult.get.bytesIn == inSize)
-    System.out.println(s"$bytesDecompressed bytes decompressed")
-    assert(bytesWritten > 0L, "expected bytes written > 0")
-    assert(bytesDecompressed > 0L, "expected bytes decompressed > 0")
-    assert(bytesDecompressed == inSize, "bytes decompressed should match input size")
   }
 
 }

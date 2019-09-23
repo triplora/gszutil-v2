@@ -26,7 +26,7 @@ import com.google.cloud.gszutil.Util.Logging
 import com.google.cloud.gszutil.orc.Protocol
 import com.google.common.base.Charsets
 import org.zeromq.ZMQ.Socket
-import org.zeromq.{SocketType, ZContext}
+import org.zeromq.{SocketType, ZContext, ZMQ}
 
 object V2SendCallable extends Logging {
   final val FiveMinutesInMillis: Int = 5*60*1000
@@ -53,8 +53,8 @@ object V2SendCallable extends Logging {
     val socket = sockets.head
     socket.setReceiveTimeOut(FiveMinutesInMillis)
     logger.debug("Sending CopyBook, GCS prefix and block size")
-    socket.send(opts.copyBook.raw.getBytes(Charsets.UTF_8), 0)
-    socket.send(opts.gcsUri.getBytes(Charsets.UTF_8), 0)
+    socket.send(opts.copyBook.raw.getBytes(Charsets.UTF_8), ZMQ.SNDMORE)
+    socket.send(opts.gcsUri.getBytes(Charsets.UTF_8), ZMQ.SNDMORE)
     socket.send(encodeInt(opts.blkSize), 0)
     logger.debug("Waiting for ACK")
     val ack = socket.recv(0)
@@ -67,6 +67,12 @@ object V2SendCallable extends Logging {
   }
 
   private def encodeInt(x: Int): Array[Byte] = {
+    val buf = ByteBuffer.allocate(4)
+    buf.putInt(x)
+    buf.array()
+  }
+
+  private def encodeIdentity(x: Int): Array[Byte] = {
     val buf = ByteBuffer.allocate(5)
     buf.put(0.toByte)
     buf.putInt(x)

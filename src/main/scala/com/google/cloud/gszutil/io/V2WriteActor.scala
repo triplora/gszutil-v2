@@ -53,7 +53,9 @@ final class V2WriteActor(args: V2ActorArgs) extends Actor with Logging {
 
   override def receive: Receive = {
     case buf: ByteBuffer =>
-      timer.timed(() => write(buf))
+      timer.start()
+      write(buf)
+      timer.end()
 
     case s: String if s == "finished" =>
       orc.close()
@@ -64,7 +66,9 @@ final class V2WriteActor(args: V2ActorArgs) extends Actor with Logging {
   }
 
   override def postStop(): Unit = {
-    timer.timed(() => orc.close())
+    timer.start()
+    orc.close()
+    timer.end()
     timer.close(logger,
       s"Stopping ${this.getClass.getSimpleName} ${self.path.name}",
       bytesIn, orc.getBytesWritten)

@@ -29,8 +29,7 @@ import org.zeromq.{SocketType, ZContext}
 object V2ReceiveCallable {
   val TwoMegaBytes: Int = 2*1024*1024
   val ReceiveQueueSize: Int = 8*1024
-  case class ReceiverOpts(ctx: ZContext, host: String, port: Int, blkSize: Int, compress: Boolean,
-                          bufferPool: BufferPool, router: Router, context: ActorContext)
+//  case class ReceiverOpts(ctx: ZContext, host: String, port: Int, blkSize: Int,compress: Boolean, bufferPool: BufferPool, router: Router, context: ActorContext)
 
   def createSocket(ctx: ZContext, host: String, port: Int): Socket = {
     val socket = ctx.createSocket(SocketType.ROUTER)
@@ -72,8 +71,10 @@ class V2ReceiveCallable(socket: Socket, blkSize: Int, compress: Boolean, bufferP
               buf.position(n)
               bytesIn += data.length
               bytesOut += n
-              if (router != null)
+              if (router != null && context != null) {
+                buf.flip()
                 router.route(buf, context.self)
+              }
             }
           } else {
             bytesIn += data.length

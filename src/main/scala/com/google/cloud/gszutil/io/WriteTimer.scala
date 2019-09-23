@@ -7,6 +7,8 @@ class WriteTimer {
   private var elapsedTime: Long = 0
   private var startTime: Long = System.currentTimeMillis()
   private var endTime: Long = -1
+  private var t0: Long = -1
+  private var t1: Long = -1
 
   def reset(): Unit = {
     startTime = System.currentTimeMillis()
@@ -14,12 +16,11 @@ class WriteTimer {
     elapsedTime = 0
   }
 
-  def timed[T](f: () => T): T = {
-    val t0 = System.currentTimeMillis
-    val result = f()
+  def start(): Unit = t0 = System.currentTimeMillis()
+
+  def end(): Unit = {
     val t1 = System.currentTimeMillis
     elapsedTime += (t1 - t0)
-    result
   }
 
   case class Snapshot(duration: Long, active: Long,
