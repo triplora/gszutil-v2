@@ -35,6 +35,13 @@ object V2SendCallable extends Logging {
                         gcsUri: String,
                         blkSize: Int,
                         ctx: ZContext, nConnections: Int, host: String, port: Int)
+
+  /** Opens sockets and sends session details
+    * blocks until the server responds with ACK
+    *
+    * @param opts ReaderOpts
+    * @return V2SendCallable
+    */
   def apply(opts: ReaderOpts): V2SendCallable = {
     val uri = s"tcp://${opts.host}:${opts.port}"
     logger.debug(s"Opening ${opts.nConnections} connections to $uri...")

@@ -39,13 +39,15 @@ object Util {
   def configureLogging(debugOverride: Boolean = false): Unit = {
     val debug = sys.env.getOrElse("BQSH_ROOT_LOGGER","").contains("DEBUG") || debugOverride
     val rootLogger = LogManager.getRootLogger
-    rootLogger.addAppender(new ConsoleAppender(new PatternLayout("%d{ISO8601} %-5p %c %x - %m%n")))
-    LogManager
-      .getLogger("org.apache.orc.impl")
-      .setLevel(Level.ERROR)
-    LogManager
-      .getLogger("org.apache.http")
-      .setLevel(Level.WARN)
+    if (!rootLogger.getAllAppenders.hasMoreElements) {
+      rootLogger.addAppender(new ConsoleAppender(new PatternLayout("%d{ISO8601} %-5p %c %x - %m%n")))
+      LogManager
+        .getLogger("org.apache.orc.impl")
+        .setLevel(Level.ERROR)
+      LogManager
+        .getLogger("org.apache.http")
+        .setLevel(Level.WARN)
+    }
 
     if (debug) {
       rootLogger.setLevel(Level.DEBUG)

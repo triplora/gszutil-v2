@@ -6,9 +6,10 @@ import com.google.api.services.compute.Compute
 import com.google.api.services.compute.model.{AccessConfig, AttachedDisk, AttachedDiskInitializeParams, Instance, Metadata, NetworkInterface, ServiceAccount}
 import com.google.auth.Credentials
 import com.google.auth.http.HttpCredentialsAdapter
+import com.google.cloud.gszutil.Util.Logging
 import com.google.common.collect.ImmutableList
 
-object GCE {
+object GCE extends Logging {
   def defaultClient(credentials: Credentials): Compute = {
     new Compute.Builder(
       Utils.getDefaultTransport,
@@ -54,38 +55,44 @@ object GCE {
             .setValue(getStartupScript(pkgUri))
         ))
       )
-      .setMachineType(machineType)
+      .setMachineType(s"projects/$project/zones/$zone/machineTypes/$machineType")
       .setNetworkInterfaces(ImmutableList.of(
         new NetworkInterface()
-          .setSubnetwork(subnet)
+          .setSubnetwork(s"projects/$project/regions/${zone.dropRight(2)}/subnetworks/$subnet")
       ))
       .setServiceAccounts(ImmutableList.of(
         new ServiceAccount()
           .setEmail(serviceAccount)
-          .setScopes(ImmutableList.of("storage-rw"))
+          .setScopes(ImmutableList.of("https://www.googleapis.com/auth/devstorage.read_write"))
       ))
       .setDisks(ImmutableList.of(
         new AttachedDisk()
+          .setType("PERSISTENT")
           .setBoot(true)
+          .setMode("READ_WRITE")
           .setAutoDelete(true)
+          .setDeviceName(name)
           .setInitializeParams(
             new AttachedDiskInitializeParams()
-              .setDiskType("pd-standard")
-              .setDiskSizeGb(200L)
               .setSourceImage(Debian10)
+              .setDiskType(s"projects/$project/zones/$zone/diskTypes/pd-standard")
+              .setDiskSizeGb(200L)
           )
       ))
+
+    val instanceRequest = JacksonFactory.getDefaultInstance.toPrettyString(instance)
+    logger.debug("Requesting creation of instance:")
 
     // Create the Instance
     val req = gce.instances().insert(project, zone, instance)
     val res = req.execute()
 
     // Verify Instance was created
-    if (res.getStatus != "DONE") {
+    if (res.getStatus != "RUNNING") {
       res.setFactory(JacksonFactory.getDefaultInstance)
       val reqString = JacksonFactory.getDefaultInstance.toPrettyString(req)
       throw new RuntimeException("Failed to create gReceiver Compute " +
-        "Instance:\nRequest:\n" + reqString + "\nResponse:\n" + res.toPrettyString)
+        "Instance:\nRequest:\n" + instanceRequest + "\nResponse:\n" + res.toPrettyString)
     }
 
     // Get the IP Address

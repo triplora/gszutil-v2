@@ -17,7 +17,7 @@
 package com.google.cloud.gszutil
 
 import java.nio.ByteBuffer
-import java.util.concurrent.TimeoutException
+import java.util.concurrent.{Callable, TimeoutException}
 
 import akka.actor.{ActorSystem, Inbox, Props, Terminated}
 import com.google.api.services.storage.StorageScopes
@@ -25,6 +25,7 @@ import com.google.auth.oauth2.GoogleCredentials
 import com.google.cloud.bqsh.GCS
 import com.google.cloud.bqsh.cmd.Result
 import com.google.cloud.gszutil.Util.Logging
+import com.google.cloud.gszutil.V2Server.V2Config
 import com.google.cloud.gszutil.io.{BlockingBoundedBufferPool, V2ActorArgs, V2ReceiveActor, V2ReceiveCallable}
 import com.google.cloud.gszutil.orc.Protocol
 import com.google.cloud.gszutil.orc.Protocol.{PartFailed, UploadComplete}
@@ -40,8 +41,8 @@ import scala.concurrent.{Await, ExecutionContext}
 import scala.util.{Failure, Success}
 
 object V2Server extends Logging {
-  private val BatchSize = 1024
-  private val PartitionBytes: Long = 128L*1024*1024
+  val BatchSize = 1024
+  val PartitionBytes: Long = 128L * 1024 * 1024
 
   case class V2Config(host: String = "0.0.0.0",
                       port: Int = 8443,
@@ -58,15 +59,17 @@ object V2Server extends Logging {
   def main(args: Array[String]): Unit = {
     V2ConfigParser.parse(args) match {
       case Some(opts) =>
-        val rc = run(opts)
+        val server = new V2Server(opts)
+        val rc = server.call()
         System.exit(rc.exitCode)
       case _ =>
         System.err.println(s"Unabled to parse args '${args.mkString(" ")}'")
         System.exit(1)
     }
   }
-
-  def run(config: V2Config): Result = {
+}
+class V2Server(config: V2Config) extends Callable[Result] with Logging {
+  override def call(): Result = {
     val conf = ConfigFactory.parseMap(ImmutableMap.of(
       "akka.actor.guardian-supervisor-strategy","akka.actor.EscalatingSupervisorStrategy"))
     logger.debug("Initializing ActorSystem")
@@ -89,7 +92,7 @@ object V2Server extends Logging {
     logger.debug(s"Allocating Buffer Pool with size ${blkSize*config.nWriters*config.bufCt}")
     val pool = new BlockingBoundedBufferPool(blkSize, config.nWriters*config.bufCt)
 
-    val wArgs = V2ActorArgs(socket, blkSize, config.nWriters, copyBook, PartitionBytes,
+    val wArgs = V2ActorArgs(socket, blkSize, config.nWriters, copyBook, V2Server.PartitionBytes,
       new Path(gcsUri), config.gcs, config.compress, pool, config.maxErrorPct, inbox.getRef())
 
     val reader = sys.actorOf(Props(classOf[V2ReceiveActor], wArgs), "DatasetReader")

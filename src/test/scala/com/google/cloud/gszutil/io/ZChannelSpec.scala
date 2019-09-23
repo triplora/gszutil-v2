@@ -16,19 +16,15 @@
 
 package com.google.cloud.gszutil.io
 
-import java.nio.ByteBuffer
-import java.util.concurrent.{Callable, ForkJoinPool, TimeUnit}
+import java.util.concurrent.{ForkJoinPool, TimeUnit}
 
-import com.google.cloud.bqsh.cmd.Result
-import com.google.cloud.gszutil.{CopyBook, Util, V2Server}
 import com.google.cloud.gszutil.Util.Logging
 import com.google.cloud.gszutil.V2Server.V2Config
 import com.google.cloud.gszutil.io.V2SendCallable.ReaderOpts
-import com.google.common.base.Charsets
+import com.google.cloud.gszutil.{CopyBook, Util, V2Server}
 import com.google.common.util.concurrent.MoreExecutors
 import org.scalatest.FlatSpec
 import org.zeromq.ZContext
-import org.zeromq.ZMQ.Socket
 
 class ZChannelSpec extends FlatSpec with Logging {
   Util.configureLogging(true)
@@ -60,10 +56,8 @@ class ZChannelSpec extends FlatSpec with Logging {
         |""".stripMargin)
     val host = "127.0.0.1"
     val port = 5570
-    val result = readExecutor.submit(new Callable[Result]{
-      private val serverCfg = V2Config(host, port, gcsUri)
-      override def call(): Result = V2Server.run(serverCfg)
-    })
+    val serverCfg = V2Config(host, port, gcsUri)
+    val result = readExecutor.submit(new V2Server(serverCfg))
 
     val readerOpts = ReaderOpts(new RandomBytes(inSize), copyBook, gcsUri, blkSize,
       ctx, sendParallelism, host, port)
