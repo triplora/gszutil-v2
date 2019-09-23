@@ -44,10 +44,9 @@ object V2Server extends Logging {
   val BatchSize = 1024
   val PartitionBytes: Long = 128L * 1024 * 1024
 
-  case class V2Config(host: String = "0.0.0.0",
-                      port: Int = 8443,
-                      destinationUri: String = "",
-                      nWriters: Int = 8,
+  case class V2Config(host: String = "127.0.0.1",
+                      port: Int = 5570,
+                      nWriters: Int = 4,
                       bufCt: Int = 256,
                       timeoutMinutes: Int = 300,
                       compress: Boolean = true,
@@ -57,6 +56,7 @@ object V2Server extends Logging {
                         .createScoped(StorageScopes.DEVSTORAGE_READ_WRITE)))
 
   def main(args: Array[String]): Unit = {
+    Util.configureLogging(true)
     V2ConfigParser.parse(args) match {
       case Some(opts) =>
         val server = new V2Server(opts)
@@ -72,24 +72,33 @@ class V2Server(config: V2Config) extends Callable[Result] with Logging {
   override def call(): Result = {
     val conf = ConfigFactory.parseMap(ImmutableMap.of(
       "akka.actor.guardian-supervisor-strategy","akka.actor.EscalatingSupervisorStrategy"))
-    logger.debug("Initializing ActorSystem")
+    logger.info("Initializing ActorSystem")
     val sys = ActorSystem("grecv", conf)
     val inbox = Inbox.create(sys)
 
     val ctx = new ZContext()
     val socket = V2ReceiveCallable.createSocket(ctx, config.host, config.port)
 
-    // Collect Send Options
-    logger.debug("Waiting to receive session details...")
-    val frame1 = socket.recv(0) // sender identity
-    val frame2 = socket.recv(0) // copy book text
-    val frame3 = socket.recv(0) // GCS URI prefix
-    val frame4 = socket.recv(0) // blkSize
-    val copyBook = CopyBook(new String(frame2, Charsets.UTF_8))
-    val gcsUri = new String(frame3, Charsets.UTF_8)
-    val blkSize = ByteBuffer.wrap(frame4).getInt
+    // Receive Session Details
+    logger.info(s"Waiting to receive session details on tcp://${config.host}:${config.port} ...")
+    val frame1 = socket.recv(0)
 
-    logger.debug(s"Allocating Buffer Pool with size ${blkSize*config.nWriters*config.bufCt}")
+    // Copy Book
+    val frame2 = socket.recv(0)
+    val copyBook = CopyBook(new String(frame2, Charsets.UTF_8))
+    logger.info(s"Received Copy Book ${copyBook}")
+
+    // GCS Prefix
+    val frame3 = socket.recv(0)
+    val gcsUri = new String(frame3, Charsets.UTF_8)
+    logger.info(s"Received GCS URI $gcsUri")
+
+    // Block Size
+    val frame4 = socket.recv(0)
+    val blkSize = ByteBuffer.wrap(frame4).getInt
+    logger.info(s"Received Block Size $blkSize")
+
+    logger.info(s"Allocating Buffer Pool with size ${blkSize*config.nWriters*config.bufCt}")
     val pool = new BlockingBoundedBufferPool(blkSize, config.nWriters*config.bufCt)
 
     val wArgs = V2ActorArgs(socket, blkSize, config.nWriters, copyBook, V2Server.PartitionBytes,
@@ -99,7 +108,7 @@ class V2Server(config: V2Config) extends Callable[Result] with Logging {
     inbox.watch(reader)
 
     // Send ACK to indicate server is ready to receive data
-    logger.debug("Sending ACK")
+    logger.info("Sending ACK")
     socket.send(frame1,ZMQ.SNDMORE);
     socket.send(Protocol.Ack.toArray,0);
 
@@ -118,7 +127,7 @@ class V2Server(config: V2Config) extends Callable[Result] with Logging {
         else
           FiniteDuration(1, DAYS)
 
-      logger.debug("Waiting for ActorSystem termination...")
+      logger.info("Waiting for ActorSystem termination...")
       inbox.receive(timeout) match {
         case UploadComplete(read, written) =>
           logger.info(s"Upload complete:\n$read bytes read\n$written bytes written")

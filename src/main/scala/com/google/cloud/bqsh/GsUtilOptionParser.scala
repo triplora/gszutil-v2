@@ -61,7 +61,43 @@ object GsUtilOptionParser extends OptionParser[GsUtilConfig]("gsutil") with ArgP
       opt[Int]("timeOutMinutes")
         .optional()
         .action{(x,c) => c.copy(timeOutMinutes = x)}
-        .text("(optional) Timeout in minutes. (default: 1 day)")
+        .text("(optional) Timeout in minutes. (default: 1 day)"),
+
+      opt[Unit]("remote")
+        .optional()
+        .action{(_,c) => c.copy(remote = true)}
+        .text("use remote decoder (default: false"),
+
+      opt[Int]("remotePort")
+        .optional()
+        .action{(x,c) => c.copy(remotePort = x)}
+        .text("remote port (default: 8443"),
+
+      opt[String]("remoteHost")
+        .optional()
+        .action{(x,c) => c.copy(remoteHost = x)}
+        .text("remote host or ip address"),
+
+      opt[String]("pkgUri")
+        .optional()
+        .action{(x,c) => c.copy(pkgUri = x)}
+        .text("GCS uri to tar file containing run.sh"),
+
+      opt[String]("zone")
+        .optional()
+        .action{(x,c) => c.copy(zone = x)}
+        .text("remote host zone"),
+
+      opt[String]("subnet")
+        .optional()
+        .action{(x,c) => c.copy(subnet = x)}
+        .text("remote host subnet in format " +
+          "projects/<project>/regions/<region>/subnetworks/<subnet>"),
+
+      opt[String]("serviceAccount")
+        .optional()
+        .action{(x,c) => c.copy(serviceAccount = x)}
+        .text("remote host service account")
     )
 
   cmd("rm")

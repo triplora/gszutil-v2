@@ -9,6 +9,8 @@ import com.google.auth.http.HttpCredentialsAdapter
 import com.google.cloud.gszutil.Util.Logging
 import com.google.common.collect.ImmutableList
 
+import scala.util.Random
+
 object GCE extends Logging {
   def defaultClient(credentials: Credentials): Compute = {
     new Compute.Builder(
@@ -25,7 +27,7 @@ object GCE extends Logging {
 
   def getStartupScript(pkgUri: String): String = {
     s"""#!/bin/bash
-       |gsutil '$pkgUri' pkg.tar && tar xvf pkg.tar && . run.sh""".stripMargin
+       |gsutil cp '$pkgUri' pkg.tar && tar xvf pkg.tar && . run.sh""".stripMargin
   }
 
   /** Creates a gReceiver Compute Instance
@@ -58,7 +60,7 @@ object GCE extends Logging {
       .setMachineType(s"projects/$project/zones/$zone/machineTypes/$machineType")
       .setNetworkInterfaces(ImmutableList.of(
         new NetworkInterface()
-          .setSubnetwork(s"projects/$project/regions/${zone.dropRight(2)}/subnetworks/$subnet")
+          .setSubnetwork(subnet)
       ))
       .setServiceAccounts(ImmutableList.of(
         new ServiceAccount()
@@ -81,22 +83,34 @@ object GCE extends Logging {
       ))
 
     val instanceRequest = JacksonFactory.getDefaultInstance.toPrettyString(instance)
-    logger.debug("Requesting creation of instance:")
+    logger.debug("Requesting creation of instance:\n" + instanceRequest)
 
     // Create the Instance
     val req = gce.instances().insert(project, zone, instance)
     val res = req.execute()
 
     // Verify Instance was created
-    if (res.getStatus != "RUNNING") {
+    var status = res.getStatus
+    if (!(status == "RUNNING" || status == "DONE")) {
       res.setFactory(JacksonFactory.getDefaultInstance)
-      val reqString = JacksonFactory.getDefaultInstance.toPrettyString(req)
       throw new RuntimeException("Failed to create gReceiver Compute " +
         "Instance:\nRequest:\n" + instanceRequest + "\nResponse:\n" + res.toPrettyString)
     }
 
     // Get the IP Address
-    val created = gce.instances().get(project, zone, name).execute()
+    var created: Instance = null
+    var totalWait = 0L
+    status = "PROVISIONING"
+    while (status == "PROVISIONING"){
+      val waitMs = 10000L + Random.nextInt(20000)
+      logger.debug(s"Waiting $waitMs ms for Instance creation")
+      Thread.sleep(waitMs)
+      totalWait += waitMs
+      created = gce.instances().get(project, zone, name).execute()
+      status = created.getStatus
+      if (totalWait > 15L * 60L * 1000L)
+        throw new RuntimeException("timed out waiting for instance creation")
+    }
     val ip = created.getNetworkInterfaces.get(0).getNetworkIP
 
     // Return the result

@@ -37,7 +37,7 @@ class ZChannelSpec extends FlatSpec with Logging {
     val blkSize: Int = 32*1024
     val inSize: Long = 256L*blkSize
 
-    val gcsUri = "gs://token-broker-poc/grecv"
+    val gcsUri = "gs://gsztest/grecv-test/"
     val copyBook = CopyBook(
       """    01  TEST-LAYOUT-FIVE.
         |        03  COL-A                    PIC S9(9) COMP.
@@ -56,7 +56,7 @@ class ZChannelSpec extends FlatSpec with Logging {
         |""".stripMargin)
     val host = "127.0.0.1"
     val port = 5570
-    val serverCfg = V2Config(host, port, gcsUri)
+    val serverCfg = V2Config(host, port)
     val result = readExecutor.submit(new V2Server(serverCfg))
 
     val readerOpts = ReaderOpts(new RandomBytes(inSize), copyBook, gcsUri, blkSize,
