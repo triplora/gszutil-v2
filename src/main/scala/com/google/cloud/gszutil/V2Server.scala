@@ -16,6 +16,7 @@
 
 package com.google.cloud.gszutil
 
+import java.net.URI
 import java.nio.ByteBuffer
 import java.util.concurrent.{Callable, TimeoutException}
 
@@ -30,7 +31,7 @@ import com.google.cloud.gszutil.io.{BlockingBoundedBufferPool, V2ActorArgs, V2Re
 import com.google.cloud.gszutil.orc.Protocol
 import com.google.cloud.gszutil.orc.Protocol.{PartFailed, UploadComplete}
 import com.google.cloud.storage.Storage
-import com.google.common.base.Charsets
+import com.google.common.base.{Charsets, Preconditions}
 import com.google.common.collect.ImmutableMap
 import com.typesafe.config.ConfigFactory
 import org.apache.hadoop.fs.Path
@@ -68,6 +69,7 @@ object V2Server extends Logging {
     }
   }
 }
+
 class V2Server(config: V2Config) extends Callable[Result] with Logging {
   override def call(): Result = {
     val conf = ConfigFactory.parseMap(ImmutableMap.of(
@@ -90,8 +92,11 @@ class V2Server(config: V2Config) extends Callable[Result] with Logging {
 
     // GCS Prefix
     val frame3 = socket.recv(0)
-    val gcsUri = new String(frame3, Charsets.UTF_8)
+    val gcsUri = new String(frame3, Charsets.UTF_8).stripSuffix("/")
     logger.info(s"Received GCS URI $gcsUri")
+    val uri = new URI(gcsUri)
+    Preconditions.checkArgument(uri.getScheme == "gs", "scheme must be gs")
+    Preconditions.checkArgument(uri.getAuthority.nonEmpty, "bucket must be provided")
 
     // Block Size
     val frame4 = socket.recv(0)
@@ -102,7 +107,8 @@ class V2Server(config: V2Config) extends Callable[Result] with Logging {
     val pool = new BlockingBoundedBufferPool(blkSize, config.nWriters*config.bufCt)
 
     val wArgs = V2ActorArgs(socket, blkSize, config.nWriters, copyBook, V2Server.PartitionBytes,
-      new Path(gcsUri), config.gcs, config.compress, pool, config.maxErrorPct, inbox.getRef())
+      new Path(gcsUri), config.gcs, config.compress,
+      pool, config.maxErrorPct, inbox.getRef())
 
     val reader = sys.actorOf(Props(classOf[V2ReceiveActor], wArgs), "DatasetReader")
     inbox.watch(reader)

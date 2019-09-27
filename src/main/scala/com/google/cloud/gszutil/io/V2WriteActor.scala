@@ -45,10 +45,6 @@ final class V2WriteActor(args: V2ActorArgs) extends Actor with Logging {
       errBuf.get(a)
       System.err.println(s"Failed to read row:\n${PackedDecimal.hexValue(a)}")
     }
-    if (buf.remaining > 0) {
-      logger.warn(s"Discarding ${buf.remaining} bytes remaining in buffer. This should never " +
-        "happen for a normal MVS data set with fixed-length records")
-    }
   }
 
   override def receive: Receive = {

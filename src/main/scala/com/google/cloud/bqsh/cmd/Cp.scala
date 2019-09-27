@@ -18,7 +18,7 @@ package com.google.cloud.bqsh.cmd
 import java.net.URI
 
 import com.google.cloud.bigquery.StatsUtil
-import com.google.cloud.bqsh._
+import com.google.cloud.bqsh.{ArgParser,BQ,Command,GCE,GCS,GsUtilConfig,GsUtilOptionParser}
 import com.google.cloud.gszutil.Util.Logging
 import com.google.cloud.gszutil.io.V2SendCallable
 import com.google.cloud.gszutil.io.V2SendCallable.ReaderOpts

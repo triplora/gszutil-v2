@@ -59,8 +59,9 @@ final class OrcContext(private val gcs: Storage, schema: TypeDescription, compre
 
   private def newWriter(): (Path,Writer) = {
     partId += 1
-    val newPath = path.suffix(s"$prefix-$partId.orc")
+    val newPath = path.suffix(s"/$prefix-$partId.orc")
     val writer = OrcFile.createWriter(newPath, writerOptions())
+    logger.info(s"Opened Writer for $newPath")
     (newPath, writer)
   }
 
@@ -79,6 +80,7 @@ final class OrcContext(private val gcs: Storage, schema: TypeDescription, compre
   def next(): Unit = {
     if (writer != null) {
       writer.close()
+      logger.info(s"Closed Writer for $currentPath")
       bytesOut += fs.getBytesWritten()
     }
     fs.resetStats()
@@ -93,13 +95,18 @@ final class OrcContext(private val gcs: Storage, schema: TypeDescription, compre
     bytesSinceLastFlush += buf.limit
     timer.start()
     val errorCount = reader.readOrc(buf, writer, err)
-    timer.end()
-    if (bytesSinceLastFlush > BytesBetweenFlush) {
-      timer.start()
-      flush()
-      timer.end()
+    if (buf.remaining > 0) {
+      logger.warn(s"ByteBuffer has ${buf.remaining} bytes remaining.")
     }
-    if (maxBytes - fs.getBytesWritten() < 1) next()
+    if (bytesSinceLastFlush > BytesBetweenFlush) {
+      flush()
+    }
+    timer.end()
+    val currentPartitionSize = fs.getBytesWritten()
+    if (maxBytes - currentPartitionSize < 1) {
+      logger.info(s"Current partition size $currentPartitionSize exceeds target")
+      next()
+    }
     pool.release(buf)
     errorCount
   }

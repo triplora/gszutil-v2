@@ -20,7 +20,6 @@ import akka.actor.{Actor, ActorRef, Props, Terminated}
 import akka.routing.{ActorRefRoutee, Broadcast, RoundRobinRoutingLogic, Router}
 import com.google.cloud.gszutil.Util.Logging
 import com.google.cloud.gszutil.orc.Protocol
-import com.google.cloud.gszutil.orc.Protocol.UploadComplete
 
 import scala.collection.mutable
 
@@ -51,19 +50,20 @@ class V2ReceiveActor(args: V2ActorArgs) extends Actor with Logging {
       timer.start()
       val result = receiver.call()
       timer.end()
-      self ! result
+      if (result.isDefined)
+        self ! result.get
+      else
+        self ! "failed"
 
-    case r: Option[ReceiveResult] =>
-      r match {
-        case Some(result) =>
-          timer.close(logger, "Finished Receiving", result.bytesIn, result.bytesOut)
-          context.become(stopping(result.bytesIn, result.bytesOut, success = true))
-          router.route(Broadcast("finished"), self)
-        case _ =>
-          timer.close(logger, "Receive failed", -1,-1)
-          context.become(stopping(-1, -1, success = false))
-          router.route(Broadcast("finished"), self)
-      }
+    case result: ReceiveResult =>
+      timer.close(logger, "Finished Receiving", result.bytesIn, result.bytesOut)
+      context.become(stopping(result.bytesIn, result.bytesOut, success = true))
+      router.route(Broadcast("finished"), self)
+
+    case s: String if s == "failed" =>
+      timer.close(logger, "Receive failed", -1,-1)
+      context.become(stopping(-1, -1, success = false))
+      router.route(Broadcast("finished"), self)
 
     case Terminated(ref) =>
       writers.remove(ref)
