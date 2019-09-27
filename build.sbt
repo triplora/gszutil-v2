@@ -15,7 +15,7 @@
  */
 name := "gszutil"
 
-scalaVersion := "2.11.8"
+scalaVersion := "2.11.12"
 
 organization := "com.google.cloud"
 
@@ -39,7 +39,6 @@ libraryDependencies ++= Seq(
   "org.apache.httpcomponents" % "httpclient" % "4.5.9",
   "org.apache.orc" % "orc-core" % "1.5.5",
   "org.zeromq" % "jeromq" % "0.5.1",
-  "net.openhft" % "chronicle-bytes" % "2.17.36",
   "org.scalatest" %% "scalatest" % "3.0.5" % Test
 ).map(_ excludeAll exGuava)
 

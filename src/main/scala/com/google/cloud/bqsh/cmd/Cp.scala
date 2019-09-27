@@ -63,10 +63,10 @@ object Cp extends Command[GsUtilConfig] with Logging {
     var result = Result.Failure("")
     if (c.remote){
       logger.info("Starting Dataset Upload")
+      val instanceId = s"grecv-${zos.jobId}"
+      val gce = GCE.defaultClient(creds)
       val remoteHost = if (c.remoteHost.isEmpty) {
-        val instanceId = s"grecv-${zos.jobId}"
         logger.info(s"Creating Compute Instance $instanceId")
-        val gce = GCE.defaultClient(creds)
         Option(GCE.createVM(instanceId, c.pkgUri, c.serviceAccount,
           c.projectId, c.zone, c.subnet, gce, c.machineType))
       } else None
@@ -82,6 +82,12 @@ object Cp extends Command[GsUtilConfig] with Logging {
       } else {
         logger.error("Dataset Upload Failed")
         result = Result.Failure("")
+      }
+      if (c.remoteHost.nonEmpty) {
+        if (c.projectId.nonEmpty)
+          GCE.terminateVM(instanceId, c.projectId, c.zone, gce)
+        else
+          logger.warn("projectId not set")
       }
     } else {
       logger.info("Starting ORC Upload")

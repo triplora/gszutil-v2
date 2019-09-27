@@ -116,4 +116,11 @@ object GCE extends Logging {
     // Return the result
     InstanceResult(ip, created)
   }
+
+  def terminateVM(name: String, project: String, zone: String, gce: Compute): Unit = {
+    val req = gce.instances().delete(project, zone, name)
+    logger.info(s"Requesting deletion of Instance $name")
+    val res = req.execute()
+    logger.info(s"Delete request returned status ${res.getStatus}")
+  }
 }

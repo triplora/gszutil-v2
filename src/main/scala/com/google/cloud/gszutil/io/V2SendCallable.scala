@@ -65,11 +65,13 @@ object V2SendCallable extends Logging {
     socket.send(encodeInt(opts.blkSize), 0)
     logger.debug("Waiting for ACK")
     val ack = socket.recv(0)
-    if (ack.toSeq == Protocol.Ack){
+    if (ack == null) {
+      throw new RuntimeException("Timed out waiting for ACK from Receiver")
+    } else if (ack.toSeq == Protocol.Ack){
       logger.debug("Received ACK")
       new V2SendCallable(opts.in, opts.blkSize, sockets)
     } else {
-      throw new RuntimeException("Receiver failed to send ACK message from Receiver")
+      throw new RuntimeException("Received invalid ACK message: $ack")
     }
   }
 
@@ -104,11 +106,13 @@ final class V2SendCallable(in: ReadableByteChannel, blkSize: Int, sockets: Seq[S
   override def call(): Option[SendResult] = {
     var bytesIn = 0L
     var bytesOut = 0L
+    var bytesRead = 0L
+    var recordCount = 0L
     var msgCount = 0L
     val data = new Array[Byte](blkSize)
     val bb = ByteBuffer.wrap(data)
 
-    val buf = new Array[Byte](blkSize)
+    val buf = new Array[Byte](blkSize*2)
     val deflater = new Deflater(3, true)
     deflater.reset()
 
@@ -118,10 +122,16 @@ final class V2SendCallable(in: ReadableByteChannel, blkSize: Int, sockets: Seq[S
         bb.clear
 
         // Read from input dataset
-        if (in.read(bb) < 0) {
+        bytesRead = in.read(bb)
+        if (bytesRead < 0) {
           logger.info(s"Input exhausted after $bytesIn bytes $msgCount messages")
           close()
           return Option(SendResult(bytesIn, bytesOut, msgCount))
+        }
+        while (bb.hasRemaining && bytesRead > -1){
+          bytesRead = in.read(bb)
+          if (bytesRead > 0)
+            recordCount += 1
         }
 
         if (bb.position > 0) {
@@ -145,6 +155,9 @@ final class V2SendCallable(in: ReadableByteChannel, blkSize: Int, sockets: Seq[S
             // Increment counters
             bytesOut += compressed
             msgCount += 1
+            if (msgCount % 10000 == 0){
+              logger.info("blocks sent: " + msgCount)
+            }
           }
         }
       }
