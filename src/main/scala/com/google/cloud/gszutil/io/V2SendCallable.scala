@@ -19,7 +19,7 @@ package com.google.cloud.gszutil.io
 import java.nio.ByteBuffer
 import java.nio.channels.ReadableByteChannel
 import java.util.concurrent.Callable
-import java.util.zip.ResettableGzipOutputStream
+import java.util.zip.GZIPOutputStream
 
 import com.google.cloud.gszutil.CopyBook
 import com.google.cloud.gszutil.Util.Logging
@@ -31,6 +31,8 @@ import org.zeromq.{SocketType, ZContext, ZMQ}
 
 object V2SendCallable extends Logging {
   final val FiveMinutesInMillis: Int = 5*60*1000
+  final val TargetBlocks = 256
+  final val GzipBufferSize = 32*1024
   case class ReaderOpts(in: ReadableByteChannel,
                         copyBook: CopyBook,
                         gcsUri: String,
@@ -61,25 +63,36 @@ object V2SendCallable extends Logging {
     val socket = sockets.head
     socket.setReceiveTimeOut(FiveMinutesInMillis)
     logger.debug("Sending CopyBook, GCS prefix and block size")
+    socket.send(Protocol.Begin, ZMQ.SNDMORE)
     socket.send(opts.copyBook.raw.getBytes(Charsets.UTF_8), ZMQ.SNDMORE)
     socket.send(opts.gcsUri.getBytes(Charsets.UTF_8), ZMQ.SNDMORE)
     socket.send(encodeInt(opts.blkSize), 0)
     logger.debug("Waiting for ACK")
     val ack = socket.recv(0)
+    require(socket.hasReceiveMore)
+    val frame2 = socket.recv(0)
+    val lreclConfirmation = decodeInt(frame2)
     if (ack == null) {
       throw new RuntimeException("Timed out waiting for ACK from Receiver")
-    } else if (ack.toSeq == Protocol.Ack){
-      logger.debug("Received ACK")
+    } else if (ack.sameElements(Protocol.Ack) && lreclConfirmation == opts
+      .copyBook
+      .LRECL){
+      logger.debug(s"Received ACK and LRECL $lreclConfirmation = ${opts.copyBook.LRECL}")
       new V2SendCallable(opts.in, opts.blkSize, sockets)
     } else {
       throw new RuntimeException("Received invalid ACK message: $ack")
     }
   }
 
-  private def encodeInt(x: Int): Array[Byte] = {
+  def encodeInt(x: Int): Array[Byte] = {
     val buf = ByteBuffer.allocate(4)
     buf.putInt(x)
     buf.array()
+  }
+
+  def decodeInt(frame: Array[Byte]): Int = {
+    val buf = ByteBuffer.wrap(frame)
+    buf.getInt
   }
 
   private def encodeIdentity(x: Int): Array[Byte] = {
@@ -103,6 +116,8 @@ object V2SendCallable extends Logging {
   */
 final class V2SendCallable(in: ReadableByteChannel, blkSize: Int, sockets: Seq[Socket])
   extends Callable[Option[SendResult]] with AutoCloseable with Logging {
+  import V2SendCallable.TargetBlocks
+  import V2SendCallable.GzipBufferSize
 
   private var bytesIn = 0L
   private var bytesOut = 0L
@@ -111,24 +126,20 @@ final class V2SendCallable(in: ReadableByteChannel, blkSize: Int, sockets: Seq[S
   private var msgCount = 0L
   private var blocksBuffered = 0
   private var socketId = 0
-  private val TargetBlocks = 256
-  private val GzipBufferSize = 32*1024
   private val baos = new ByteArrayOutputStream(2*TargetBlocks*blkSize)
-  private val gzos = new ResettableGzipOutputStream(baos, GzipBufferSize, false)
+  private var gzos: GZIPOutputStream = new GZIPOutputStream(baos, GzipBufferSize, false)
 
   def flush(): Unit = {
     if (blocksBuffered > 0) {
       // Socket round-robin
-      socketId += 1
-      if (socketId >= sockets.length) socketId = 0
+      socketId = if (socketId < sockets.length-1) socketId + 1 else 0
+      val socket = sockets(socketId)
 
       // Send payload
       gzos.finish()
       val compressed = baos.toByteArray
-      sockets(socketId).send(compressed, 0, compressed.length, 0)
+      socket.send(compressed, 0, compressed.length, 0)
       baos.reset()
-      gzos.reset()
-      gzos.writeHeader()
 
       // Increment counters
       bytesOut += compressed.length
@@ -136,6 +147,7 @@ final class V2SendCallable(in: ReadableByteChannel, blkSize: Int, sockets: Seq[S
       if (msgCount % 10000 == 0) {
         logger.info("blocks sent: " + msgCount)
       }
+      gzos = new GZIPOutputStream(baos, GzipBufferSize, false)
       blocksBuffered = 0
     }
   }
@@ -165,7 +177,7 @@ final class V2SendCallable(in: ReadableByteChannel, blkSize: Int, sockets: Seq[S
         if (bb.position > 0) {
           bytesIn += bb.position
           gzos.write(data, 0, bb.position)
-          if (blocksBuffered > 256)
+          if (blocksBuffered >= TargetBlocks)
             flush()
         }
       }

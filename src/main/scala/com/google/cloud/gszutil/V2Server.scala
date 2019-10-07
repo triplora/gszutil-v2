@@ -27,7 +27,7 @@ import com.google.cloud.bqsh.GCS
 import com.google.cloud.bqsh.cmd.Result
 import com.google.cloud.gszutil.Util.Logging
 import com.google.cloud.gszutil.V2Server.V2Config
-import com.google.cloud.gszutil.io.{BlockingBoundedBufferPool, V2ActorArgs, V2ReceiveActor, V2ReceiveCallable}
+import com.google.cloud.gszutil.io.{BlockingBoundedBufferPool, V2ActorArgs, V2ReceiveActor, V2ReceiveCallable, V2SendCallable}
 import com.google.cloud.gszutil.orc.Protocol
 import com.google.cloud.gszutil.orc.Protocol.{PartFailed, UploadComplete}
 import com.google.cloud.storage.Storage
@@ -48,7 +48,7 @@ object V2Server extends Logging {
   case class V2Config(host: String = "127.0.0.1",
                       port: Int = 5570,
                       nWriters: Int = 4,
-                      bufCt: Int = 256,
+                      bufCt: Int = 32,
                       timeoutMinutes: Int = 300,
                       compress: Boolean = true,
                       daemon: Boolean = true,
@@ -58,6 +58,7 @@ object V2Server extends Logging {
                         .createScoped(StorageScopes.DEVSTORAGE_READ_WRITE)))
 
   def main(args: Array[String]): Unit = {
+    System.out.println("Build Info:\n" + Util.readS("build.txt"))
     Util.configureLogging(true)
     V2ConfigParser.parse(args) match {
       case Some(opts) =>
@@ -77,6 +78,12 @@ object V2Server extends Logging {
         System.exit(1)
     }
   }
+
+  def readId(frame: Array[Byte]): Int = {
+    val idBuf = ByteBuffer.wrap(frame)
+    idBuf.get()
+    idBuf.getInt
+  }
 }
 
 class V2Server(config: V2Config) extends Callable[Result] with Logging {
@@ -93,11 +100,19 @@ class V2Server(config: V2Config) extends Callable[Result] with Logging {
     // Receive Session Details
     logger.info(s"Waiting to receive session details on tcp://${config.host}:${config.port} ...")
     val frame1 = socket.recv(0)
+    socket.hasReceiveMore
+    logger.debug(s"Received ID frame ${V2Server.readId(frame1)}\n" + PackedDecimal.hexValue(frame1))
+
+    val frame1a = socket.recv(0)
+    logger.debug(s"Received BEGIN frame\n" + PackedDecimal.hexValue(frame1a))
+    require(frame1a.sameElements(Protocol.Begin))
 
     // Copy Book
     val frame2 = socket.recv(0)
-    val copyBook = CopyBook(new String(frame2, Charsets.UTF_8))
-    logger.info(s"Received Copy Book ${copyBook}")
+    val copyBookRaw = new String(frame2, Charsets.UTF_8)
+    logger.debug("Received Copy Book\n" + copyBookRaw)
+    val copyBook = CopyBook(copyBookRaw)
+    logger.info(s"Received Copy Book $copyBook")
 
     // GCS Prefix
     val frame3 = socket.recv(0)
@@ -112,8 +127,9 @@ class V2Server(config: V2Config) extends Callable[Result] with Logging {
     val blkSize = ByteBuffer.wrap(frame4).getInt
     logger.info(s"Received Block Size $blkSize")
 
-    logger.info(s"Allocating Buffer Pool with size ${blkSize*config.nWriters*config.bufCt}")
-    val pool = new BlockingBoundedBufferPool(blkSize, config.nWriters*config.bufCt)
+    val bufSize = 2 * blkSize * V2SendCallable.TargetBlocks
+    logger.info(s"Allocating Buffer Pool with size ${1L*bufSize*config.nWriters*config.bufCt}")
+    val pool = new BlockingBoundedBufferPool(bufSize, config.nWriters*config.bufCt)
 
     val wArgs = V2ActorArgs(socket, blkSize, config.nWriters, copyBook, V2Server.PartitionBytes,
       new Path(gcsUri), config.gcs, config.compress,
@@ -124,8 +140,9 @@ class V2Server(config: V2Config) extends Callable[Result] with Logging {
 
     // Send ACK to indicate server is ready to receive data
     logger.info("Sending ACK")
-    socket.send(frame1,ZMQ.SNDMORE);
-    socket.send(Protocol.Ack.toArray,0);
+    socket.send(frame1,ZMQ.SNDMORE) // sender identity
+    socket.send(Protocol.Ack,ZMQ.SNDMORE) // ACK message
+    socket.send(V2SendCallable.encodeInt(copyBook.LRECL),0) // LRECL confirmation
 
     // Set termination callback
     sys.whenTerminated.onComplete{

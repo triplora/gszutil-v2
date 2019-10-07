@@ -17,6 +17,11 @@ object V2ConfigParser extends OptionParser[V2Config]("gReceiver") {
     .action{(x,c) => c.copy(nWriters = x)}
     .text("number of concurrent writers (default: 4)")
 
+  opt[Int]("bufCt")
+    .optional()
+    .action{(x,c) => c.copy(bufCt = x)}
+    .text("number of buffers (default: 32)")
+
   opt[String]("bindAddress")
     .optional()
     .action{(x,c) => c.copy(host = x)}

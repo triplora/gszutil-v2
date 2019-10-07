@@ -16,12 +16,13 @@
 
 package com.google.cloud.gszutil.io
 
-import java.io.Gzip
+import java.nio.ByteBuffer
 import java.util.concurrent.Callable
 
 import akka.actor.ActorContext
 import akka.io.BufferPool
 import akka.routing.Router
+import com.google.cloud.gszutil.Gzip
 import com.google.cloud.gszutil.Util.Logging
 import org.zeromq.ZMQ.Socket
 import org.zeromq.{SocketType, ZContext}
@@ -51,29 +52,37 @@ class V2ReceiveCallable(socket: Socket, blkSize: Int, compress: Boolean, bufferP
     var msgCount = 0L
     var msgCount2 = 0L
     var bytesOut = 0L
-    val gzip = new Gzip()
+
+    // Buffer to receive compressed data
+    val inputBuffer = ByteBuffer.allocate(2*blkSize*256)
 
     try {
       while (!Thread.currentThread.isInterrupted) {
         val id = socket.recv(0)
-        val data = socket.recv(0)
+
+        inputBuffer.clear()
+        val bytesReceived = socket.recvByteBuffer(inputBuffer,0)
         msgCount += 1
-        if (data != null && data.nonEmpty) {
+        if (bytesReceived > 0) {
           msgCount2 += 1
+          if (msgCount2 % 1000 == 0){
+            logger.debug(s"Received $msgCount2")
+          }
           if (compress) {
-            val buf = bufferPool.acquire()
-            buf.clear()
-            buf.put(gzip.decompress(data))
-            if (buf.position > 0) {
-              bytesIn += data.length
-              bytesOut += buf.position
+            // Buffer to receive decompressed data
+            val outputBuffer = bufferPool.acquire()
+            outputBuffer.clear()
+            outputBuffer.put(Gzip.decompress(inputBuffer.array, 0, inputBuffer.limit))
+            if (outputBuffer.position > 0) {
+              bytesIn += inputBuffer.limit
+              bytesOut += outputBuffer.position
               if (router != null && context != null) {
-                buf.flip()
-                router.route(buf, context.self)
+                outputBuffer.flip()
+                router.route(outputBuffer, context.self)
               }
             }
           } else {
-            bytesIn += data.length
+            bytesIn += inputBuffer.limit
           }
         } else {
           return Option(ReceiveResult(bytesIn, bytesOut, msgCount, msgCount2))
