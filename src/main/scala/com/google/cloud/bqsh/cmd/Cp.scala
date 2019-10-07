@@ -71,9 +71,8 @@ object Cp extends Command[GsUtilConfig] with Logging {
           c.projectId, c.zone, c.subnet, gce, c.machineType))
       } else None
       val host = remoteHost.map(_.ip).getOrElse(c.remoteHost)
-      val nConnections = c.parallelism
       val opts = ReaderOpts(in, copyBook, c.destinationUri, in.blkSize,
-        new ZContext(), nConnections, host, c.remotePort)
+        new ZContext(), c.nConnections, host, c.remotePort)
       logger.info("Starting Send...")
       val res = V2SendCallable(opts).call()
       if (res.isDefined) {

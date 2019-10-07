@@ -16,8 +16,8 @@
 
 package com.google.cloud.gszutil.io
 
+import java.io.Gzip
 import java.util.concurrent.Callable
-import java.util.zip.Inflater
 
 import akka.actor.ActorContext
 import akka.io.BufferPool
@@ -29,7 +29,6 @@ import org.zeromq.{SocketType, ZContext}
 object V2ReceiveCallable {
   val TwoMegaBytes: Int = 2*1024*1024
   val ReceiveQueueSize: Int = 8*1024
-//  case class ReceiverOpts(ctx: ZContext, host: String, port: Int, blkSize: Int,compress: Boolean, bufferPool: BufferPool, router: Router, context: ActorContext)
 
   def createSocket(ctx: ZContext, host: String, port: Int): Socket = {
     val socket = ctx.createSocket(SocketType.ROUTER)
@@ -52,7 +51,7 @@ class V2ReceiveCallable(socket: Socket, blkSize: Int, compress: Boolean, bufferP
     var msgCount = 0L
     var msgCount2 = 0L
     var bytesOut = 0L
-    val inflater = new Inflater(true)
+    val gzip = new Gzip()
 
     try {
       while (!Thread.currentThread.isInterrupted) {
@@ -62,15 +61,12 @@ class V2ReceiveCallable(socket: Socket, blkSize: Int, compress: Boolean, bufferP
         if (data != null && data.nonEmpty) {
           msgCount2 += 1
           if (compress) {
-            inflater.reset()
-            inflater.setInput(data, 0, data.length)
             val buf = bufferPool.acquire()
             buf.clear()
-            val n = inflater.inflate(buf.array,0,buf.limit)
-            if (n > 0) {
-              buf.position(n)
+            buf.put(gzip.decompress(data))
+            if (buf.position > 0) {
               bytesIn += data.length
-              bytesOut += n
+              bytesOut += buf.position
               if (router != null && context != null) {
                 buf.flip()
                 router.route(buf, context.self)

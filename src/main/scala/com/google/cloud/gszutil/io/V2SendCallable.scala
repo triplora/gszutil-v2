@@ -19,12 +19,13 @@ package com.google.cloud.gszutil.io
 import java.nio.ByteBuffer
 import java.nio.channels.ReadableByteChannel
 import java.util.concurrent.Callable
-import java.util.zip.Deflater
+import java.util.zip.ResettableGzipOutputStream
 
 import com.google.cloud.gszutil.CopyBook
 import com.google.cloud.gszutil.Util.Logging
 import com.google.cloud.gszutil.orc.Protocol
 import com.google.common.base.Charsets
+import org.apache.commons.io.output.ByteArrayOutputStream
 import org.zeromq.ZMQ.Socket
 import org.zeromq.{SocketType, ZContext, ZMQ}
 
@@ -103,20 +104,45 @@ object V2SendCallable extends Logging {
 final class V2SendCallable(in: ReadableByteChannel, blkSize: Int, sockets: Seq[Socket])
   extends Callable[Option[SendResult]] with AutoCloseable with Logging {
 
+  private var bytesIn = 0L
+  private var bytesOut = 0L
+  private var bytesRead = 0L
+  private var recordCount = 0L
+  private var msgCount = 0L
+  private var blocksBuffered = 0
+  private var socketId = 0
+  private val TargetBlocks = 256
+  private val GzipBufferSize = 32*1024
+  private val baos = new ByteArrayOutputStream(2*TargetBlocks*blkSize)
+  private val gzos = new ResettableGzipOutputStream(baos, GzipBufferSize, false)
+
+  def flush(): Unit = {
+    if (blocksBuffered > 0) {
+      // Socket round-robin
+      socketId += 1
+      if (socketId >= sockets.length) socketId = 0
+
+      // Send payload
+      gzos.finish()
+      val compressed = baos.toByteArray
+      sockets(socketId).send(compressed, 0, compressed.length, 0)
+      baos.reset()
+      gzos.reset()
+      gzos.writeHeader()
+
+      // Increment counters
+      bytesOut += compressed.length
+      msgCount += 1
+      if (msgCount % 10000 == 0) {
+        logger.info("blocks sent: " + msgCount)
+      }
+      blocksBuffered = 0
+    }
+  }
+
   override def call(): Option[SendResult] = {
-    var bytesIn = 0L
-    var bytesOut = 0L
-    var bytesRead = 0L
-    var recordCount = 0L
-    var msgCount = 0L
     val data = new Array[Byte](blkSize)
     val bb = ByteBuffer.wrap(data)
-
-    val buf = new Array[Byte](blkSize*2)
-    val deflater = new Deflater(3, true)
-    deflater.reset()
-
-    var i: Int = 0
     try {
       while (!Thread.currentThread.isInterrupted) {
         bb.clear
@@ -125,6 +151,7 @@ final class V2SendCallable(in: ReadableByteChannel, blkSize: Int, sockets: Seq[S
         bytesRead = in.read(bb)
         if (bytesRead < 0) {
           logger.info(s"Input exhausted after $bytesIn bytes $msgCount messages")
+          flush()
           close()
           return Option(SendResult(bytesIn, bytesOut, msgCount))
         }
@@ -133,32 +160,13 @@ final class V2SendCallable(in: ReadableByteChannel, blkSize: Int, sockets: Seq[S
           if (bytesRead > 0)
             recordCount += 1
         }
+        blocksBuffered += 1
 
         if (bb.position > 0) {
           bytesIn += bb.position
-
-          // Load deflater
-          deflater.setInput(data, 0, bb.position)
-          deflater.finish()
-
-          // Compress bytes
-          val compressed = deflater.deflate(buf, 0, buf.length, Deflater.FULL_FLUSH)
-          deflater.reset()
-          if (compressed > 0) {
-            // Socket round-robin
-            i += 1
-            if (i >= sockets.length) i = 0
-
-            // Send payload
-            sockets(i).send(buf,0, compressed, 0)
-
-            // Increment counters
-            bytesOut += compressed
-            msgCount += 1
-            if (msgCount % 10000 == 0){
-              logger.info("blocks sent: " + msgCount)
-            }
-          }
+          gzos.write(data, 0, bb.position)
+          if (blocksBuffered > 256)
+            flush()
         }
       }
       logger.warn("thread was interrupted")
