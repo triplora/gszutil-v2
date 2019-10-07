@@ -83,7 +83,7 @@ object Cp extends Command[GsUtilConfig] with Logging {
         logger.error("Dataset Upload Failed")
         result = Result.Failure("")
       }
-      if (c.remoteHost.nonEmpty) {
+      if (c.remoteHost.isEmpty) {
         if (c.projectId.nonEmpty)
           GCE.terminateVM(instanceId, c.projectId, c.zone, gce)
         else

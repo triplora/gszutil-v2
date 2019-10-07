@@ -69,7 +69,13 @@ class CCASSLSocketFactory extends SSLSocketFactory with Logging {
         x.setSendBufferSize(2 * 1024 * 1024)
         x.setEnabledCipherSuites(Ciphers)
         x.setEnabledProtocols(Protocols)
-        logger.debug("created " + x.getClass.getCanonicalName + " with Protocols: " + x.getEnabledProtocols.mkString(",") + " Cipher Suites: "+x.getEnabledCipherSuites.mkString(",") + " Send Buffer: " + x.getSendBufferSize + " Receive Buffer: " + x.getReceiveBufferSize + " local address: " + x.getLocalAddress + ":" + x.getLocalPort)
+        logger.debug("Created " + x.getClass.getCanonicalName +
+          " Protocols: " + x.getEnabledProtocols.mkString(",") +
+          " Cipher Suites: " + x.getEnabledCipherSuites.mkString(",") +
+          " Send Buffer: " + x.getSendBufferSize +
+          " Receive Buffer: " + x.getReceiveBufferSize +
+          " Local Address: " + x.getLocalAddress + ":" + x.getLocalPort +
+          " Remote Address: " + host + ":" + port)
       case x =>
         logger.warn(s"${x.getClass.getCanonicalName} is not an instance of SSLSocket ")
     }

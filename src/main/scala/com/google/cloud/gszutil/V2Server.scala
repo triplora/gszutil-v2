@@ -95,8 +95,8 @@ class V2Server(config: V2Config) extends Callable[Result] with Logging {
     val gcsUri = new String(frame3, Charsets.UTF_8).stripSuffix("/")
     logger.info(s"Received GCS URI $gcsUri")
     val uri = new URI(gcsUri)
-    Preconditions.checkArgument(uri.getScheme == "gs", "scheme must be gs")
-    Preconditions.checkArgument(uri.getAuthority.nonEmpty, "bucket must be provided")
+    require(uri.getScheme == "gs", "scheme must be gs")
+    require(uri.getAuthority.nonEmpty, "bucket must be provided")
 
     // Block Size
     val frame4 = socket.recv(0)
