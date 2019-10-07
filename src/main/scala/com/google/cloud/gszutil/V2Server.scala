@@ -51,6 +51,7 @@ object V2Server extends Logging {
                       bufCt: Int = 256,
                       timeoutMinutes: Int = 300,
                       compress: Boolean = true,
+                      daemon: Boolean = true,
                       maxErrorPct: Double = 0.00d,
                       gcs: Storage = GCS.defaultClient(GoogleCredentials
                         .getApplicationDefault
@@ -61,8 +62,16 @@ object V2Server extends Logging {
     V2ConfigParser.parse(args) match {
       case Some(opts) =>
         val server = new V2Server(opts)
-        val rc = server.call()
-        System.exit(rc.exitCode)
+        if (opts.daemon){
+          while (!Thread.currentThread().isInterrupted){
+            val rc = server.call()
+            System.out.println(s"V2Server instance returned exit code $rc")
+          }
+        } else {
+          val rc = server.call()
+          System.out.println(s"V2Server instance returned exit code $rc")
+          System.exit(rc.exitCode)
+        }
       case _ =>
         System.err.println(s"Unabled to parse args '${args.mkString(" ")}'")
         System.exit(1)

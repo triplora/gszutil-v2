@@ -32,6 +32,11 @@ object V2ConfigParser extends OptionParser[V2Config]("gReceiver") {
     .action{(x,c) => c.copy(timeoutMinutes = x)}
     .text("(optional) Timeout in minutes. (default: 1 day)")
 
+  opt[Unit]("daemon")
+    .optional()
+    .action{(_,c) => c.copy(daemon = true)}
+    .text("(optional) Wait for another session after completion (default: false)")
+
   opt[Double]("max_error_pct")
     .optional()
     .text("job failure threshold for row decoding errors (default: 0.0")
