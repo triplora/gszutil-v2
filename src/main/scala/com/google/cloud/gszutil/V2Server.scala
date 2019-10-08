@@ -18,6 +18,7 @@ package com.google.cloud.gszutil
 
 import java.net.URI
 import java.nio.ByteBuffer
+import java.util
 import java.util.concurrent.{Callable, TimeoutException}
 
 import akka.actor.{ActorSystem, Inbox, Props, Terminated}
@@ -48,7 +49,7 @@ object V2Server extends Logging {
   case class V2Config(host: String = "127.0.0.1",
                       port: Int = 5570,
                       nWriters: Int = 4,
-                      bufCt: Int = 32,
+                      bufCt: Int = 64,
                       timeoutMinutes: Int = 300,
                       compress: Boolean = true,
                       daemon: Boolean = true,
@@ -105,7 +106,7 @@ class V2Server(config: V2Config) extends Callable[Result] with Logging {
 
     val frame1a = socket.recv(0)
     logger.debug(s"Received BEGIN frame\n" + PackedDecimal.hexValue(frame1a))
-    require(frame1a.sameElements(Protocol.Begin))
+    require(util.Arrays.equals(frame1a,Protocol.Begin), "expected BEGIN message")
 
     // Copy Book
     val frame2 = socket.recv(0)

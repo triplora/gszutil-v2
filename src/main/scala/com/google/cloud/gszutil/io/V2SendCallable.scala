@@ -18,10 +18,11 @@ package com.google.cloud.gszutil.io
 
 import java.nio.ByteBuffer
 import java.nio.channels.ReadableByteChannel
+import java.util
 import java.util.concurrent.Callable
 import java.util.zip.GZIPOutputStream
 
-import com.google.cloud.gszutil.CopyBook
+import com.google.cloud.gszutil.{CopyBook, PackedDecimal}
 import com.google.cloud.gszutil.Util.Logging
 import com.google.cloud.gszutil.orc.Protocol
 import com.google.common.base.Charsets
@@ -31,7 +32,7 @@ import org.zeromq.{SocketType, ZContext, ZMQ}
 
 object V2SendCallable extends Logging {
   final val FiveMinutesInMillis: Int = 5*60*1000
-  final val TargetBlocks = 256
+  final val TargetBlocks = 128
   final val GzipBufferSize = 32*1024
   case class ReaderOpts(in: ReadableByteChannel,
                         copyBook: CopyBook,
@@ -62,19 +63,22 @@ object V2SendCallable extends Logging {
     }
     val socket = sockets.head
     socket.setReceiveTimeOut(FiveMinutesInMillis)
-    logger.debug("Sending CopyBook, GCS prefix and block size")
+    logger.debug(s"Sending BEGIN\n${PackedDecimal.hexValue(Protocol.Begin)}")
     socket.send(Protocol.Begin, ZMQ.SNDMORE)
+    logger.debug(s"CopyBook with LRECL ${opts.copyBook.LRECL}")
     socket.send(opts.copyBook.raw.getBytes(Charsets.UTF_8), ZMQ.SNDMORE)
+    logger.debug(s"GCS prefix ${opts.gcsUri}")
     socket.send(opts.gcsUri.getBytes(Charsets.UTF_8), ZMQ.SNDMORE)
+    logger.debug(s"Block size ${opts.blkSize}")
     socket.send(encodeInt(opts.blkSize), 0)
     logger.debug("Waiting for ACK")
     val ack = socket.recv(0)
-    require(socket.hasReceiveMore)
+    require(socket.hasReceiveMore, "expected more frames")
     val frame2 = socket.recv(0)
     val lreclConfirmation = decodeInt(frame2)
     if (ack == null) {
       throw new RuntimeException("Timed out waiting for ACK from Receiver")
-    } else if (ack.sameElements(Protocol.Ack) && lreclConfirmation == opts
+    } else if (util.Arrays.equals(ack, Protocol.Ack) && lreclConfirmation == opts
       .copyBook
       .LRECL){
       logger.debug(s"Received ACK and LRECL $lreclConfirmation = ${opts.copyBook.LRECL}")
