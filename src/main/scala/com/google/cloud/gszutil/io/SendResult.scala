@@ -16,4 +16,4 @@
 
 package com.google.cloud.gszutil.io
 
-case class SendResult(bytesIn: Long, bytesOut: Long, msgCount: Long)
+case class SendResult(bytesIn: Long, bytesOut: Long, msgCount: Long, rc: Int)

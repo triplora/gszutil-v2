@@ -64,18 +64,22 @@ object Cp extends Command[GsUtilConfig] with Logging {
     if (c.remote){
       logger.info("Starting Dataset Upload")
       val instanceId = s"grecv-${zos.jobId}"
-      val gce = GCE.defaultClient(creds)
       val remoteHost = if (c.remoteHost.isEmpty) {
         logger.info(s"Creating Compute Instance $instanceId")
         Option(GCE.createVM(instanceId, c.pkgUri, c.serviceAccount,
-          c.projectId, c.zone, c.subnet, gce, c.machineType))
+          c.projectId, c.zone, c.subnet, GCE.defaultClient(creds), c.machineType))
       } else None
       val host = remoteHost.map(_.ip).getOrElse(c.remoteHost)
       val opts = ReaderOpts(in, copyBook, c.destinationUri, in.blkSize,
         new ZContext(), c.nConnections, host, c.remotePort)
       logger.info("Starting Send...")
       val res = V2SendCallable(opts).call()
-      if (res.isDefined) {
+      res.foreach(r => logger.debug(
+        s"""return code: ${r.rc}
+           |bytes in: ${r.bytesIn}
+           |bytes out: ${r.bytesOut}
+           |msgCount: ${r.msgCount}""".stripMargin))
+      if (res.isDefined && res.get.rc == 0) {
         logger.info("Dataset Upload Complete")
         result = Result.Success
       } else {
@@ -84,7 +88,7 @@ object Cp extends Command[GsUtilConfig] with Logging {
       }
       if (c.remoteHost.isEmpty) {
         if (c.projectId.nonEmpty)
-          GCE.terminateVM(instanceId, c.projectId, c.zone, gce)
+          GCE.terminateVM(instanceId, c.projectId, c.zone, GCE.defaultClient(creds))
         else
           logger.warn("projectId not set")
       }

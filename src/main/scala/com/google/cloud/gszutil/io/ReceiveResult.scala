@@ -16,4 +16,4 @@
 
 package com.google.cloud.gszutil.io
 
-case class ReceiveResult(bytesIn: Long, bytesOut: Long, msgCount: Long, msgCount2: Long)
+case class ReceiveResult(bytesIn: Long, bytesOut: Long, msgCount: Long, msgCount2: Long, rc: Int)

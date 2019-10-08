@@ -3,7 +3,8 @@ package com.google.cloud.bqsh
 import com.google.api.client.googleapis.util.Utils
 import com.google.api.client.json.jackson2.JacksonFactory
 import com.google.api.services.compute.Compute
-import com.google.api.services.compute.model.{AccessConfig, AttachedDisk, AttachedDiskInitializeParams, Instance, Metadata, NetworkInterface, ServiceAccount}
+import com.google.api.services.compute.model.{AttachedDisk, AttachedDiskInitializeParams, Instance,
+  Metadata, NetworkInterface, ServiceAccount}
 import com.google.auth.Credentials
 import com.google.auth.http.HttpCredentialsAdapter
 import com.google.cloud.gszutil.Util.Logging
@@ -12,13 +13,18 @@ import com.google.common.collect.ImmutableList
 import scala.util.Random
 
 object GCE extends Logging {
+  private var client: Compute = _
+
   def defaultClient(credentials: Credentials): Compute = {
-    new Compute.Builder(
-      Utils.getDefaultTransport,
-      Utils.getDefaultJsonFactory,
-      new HttpCredentialsAdapter(credentials))
-      .setApplicationName(Bqsh.UserAgent)
-      .build();
+    if (client == null)
+      client = new Compute.Builder(
+        Utils.getDefaultTransport,
+        Utils.getDefaultJsonFactory,
+        new HttpCredentialsAdapter(credentials))
+        .setApplicationName(Bqsh.UserAgent)
+        .build()
+
+    client
   }
 
   val Debian10 = "projects/debian-cloud/global/images/debian-10-buster-v20190916"

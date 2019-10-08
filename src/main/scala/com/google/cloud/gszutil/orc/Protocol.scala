@@ -21,6 +21,9 @@ import com.google.common.base.Charsets
 object Protocol {
   val Ack: Array[Byte] = "ACK".getBytes(Charsets.UTF_8)
   val Begin: Array[Byte] = "BEGIN".getBytes(Charsets.UTF_8)
+  val BlocksGzip: Array[Byte] = "BLOCKSGZIP".getBytes(Charsets.UTF_8)
+  val Fin: Array[Byte] = "FIN".getBytes(Charsets.UTF_8)
+  val Err: Array[Byte] = "ERR".getBytes(Charsets.UTF_8)
   case class PartComplete(path: String, bytesWritten: Long)
   case class FinishedWriting(bytesIn: Long, bytesOut: Long)
   case class PartFailed(msg: String)
