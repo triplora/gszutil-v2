@@ -48,13 +48,13 @@ object V2ReceiveCallable {
 class V2ReceiveCallable(socket: Socket, blkSize: Int, compress: Boolean, bufferPool: BufferPool,
                         router: Router, context: ActorContext)
   extends Callable[Option[ReceiveResult]] with Logging {
-  private var rc = 1
 
   override def call: Option[ReceiveResult] = {
     var bytesIn = 0L
     var msgCount = 0L
     var msgCount2 = 0L
     var bytesOut = 0L
+    var rc = 1
     val inflater = new Inflater(true)
 
     // Buffer to receive compressed data
@@ -98,14 +98,20 @@ class V2ReceiveCallable(socket: Socket, blkSize: Int, compress: Boolean, bufferP
           } else {
             bytesIn += inputBuffer.limit
           }
+        } else if (bytesReceived == -1) {
+          rc = 1
+          logger.info("Sending ERR")
+          socket.send(id, ZMQ.ZMQ_SNDMORE)
+          socket.send(Protocol.Err, 0)
+          return Option(ReceiveResult(bytesIn, bytesOut, msgCount, msgCount2, rc))
         } else {
           rc = 0
+          logger.info("Sending FIN")
+          socket.send(id, ZMQ.ZMQ_SNDMORE)
           socket.send(Protocol.Fin, 0)
           return Option(ReceiveResult(bytesIn, bytesOut, msgCount, msgCount2, rc))
         }
       }
-      if (rc != 0)
-        socket.send(Protocol.Err, ZMQ.ZMQ_DONTWAIT)
       Option(ReceiveResult(bytesIn, bytesOut, msgCount, msgCount2, rc))
     } catch {
       case e: Exception =>
