@@ -128,7 +128,7 @@ class V2Server(config: V2Config) extends Callable[Result] with Logging {
     val blkSize = ByteBuffer.wrap(frame4).getInt
     logger.info(s"Received Block Size $blkSize")
 
-    val bufSize = 2 * blkSize * V2SendCallable.TargetBlocks
+    val bufSize = 2 * blkSize
     logger.info(s"Allocating Buffer Pool with size ${1L*bufSize*config.nWriters*config.bufCt}")
     val pool = new BlockingBoundedBufferPool(bufSize, config.nWriters*config.bufCt)
 

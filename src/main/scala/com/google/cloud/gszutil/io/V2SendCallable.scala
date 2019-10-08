@@ -20,13 +20,12 @@ import java.nio.ByteBuffer
 import java.nio.channels.ReadableByteChannel
 import java.util
 import java.util.concurrent.Callable
-import java.util.zip.GZIPOutputStream
+import java.util.zip.Deflater
 
 import com.google.cloud.gszutil.{CopyBook, PackedDecimal}
 import com.google.cloud.gszutil.Util.Logging
 import com.google.cloud.gszutil.orc.Protocol
 import com.google.common.base.Charsets
-import org.apache.commons.io.output.ByteArrayOutputStream
 import org.zeromq.ZMQ.Socket
 import org.zeromq.{SocketType, ZContext, ZMQ}
 
@@ -120,55 +119,21 @@ object V2SendCallable extends Logging {
   */
 final class V2SendCallable(in: ReadableByteChannel, blkSize: Int, sockets: Seq[Socket])
   extends Callable[Option[SendResult]] with Logging {
-  import V2SendCallable.TargetBlocks
-  import V2SendCallable.GzipBufferSize
-
-  private var bytesIn = 0L
-  private var bytesOut = 0L
-  private var bytesRead = 0L
-  private var recordCount = 0L
-  private var msgCount = 0L
-  private var blocksBuffered = 0
-  private var socketId = 0
-  private val bufSize = 2*TargetBlocks*blkSize
-  private val baos = new ByteArrayOutputStream(bufSize)
-  private val compressBuffer = ByteBuffer.allocate(bufSize)
-  private var gzos: GZIPOutputStream = new GZIPOutputStream(baos, GzipBufferSize, false)
-
-  def flush(): Unit = {
-    if (blocksBuffered > 0) {
-      // Socket round-robin
-      socketId = if (socketId < sockets.length-1) socketId + 1 else 0
-      val socket = sockets(socketId)
-
-      // Buffer payload
-      gzos.finish()
-      compressBuffer.clear()
-      compressBuffer.put(baos.toByteArray)
-      compressBuffer.flip()
-
-      // Send payload
-      socket.send(Protocol.BlocksGzip, ZMQ.SNDMORE)
-      val bytesQueued = socket.sendByteBuffer(compressBuffer, 0)
-      if (bytesQueued != compressBuffer.limit)
-        logger.warn(s"bytesQueued $bytesQueued != compressBuffer.limit ${compressBuffer.limit}")
-
-      // Increment counters
-      bytesOut += bytesQueued
-      msgCount += 1
-      if (msgCount % 1000 == 0)
-        logger.info("Sent " + msgCount)
-
-      // Prepare to receive more
-      baos.reset()
-      gzos = new GZIPOutputStream(baos, GzipBufferSize, false)
-      blocksBuffered = 0
-    }
-  }
 
   override def call(): Option[SendResult] = {
+    var bytesIn = 0L
+    var bytesOut = 0L
+    var bytesRead = 0L
+    var recordCount = 0L
+    var msgCount = 0L
+    var socketId = 0
     val data = new Array[Byte](blkSize)
     val bb = ByteBuffer.wrap(data)
+
+    val buf = new Array[Byte](blkSize*2)
+    val deflater = new Deflater(3, true)
+    deflater.reset()
+
     try {
       while (!Thread.currentThread.isInterrupted) {
         bb.clear
@@ -177,7 +142,6 @@ final class V2SendCallable(in: ReadableByteChannel, blkSize: Int, sockets: Seq[S
         bytesRead = in.read(bb)
         if (bytesRead < 0) {
           logger.info(s"Input exhausted after $bytesIn bytes $msgCount messages")
-          flush()
           val rc = finish()
           return Option(SendResult(bytesIn, bytesOut, msgCount, rc))
         }
@@ -186,13 +150,32 @@ final class V2SendCallable(in: ReadableByteChannel, blkSize: Int, sockets: Seq[S
           if (bytesRead > 0)
             recordCount += 1
         }
-        blocksBuffered += 1
 
         if (bb.position > 0) {
           bytesIn += bb.position
-          gzos.write(data, 0, bb.position)
-          if (blocksBuffered >= TargetBlocks)
-            flush()
+
+          // Load deflater
+          deflater.setInput(data, 0, bb.position)
+          deflater.finish()
+
+          // Compress bytes
+          val compressed = deflater.deflate(buf, 0, buf.length, Deflater.FULL_FLUSH)
+          deflater.reset()
+          if (compressed > 0) {
+            // Socket round-robin
+            socketId += 1
+            if (socketId >= sockets.length) socketId = 0
+
+            // Send payload
+            sockets(socketId).send(buf,0, compressed, 0)
+
+            // Increment counters
+            bytesOut += compressed
+            msgCount += 1
+            if (msgCount % 10000 == 0){
+              logger.info("blocks sent: " + msgCount)
+            }
+          }
         }
       }
       logger.warn("thread was interrupted")
@@ -216,7 +199,6 @@ final class V2SendCallable(in: ReadableByteChannel, blkSize: Int, sockets: Seq[S
 
     logger.info("Sending null frames to signal end of data")
     val socket = sockets.head
-    socket.send(Protocol.BlocksGzip, ZMQ.SNDMORE)
     socket.send(Array.empty[Byte], 0)
     socket.setReceiveTimeOut(30000) // Wait for up to 30 seconds
     val closeMsg = socket.recv(0)

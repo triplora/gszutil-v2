@@ -17,6 +17,7 @@
 package com.google.cloud.gszutil.io
 
 import java.util.concurrent.Callable
+import java.util.zip.Inflater
 
 import akka.actor.ActorContext
 import akka.io.BufferPool
@@ -54,6 +55,7 @@ class V2ReceiveCallable(socket: Socket, blkSize: Int, compress: Boolean, bufferP
     var msgCount = 0L
     var msgCount2 = 0L
     var bytesOut = 0L
+    val inflater = new Inflater(true)
 
     // Buffer to receive compressed data
     val inputBuffer = bufferPool.acquire()
@@ -69,42 +71,37 @@ class V2ReceiveCallable(socket: Socket, blkSize: Int, compress: Boolean, bufferP
         }
 
         inputBuffer.clear()
-        val msgType = socket.recv(0)
-        if (!msgType.sameElements(Protocol.BlocksGzip)){
-          logger.warn(s"Received unexpected msgType ${PackedDecimal.hexValue(msgType)}")
-        }
 
-        if (socket.hasReceiveMore) {
-          val bytesReceived = socket.recvByteBuffer(inputBuffer, 0)
-          msgCount += 1
-          if (bytesReceived > 0) {
-            msgCount2 += 1
-            if (msgCount2 % 1000 == 0) {
-              logger.debug(s"Received $msgCount2")
-            }
-            if (compress) {
-              // Buffer to receive decompressed data
-              val outputBuffer = bufferPool.acquire()
-              outputBuffer.clear()
-              outputBuffer.put(Gzip.decompress(inputBuffer.array, 0, inputBuffer.limit))
-              if (outputBuffer.position > 0) {
-                bytesIn += inputBuffer.limit
-                bytesOut += outputBuffer.position
-                if (router != null && context != null) {
-                  outputBuffer.flip()
-                  router.route(outputBuffer, context.self)
-                }
-              }
-            } else {
+        val bytesReceived = socket.recvByteBuffer(inputBuffer, 0)
+        msgCount += 1
+        if (bytesReceived > 0) {
+          msgCount2 += 1
+          if (msgCount2 % 1000 == 0) {
+            logger.debug(s"Received $msgCount2")
+          }
+          if (compress) {
+            inflater.reset()
+            inputBuffer.flip()
+            inflater.setInput(inputBuffer.array(), 0, inputBuffer.limit())
+            val buf = bufferPool.acquire()
+            buf.clear()
+            val n = inflater.inflate(buf.array,0,buf.limit)
+            if (n > 0) {
+              buf.position(n)
               bytesIn += inputBuffer.limit
+              bytesOut += n
+              if (router != null && context != null) {
+                buf.flip()
+                router.route(buf, context.self)
+              }
             }
           } else {
-            rc = 0
-            socket.send(Protocol.Fin, 0)
-            return Option(ReceiveResult(bytesIn, bytesOut, msgCount, msgCount2, rc))
+            bytesIn += inputBuffer.limit
           }
         } else {
-          logger.warn(s"Message did not include data frame")
+          rc = 0
+          socket.send(Protocol.Fin, 0)
+          return Option(ReceiveResult(bytesIn, bytesOut, msgCount, msgCount2, rc))
         }
       }
       if (rc != 0)
