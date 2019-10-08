@@ -57,10 +57,16 @@ class V2ReceiveCallable(socket: Socket, blkSize: Int, compress: Boolean, bufferP
 
     // Buffer to receive compressed data
     val inputBuffer = bufferPool.acquire()
+    socket.setReceiveTimeOut(30000)
 
     try {
       while (!Thread.currentThread.isInterrupted) {
         val id = socket.recv(0)
+        if (id == null) {
+          rc = 1
+          logger.error("Timed out waiting for receive")
+          return Option(ReceiveResult(bytesIn, bytesOut, msgCount, msgCount2, rc))
+        }
 
         inputBuffer.clear()
         val msgType = socket.recv(0)
