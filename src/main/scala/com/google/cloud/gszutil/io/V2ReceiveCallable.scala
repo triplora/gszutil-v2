@@ -22,7 +22,6 @@ import java.util.zip.Inflater
 import akka.actor.ActorContext
 import akka.io.BufferPool
 import akka.routing.Router
-import com.google.cloud.gszutil.{Gzip, PackedDecimal}
 import com.google.cloud.gszutil.Util.Logging
 import com.google.cloud.gszutil.orc.Protocol
 import org.zeromq.ZMQ.Socket
@@ -108,7 +107,8 @@ class V2ReceiveCallable(socket: Socket, blkSize: Int, compress: Boolean, bufferP
           rc = 0
           logger.info("Sending FIN")
           socket.send(id, ZMQ.ZMQ_SNDMORE)
-          socket.send(Protocol.Fin, 0)
+          socket.send(Protocol.Fin, ZMQ.ZMQ_SNDMORE)
+          socket.send(V2SendCallable.encodeLong(msgCount2))
           return Option(ReceiveResult(bytesIn, bytesOut, msgCount, msgCount2, rc))
         }
       }

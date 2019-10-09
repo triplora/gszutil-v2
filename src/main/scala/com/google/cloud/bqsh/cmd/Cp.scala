@@ -78,7 +78,8 @@ object Cp extends Command[GsUtilConfig] with Logging {
         s"""return code: ${r.rc}
            |bytes in: ${r.bytesIn}
            |bytes out: ${r.bytesOut}
-           |msgCount: ${r.msgCount}""".stripMargin))
+           |msgCount: ${r.msgCount}
+           |yieldCount: ${r.yieldCount}""".stripMargin))
       if (res.isDefined && res.get.rc == 0) {
         logger.info("Dataset Upload Complete")
         result = Result.Success
