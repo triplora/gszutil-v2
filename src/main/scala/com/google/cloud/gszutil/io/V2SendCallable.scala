@@ -141,8 +141,7 @@ final class V2SendCallable(in: ReadableByteChannel, blkSize: Int, sockets: Seq[S
     var socketId = 0
     val data = new Array[Byte](blkSize)
     val bb = ByteBuffer.wrap(data)
-
-    val buf = new Array[Byte](blkSize*2)
+    val outputBuffer = ByteBuffer.allocate(blkSize*2)
     val deflater = new Deflater(3, true)
     deflater.reset()
 
@@ -175,7 +174,8 @@ final class V2SendCallable(in: ReadableByteChannel, blkSize: Int, sockets: Seq[S
           deflater.finish()
 
           // Compress bytes
-          val compressed = deflater.deflate(buf, 0, buf.length, Deflater.FULL_FLUSH)
+          val compressed = deflater.deflate(outputBuffer.array, 0, outputBuffer.capacity, Deflater
+            .FULL_FLUSH)
           deflater.reset()
           if (compressed > 0) {
             // Socket round-robin
@@ -183,13 +183,19 @@ final class V2SendCallable(in: ReadableByteChannel, blkSize: Int, sockets: Seq[S
             if (socketId >= sockets.length) socketId = 0
 
             // Send payload
-            sockets(socketId).send(buf,0, compressed, 0)
+            outputBuffer.position(0)
+            outputBuffer.limit(compressed-1)
+            val sent = sockets(socketId).sendByteBuffer(outputBuffer, 0)
 
             // Increment counters
-            bytesOut += compressed
-            msgCount += 1
-            if (msgCount % 10000 == 0){
-              logger.info("blocks sent: " + msgCount)
+            if (sent > -1) {
+              bytesOut += sent
+              msgCount += 1
+              if (msgCount % 10000 == 0) {
+                logger.info("blocks sent: " + msgCount)
+              }
+            } else {
+              logger.error("Error sending compressed block")
             }
           }
         }
