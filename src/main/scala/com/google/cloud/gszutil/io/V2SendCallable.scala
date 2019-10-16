@@ -139,29 +139,26 @@ final class V2SendCallable(in: ReadableByteChannel, blkSize: Int, sockets: Seq[S
     var msgCount = 0L
     var yieldCount = 0L
     var socketId = 0
-    val readBuf = ByteBuffer.allocate(blkSize)
-    val compressBuf = new Array[Byte](blkSize*2)
-    val outputBuffer = ByteBuffer.allocate(compressBuf.length)
+    val data = new Array[Byte](blkSize)
+    val bb = ByteBuffer.wrap(data)
+
+    val buf = new Array[Byte](blkSize*2)
     val deflater = new Deflater(3, true)
     deflater.reset()
 
     try {
       while (!Thread.currentThread.isInterrupted) {
-        readBuf.clear
+        bb.clear
 
         // Read from input dataset
-        bytesRead = in.read(readBuf)
+        bytesRead = in.read(bb)
         if (bytesRead < 0) {
           logger.info(s"Input exhausted after $bytesIn bytes $msgCount messages")
-          val rc = finish(msgCount)
+          val rc = finish()
           return Option(SendResult(bytesIn, bytesOut, msgCount, yieldCount, rc))
-        } else if (bytesRead == 0) {
-          yieldCount += 1
-          Thread.`yield`()
         }
-
-        while (readBuf.hasRemaining && bytesRead > -1){
-          bytesRead = in.read(readBuf)
+        while (bb.hasRemaining && bytesRead > -1){
+          bytesRead = in.read(bb)
           if (bytesRead > 0) {
             recordCount += 1
           } else if (bytesRead == 0) {
@@ -170,34 +167,26 @@ final class V2SendCallable(in: ReadableByteChannel, blkSize: Int, sockets: Seq[S
           }
         }
 
-        if (readBuf.position > 0) {
-          bytesIn += readBuf.position
+        if (bb.position > 0) {
+          bytesIn += bb.position
+
+          // Load deflater
+          deflater.setInput(data, 0, bb.position)
+          deflater.finish()
 
           // Compress bytes
-          deflater.setInput(readBuf.array, 0, readBuf.position)
-          deflater.finish()
-          val compressed = deflater.deflate(compressBuf, 0, compressBuf.length, Deflater.FULL_FLUSH)
+          val compressed = deflater.deflate(buf, 0, buf.length, Deflater.FULL_FLUSH)
           deflater.reset()
-
           if (compressed > 0) {
-            outputBuffer.clear()
-            outputBuffer.put(compressBuf, 0, compressed)
-            outputBuffer.flip()
-
             // Socket round-robin
             socketId += 1
             if (socketId >= sockets.length) socketId = 0
 
             // Send payload
-            val bytesQueued = sockets(socketId).sendByteBuffer(outputBuffer, 0)
-            if (bytesQueued < 0){
-              val rc = 1
-              logger.error("Failed to enqueue bytes")
-              return Option(SendResult(bytesIn, bytesOut, msgCount, yieldCount, rc))
-            }
+            sockets(socketId).send(buf,0, compressed, 0)
 
             // Increment counters
-            bytesOut += bytesQueued
+            bytesOut += compressed
             msgCount += 1
             if (msgCount % 10000 == 0){
               logger.info("blocks sent: " + msgCount)
@@ -214,7 +203,7 @@ final class V2SendCallable(in: ReadableByteChannel, blkSize: Int, sockets: Seq[S
     }
   }
 
-  def finish(msgCount: Long): Int = {
+  def finish(): Int = {
     val n = sockets.length
     if (n > 1) {
       logger.info(s"Closing ${n-1} of $n sockets...")
@@ -227,35 +216,13 @@ final class V2SendCallable(in: ReadableByteChannel, blkSize: Int, sockets: Seq[S
     logger.info("Sending null frames to signal end of data")
     val socket = sockets.head
     socket.send(Array.empty[Byte], 0)
-
-    logger.info("Waiting for FIN message...")
     socket.setReceiveTimeOut(30000) // Wait for up to 30 seconds
     val closeMsg = socket.recv(0)
-    if (socket.hasReceiveMore){
-      val frame2 = socket.recv()
-      if (frame2 != null){
-        val msgRecvCount = V2SendCallable.decodeLong(frame2)
-        if (msgRecvCount != msgCount) {
-          logger.error(s"Server received $msgRecvCount messages but $msgCount were sent")
-          socket.close()
-          return 1
-        } else {
-          logger.info(s"Server received $msgRecvCount messages")
-        }
-      }
-    } else {
-      logger.warn("Server didn't send received message count")
-    }
     socket.close()
     if (closeMsg == null){
       logger.error("Server did not send FIN message within 30s timeout period")
       1
-    } else if (!util.Arrays.equals(closeMsg, Protocol.Fin)) {
-      logger.error(s"expected FIN but received message with length ${closeMsg.length}")
-      1
-    } else {
-      logger.info("Received FIN")
-      0
-    }
+    } else if (closeMsg.sameElements(Protocol.Fin)) 0
+    else 1
   }
 }
