@@ -42,24 +42,18 @@ protected object ZOS extends Logging {
   class WrappedRecordReader(private val r: RecordReader) extends ZRecordReaderT with Logging {
     require(r.getRecfm == "FB", s"${r.getDDName} record format must be FB - ${r.getRecfm} is not supported")
 
-    // Ensure that reader is closed if job is killed
-    //Runtime.getRuntime.addShutdownHook(new RecordReaderCloser(r))
     private var open = true
-    private var hasRemaining = true
     private var nRecordsRead: Long = 0
 
     override def getDsn: String = r.getDsn
 
-    override def read(buf: Array[Byte]): Int = read(buf, 0, buf.length)
+    @scala.inline
+    override def read(buf: Array[Byte]): Int =
+      read(buf, 0, buf.length)
 
-    override def read(buf: Array[Byte], off: Int, len: Int): Int = {
-      if (hasRemaining) {
-        val n = r.read(buf, off, len)
-        if (n > 0) nRecordsRead += 1
-        else if (n < 0) hasRemaining = false
-        n
-      } else -1
-    }
+    @scala.inline
+    override def read(buf: Array[Byte], off: Int, len: Int): Int =
+      r.read(buf, off, len)
 
     override def close(): Unit = {
       if (open) {
@@ -72,20 +66,15 @@ protected object ZOS extends Logging {
     override def isOpen: Boolean = open
     override val lRecl: Int = r.getLrecl
     override val blkSize: Int = r.getBlksize
+    private val buf: Array[Byte] = new Array[Byte](lRecl)
 
+    @scala.inline
     override def read(dst: ByteBuffer): Int = {
-      val i = dst.position
-      if (dst.remaining >= lRecl) {
-        // Read a single record
-        val n = read(dst.array, i, lRecl)
-        if (n > 0) dst.position(i + n)
-        n
-      } else {
-        // Prevent partial read
-        logger.debug("Adjusting buffer limit to avoid partial read")
-        dst.limit(i)
-        0
-      }
+      val n = read(buf, 0, lRecl)
+      val k = math.max(0,n)
+      dst.put(buf, 0, k)
+      nRecordsRead += 1 * k
+      n
     }
 
     /** Number of records read

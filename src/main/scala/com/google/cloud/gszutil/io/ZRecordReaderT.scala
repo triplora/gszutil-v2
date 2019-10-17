@@ -25,6 +25,7 @@ trait ZRecordReaderT extends ReadableByteChannel {
     * @param buf - the byte array into which the bytes will be read
     * @return the number of bytes read, -1 if EOF encountered.
     */
+  @scala.inline
   def read(buf: Array[Byte]): Int
 
   /** Read a record from the dataset into a buffer.
@@ -34,6 +35,7 @@ trait ZRecordReaderT extends ReadableByteChannel {
     * @param len the number of bytes to read
     * @return the number of bytes read, -1 if EOF encountered.
     */
+  @scala.inline
   def read(buf: Array[Byte], off: Int, len: Int): Int
 
   /** Close the reader and underlying native file.

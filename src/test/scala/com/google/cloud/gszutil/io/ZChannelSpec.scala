@@ -31,11 +31,8 @@ class ZChannelSpec extends FlatSpec with Logging {
 
   "ZChannel" should "rw" in {
     val sendParallelism = 6
-    val readExecutor = MoreExecutors.listeningDecorator(new ForkJoinPool(4))
-    val timeout = 5
+    val readExecutor = MoreExecutors.listeningDecorator(new ForkJoinPool(2))
     val ctx = new ZContext()
-    val blkSize: Int = 32*1024
-    val inSize: Long = 256L*blkSize
 
     val gcsUri = "gs://gsztest/grecv-test/"
     val copyBook = CopyBook(
@@ -54,21 +51,27 @@ class ZChannelSpec extends FlatSpec with Logging {
         |        03  COL-L                    PIC S9(16)V9(2) COMP-3.
         |        03  COL-M                    PIC S9(16)V9(2) COMP-3.
         |""".stripMargin)
+
+    val blkSize: Int = 32*1024 - (32*1024 % copyBook.LRECL)
+    val inSize: Long = 256L*blkSize
     val host = "127.0.0.1"
     val port = 5570
     val serverCfg = V2Config(host, port)
-    val result = readExecutor.submit(new V2Server(serverCfg))
+    val recvResult = readExecutor.submit(new V2Server(serverCfg))
 
-    val readerOpts = ReaderOpts(new RandomBytes(inSize), copyBook, gcsUri, blkSize,
+    val readerOpts = ReaderOpts(new RandomBytes(inSize, blkSize, copyBook.LRECL), copyBook, gcsUri,
+      blkSize,
       ctx, sendParallelism, host, port)
-    val src = readExecutor.submit(V2SendCallable(readerOpts))
 
-    val readResult = src.get(timeout, TimeUnit.MINUTES)
-    System.out.println(readResult)
-
-    assert(result.get().exitCode == 0)
+    val sendResult = V2SendCallable(readerOpts).call()
+    assert(sendResult.isDefined)
+    assert(sendResult.get.rc == 0)
     ctx.close()
-    assert(readResult.get.bytesIn == inSize)
+    assert(sendResult.get.bytesIn == inSize)
+
+    recvResult.get(60, TimeUnit.SECONDS)
+    assert(recvResult.isDone)
+    assert(recvResult.get.exitCode == 0)
   }
 
 }

@@ -22,7 +22,7 @@ import java.util
 import java.util.concurrent.Callable
 import java.util.zip.Deflater
 
-import com.google.cloud.gszutil.{CopyBook, PackedDecimal}
+import com.google.cloud.gszutil.{CopyBook, IOUtil, PackedDecimal}
 import com.google.cloud.gszutil.Util.Logging
 import com.google.cloud.gszutil.orc.Protocol
 import com.google.common.base.Charsets
@@ -33,7 +33,7 @@ object V2SendCallable extends Logging {
   final val FiveMinutesInMillis: Int = 5*60*1000
   final val TargetBlocks = 128
   final val GzipBufferSize = 32*1024
-  case class ReaderOpts(in: ReadableByteChannel,
+  case class ReaderOpts(in: ZRecordReaderT,
                         copyBook: CopyBook,
                         gcsUri: String,
                         blkSize: Int,
@@ -128,77 +128,47 @@ object V2SendCallable extends Logging {
   * Sends using multiple sockets
   * Runs on a single thread
   */
-final class V2SendCallable(in: ReadableByteChannel, blkSize: Int, sockets: Seq[Socket])
+final class V2SendCallable(in: ZRecordReaderT, blkSize: Int, sockets: Seq[Socket])
   extends Callable[Option[SendResult]] with Logging {
 
   override def call(): Option[SendResult] = {
     var bytesIn = 0L
     var bytesOut = 0L
-    var bytesRead = 0L
-    var recordCount = 0L
     var msgCount = 0L
-    var yieldCount = 0L
     var socketId = 0
     val data = new Array[Byte](blkSize)
-    val bb = ByteBuffer.wrap(data)
-    val outputBuffer = ByteBuffer.allocate(blkSize*2)
+    val deflateBuf = new Array[Byte](blkSize*2)
     val deflater = new Deflater(3, true)
     deflater.reset()
+    IOUtil.reset()
 
     try {
       while (!Thread.currentThread.isInterrupted) {
-        bb.clear
+        val bytesRead = IOUtil.readBlock(in, data)
 
         // Read from input dataset
-        bytesRead = in.read(bb)
-        if (bytesRead < 0) {
+        if (bytesRead == -1) {
           logger.info(s"Input exhausted after $bytesIn bytes $msgCount messages")
           val rc = finish()
-          return Option(SendResult(bytesIn, bytesOut, msgCount, yieldCount, rc))
+          return Option(SendResult(bytesIn, bytesOut, msgCount, IOUtil.getYieldCount, rc))
         }
-        while (bb.hasRemaining && bytesRead > -1){
-          bytesRead = in.read(bb)
-          if (bytesRead > 0) {
-            recordCount += 1
-          } else if (bytesRead == 0) {
-            yieldCount += 1
-            Thread.`yield`()
-          }
-        }
+        bytesIn += bytesRead
 
-        if (bb.position > 0) {
-          bytesIn += bb.position
+        // Compress bytes
+        deflater.setInput(data, 0, bytesRead)
+        deflater.finish()
+        val compressed = deflater.deflate(deflateBuf, 0, deflateBuf.length, Deflater
+          .FULL_FLUSH)
+        deflater.reset()
+        // Socket round-robin
+        socketId = socketId+1 % sockets.length
 
-          // Load deflater
-          deflater.setInput(data, 0, bb.position)
-          deflater.finish()
+        // Send payload
+        sockets(socketId).send(deflateBuf, 0, compressed, 0)
 
-          // Compress bytes
-          val compressed = deflater.deflate(outputBuffer.array, 0, outputBuffer.capacity, Deflater
-            .FULL_FLUSH)
-          deflater.reset()
-          if (compressed > 0) {
-            // Socket round-robin
-            socketId += 1
-            if (socketId >= sockets.length) socketId = 0
-
-            // Send payload
-            outputBuffer.position(0)
-            outputBuffer.limit(compressed-1)
-            val sent = sockets(socketId).sendByteBuffer(outputBuffer, 0)
-
-            // Increment counters
-            if (sent > -1) {
-              bytesOut += sent
-              msgCount += 1
-              if (msgCount % 10000 == 0) {
-                logger.info("blocks sent: " + msgCount)
-              }
-            } else {
-              logger.error("Error sending compressed block")
-            }
-          }
-        }
+        // Increment counters
+        bytesOut += compressed
+        msgCount += 1
       }
       logger.warn("thread was interrupted")
       None
