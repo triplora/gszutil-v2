@@ -69,3 +69,7 @@ resourceGenerators in Compile += Def.task {
   IO.write(file, new java.text.SimpleDateFormat("yyyy/MM/dd HH:mm:ss").format(new java.util.Date))
   Seq(file)
 }.taskValue
+
+scalacOptions ++= Seq(
+  "-optimize"
+)

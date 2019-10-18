@@ -138,15 +138,18 @@ final class V2SendCallable(in: ZRecordReaderT, blkSize: Int, sockets: Seq[Socket
     var socketId = 0
     val data = new Array[Byte](blkSize)
     val deflateBuf = new Array[Byte](blkSize*2)
+    val deflateBB = ByteBuffer.wrap(deflateBuf)
     val deflater = new Deflater(3, true)
     deflater.reset()
     IOUtil.reset()
 
     try {
       while (!Thread.currentThread.isInterrupted) {
-        val bytesRead = IOUtil.readBlock(in, data)
+        // Socket round-robin
+        socketId = socketId+1 % sockets.length
 
-        // Read from input dataset
+        // Read a single block
+        val bytesRead = IOUtil.readBlock(in, data)
         if (bytesRead == -1) {
           logger.info(s"Input exhausted after $bytesIn bytes $msgCount messages")
           val rc = finish()
@@ -154,20 +157,8 @@ final class V2SendCallable(in: ZRecordReaderT, blkSize: Int, sockets: Seq[Socket
         }
         bytesIn += bytesRead
 
-        // Compress bytes
-        deflater.setInput(data, 0, bytesRead)
-        deflater.finish()
-        val compressed = deflater.deflate(deflateBuf, 0, deflateBuf.length, Deflater
-          .FULL_FLUSH)
-        deflater.reset()
-        // Socket round-robin
-        socketId = socketId+1 % sockets.length
-
-        // Send payload
-        sockets(socketId).send(deflateBuf, 0, compressed, 0)
-
-        // Increment counters
-        bytesOut += compressed
+        val sent = IOUtil.compressAndSend(data, bytesRead, deflateBB, deflater, sockets(socketId))
+        bytesOut += sent
         msgCount += 1
       }
       logger.warn("thread was interrupted")
