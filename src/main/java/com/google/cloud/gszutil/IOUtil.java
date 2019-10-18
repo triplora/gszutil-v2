@@ -35,19 +35,18 @@ public class IOUtil {
 
     public static int compressAndSend(byte[] data,
                                       int bytesRead,
-                                      ByteBuffer deflateBB,
+                                      byte[] deflateBuf,
                                       Deflater deflater,
                                       ZMQ.Socket socket) {
         // Compress
         deflater.setInput(data, 0, bytesRead);
         deflater.finish();
-        int compressed = deflater.deflate(deflateBB.array(), 0, deflateBB.capacity(),
-            Deflater.FULL_FLUSH);
+        int compressed = deflater.deflate(deflateBuf,0,deflateBuf.length,Deflater.FULL_FLUSH);
         deflater.reset();
 
         // Send
-        deflateBB.clear();
-        deflateBB.limit(compressed);
-        return socket.sendByteBuffer(deflateBB, 0);
+        if (socket.send(deflateBuf, 0, compressed, 0))
+            return compressed;
+        else return -1;
     }
 }

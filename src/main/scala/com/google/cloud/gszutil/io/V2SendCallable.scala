@@ -17,7 +17,6 @@
 package com.google.cloud.gszutil.io
 
 import java.nio.ByteBuffer
-import java.nio.channels.ReadableByteChannel
 import java.util
 import java.util.concurrent.Callable
 import java.util.zip.Deflater
@@ -138,7 +137,6 @@ final class V2SendCallable(in: ZRecordReaderT, blkSize: Int, sockets: Seq[Socket
     var socketId = 0
     val data = new Array[Byte](blkSize)
     val deflateBuf = new Array[Byte](blkSize*2)
-    val deflateBB = ByteBuffer.wrap(deflateBuf)
     val deflater = new Deflater(3, true)
     deflater.reset()
     IOUtil.reset()
@@ -157,7 +155,7 @@ final class V2SendCallable(in: ZRecordReaderT, blkSize: Int, sockets: Seq[Socket
         }
         bytesIn += bytesRead
 
-        val sent = IOUtil.compressAndSend(data, bytesRead, deflateBB, deflater, sockets(socketId))
+        val sent = IOUtil.compressAndSend(data, bytesRead, deflateBuf, deflater, sockets(socketId))
         bytesOut += sent
         msgCount += 1
       }
