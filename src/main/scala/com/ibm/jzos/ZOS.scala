@@ -52,8 +52,10 @@ protected object ZOS extends Logging {
       read(buf, 0, buf.length)
 
     @scala.inline
-    override def read(buf: Array[Byte], off: Int, len: Int): Int =
+    override def read(buf: Array[Byte], off: Int, len: Int): Int = {
+      nRecordsRead += 1
       r.read(buf, off, len)
+    }
 
     override def close(): Unit = {
       if (open) {
@@ -73,7 +75,6 @@ protected object ZOS extends Logging {
       val n = read(buf, 0, lRecl)
       val k = math.max(0,n)
       dst.put(buf, 0, k)
-      nRecordsRead += 1 * k
       n
     }
 

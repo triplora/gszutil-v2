@@ -5,7 +5,6 @@ import org.apache.log4j.LogManager;
 import org.apache.log4j.Logger;
 import org.zeromq.ZMQ;
 
-import java.nio.ByteBuffer;
 import java.util.zip.Deflater;
 
 public class IOUtil {
@@ -26,6 +25,8 @@ public class IOUtil {
         if (bytesRead == 0){
             Thread.yield();
             yieldCount += 1;
+        } else if (bytesRead == -1){
+            r.close();
         }
 
         if (i == -1) return -1;

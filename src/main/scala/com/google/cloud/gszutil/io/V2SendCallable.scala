@@ -138,6 +138,7 @@ final class V2SendCallable(in: ZRecordReaderT, blkSize: Int, sockets: Seq[Socket
     val data = new Array[Byte](blkSize)
     val deflateBuf = new Array[Byte](blkSize*2)
     val deflater = new Deflater(3, true)
+    var bytesRead = 0
     deflater.reset()
     IOUtil.reset()
 
@@ -147,17 +148,18 @@ final class V2SendCallable(in: ZRecordReaderT, blkSize: Int, sockets: Seq[Socket
         socketId = socketId+1 % sockets.length
 
         // Read a single block
-        val bytesRead = IOUtil.readBlock(in, data)
-        if (bytesRead == -1) {
+        if (!in.isOpen) {
           logger.info(s"Input exhausted after $bytesIn bytes $msgCount messages")
           val rc = finish()
           return Option(SendResult(bytesIn, bytesOut, msgCount, IOUtil.getYieldCount, rc))
         }
-        bytesIn += bytesRead
-
-        val sent = IOUtil.compressAndSend(data, bytesRead, deflateBuf, deflater, sockets(socketId))
-        bytesOut += sent
-        msgCount += 1
+        bytesRead = IOUtil.readBlock(in, data)
+        if (bytesRead > 0) {
+          bytesIn += bytesRead
+          val sent = IOUtil.compressAndSend(data, bytesRead, deflateBuf, deflater, sockets(socketId))
+          bytesOut += sent
+          msgCount += 1
+        }
       }
       logger.warn("thread was interrupted")
       None
