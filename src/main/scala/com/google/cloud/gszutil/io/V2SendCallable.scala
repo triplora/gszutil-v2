@@ -143,16 +143,11 @@ final class V2SendCallable(in: ZRecordReaderT, blkSize: Int, sockets: Seq[Socket
     IOUtil.reset()
 
     try {
-      while (!Thread.currentThread.isInterrupted) {
+      while (in.isOpen) {
         // Socket round-robin
         socketId = socketId+1 % sockets.length
 
         // Read a single block
-        if (!in.isOpen) {
-          logger.info(s"Input exhausted after $bytesIn bytes $msgCount messages")
-          val rc = finish()
-          return Option(SendResult(bytesIn, bytesOut, msgCount, IOUtil.getYieldCount, rc))
-        }
         bytesRead = IOUtil.readBlock(in, data)
         if (bytesRead > 0) {
           bytesIn += bytesRead
@@ -161,8 +156,9 @@ final class V2SendCallable(in: ZRecordReaderT, blkSize: Int, sockets: Seq[Socket
           msgCount += 1
         }
       }
-      logger.warn("thread was interrupted")
-      None
+      logger.info(s"Input exhausted after $bytesIn bytes $msgCount messages")
+      val rc = finish()
+      Option(SendResult(bytesIn, bytesOut, msgCount, IOUtil.getYieldCount, rc))
     } catch {
       case e: Exception =>
         logger.error("Failed to upload data", e)
