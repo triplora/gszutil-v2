@@ -67,7 +67,8 @@ object Util {
 
   val StorageScope = "https://www.googleapis.com/auth/devstorage.read_write"
   val BigQueryScope = "https://www.googleapis.com/auth/bigquery"
-  final val Scopes = ImmutableSet.of(StorageScope, BigQueryScope)
+  val ComputeScope = "https://www.googleapis.com/auth/compute"
+  final val Scopes = ImmutableSet.of(ComputeScope, StorageScope, BigQueryScope)
 
   trait CredentialProvider {
     def getCredentials: GoogleCredentials

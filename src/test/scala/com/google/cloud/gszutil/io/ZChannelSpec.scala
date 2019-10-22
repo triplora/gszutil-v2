@@ -61,7 +61,7 @@ class ZChannelSpec extends FlatSpec with Logging {
 
     val readerOpts = ReaderOpts(new RandomBytes(inSize, blkSize, copyBook.LRECL), copyBook, gcsUri,
       blkSize,
-      ctx, sendParallelism, host, port)
+      ctx, sendParallelism, host, port, 1024)
 
     val sendResult = V2SendCallable(readerOpts).call()
     assert(sendResult.isDefined)

@@ -63,7 +63,7 @@ object Cp extends Command[GsUtilConfig] with Logging {
     var result = Result.Failure("")
     if (c.remote){
       logger.info("Starting Dataset Upload")
-      val instanceId = s"grecv-${zos.jobId}"
+      val instanceId = s"grecv-${zos.jobId.toLowerCase}"
       val remoteHost = if (c.remoteHost.isEmpty) {
         logger.info(s"Creating Compute Instance $instanceId")
         Option(GCE.createVM(instanceId, c.pkgUri, c.serviceAccount,
@@ -71,7 +71,7 @@ object Cp extends Command[GsUtilConfig] with Logging {
       } else None
       val host = remoteHost.map(_.ip).getOrElse(c.remoteHost)
       val opts = ReaderOpts(in, copyBook, c.destinationUri, in.blkSize,
-        new ZContext(), c.nConnections, host, c.remotePort)
+        new ZContext(), c.nConnections, host, c.remotePort, c.blocks)
       logger.info("Starting Send...")
       val res = V2SendCallable(opts).call()
       res.foreach(r => logger.debug(

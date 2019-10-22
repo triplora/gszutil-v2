@@ -41,10 +41,11 @@ case class GsUtilConfig(source: String = "INFILE",
                         remote: Boolean = false,
                         remoteHost: String = "",
                         remotePort: Int = 8443,
-                        nConnections: Int = 10,
+                        blocks: Long = 1024,
+                        nConnections: Int = 4,
                         pkgUri: String = "",
                         zone: String = "",
                         subnet: String = "",
                         serviceAccount: String = "",
-                        machineType: String = "n1-standard-8"
+                        machineType: String = "n1-standard-4"
 )

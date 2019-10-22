@@ -36,7 +36,8 @@ object V2SendCallable extends Logging {
                         copyBook: CopyBook,
                         gcsUri: String,
                         blkSize: Int,
-                        ctx: ZContext, nConnections: Int, host: String, port: Int)
+                        ctx: ZContext, nConnections: Int, host: String, port: Int,
+                        blocks: Long)
 
   /** Opens sockets and sends session details
     * blocks until the server responds with ACK
@@ -80,7 +81,7 @@ object V2SendCallable extends Logging {
       .copyBook
       .LRECL){
       logger.debug(s"Received ACK and LRECL $lreclConfirmation = ${opts.copyBook.LRECL}")
-      new V2SendCallable(opts.in, opts.blkSize, sockets)
+      new V2SendCallable(opts.in, opts.blkSize, sockets, opts.blocks)
     } else {
       throw new RuntimeException("Received invalid ACK message: $ack")
     }
@@ -127,13 +128,14 @@ object V2SendCallable extends Logging {
   * Sends using multiple sockets
   * Runs on a single thread
   */
-final class V2SendCallable(in: ZRecordReaderT, blkSize: Int, sockets: Seq[Socket])
+final class V2SendCallable(in: ZRecordReaderT, blkSize: Int, sockets: Seq[Socket], blocks: Long)
   extends Callable[Option[SendResult]] with Logging {
 
   override def call(): Option[SendResult] = {
     var bytesIn = 0L
     var bytesOut = 0L
     var msgCount = 0L
+    var msgLimit = blocks
     var socketId = 0
     val data = new Array[Byte](blkSize)
     val deflateBuf = new Array[Byte](blkSize*2)
@@ -154,6 +156,10 @@ final class V2SendCallable(in: ZRecordReaderT, blkSize: Int, sockets: Seq[Socket
           val sent = IOUtil.compressAndSend(data, bytesRead, deflateBuf, deflater, sockets(socketId))
           bytesOut += sent
           msgCount += 1
+          if (msgCount > msgLimit) {
+            msgLimit += blocks
+            Thread.`yield`()
+          }
         }
       }
       logger.info(s"Input exhausted after $bytesIn bytes $msgCount messages")

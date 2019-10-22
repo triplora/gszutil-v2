@@ -68,6 +68,11 @@ object GsUtilOptionParser extends OptionParser[GsUtilConfig]("gsutil") with ArgP
         .action{(_,c) => c.copy(remote = true)}
         .text("use remote decoder (default: false"),
 
+      opt[Long]("blocks")
+        .optional()
+        .action{(x,c) => c.copy(blocks = x)}
+        .text("blocks before yield (default: 1024"),
+
       opt[Int]("remotePort")
         .optional()
         .action{(x,c) => c.copy(remotePort = x)}
