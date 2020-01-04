@@ -18,7 +18,7 @@ package com.ibm.jzos
 import java.nio.ByteBuffer
 import java.security.Security
 
-import com.google.cloud.gszutil.Util.Logging
+import com.google.cloud.gszutil.Util.{Logging, ZInfo}
 import com.google.cloud.gszutil.io.ZRecordReaderT
 
 import scala.util.Try
@@ -84,6 +84,48 @@ protected object ZOS extends Logging {
     override def count(): Long = nRecordsRead
   }
 
+  class WrappedVBRecordReader(private val r: RecordReader) extends ZRecordReaderT with Logging {
+    require(r.getRecfm == "VB", s"${r.getDDName} record format must be FB - ${r.getRecfm} is not " +
+      s"supported")
+
+    override val lRecl: Int = r.getLrecl
+    override val blkSize: Int = r.getBlksize
+
+    private val buf: Array[Byte] = new Array[Byte](lRecl)
+    private var open = true
+    private var nRecordsRead: Long = 0
+
+    override def isOpen: Boolean = open
+    override def count(): Long = nRecordsRead
+    override def getDsn: String = r.getDsn
+
+    @scala.inline
+    override def read(buf: Array[Byte]): Int = {
+      nRecordsRead += 1
+      r.read(buf)
+    }
+
+    @scala.inline
+    override def read(buf: Array[Byte], off: Int, len: Int): Int =
+      read(buf)
+
+    override def close(): Unit = {
+      if (open) {
+        open = false
+        logger.info("Closing " + r.getDDName + " " + r.getDsn)
+        Try(r.close()).failed.foreach(t => logger.error(t.getMessage))
+      }
+    }
+
+    @scala.inline
+    override def read(dst: ByteBuffer): Int = {
+      val n = read(buf)
+      val k = math.max(0,n)
+      dst.put(buf, 0, k)
+      n
+    }
+  }
+
   def ddExists(ddName: String): Boolean = {
     ZFile.ddExists(ddName)
   }
@@ -97,7 +139,12 @@ protected object ZOS extends Logging {
       val reader: RecordReader = RecordReader.newReaderForDD(ddName)
       logger.info(s"Reading DD $ddName with ${reader.getClass.getSimpleName}\nDSN=${reader.getDsn}\nRECFM=${reader.getRecfm}\nBLKSIZE=${reader.getBlksize}\nLRECL=${reader.getLrecl}")
 
-      new WrappedRecordReader(reader)
+      if (reader.getRecfm == "FB")
+        new WrappedRecordReader(reader)
+      else if (reader.getRecfm == "VB")
+        new WrappedVBRecordReader(reader)
+      else
+        throw new RuntimeException(s"Unsupported record format: '${reader.getRecfm}'")
     } catch {
       case e: ZFileException =>
         throw new RuntimeException(s"Failed to open DD:'$ddName'", e)

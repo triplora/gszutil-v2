@@ -70,6 +70,11 @@ object Util {
   val ComputeScope = "https://www.googleapis.com/auth/compute"
   final val Scopes = ImmutableSet.of(ComputeScope, StorageScope, BigQueryScope)
 
+  case class ZInfo(jobId: String,
+                   jobName: String,
+                   stepName: String,
+                   user: String)
+
   trait CredentialProvider {
     def getCredentials: GoogleCredentials
   }

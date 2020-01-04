@@ -72,26 +72,29 @@ object Cp extends Command[GsUtilConfig] with Logging {
       val host = remoteHost.map(_.ip).getOrElse(c.remoteHost)
       val opts = ReaderOpts(in, copyBook, c.destinationUri, in.blkSize,
         new ZContext(), c.nConnections, host, c.remotePort, c.blocks)
-      logger.info("Starting Send...")
-      val res = V2SendCallable(opts).call()
-      res.foreach(r => logger.debug(
-        s"""return code: ${r.rc}
-           |bytes in: ${r.bytesIn}
-           |bytes out: ${r.bytesOut}
-           |msgCount: ${r.msgCount}
-           |yieldCount: ${r.yieldCount}""".stripMargin))
-      if (res.isDefined && res.get.rc == 0) {
-        logger.info("Dataset Upload Complete")
-        result = Result.Success
-      } else {
-        logger.error("Dataset Upload Failed")
-        result = Result.Failure("")
-      }
-      if (c.remoteHost.isEmpty) {
-        if (c.projectId.nonEmpty)
+      try {
+        logger.info("Starting Send...")
+        val res = V2SendCallable(opts).call()
+        res.foreach(r => logger.debug(
+          s"""return code: ${r.rc}
+             |bytes in: ${r.bytesIn}
+             |bytes out: ${r.bytesOut}
+             |msgCount: ${r.msgCount}
+             |yieldCount: ${r.yieldCount}""".stripMargin))
+        if (res.isDefined && res.get.rc == 0) {
+          logger.info("Dataset Upload Complete")
+          result = Result.Success
+        } else {
+          logger.error("Dataset Upload Failed")
+          result = Result.Failure("")
+        }
+      } catch {
+        case e: Exception =>
+          logger.error("Dataset Upload Failed", e)
+          result = Result.Failure(e.getMessage)
+      } finally {
+        if (c.remoteHost.isEmpty)
           GCE.terminateVM(instanceId, c.projectId, c.zone, GCE.defaultClient(creds))
-        else
-          logger.warn("projectId not set")
       }
     } else {
       logger.info("Starting ORC Upload")

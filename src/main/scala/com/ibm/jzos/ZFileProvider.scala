@@ -17,7 +17,7 @@
 package com.ibm.jzos
 
 import com.google.cloud.gszutil.CopyBook
-import com.google.cloud.gszutil.Util.CredentialProvider
+import com.google.cloud.gszutil.Util.{CredentialProvider, ZInfo}
 import com.google.cloud.gszutil.io.ZRecordReaderT
 
 object ZFileProvider {
@@ -49,5 +49,6 @@ trait ZFileProvider {
   def jobDate: String = sys.env.getOrElse("JOBDATE","UNKNOWN")
   def jobTime: String = sys.env.getOrElse("JOBTIME","UNKNOWN")
   def jobId: String = jobName+jobDate+jobTime
+  def getInfo: ZInfo
 }
 

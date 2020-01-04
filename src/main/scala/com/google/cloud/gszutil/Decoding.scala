@@ -49,6 +49,7 @@ object Decoding extends Logging {
 
   final val Space: Byte = " ".getBytes(Charsets.US_ASCII).head
 
+  // https://en.wikipedia.org/wiki/EBCDIC_1047
   final val EBCDIC2ASCII: Array[Byte] = {
     val buf = ByteBuffer.wrap((0 until 256).map(_.toByte).toArray)
     val cb = CP1047.decode(buf)

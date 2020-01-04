@@ -20,7 +20,7 @@ import java.nio.channels.FileChannel
 import java.nio.file.{Files, Paths, StandardOpenOption}
 import java.util.{Calendar, Date}
 
-import com.google.cloud.gszutil.Util.{CredentialProvider, DefaultCredentialProvider, Logging}
+import com.google.cloud.gszutil.Util.{CredentialProvider, DefaultCredentialProvider, Logging, ZInfo}
 import com.google.cloud.gszutil.io.{ChannelRecordReader, ZRecordReaderT}
 import com.google.cloud.gszutil.{CopyBook, Util}
 import com.google.common.base.Charsets
@@ -95,4 +95,6 @@ object Linux extends ZFileProvider with Logging {
   }
 
   override def jobId: String = s"${System.currentTimeMillis()/1000L}"
+
+  override def getInfo: ZInfo = ZInfo("", "", "", "")
 }

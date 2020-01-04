@@ -16,7 +16,7 @@
 
 package com.ibm.jzos
 
-import com.google.cloud.gszutil.Util.{CredentialProvider, GoogleCredentialsProvider, Logging}
+import com.google.cloud.gszutil.Util.{CredentialProvider, GoogleCredentialsProvider, Logging, ZInfo}
 import com.google.cloud.gszutil.io.ZRecordReaderT
 import com.google.cloud.gszutil.{CopyBook, Decoding, Util}
 import com.google.common.base.Charsets
@@ -75,4 +75,13 @@ object IBM extends ZFileProvider with Logging {
         throw new RuntimeException("Failed to parse copybook", e)
     }
   }
+
+  override def jobName: String = ZUtil.getCurrentJobname
+
+  override def getInfo: ZInfo = ZInfo(
+    ZUtil.getCurrentJobId,
+    ZUtil.getCurrentJobname,
+    ZUtil.getCurrentStepname,
+    ZUtil.getCurrentUser
+  )
 }
