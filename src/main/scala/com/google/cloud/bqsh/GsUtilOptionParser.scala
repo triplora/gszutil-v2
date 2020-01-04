@@ -18,7 +18,7 @@ package com.google.cloud.bqsh
 
 import java.net.URI
 
-import scopt.OptionParser
+import scopt.{OptionDef, OptionParser}
 
 
 object GsUtilOptionParser extends OptionParser[GsUtilConfig]("gsutil") with ArgParser[GsUtilConfig] {
@@ -163,4 +163,30 @@ object GsUtilOptionParser extends OptionParser[GsUtilConfig]("gsutil") with ArgP
     .optional()
     .text("job failure threshold for row decoding errors (default: 0.0")
     .action((x,c) => c.copy(maxErrorPct = x))
+
+  checkConfig{x =>
+    if (x.remote) {
+      val missing = new StringBuilder
+      if (x.subnet.isEmpty) {
+        missing.append(" --subnet")
+      }
+      if (x.pkgUri.isEmpty) {
+        missing.append(" --pkgUri")
+      }
+      if (x.serviceAccount.isEmpty) {
+        missing.append(" --serviceAccount")
+      }
+      if (x.zone.isEmpty) {
+        missing.append(" --zone")
+      }
+
+      if (x.remoteHost.nonEmpty) {
+        if (x.projectId.isEmpty)
+          failure("must specify --project_id if --remoteHost is set")
+        else if (missing.nonEmpty)
+          failure("must specify" + missing.result)
+        else success
+      } else success
+    } else success
+  }
 }
