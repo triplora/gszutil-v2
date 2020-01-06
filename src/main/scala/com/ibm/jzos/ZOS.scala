@@ -154,4 +154,13 @@ protected object ZOS extends Logging {
   def addCCAProvider(): Unit = {
     Security.insertProviderAt(new com.ibm.crypto.hdwrCCA.provider.IBMJCECCA(), 1)
   }
+
+  def getJobName: String = ZUtil.getCurrentJobname
+
+  def getInfo: ZInfo = ZInfo(
+    ZUtil.getCurrentJobId,
+    ZUtil.getCurrentJobname,
+    ZUtil.getCurrentStepname,
+    ZUtil.getCurrentUser
+  )
 }

@@ -76,12 +76,8 @@ object IBM extends ZFileProvider with Logging {
     }
   }
 
-  override def jobName: String = ZUtil.getCurrentJobname
-
-  override def getInfo: ZInfo = ZInfo(
-    ZUtil.getCurrentJobId,
-    ZUtil.getCurrentJobname,
-    ZUtil.getCurrentStepname,
-    ZUtil.getCurrentUser
-  )
+  override def jobName: String = ZOS.getJobName
+  override def jobDate: String = sys.env.getOrElse("JOBDATE","UNKNOWN")
+  override def jobTime: String = sys.env.getOrElse("JOBTIME","UNKNOWN")
+  override def getInfo: ZInfo = ZOS.getInfo
 }

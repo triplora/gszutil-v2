@@ -84,6 +84,8 @@ object Linux extends ZFileProvider with Logging {
     new ChannelRecordReader(FileChannel.open(ddPath, StandardOpenOption.READ), lRecl, blkSize)
   }
 
+  def jobName: String = sys.env.getOrElse("JOBNAME","UNKNOWN")
+
   override def jobDate: String = {
     val c = Calendar.getInstance()
     s"${c.get(Calendar.DAY_OF_MONTH)}${c.get(Calendar.MONTH)}${c.get(Calendar.YEAR)}"
