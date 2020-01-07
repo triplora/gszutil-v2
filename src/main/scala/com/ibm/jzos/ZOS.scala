@@ -163,4 +163,6 @@ protected object ZOS extends Logging {
     ZUtil.getCurrentStepname,
     ZUtil.getCurrentUser
   )
+
+  def substituteSystemSymbols(s: String): String = ZUtil.substituteSystemSymbols(s)
 }

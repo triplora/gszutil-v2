@@ -42,6 +42,7 @@ object BQMLD {
   def collectJobInfo(zos: ZFileProvider): util.Map[String,String] = {
     val info = zos.getInfo
     val script = zos.readStdin()
+    val substituted = zos.substituteSystemSymbols(script)
     val content = new util.HashMap[String,String]()
     content.put("jobid", zos.jobId)
     content.put("jobdate", zos.jobDate)
@@ -49,7 +50,12 @@ object BQMLD {
     content.put("jobname", zos.jobName)
     content.put("stepname", info.stepName)
     content.put("user", info.user)
-    content.put("script", script)
+    if (!substituted.contentEquals(script)) {
+      content.put("script", substituted)
+      content.put("template", script)
+    } else {
+      content.put("script", script)
+    }
     content
   }
 }

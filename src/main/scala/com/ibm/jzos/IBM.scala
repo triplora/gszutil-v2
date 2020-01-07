@@ -80,4 +80,6 @@ object IBM extends ZFileProvider with Logging {
   override def jobDate: String = sys.env.getOrElse("JOBDATE","UNKNOWN")
   override def jobTime: String = sys.env.getOrElse("JOBTIME","UNKNOWN")
   override def getInfo: ZInfo = ZOS.getInfo
+
+  override def substituteSystemSymbols(s: String): String = ZOS.substituteSystemSymbols(s)
 }

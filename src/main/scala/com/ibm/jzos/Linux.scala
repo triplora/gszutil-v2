@@ -99,4 +99,6 @@ object Linux extends ZFileProvider with Logging {
   override def jobId: String = s"${System.currentTimeMillis()/1000L}"
 
   override def getInfo: ZInfo = ZInfo("", "", "", "")
+
+  override def substituteSystemSymbols(s: String): String = s
 }

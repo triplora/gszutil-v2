@@ -50,5 +50,6 @@ trait ZFileProvider {
   def jobTime: String
   def jobId: String = jobName+jobDate+jobTime
   def getInfo: ZInfo
+  def substituteSystemSymbols(s: String): String
 }
 
