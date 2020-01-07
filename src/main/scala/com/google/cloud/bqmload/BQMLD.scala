@@ -23,6 +23,16 @@ object BQMLD {
     System.out.println("Inserting Job Info into BigQuery log table")
     insertRow(jobInfo, bq, tableId)
     System.out.println("Done")
+
+    // TODO parse
+
+    // TODO copy data
+
+    // TODO generate DML plan
+
+    // TODO submit bigquery jobs
+
+    // TODO log results
   }
 
   def insertRow(content: util.Map[String,String],
