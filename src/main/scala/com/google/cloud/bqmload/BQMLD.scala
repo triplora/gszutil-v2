@@ -25,14 +25,20 @@ object BQMLD {
     System.out.println("Done")
 
     // TODO parse
+    // MLoadScript
 
-    // TODO copy data
+    // TODO copy data IMPORT, INFILE, LAYOUT
+    // Write to ORC in GCS
 
     // TODO generate DML plan
+    // MERGE statement
 
     // TODO submit bigquery jobs
+    // submit MERGE statement
+    // wait for success
 
     // TODO log results
+    // count rows impacted
   }
 
   def insertRow(content: util.Map[String,String],
