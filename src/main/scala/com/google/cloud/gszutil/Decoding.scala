@@ -17,6 +17,9 @@ package com.google.cloud.gszutil
 
 import java.nio.ByteBuffer
 import java.nio.charset.Charset
+import java.sql.Timestamp
+import java.time.{LocalDateTime, ZoneOffset}
+import java.time.format.DateTimeFormatter
 
 import com.google.cloud.gszutil.Util.Logging
 import com.google.common.base.Charsets
@@ -128,9 +131,9 @@ object Decoding extends Logging {
       */
     def get(buf: ByteBuffer, row: ColumnVector, i: Int): Unit
 
-    def columnVector(maxSize: Int): ColumnVector
+    def columnVector(maxSize: Int): Option[ColumnVector]
 
-    def typeDescription: TypeDescription
+    def typeDescription: Option[TypeDescription]
   }
 
   case class StringDecoder(override val size: Int, ascii: Boolean = true) extends Decoder {
@@ -147,16 +150,50 @@ object Decoding extends Logging {
       bcv.setValPreallocated(i, size)
     }
 
-    override def columnVector(maxSize: Int): ColumnVector = {
+    override def columnVector(maxSize: Int): Option[ColumnVector] = {
       val cv = new BytesColumnVector(maxSize)
       cv.initBuffer(size)
-      cv
+      Option(cv)
     }
 
-    override def typeDescription: TypeDescription =
-      TypeDescription.createChar().withMaxLength(size)
+    override def typeDescription: Option[TypeDescription] =
+      Option(TypeDescription.createChar().withMaxLength(size))
 
     override def toString: String = s"$size byte STRING"
+  }
+
+  case class FillerDecoder() extends Decoder {
+    override val size: Int = 0
+
+    override def get(buf: ByteBuffer, row: ColumnVector, i: Int): Unit = {}
+
+    override def columnVector(maxSize: Int): Option[ColumnVector] = None
+
+    override def typeDescription: Option[TypeDescription] = None
+  }
+
+  case class TimestampDecoder(override val size: Int,
+                              format: String = "YYYY/MM/DD") extends Decoder {
+
+    private val pattern = format.replace("DD","dd")
+    private val formatter = DateTimeFormatter.ofPattern(pattern)
+
+    override def get(buf: ByteBuffer, row: ColumnVector, i: Int): Unit = {
+      val bcv = row.asInstanceOf[TimestampColumnVector]
+      val bytes = new Array[Byte](size)
+      buf.get(bytes)
+      val dateString = new String(bytes, Charsets.UTF_8)
+      val localDateTime = LocalDateTime.from(formatter.parse(dateString))
+      val time = localDateTime.toEpochSecond(ZoneOffset.UTC)
+      bcv.getScratchTimestamp.setTime(time)
+      bcv.setFromScratchTimestamp(i)
+    }
+
+    override def columnVector(maxSize: Int): Option[ColumnVector] =
+      Option(new TimestampColumnVector())
+
+    override def typeDescription: Option[TypeDescription] =
+      Option(TypeDescription.createTimestamp())
   }
 
   case class LongDecoder(override val size: Int) extends Decoder {
@@ -165,11 +202,11 @@ object Decoding extends Logging {
         .vector.update(i, Binary.decode(buf, size))
     }
 
-    override def columnVector(maxSize: Int): ColumnVector =
-      new LongColumnVector(maxSize)
+    override def columnVector(maxSize: Int): Option[ColumnVector] =
+      Option(new LongColumnVector(maxSize))
 
-    override def typeDescription: TypeDescription =
-      TypeDescription.createLong
+    override def typeDescription: Option[TypeDescription] =
+      Option(TypeDescription.createLong)
 
     override def toString: String = s"$size byte INT64"
   }
@@ -180,11 +217,11 @@ object Decoding extends Logging {
         .vector.update(i, Binary.decodeUnsigned(buf, size))
     }
 
-    override def columnVector(maxSize: Int): ColumnVector =
-      new LongColumnVector(maxSize)
+    override def columnVector(maxSize: Int): Option[ColumnVector] =
+      Option(new LongColumnVector(maxSize))
 
-    override def typeDescription: TypeDescription =
-      TypeDescription.createLong
+    override def typeDescription: Option[TypeDescription] =
+      Option(TypeDescription.createLong)
 
     override def toString: String = s"$size byte INT64"
   }
@@ -217,13 +254,13 @@ object Decoding extends Logging {
       r.set(i, w)
     }
 
-    override def columnVector(maxSize: Int): ColumnVector =
-      new DecimalColumnVector(maxSize, p+s, s)
+    override def columnVector(maxSize: Int): Option[ColumnVector] =
+      Option(new DecimalColumnVector(maxSize, p+s, s))
 
-    override def typeDescription: TypeDescription =
-      TypeDescription.createDecimal
+    override def typeDescription: Option[TypeDescription] =
+      Option(TypeDescription.createDecimal
         .withScale(s)
-        .withPrecision(p+s)
+        .withPrecision(p+s))
 
     override def toString: String = s"$size byte NUMERIC($p,$s)"
   }
@@ -244,13 +281,13 @@ object Decoding extends Logging {
       }
     }
 
-    override def columnVector(maxSize: Int): ColumnVector =
-      new Decimal64ColumnVector(maxSize, p+s, s)
+    override def columnVector(maxSize: Int): Option[ColumnVector] =
+      Option(new Decimal64ColumnVector(maxSize, p+s, s))
 
-    override def typeDescription: TypeDescription =
-      TypeDescription.createDecimal
+    override def typeDescription: Option[TypeDescription] =
+      Option(TypeDescription.createDecimal
         .withScale(s)
-        .withPrecision(p+s)
+        .withPrecision(p+s))
 
     override def toString: String = s"$size byte NUMERIC($p,$s)"
   }

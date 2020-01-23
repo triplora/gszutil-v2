@@ -17,13 +17,13 @@
 package com.google.cloud.gszutil.orc
 
 import akka.io.BufferPool
-import com.google.cloud.gszutil.CopyBook
+import com.google.cloud.gszutil.SchemaProvider
 import com.google.cloud.storage.Storage
 import org.apache.hadoop.fs.Path
 
 /**
   *
-  * @param copyBook CopyBook
+  * @param copyBook SchemaProvider
   * @param maxBytes number of bytes to accept before closing the writer
   * @param batchSize records per batch
   * @param path Hadoop FileSystem Path gs://bucket/object
@@ -33,6 +33,6 @@ import org.apache.hadoop.fs.Path
   * @param pool BufferPool
   * @param maxErrorPct proportion of acceptable row decoding errors
   */
-case class ORCFileWriterArgs(copyBook: CopyBook, maxBytes: Long, batchSize: Int, path: Path,
+case class ORCFileWriterArgs(copyBook: SchemaProvider, maxBytes: Long, batchSize: Int, path: Path,
                              gcs: Storage, compress: Boolean, compressBuffer: Int, pool: BufferPool,
                              maxErrorPct: Double)

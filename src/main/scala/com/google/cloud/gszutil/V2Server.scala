@@ -108,6 +108,7 @@ class V2Server(config: V2Config) extends Callable[Result] with Logging {
     logger.debug(s"Received BEGIN frame\n" + PackedDecimal.hexValue(frame1a))
     require(util.Arrays.equals(frame1a,Protocol.Begin), "expected BEGIN message")
 
+    // TODO support alternative SchemaProvider
     // Copy Book
     val frame2 = socket.recv(0)
     val copyBookRaw = new String(frame2, Charsets.UTF_8)

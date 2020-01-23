@@ -22,7 +22,7 @@ import java.util.concurrent.TimeoutException
 
 import akka.actor.{ActorSystem, Inbox, Props, Terminated}
 import com.google.cloud.bqsh.cmd.Result
-import com.google.cloud.gszutil.CopyBook
+import com.google.cloud.gszutil.SchemaProvider
 import com.google.cloud.gszutil.Util.Logging
 import com.google.cloud.gszutil.io.NoOpHeapBufferPool
 import com.google.cloud.gszutil.orc.Protocol.{PartFailed, UploadComplete}
@@ -51,7 +51,7 @@ object WriteORCFile extends Logging {
 
   def run(gcsUri: String,
           in: ReadableByteChannel,
-          copyBook: CopyBook,
+          copyBook: SchemaProvider,
           gcs: Storage,
           maxWriters: Int,
           batchSize: Int,

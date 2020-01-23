@@ -83,7 +83,7 @@ class CopyBookSpec extends FlatSpec with Logging {
     examples.indices.foreach{i =>
       val cb = CopyBook(examples(i))
       assert(cb.LRECL == expectedLRECL(i))
-      assert(cb.FieldNames.length == expectedFieldCount(i))
+      assert(cb.fieldNames.length == expectedFieldCount(i))
     }
   }
 

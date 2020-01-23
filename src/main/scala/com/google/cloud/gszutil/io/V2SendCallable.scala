@@ -21,7 +21,7 @@ import java.util
 import java.util.concurrent.Callable
 import java.util.zip.Deflater
 
-import com.google.cloud.gszutil.{CopyBook, IOUtil, PackedDecimal}
+import com.google.cloud.gszutil.{SchemaProvider, IOUtil, PackedDecimal}
 import com.google.cloud.gszutil.Util.Logging
 import com.google.cloud.gszutil.orc.Protocol
 import com.google.common.base.Charsets
@@ -33,7 +33,7 @@ object V2SendCallable extends Logging {
   final val TargetBlocks = 128
   final val GzipBufferSize = 32*1024
   case class ReaderOpts(in: ZRecordReaderT,
-                        copyBook: CopyBook,
+                        copyBook: SchemaProvider,
                         gcsUri: String,
                         blkSize: Int,
                         ctx: ZContext, nConnections: Int, host: String, port: Int,
@@ -65,7 +65,7 @@ object V2SendCallable extends Logging {
     logger.debug(s"Sending BEGIN\n${PackedDecimal.hexValue(Protocol.Begin)}")
     socket.send(Protocol.Begin, ZMQ.SNDMORE)
     logger.debug(s"CopyBook with LRECL ${opts.copyBook.LRECL}")
-    socket.send(opts.copyBook.raw.getBytes(Charsets.UTF_8), ZMQ.SNDMORE)
+    socket.send(opts.copyBook.toByteArray, ZMQ.SNDMORE)
     logger.debug(s"GCS prefix ${opts.gcsUri}")
     socket.send(opts.gcsUri.getBytes(Charsets.UTF_8), ZMQ.SNDMORE)
     logger.debug(s"Block size ${opts.blkSize}")

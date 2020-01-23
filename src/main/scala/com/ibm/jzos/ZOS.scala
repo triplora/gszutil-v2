@@ -157,12 +157,35 @@ protected object ZOS extends Logging {
 
   def getJobName: String = ZUtil.getCurrentJobname
 
-  def getInfo: ZInfo = ZInfo(
-    ZUtil.getCurrentJobId,
-    ZUtil.getCurrentJobname,
-    ZUtil.getCurrentStepname,
-    ZUtil.getCurrentUser
-  )
+  def getSymbols: Map[String,String] = {
+    import scala.collection.JavaConverters.mapAsScalaMapConverter
+    JesSymbols.extract("*").asScala.toMap
+  }
+
+  def getDSNInfo(dsn: String): DSCBChain = {
+    val volume = ZFile.locateDSN(dsn).headOption.getOrElse("")
+    new DSCBChain(ZFile.readDSCBChain(dsn, volume))
+  }
+
+  class DSCBChain(val chain: Array[DSCB]) {
+    val f1Extents: Int = chain.find(_.isInstanceOf[Format1DSCB])
+      .map(_.asInstanceOf[Format1DSCB])
+      .map(_.getDS1NOEPV)
+      .getOrElse(0)
+    val f3Count: Int = chain.count(_.isInstanceOf[Format3DSCB])
+  }
+
+  def getInfo: ZInfo = {
+    ZInfo(
+      ZUtil.getCurrentJobId,
+      ZUtil.getCurrentJobname,
+      ZUtil.getCurrentStepname,
+      ZUtil.getCurrentUser,
+      getSymbols
+    )
+  }
+
+
 
   def substituteSystemSymbols(s: String): String = ZUtil.substituteSystemSymbols(s)
 }

@@ -18,7 +18,7 @@ package com.google.cloud.gszutil.io
 
 import akka.actor.ActorRef
 import akka.io.BufferPool
-import com.google.cloud.gszutil.CopyBook
+import com.google.cloud.gszutil.SchemaProvider
 import com.google.cloud.storage.Storage
 import org.apache.hadoop.fs.Path
 import org.zeromq.ZMQ.Socket
@@ -28,7 +28,7 @@ import org.zeromq.ZMQ.Socket
   * @param socket org.zeromq.ZMQ.Socket
   * @param blkSize block size
   * @param nWriters number of writers
-  * @param copyBook CopyBook
+  * @param copyBook SchemaProvider
   * @param partitionBytes number of bytes per partition
   * @param path org.apache.hadoop.fs.Path gs://bucket/prefix
   * @param gcs Storage client
@@ -38,6 +38,6 @@ import org.zeromq.ZMQ.Socket
   * @param notifyActor ActorRef to send results
   */
 case class V2ActorArgs(socket: Socket, blkSize: Int, nWriters: Int,
-                       copyBook: CopyBook, partitionBytes: Long, path: Path,
+                       copyBook: SchemaProvider, partitionBytes: Long, path: Path,
                        gcs: Storage, compress: Boolean, pool: BufferPool,
                        maxErrorPct: Double, notifyActor: ActorRef)

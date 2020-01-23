@@ -18,11 +18,11 @@ package com.ibm.jzos
 
 import java.nio.channels.FileChannel
 import java.nio.file.{Files, Paths, StandardOpenOption}
-import java.util.{Calendar, Date}
+import java.util.Calendar
 
 import com.google.cloud.gszutil.Util.{CredentialProvider, DefaultCredentialProvider, Logging, ZInfo}
 import com.google.cloud.gszutil.io.{ChannelRecordReader, ZRecordReaderT}
-import com.google.cloud.gszutil.{CopyBook, Util}
+import com.google.cloud.gszutil.{CopyBook,SchemaProvider, Util}
 import com.google.common.base.Charsets
 import com.google.common.io.ByteStreams
 
@@ -31,7 +31,7 @@ object Linux extends ZFileProvider with Logging {
     System.setProperty("java.net.preferIPv4Stack" , "true")
     System.out.println("Build Info:\n" + Util.readS("build.txt"))
   }
-  override def readDDWithCopyBook(dd: String, copyBook: CopyBook): ZRecordReaderT = {
+  override def readDDWithCopyBook(dd: String, copyBook: SchemaProvider): ZRecordReaderT = {
     val rr = readDD(dd)
     require(rr.lRecl == copyBook.LRECL, s"Copybook LRECL ${copyBook.LRECL} doesn't match LRECL ${rr.lRecl}")
     rr

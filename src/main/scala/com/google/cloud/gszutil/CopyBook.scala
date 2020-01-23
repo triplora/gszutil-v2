@@ -17,16 +17,15 @@
 package com.google.cloud.gszutil
 
 import com.google.cloud.gszutil.Decoding.{CopyBookField, CopyBookLine, Decoder, parseCopyBookLine}
-import org.apache.orc.TypeDescription
-import org.apache.orc.TypeDescription.Category
+import com.google.common.base.Charsets
 
 import scala.collection.mutable.ArrayBuffer
 
 
-case class CopyBook(raw: String) {
+case class CopyBook(raw: String) extends SchemaProvider {
   final val Fields: Seq[CopyBookLine] = raw.lines.flatMap(parseCopyBookLine).toSeq
 
-  final val FieldNames: Seq[String] =
+  override def fieldNames: Seq[String] =
     Fields.flatMap{
       case CopyBookField(name, _) =>
         Option(name.replaceAllLiterally("-","_"))
@@ -34,7 +33,7 @@ case class CopyBook(raw: String) {
         None
     }
 
-  final val decoders: Array[Decoder] = {
+  override def decoders: Array[Decoder] = {
     val buf = ArrayBuffer.empty[Decoder]
     Fields.foreach{
       case CopyBookField(_, decoder) =>
@@ -44,19 +43,10 @@ case class CopyBook(raw: String) {
     buf.toArray
   }
 
-  final val ORCSchema: TypeDescription = {
-    val schema = new TypeDescription(Category.STRUCT)
-    FieldNames
-      .zip(decoders)
-      .foreach{f =>
-        schema.addField(f._1, f._2.typeDescription)
-      }
-    schema
-  }
-
-  final val LRECL: Int = decoders.foldLeft(0){_ + _.size}
-
   override def toString: String =
-    s"LRECL=$LRECL\nFIELDS=${FieldNames.mkString(",")}\n$raw\n\nORC TypeDescription:\n${ORCSchema.toJson}"
+    s"LRECL=$LRECL\nFIELDS=${fieldNames.mkString(",")}\n$raw\n\nORC TypeDescription:\n${ORCSchema.toJson}"
+
+  override def toByteArray: Array[Byte] =
+    raw.getBytes(Charsets.UTF_8)
 }
 

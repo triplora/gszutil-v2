@@ -73,7 +73,8 @@ object Util {
   case class ZInfo(jobId: String,
                    jobName: String,
                    stepName: String,
-                   user: String)
+                   user: String,
+                   symbols: Map[String,String] = Map.empty)
 
   trait CredentialProvider {
     def getCredentials: GoogleCredentials

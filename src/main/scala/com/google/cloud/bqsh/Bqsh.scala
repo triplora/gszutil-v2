@@ -100,6 +100,8 @@ object Bqsh extends Logging {
             case _ =>
               Result.Failure(s"invalid command '${args.mkString(" ")}'")
           }
+        } else if (cmd.name == "jclutil") {
+          runCommand(JCLUtil, cmd.args, zos)
         } else {
           Bqsh.eval(cmd)
         }

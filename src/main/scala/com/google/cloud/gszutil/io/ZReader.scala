@@ -18,7 +18,7 @@ package com.google.cloud.gszutil.io
 
 import java.nio.ByteBuffer
 
-import com.google.cloud.gszutil.CopyBook
+import com.google.cloud.gszutil.SchemaProvider
 import com.google.cloud.gszutil.Decoding.Decoder
 import com.google.cloud.gszutil.Util.Logging
 import org.apache.hadoop.hive.ql.exec.vector.{ColumnVector, VectorizedRowBatch}
@@ -29,12 +29,13 @@ import org.apache.orc.Writer
   * @param copyBook
   * @param batchSize
   */
-class ZReader(private val copyBook: CopyBook, private val batchSize: Int) extends Logging {
+class ZReader(private val copyBook: SchemaProvider, private val batchSize: Int) extends Logging {
   private final val decoders: Array[Decoder] = copyBook.decoders
   private final val rowBatch: VectorizedRowBatch = {
-    val batch = new VectorizedRowBatch(copyBook.decoders.length, batchSize)
+    val cols = decoders.flatMap{_.columnVector(batchSize)}
+    val batch = new VectorizedRowBatch(cols.length, batchSize)
     for (i <- decoders.indices) {
-      batch.cols(i) = decoders(i).columnVector(batchSize)
+      batch.cols(i) = cols(i)
     }
     batch
   }

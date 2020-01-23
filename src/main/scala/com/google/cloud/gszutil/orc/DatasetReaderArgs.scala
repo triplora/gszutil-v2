@@ -21,7 +21,7 @@ import java.nio.channels.ReadableByteChannel
 
 import akka.actor.ActorRef
 import akka.io.BufferPool
-import com.google.cloud.gszutil.CopyBook
+import com.google.cloud.gszutil.SchemaProvider
 import com.google.cloud.storage.Storage
 
 /**
@@ -39,4 +39,6 @@ import com.google.cloud.storage.Storage
   * @param maxErrorPct maximum proportion of invalid rows
   * @param notifyActor ActorRef to send results
   */
-case class DatasetReaderArgs(in: ReadableByteChannel, batchSize: Int, uri: URI, maxBytes: Long, nWorkers: Int, copyBook: CopyBook, gcs: Storage, compress: Boolean, compressBuffer: Int, pool: BufferPool, maxErrorPct: Double, notifyActor: ActorRef)
+case class DatasetReaderArgs(in: ReadableByteChannel, batchSize: Int, uri: URI, maxBytes: Long,
+                             nWorkers: Int, copyBook: SchemaProvider, gcs: Storage, compress: Boolean,
+                             compressBuffer: Int, pool: BufferPool, maxErrorPct: Double, notifyActor: ActorRef)

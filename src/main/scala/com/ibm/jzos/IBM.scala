@@ -18,7 +18,7 @@ package com.ibm.jzos
 
 import com.google.cloud.gszutil.Util.{CredentialProvider, GoogleCredentialsProvider, Logging, ZInfo}
 import com.google.cloud.gszutil.io.ZRecordReaderT
-import com.google.cloud.gszutil.{CopyBook, Decoding, Util}
+import com.google.cloud.gszutil.{CopyBook, Decoding, SchemaProvider, Util}
 import com.google.common.base.Charsets
 import com.google.common.io.ByteStreams
 
@@ -29,7 +29,7 @@ object IBM extends ZFileProvider with Logging {
     System.out.println("Build Info:\n" + Util.readS("build.txt"))
   }
 
-  override def readDDWithCopyBook(dd: String, copyBook: CopyBook): ZRecordReaderT = {
+  override def readDDWithCopyBook(dd: String, copyBook: SchemaProvider): ZRecordReaderT = {
     val rr = ZOS.readDD(dd)
 
     require(rr.lRecl == copyBook.LRECL, s"Copybook LRECL ${copyBook.LRECL} doesn't match DSN LRECL ${rr.lRecl}")

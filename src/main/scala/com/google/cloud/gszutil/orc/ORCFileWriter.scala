@@ -57,7 +57,7 @@ class ORCFileWriter(args: ORCFileWriterArgs) extends Actor with Logging {
     OrcConf.OVERWRITE_OUTPUT_FILE.setBoolean(c, true)
     OrcConf.MEMORY_POOL.setDouble(c, 0.5d)
     OrcConf.BUFFER_SIZE.setLong(c, args.compressBuffer)
-    OrcConf.DIRECT_ENCODING_COLUMNS.setString(c, copyBook.FieldNames.mkString(","))
+    OrcConf.DIRECT_ENCODING_COLUMNS.setString(c, copyBook.fieldNames.mkString(","))
     c
   }
 
