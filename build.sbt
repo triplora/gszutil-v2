@@ -19,7 +19,7 @@ scalaVersion := "2.11.12"
 
 organization := "com.google.cloud"
 
-version := "2.0.0-SNAPSHOT"
+version := "2.1.0-SNAPSHOT"
 
 val exGuava = ExclusionRule(organization = "com.google.guava")
 
