@@ -1,11 +1,13 @@
 package com.google.cloud.bqsh.cmd
 
-import java.io.{BufferedReader, BufferedWriter, InputStreamReader, OutputStreamWriter}
+import java.io.{BufferedReader, BufferedWriter, IOException, InputStreamReader, OutputStreamWriter}
 import java.nio.CharBuffer
 
 import com.google.cloud.bqsh.{ArgParser, Command, JCLUtilConfig, JCLUtilOptionParser}
 import com.google.cloud.gszutil.Util.Logging
-import com.ibm.jzos.{FileFactory, PdsDirectory, RecordReader, RecordWriter, ZFile, ZFileConstants, ZFileProvider, ZUtil}
+import com.ibm.jzos.{Exec, MvsJobSubmitter, PdsDirectory, RcException, RecordReader, RecordWriter, ZFile, ZFileConstants, ZFileProvider, ZUtil}
+
+import scala.collection.mutable.ArrayBuffer
 
 object JCLUtil extends Command[JCLUtilConfig] with Logging {
   override val name: String = "jclutil"
@@ -81,5 +83,70 @@ object JCLUtil extends Command[JCLUtilConfig] with Logging {
     override def hasNext: Boolean = iter.hasNext
     override def next(): PDSMember = new PDSMember(iter.next()
       .asInstanceOf[PdsDirectory.MemberInfo])
+  }
+
+  def submit(jcl: String): Option[MVSJob] = {
+    val jobName = jcl.lines.find(_.startsWith("//"))
+      .map(s => s.substring(2, s.indexOf(' ')))
+    if (jobName.isDefined) {
+      val mjs = new MvsJobSubmitter()
+      for (line <- jcl.lines)
+        mjs.write(line)
+      val jobId = mjs.getJobid
+      Option(new MVSJob(jobName.get, jobId))
+    } else None
+  }
+
+  def env(): Array[String] = {
+    import scala.collection.JavaConverters._
+    val p = ZUtil.getEnvironment.asScala
+    p.put("_BPX_SHAREAS", "YES")
+    p.put("_BPX_SPAWN_SCRIPT", "YES")
+    p.map{x => s"${x._1} = ${x._2}"}.toArray
+  }
+
+  class MVSJob(jobName: String, jobId: String) {
+    def getStatus: String = {
+      val cmd = s"jobStatus $jobId"
+      val exec = new Exec(cmd, env())
+      exec.run()
+
+      val line = Option(exec.readLine())
+      if (line.isEmpty)
+        throw new IOException("No output from jobStatus child process")
+
+      val wdr = exec.getStdinWriter
+      wdr.close()
+
+      var lines = 0
+      while (Option(exec.readLine()).isDefined) {
+        lines +=1
+      }
+
+      if (exec.getReturnCode != 0) {
+        throw new RcException("jobStatus failed", exec.getReturnCode)
+      } else {
+        line.getOrElse("")
+      }
+    }
+
+    def getOutput: String = {
+      val cmd = s"jobOutput $jobName $jobId"
+      val exec = new Exec(cmd, env())
+      exec.run()
+
+      val lines = new ArrayBuffer[String]()
+      var line: Option[String] = Option(exec.readLine())
+      while (line.isDefined){
+        lines.append(line.get)
+        line = Option(exec.readLine())
+      }
+
+      if (exec.getReturnCode != 0) {
+        throw new RcException("jobOutput failed", exec.getReturnCode)
+      } else {
+        lines.mkString("\n")
+      }
+    }
   }
 }
