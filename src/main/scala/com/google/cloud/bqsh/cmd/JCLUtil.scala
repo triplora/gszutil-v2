@@ -14,7 +14,7 @@ object JCLUtil extends Command[JCLUtilConfig] with Logging {
   override val parser: ArgParser[JCLUtilConfig] = JCLUtilOptionParser
 
   override def run(config: JCLUtilConfig, zos: ZFileProvider): Result = {
-    val transform: (String) => String = replaceFirst2(_, "BQ")
+    val transform: (String) => String = replacePrefix(_, "BQ")
     val members = new PDSIterator(config.src)
     while (members.hasNext){
       val member = members.next()
@@ -29,22 +29,14 @@ object JCLUtil extends Command[JCLUtilConfig] with Logging {
     Result.Success
   }
 
-  def replaceFirst2(name: String, sub: String): String = {
-    val arr = name.toCharArray
-    arr(0) = sub.charAt(0)
-    arr(1) = sub.charAt(1)
-    new String(arr)
-  }
+  def replacePrefix(name: String, sub: String): String =
+    sub + name.substring(sub.length)
 
   def copy(src: String, dest: String, limit: Int): Result = {
     System.out.println(s"$src -> $dest")
     if (ZFile.exists(src)) {
       val in = RecordReader.newReader(src, ZFileConstants.MODE_FLAG_READ)
       if (!ZFile.exists(dest)) {
-        val outOpts = s"recfm=${in.getRecfm},lrecl=${in.getLrecl}"
-        logger.info(s"Creating ZFile($dest) with options $outOpts")
-        val outfile = new ZFile(dest, s"wt,type=record,noseek,$outOpts")
-        outfile.close()
         logger.info(s"Opening RecordWriter $dest")
         val out = RecordWriter.newWriter(dest, ZFileConstants.MODE_FLAG_WRITE)
         val buf = new Array[Byte](in.getLrecl)
@@ -91,7 +83,7 @@ object JCLUtil extends Command[JCLUtilConfig] with Logging {
   }
 
   class PDSIterator(val pdsName: String) extends Iterator[PDSMember] {
-    private val dir = new PdsDirectory(pdsName)
+    private val dir = new PdsDirectory(s"//'$pdsName'")
     import scala.collection.JavaConverters.asScalaIteratorConverter
     private val iter = dir.iterator().asScala
 

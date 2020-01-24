@@ -10,17 +10,17 @@ object JCLUtilOptionParser extends OptionParser[JCLUtilConfig]("jclutil") with A
   help("help").text("prints this usage text")
 
   opt[String]("src")
-    .text("source library")
+    .text("source PDS")
     .validate{x =>
-      if (x.length < 8) failure("invalid source library")
+      if (x.length < 8) failure("invalid source")
       else success
     }
     .action((x,c) => c.copy(src = x))
 
   opt[String]("dest")
-    .text("destination library")
+    .text("destination PDS")
     .validate{x =>
-      if (x.length < 8) failure("invalid destination library")
+      if (x.length < 8) failure("invalid destination")
       else success
     }
     .action((x,c) => c.copy(dest = x))
