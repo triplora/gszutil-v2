@@ -15,12 +15,16 @@ object JCLUtil extends Command[JCLUtilConfig] with Logging {
 
   override def run(config: JCLUtilConfig, zos: ZFileProvider): Result = {
     val transform: (String) => String = replaceFirst2(_, "BQ")
-    for (member <- new PDSIterator(config.src)){
+    val members = new PDSIterator(config.src)
+    while (members.hasNext){
+      val member = members.next()
       System.out.println(member)
       val newName = transform(member.name)
       val src = s"//'${config.src}(${member.name})'"
       val dest = s"//'${config.dest}($newName)'"
-      copy(src, dest)
+      val result = copy(src, dest, config.limit)
+      if (result.exitCode != 0)
+        return result
     }
     Result.Success
   }
@@ -32,19 +36,21 @@ object JCLUtil extends Command[JCLUtilConfig] with Logging {
     new String(arr)
   }
 
-  def copy(src: String, dest: String): Unit = {
+  def copy(src: String, dest: String, limit: Int): Result = {
     System.out.println(s"$src -> $dest")
-    var count = 0
     if (ZFile.exists(src)) {
       val in = RecordReader.newReader(src, ZFileConstants.MODE_FLAG_READ)
       if (!ZFile.exists(dest)) {
         val outOpts = s"recfm=${in.getRecfm},lrecl=${in.getLrecl}"
+        logger.info(s"Creating ZFile($dest) with options $outOpts")
         val outfile = new ZFile(dest, s"wt,type=record,noseek,$outOpts")
         outfile.close()
+        logger.info(s"Opening RecordWriter $dest")
         val out = RecordWriter.newWriter(dest, ZFileConstants.MODE_FLAG_WRITE)
         val buf = new Array[Byte](in.getLrecl)
         var n = 0
-        while (n > -1) {
+        var count = 0
+        while (n > -1 && count < limit) {
           n = in.read(buf)
           if (n > -1) {
             out.write(buf)
@@ -52,13 +58,22 @@ object JCLUtil extends Command[JCLUtilConfig] with Logging {
           }
         }
         in.close()
+        out.flush()
         out.close()
-        System.out.println(s"Copied $count lines from $src to $dest")
+        logger.info(s"Copied $count lines from $src to $dest")
+        if (count >= limit) Result.Failure(s"$src exceeded line limit")
+        else Result.Success
       } else {
-        System.err.println(s"Error: $dest already exists")
+        val msg = s"Error: $dest already exists"
+        logger.error(msg)
+        System.err.println(msg)
+        Result.Failure(msg)
       }
     } else {
-      System.err.println(s"Error: $src doesn't exist")
+      val msg = s"Error: $src doesn't exist"
+      logger.error(msg)
+      System.err.println(msg)
+      Result.Failure(msg)
     }
   }
 
@@ -92,6 +107,7 @@ object JCLUtil extends Command[JCLUtilConfig] with Logging {
       val mjs = new MvsJobSubmitter()
       for (line <- jcl.lines)
         mjs.write(line)
+      mjs.close()
       val jobId = mjs.getJobid
       Option(new MVSJob(jobName.get, jobId))
     } else None
@@ -115,8 +131,7 @@ object JCLUtil extends Command[JCLUtilConfig] with Logging {
       if (line.isEmpty)
         throw new IOException("No output from jobStatus child process")
 
-      val wdr = exec.getStdinWriter
-      wdr.close()
+      exec.getStdinWriter.close()
 
       var lines = 0
       while (Option(exec.readLine()).isDefined) {
