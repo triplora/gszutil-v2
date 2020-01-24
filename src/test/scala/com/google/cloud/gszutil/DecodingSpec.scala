@@ -32,7 +32,7 @@ class DecodingSpec extends FlatSpec {
     val exampleData = Array[Byte](20.toByte, 140.toByte)
     val buf = ByteBuffer.wrap(exampleData)
     val decoder = LongDecoder(2)
-    val col = decoder.columnVector(1)
+    val col = decoder.columnVector(1).get
     val minTwoByteInt = -32768
     val maxTwoByteInt = 32767
     val testValues = Seq(minTwoByteInt, -1, 0, 1, 5260, maxTwoByteInt)
@@ -49,7 +49,7 @@ class DecodingSpec extends FlatSpec {
     val exampleData = new Array[Byte](4)
     val buf = ByteBuffer.wrap(exampleData)
     val decoder = LongDecoder(4)
-    val col = decoder.columnVector(1)
+    val col = decoder.columnVector(1).get
 
     val minFourByteInt = Int.MinValue
     val maxFourByteInt = Int.MaxValue
@@ -68,7 +68,7 @@ class DecodingSpec extends FlatSpec {
     val exampleData = new Array[Byte](8)
     val buf = ByteBuffer.wrap(exampleData)
     val decoder = LongDecoder(8)
-    val col = decoder.columnVector(1)
+    val col = decoder.columnVector(1).get
     val minEightByteInteger = Long.MinValue
     val maxEightByteInteger = Long.MaxValue
     val testValues = Seq(minEightByteInteger, -174, -1, 1, 0, maxEightByteInteger)
@@ -85,7 +85,7 @@ class DecodingSpec extends FlatSpec {
     val exampleData = new Array[Byte](4)
     val buf = ByteBuffer.wrap(exampleData)
     val decoder = LongDecoder(4)
-    val col = decoder.columnVector(1)
+    val col = decoder.columnVector(1).get
     val testValues = Seq(0, 1, Int.MaxValue)
     for (testValue <- testValues) {
       field.putInt(testValue, exampleData, 0)
@@ -100,7 +100,7 @@ class DecodingSpec extends FlatSpec {
     val exampleData = new Array[Byte](8)
     val buf = ByteBuffer.wrap(exampleData)
     val decoder = LongDecoder(8)
-    val col = decoder.columnVector(1)
+    val col = decoder.columnVector(1).get
     val testValues = Seq(0, 1, Long.MaxValue)
     for (testValue <- testValues) {
       field.putLong(testValue, exampleData, 0)
@@ -115,7 +115,7 @@ class DecodingSpec extends FlatSpec {
     val exampleData = Array[Byte](0x00.toByte,0x00.toByte,0x17.toByte, 0x4D.toByte)
     val buf = ByteBuffer.wrap(exampleData)
     val decoder = Decimal64Decoder(7,0)
-    val col = decoder.columnVector(1)
+    val col = decoder.columnVector(1).get
     // 4 bytes contains 8 half-bytes, with 1 reserved for sign
     // so this field type supports a maximum of 7 digits
     val min7DigitInt = -9999999
@@ -134,7 +134,7 @@ class DecodingSpec extends FlatSpec {
     val exampleData = new Array[Byte](6)
     val buf = ByteBuffer.wrap(exampleData)
     val decoder = Decimal64Decoder(9,2)
-    val col = decoder.columnVector(1)
+    val col = decoder.columnVector(1).get
     val w = new HiveDecimalWritable()
     // 6 bytes contains 12 half-bytes, with 1 reserved for sign
     // so this field type supports a maximum of 11 digits
@@ -158,7 +158,7 @@ class DecodingSpec extends FlatSpec {
     val exampleData = new Array[Byte](10)
     val buf = ByteBuffer.wrap(exampleData)
     val decoder = Decimal64Decoder(16,2)
-    val col = decoder.columnVector(1)
+    val col = decoder.columnVector(1).get
     // 10 bytes contains 20 half-bytes, with 1 reserved for sign
     // but the first half-byte is not usable
     // so this field type supports a maximum of 18 digits
@@ -190,7 +190,7 @@ class DecodingSpec extends FlatSpec {
     val expected = 100000000000000001L
     assert(unpackedLong == expected)
     val decoder = Decimal64Decoder(16,2)
-    val col = decoder.columnVector(1)
+    val col = decoder.columnVector(1).get
     decoder.get(buf, col, 0)
     val got = col.asInstanceOf[Decimal64ColumnVector].vector(0)
     assert(got == expected)
@@ -219,7 +219,7 @@ class DecodingSpec extends FlatSpec {
   it should "decode string" in {
     val buf = ByteBuffer.wrap(Array[Byte](228.toByte,201.toByte))
     val decoder = StringDecoder(2)
-    val col = decoder.columnVector(1)
+    val col = decoder.columnVector(1).get
     decoder.get(buf, col, 0)
     val vec = col.asInstanceOf[BytesColumnVector].vector
     assert(vec.length == 1)
@@ -269,7 +269,7 @@ class DecodingSpec extends FlatSpec {
     exampleData(0) = 0x10.toByte
     exampleData(len-1) = 0x1C.toByte
     val decoder = DecimalDecoder(29,2)
-    val col = decoder.columnVector(1)
+    val col = decoder.columnVector(1).get
     decoder.get(ByteBuffer.wrap(exampleData), col, 0)
     val expected = "10000000000000000000000000000.01"
     val got = col.asInstanceOf[DecimalColumnVector].vector(0).toString
