@@ -1,7 +1,6 @@
 package com.google.cloud.bqsh.cmd
 
-import java.io.{BufferedReader, BufferedWriter, IOException, InputStreamReader, OutputStreamWriter}
-import java.nio.CharBuffer
+import java.io.IOException
 
 import com.google.cloud.bqsh.{ArgParser, Command, JCLUtilConfig, JCLUtilOptionParser}
 import com.google.cloud.gszutil.Util.Logging
@@ -35,10 +34,10 @@ object JCLUtil extends Command[JCLUtilConfig] with Logging {
   def copy(src: String, dest: String, limit: Int): Result = {
     System.out.println(s"$src -> $dest")
     if (ZFile.exists(src)) {
-      val in = RecordReader.newReader(src, ZFileConstants.MODE_FLAG_READ)
+      val in = RecordReader.newReader(src, ZFileConstants.FLAG_DISP_SHR)
       if (!ZFile.exists(dest)) {
         logger.info(s"Opening RecordWriter $dest")
-        val out = RecordWriter.newWriter(dest, ZFileConstants.MODE_FLAG_WRITE)
+        val out = RecordWriter.newWriter(dest, ZFileConstants.FLAG_DISP_SHR)
         val buf = new Array[Byte](in.getLrecl)
         var n = 0
         var count = 0
