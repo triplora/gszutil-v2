@@ -18,7 +18,7 @@ package com.google.cloud.bqsh
 
 import java.net.URI
 
-import scopt.{OptionDef, OptionParser}
+import scopt.OptionParser
 
 
 object GsUtilOptionParser extends OptionParser[GsUtilConfig]("gsutil") with ArgParser[GsUtilConfig] {

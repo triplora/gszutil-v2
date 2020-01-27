@@ -15,6 +15,8 @@
  */
 package com.google.cloud.bqsh
 
+import com.google.cloud.gszutil.SchemaProvider
+
 case class GsUtilConfig(source: String = "INFILE",
                         copyBook: String = "COPYBOOK",
                         keyFile: String = "KEYFILE",
@@ -36,6 +38,7 @@ case class GsUtilConfig(source: String = "INFILE",
                         projectId: String = "",
 
                         // Custom
+                        schemaProvider: Option[SchemaProvider] = None,
                         allowNonAscii: Boolean = false,
                         statsTable: String = "",
                         remote: Boolean = false,

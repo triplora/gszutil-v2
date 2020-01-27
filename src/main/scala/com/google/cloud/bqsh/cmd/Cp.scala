@@ -18,7 +18,8 @@ package com.google.cloud.bqsh.cmd
 import java.net.URI
 
 import com.google.cloud.bigquery.StatsUtil
-import com.google.cloud.bqsh.{ArgParser,BQ,Command,GCE,GCS,GsUtilConfig,GsUtilOptionParser}
+import com.google.cloud.bqsh.{ArgParser, BQ, Command, GCE, GCS, GsUtilConfig, GsUtilOptionParser}
+import com.google.cloud.gszutil.SchemaProvider
 import com.google.cloud.gszutil.Util.Logging
 import com.google.cloud.gszutil.io.V2SendCallable
 import com.google.cloud.gszutil.io.V2SendCallable.ReaderOpts
@@ -37,8 +38,8 @@ object Cp extends Command[GsUtilConfig] with Logging {
       .getCredentials
 
     val bq = BQ.defaultClient(c.projectId, c.location, creds)
-    val copyBook = zos.loadCopyBook(c.copyBook)
-    val in = zos.readDDWithCopyBook(c.source, copyBook)
+    val schemaProvider = c.schemaProvider.getOrElse(zos.loadCopyBook(c.copyBook))
+    val in = zos.readDDWithCopyBook(c.source, c.schemaProvider.get)
     logger.info(s"gsutil cp ${in.getDsn} ${c.destinationUri}")
 
     val batchSize = (c.blocksPerBatch * in.blkSize) / in.lRecl
@@ -55,7 +56,9 @@ object Cp extends Command[GsUtilConfig] with Logging {
       import scala.collection.JavaConverters.iterableAsScalaIterableConverter
       val blobs = lsResult.getValues.asScala.toArray
       if (blobs.nonEmpty) {
-        throw new RuntimeException("Data is already present at destination. Use --replace to delete existing files prior to upload.")
+        val msg = "Data is already present at destination. " +
+          "Use --replace to delete existing files prior to upload."
+        throw new RuntimeException(msg)
       }
     }
     val sourceDSN = in.getDsn
@@ -70,7 +73,7 @@ object Cp extends Command[GsUtilConfig] with Logging {
           c.projectId, c.zone, c.subnet, GCE.defaultClient(creds), c.machineType))
       } else None
       val host = remoteHost.map(_.ip).getOrElse(c.remoteHost)
-      val opts = ReaderOpts(in, copyBook, c.destinationUri, in.blkSize,
+      val opts = ReaderOpts(in, schemaProvider, c.destinationUri, in.blkSize,
         new ZContext(), c.nConnections, host, c.remotePort, c.blocks)
       try {
         logger.info("Starting Send...")
@@ -100,7 +103,7 @@ object Cp extends Command[GsUtilConfig] with Logging {
       logger.info("Starting ORC Upload")
       result = WriteORCFile.run(gcsUri = c.destinationUri,
                        in = in,
-                       copyBook = copyBook,
+                       schemaProvider = schemaProvider,
                        gcs = gcs,
                        maxWriters = c.parallelism,
                        batchSize = batchSize,

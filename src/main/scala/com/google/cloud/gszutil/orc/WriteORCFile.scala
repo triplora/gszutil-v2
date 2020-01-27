@@ -51,7 +51,7 @@ object WriteORCFile extends Logging {
 
   def run(gcsUri: String,
           in: ReadableByteChannel,
-          copyBook: SchemaProvider,
+          schemaProvider: SchemaProvider,
           gcs: Storage,
           maxWriters: Int,
           batchSize: Int,
@@ -64,7 +64,7 @@ object WriteORCFile extends Logging {
     val conf = ConfigFactory.parseMap(ImmutableMap.of(
       "akka.actor.guardian-supervisor-strategy","akka.actor.EscalatingSupervisorStrategy"))
     val sys = ActorSystem("gsz", conf)
-    val bufSize = copyBook.LRECL * batchSize
+    val bufSize = schemaProvider.LRECL * batchSize
     //val pool = ByteBufferPool.allocate(bufSize, maxWriters)
     val inbox = Inbox.create(sys)
 
@@ -75,7 +75,7 @@ object WriteORCFile extends Logging {
       uri = new URI(gcsUri),
       maxBytes = partSizeMb*1024*1024,
       nWorkers = maxWriters,
-      copyBook = copyBook,
+      schemaProvider = schemaProvider,
       gcs = gcs,
       compress = compress,
       compressBuffer = compressBuffer,
