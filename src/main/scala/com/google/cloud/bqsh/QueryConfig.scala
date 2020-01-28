@@ -18,6 +18,7 @@ package com.google.cloud.bqsh
 
 case class QueryConfig(
   // Custom Options
+  sql: String = "",
   timeoutMinutes: Int = 60,
   parametersFromFile: Seq[String] = Seq.empty,
   createIfNeeded: Boolean = false,

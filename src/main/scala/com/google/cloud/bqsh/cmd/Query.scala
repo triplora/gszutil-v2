@@ -31,9 +31,13 @@ object Query extends Command[QueryConfig] with Logging {
     val creds = zos.getCredentialProvider().getCredentials
     val bq = BQ.defaultClient(cfg.projectId, cfg.location, creds)
 
-    logger.info("Reading query from QUERY DD")
-    val queryString = zos.readDDString("QUERY", " ")
-    logger.info(s"Read query:\n$queryString")
+    val queryString =
+      if (cfg.sql.nonEmpty) cfg.sql
+      else {
+        logger.info("Reading query from QUERY DD")
+        zos.readDDString("QUERY", " ")
+      }
+    logger.info(s"SQL Query:\n$queryString")
     require(queryString.nonEmpty, "query must not be empty")
 
     val queries =
