@@ -43,5 +43,4 @@ class ConfigSpec extends FlatSpec {
       case _ =>
     }
   }
-
 }

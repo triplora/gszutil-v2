@@ -25,6 +25,10 @@ object JCLUtilOptionParser extends OptionParser[JCLUtilConfig]("jclutil") with A
     }
     .action((x,c) => c.copy(dest = x))
 
+  opt[String]("filter")
+    .optional()
+    .action((x,c) => c.copy(filter = x))
+
   opt[String]('e',"expr")
     .optional()
     .maxOccurs(1024)

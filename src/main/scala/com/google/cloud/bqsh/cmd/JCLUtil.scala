@@ -32,15 +32,23 @@ object JCLUtil extends Command[JCLUtilConfig] with Logging {
         "INCLUDE MEMBER=(TDSP" -> "INCLUDE MEMBER=(BQSP"
       )
 
+    if (config.filter.nonEmpty){
+      System.out.println(s"Using member name filter regex '${config.filter}'")
+    }
+
     while (members.hasNext){
       val member = members.next()
-      val newName = transform(member.name)
-      val src = s"//'${config.src}(${member.name})'"
-      val dest = s"//'${config.dest}($newName)'"
-      val result = copy(src, dest, config.limit, exprs)
-      if (result.exitCode != 0) {
-        System.out.println(s"Non-zero exit code returned for ${member.name}")
-        return result
+      if (config.filter.isEmpty || member.name.startsWith(config.filter)){
+        val newName = transform(member.name)
+        val src = s"//'${config.src}(${member.name})'"
+        val dest = s"//'${config.dest}($newName)'"
+        val result = copy(src, dest, config.limit, exprs)
+        if (result.exitCode != 0) {
+          System.out.println(s"Non-zero exit code returned for ${member.name}")
+          return result
+        }
+      } else {
+        System.out.println(s"Ignored '${member.name}'")
       }
     }
     Result.Success
@@ -59,8 +67,12 @@ object JCLUtil extends Command[JCLUtilConfig] with Logging {
     override def next(): String = {
       n = recordReader.read(buf)
       if (n > -1 || count < limit) {
-        count += 1
-        new String(buf,0,n,Decoding.EBCDIC1)
+        if (n == recordReader.getLrecl){
+          count += 1
+          new String(buf,Decoding.EBCDIC1)
+        } else {
+          throw new IOException(s"RecordReader read $n bytes but expected ${recordReader.getLrecl}")
+        }
       } else {
         if (count >= limit)
           System.err.println(s"${recordReader.getDsn} exceeded $limit record limit")
