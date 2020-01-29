@@ -18,7 +18,7 @@ package com.google.cloud.gszutil
 import java.nio.{ByteBuffer, CharBuffer}
 import java.nio.charset.Charset
 import java.sql.Timestamp
-import java.time.{LocalDateTime, ZoneOffset}
+import java.time.{LocalDate, LocalDateTime, LocalTime, Month, ZoneOffset}
 import java.time.format.DateTimeFormatter
 
 import com.google.cloud.gszutil.Util.Logging
@@ -200,6 +200,31 @@ object Decoding extends Logging {
       val localDateTime = LocalDateTime.from(formatter.parse(dateString))
       val time = localDateTime.toEpochSecond(ZoneOffset.UTC)
       bcv.getScratchTimestamp.setTime(time)
+      bcv.setFromScratchTimestamp(i)
+    }
+
+    override def columnVector(maxSize: Int): Option[ColumnVector] =
+      Option(new TimestampColumnVector())
+
+    override def typeDescription: Option[TypeDescription] =
+      Option(TypeDescription.createTimestamp())
+  }
+
+  case class DateDecoder() extends Decoder {
+    override val size: Int = 4
+    private final val Time = LocalTime.of(0,0,0)
+
+    override def get(buf: ByteBuffer, row: ColumnVector, i: Int): Unit = {
+      val bcv = row.asInstanceOf[TimestampColumnVector]
+      val dt = Binary.decode(buf, size).toInt + 19000000
+      val year = dt / 10000
+      val y = year * 10000
+      val month = dt - y
+      val day = dt - (y + month*100)
+      val localDate = LocalDate.of(year,Month.of(month),day)
+      val localDateTime = LocalDateTime.of(localDate,Time)
+      val t = localDateTime.toEpochSecond(ZoneOffset.UTC)
+      bcv.getScratchTimestamp.setTime(t)
       bcv.setFromScratchTimestamp(i)
     }
 
