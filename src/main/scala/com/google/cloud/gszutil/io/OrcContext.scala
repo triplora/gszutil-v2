@@ -94,7 +94,7 @@ final class OrcContext(private val gcs: Storage, schema: TypeDescription, compre
     bytesIn += buf.limit
     bytesSinceLastFlush += buf.limit
     timer.start()
-    val errorCount = reader.readOrc(buf, writer, err)
+    val (rowCount,errorCount) = reader.readOrc(buf, writer, err)
     if (buf.remaining > 0) {
       logger.warn(s"ByteBuffer has ${buf.remaining} bytes remaining.")
     }

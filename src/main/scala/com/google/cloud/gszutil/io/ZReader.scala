@@ -21,21 +21,27 @@ import java.nio.ByteBuffer
 import com.google.cloud.gszutil.SchemaProvider
 import com.google.cloud.gszutil.Decoding.Decoder
 import com.google.cloud.gszutil.Util.Logging
-import org.apache.hadoop.hive.ql.exec.vector.{ColumnVector, VectorizedRowBatch}
+import org.apache.hadoop.hive.ql.exec.vector.{ColumnVector, VectorizedRowBatch, VoidColumnVector}
 import org.apache.orc.Writer
 
-/** Uses a Copy Book to convert MVS data set records into an ORC row batch
-  *
-  * @param copyBook
-  * @param batchSize
+/** Decodes MVS data set records into ORC row batch
+  * @param schemaProvider SchemaProvider provides field decoders
+  * @param batchSize size of ORC VectorizedRowBatch
   */
-class ZReader(private val copyBook: SchemaProvider, private val batchSize: Int) extends Logging {
-  private final val decoders: Array[Decoder] = copyBook.decoders
+class ZReader(private val schemaProvider: SchemaProvider,
+              private val batchSize: Int) extends Logging {
+  private final val decoders: Array[Decoder] = schemaProvider.decoders
+  private final val cols: Array[ColumnVector] = decoders.map{x =>
+    x.columnVector(batchSize).getOrElse(new VoidColumnVector(batchSize))
+  }
   private final val rowBatch: VectorizedRowBatch = {
-    val cols = decoders.flatMap{_.columnVector(batchSize)}
-    val batch = new VectorizedRowBatch(cols.length, batchSize)
+    val batch = new VectorizedRowBatch(decoders.count(_.output), batchSize)
+    var j = 0
     for (i <- decoders.indices) {
-      batch.cols(i) = cols(i)
+      if (!cols(i).isInstanceOf[VoidColumnVector]) {
+        batch.cols(j) = cols(i)
+        j += 1
+      }
     }
     batch
   }
@@ -47,53 +53,69 @@ class ZReader(private val copyBook: SchemaProvider, private val batchSize: Int) 
     * @param err ByteBuffer to receive rows with decoding errors
     * @return number of errors
     */
-  def readOrc(buf: ByteBuffer, writer: Writer, err: ByteBuffer): Long = {
+  def readOrc(buf: ByteBuffer, writer: Writer, err: ByteBuffer): (Long,Long) = {
     var errors: Long = 0
-    while (buf.remaining >= copyBook.LRECL) {
-      errors += ZReader.readBatch(decoders, buf, rowBatch, batchSize, copyBook.LRECL, err)
+    var rows: Long = 0
+    while (buf.remaining >= schemaProvider.LRECL) {
+      rowBatch.reset()
+      val (rowId,errCt) = ZReader.readBatch(buf,decoders,cols,batchSize,schemaProvider.LRECL,err)
+      if (rowId == 0)
+        rowBatch.endOfFile = true
+      rowBatch.size = rowId
+      rows += rowId
+      errors += errCt
       writer.addRowBatch(rowBatch)
     }
-    errors
+    (rows,errors)
   }
 }
 
 object ZReader {
   /**
     *
-    * @param decoder Decoder instance
     * @param buf ByteBuffer with position at column to be decoded
+    * @param decoder Decoder instance
     * @param col ColumnVector to receive decoded value
     * @param rowId index within ColumnVector to store decoded value
     */
-  private final def readColumn(decoder: Decoder, buf: ByteBuffer, col: ColumnVector, rowId: Int): Unit = {
+  private final def readColumn(buf: ByteBuffer, decoder: Decoder, col: ColumnVector, rowId: Int)
+  : Unit = {
     decoder.get(buf, col, rowId)
   }
 
   /** Read
-    *
-    * @param buf byte array with multiple records
+    * @param buf input ByteBuffer with position set to start of record
+    * @param decoders Array[Decoder] to read from input
+    * @param cols Array[ColumnVector] to receive Decoder output
     * @param rowId index within the batch
     */
-  private final def readRecord(decoders: Array[Decoder], buf: ByteBuffer, rowBatch: VectorizedRowBatch, rowId: Int): Unit = {
+  private final def readRecord(buf: ByteBuffer,
+                               decoders: Array[Decoder],
+                               cols: Array[ColumnVector],
+                               rowId: Int): Unit = {
     var i = 0
     while (i < decoders.length){
-      readColumn(decoders(i), buf, rowBatch.cols(i), rowId)
+      readColumn(buf, decoders(i), cols(i), rowId)
       i += 1
     }
   }
 
   /**
     *
-    * @param decoders Decoder instances
     * @param buf ByteBuffer containing data
-    * @param rowBatch VectorizedRowBatch
+    * @param decoders Decoder instances
+    * @param cols VectorizedRowBatch
     * @param batchSize rows per batch
     * @param lRecl size of each row in bytes
     * @param err ByteBuffer to receive failed rows
     * @return number of errors encountered
     */
-  private final def readBatch(decoders: Array[Decoder], buf: ByteBuffer, rowBatch: VectorizedRowBatch, batchSize: Int, lRecl: Int, err: ByteBuffer): Int = {
-    rowBatch.reset()
+  private final def readBatch(buf: ByteBuffer,
+                              decoders: Array[Decoder],
+                              cols: Array[ColumnVector],
+                              batchSize: Int,
+                              lRecl: Int,
+                              err: ByteBuffer): (Int,Int) = {
     err.clear()
     var errors: Int = 0
     var rowId = 0
@@ -102,7 +124,7 @@ object ZReader {
     while (rowId < batchSize && buf.remaining >= lRecl){
       rowStart = buf.position()
       try {
-        readRecord(decoders, buf, rowBatch, rowId)
+        readRecord(buf, decoders, cols, rowId)
         rowId += 1
       } catch {
         case _: IllegalArgumentException =>
@@ -112,9 +134,6 @@ object ZReader {
           err.put(errRecord)
       }
     }
-    rowBatch.size = rowId
-    if (rowBatch.size == 0)
-      rowBatch.endOfFile = true
-    errors
+    (rowId,errors)
   }
 }

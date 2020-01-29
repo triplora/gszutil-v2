@@ -37,6 +37,7 @@ class ORCFileWriter(args: ORCFileWriterArgs) extends Actor with Logging {
   private final val reader = new ZReader(copyBook, batchSize)
   private final val errBuf = ByteBuffer.allocate(copyBook.LRECL * batchSize)
 
+  private var rowCount: Long = 0
   private var errorCount: Long = 0
   private var bytesIn: Long = 0
   private var bytesSinceLastFlush: Long = 0
@@ -81,7 +82,9 @@ class ORCFileWriter(args: ORCFileWriterArgs) extends Actor with Logging {
       bytesIn += x.limit
       bytesSinceLastFlush += x.limit
       val t0 = System.currentTimeMillis
-      errorCount += reader.readOrc(x, writer, errBuf)
+      val (rowCt,errorCt) = reader.readOrc(x, writer, errBuf)
+      rowCount += rowCt
+      errorCount += errorCt
       if (errBuf.position > 0){
         errBuf.flip()
         val a = new Array[Byte](copyBook.LRECL)
@@ -128,7 +131,9 @@ class ORCFileWriter(args: ORCFileWriterArgs) extends Actor with Logging {
     val bytesOut = stats.getBytesWritten
     val ratio = (bytesOut * 1.0d) / bytesIn
     val mbps = Util.fmbps(bytesOut, elapsedTime)
-    logger.info(s"Stopping writer for ${args.path} after writing $bytesOut bytes in $elapsedTime ms ($mbps mbps) $dt ms total $idle ms idle $bytesIn bytes read ${f"$ratio%1.2f"} compression ratio ${Util.logMem()}")
+    logger.info(s"Stopping writer for ${args.path} after writing $rowCount records " +
+      s"$bytesOut bytes in $elapsedTime ms ($mbps mbps) $dt ms total $idle ms idle " +
+      s"$bytesIn bytes read ${f"$ratio%1.2f"} compression ratio ${Util.logMem()}")
     val recordsIn = bytesIn / copyBook.LRECL
     val errorPct = errorCount*1.0d / recordsIn
     if (errorPct > maxErrorPct) {

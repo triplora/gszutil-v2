@@ -25,4 +25,9 @@ object JCLUtilOptionParser extends OptionParser[JCLUtilConfig]("jclutil") with A
     }
     .action((x,c) => c.copy(dest = x))
 
+  opt[String]('e',"expr")
+    .optional()
+    .maxOccurs(1024)
+    .action((x,c) => c.copy(expressions = c.expressions ++ Seq(x)))
+
 }

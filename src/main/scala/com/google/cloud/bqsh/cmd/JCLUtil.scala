@@ -3,8 +3,10 @@ package com.google.cloud.bqsh.cmd
 import java.io.IOException
 
 import com.google.cloud.bqsh.{ArgParser, Command, JCLUtilConfig, JCLUtilOptionParser}
+import com.google.cloud.gszutil.Decoding
 import com.google.cloud.gszutil.Util.Logging
-import com.ibm.jzos.{Exec, MvsJobSubmitter, PdsDirectory, RcException, RecordReader, RecordWriter, ZFile, ZFileConstants, ZFileProvider, ZUtil}
+import com.ibm.jzos.{Exec, MvsJobSubmitter, PdsDirectory, RcException, RecordReader, RecordWriter,
+  ZFile, ZFileConstants, ZFileProvider, ZUtil}
 
 import scala.collection.mutable.ArrayBuffer
 
@@ -15,15 +17,31 @@ object JCLUtil extends Command[JCLUtilConfig] with Logging {
   override def run(config: JCLUtilConfig, zos: ZFileProvider): Result = {
     val transform: (String) => String = replacePrefix(_, "BQ")
     val members = new PDSIterator(config.src)
+
+    val exprs: Seq[(String,String)] =
+      if (config.expressions.nonEmpty)
+        config.exprs
+      else Seq(
+        "BTEQEXT"    -> "BQSHEXT",
+        "MLOADEXT"   -> "BQMLDEXT",
+        "TPUMP"      -> "BQMLD",
+        "TDCMLD"     -> "BQMLD1",
+        "//TD"       -> "//BQ",
+        "JOBCHK=TD"  -> "JOBCHK=BQ",
+        "JOBNAME=TD" -> "JOBNAME=BQ",
+        "INCLUDE MEMBER=(TDSP" -> "INCLUDE MEMBER=(BQSP"
+      )
+
     while (members.hasNext){
       val member = members.next()
-      System.out.println(member)
       val newName = transform(member.name)
       val src = s"//'${config.src}(${member.name})'"
       val dest = s"//'${config.dest}($newName)'"
-      val result = copy(src, dest, config.limit)
-      if (result.exitCode != 0)
+      val result = copy(src, dest, config.limit, exprs)
+      if (result.exitCode != 0) {
+        System.out.println(s"Non-zero exit code returned for ${member.name}")
         return result
+      }
     }
     Result.Success
   }
@@ -31,41 +49,75 @@ object JCLUtil extends Command[JCLUtilConfig] with Logging {
   def replacePrefix(name: String, sub: String): String =
     sub + name.substring(sub.length)
 
-  def copy(src: String, dest: String, limit: Int): Result = {
-    System.out.println(s"$src -> $dest")
-    if (ZFile.exists(src)) {
-      val in = RecordReader.newReader(src, ZFileConstants.FLAG_DISP_SHR)
-      if (!ZFile.exists(dest)) {
-        logger.info(s"Opening RecordWriter $dest")
-        val out = RecordWriter.newWriter(dest, ZFileConstants.FLAG_DISP_SHR)
-        val buf = new Array[Byte](in.getLrecl)
-        var n = 0
-        var count = 0
-        while (n > -1 && count < limit) {
-          n = in.read(buf)
-          if (n > -1) {
-            out.write(buf)
-            count += 1
-          }
-        }
-        in.close()
-        out.flush()
-        out.close()
-        logger.info(s"Copied $count lines from $src to $dest")
-        if (count >= limit) Result.Failure(s"$src exceeded line limit")
-        else Result.Success
+  class RecordIterator(val recordReader: RecordReader, limit: Long) extends Iterator[String] with
+    AutoCloseable {
+    private val buf = new Array[Byte](recordReader.getLrecl)
+    private var n = 0
+    private var count: Long = 0
+    private var closed = false
+    override def hasNext: Boolean = n > -1
+    override def next(): String = {
+      n = recordReader.read(buf)
+      if (n > -1 || count < limit) {
+        count += 1
+        new String(buf,0,n,Decoding.EBCDIC1)
       } else {
-        val msg = s"Error: $dest already exists"
-        logger.error(msg)
-        System.err.println(msg)
-        Result.Failure(msg)
+        if (count >= limit)
+          System.err.println(s"${recordReader.getDsn} exceeded $limit record limit")
+        close()
+        null
       }
-    } else {
+    }
+    override def close(): Unit =
+      if (!closed) {
+        recordReader.close()
+        closed = true
+      }
+  }
+
+  def readWithReplacements(src: String, exprs: Seq[(String,String)], limit: Long): Iterator[String]
+  = {
+    val in = RecordReader.newReader(src, ZFileConstants.FLAG_DISP_SHR)
+    val it = new RecordIterator(in,limit).takeWhile(_ != null)
+
+    // capture trailing 8 characters separately
+    val it1 = it.map{line => (line.take(72),line.drop(72))}
+
+    // lines with all replacements applied
+    exprs.foldLeft(it1){(a,b) =>
+      a.map{x => (x._1.replaceAllLiterally(b._1,b._2), x._2)}
+    }.map{x =>
+      x._1.take(72) + x._2
+    }
+  }
+
+  def copy(src: String, dest: String, limit: Int, exprs: Seq[(String,String)]): Result = {
+    System.out.println(s"$src -> $dest")
+    if (ZFile.exists(dest)) {
+      val msg = s"Error: $dest already exists"
+      logger.error(msg)
+      System.err.println(msg)
+      return Result.Failure(msg)
+    } else if (!ZFile.exists(src)) {
       val msg = s"Error: $src doesn't exist"
       logger.error(msg)
       System.err.println(msg)
       Result.Failure(msg)
     }
+
+    val it1 = readWithReplacements(src, exprs, 10000)
+    logger.info(s"Opening RecordWriter $dest")
+    val out = RecordWriter.newWriter(dest, ZFileConstants.FLAG_DISP_SHR)
+
+    var count = 0
+    for (record <- it1){
+      out.write(record.getBytes)
+      count += 1
+    }
+    out.flush()
+    out.close()
+    logger.info(s"Copied $count lines from $src to $dest")
+    Result.Success
   }
 
   class PDSMember(val info: PdsDirectory.MemberInfo) {

@@ -15,7 +15,7 @@
  */
 package com.google.cloud.gszutil
 
-import java.nio.ByteBuffer
+import java.nio.{ByteBuffer, CharBuffer}
 import java.nio.charset.Charset
 import java.sql.Timestamp
 import java.time.{LocalDateTime, ZoneOffset}
@@ -31,6 +31,7 @@ import org.apache.orc.TypeDescription
 
 object Decoding extends Logging {
   final val CP1047: Charset = Charset.forName("CP1047")
+  final val EBCDIC1: Charset = new EBCDIC1()
 
   // EBCDIC decimal byte values that map to valid ASCII characters
   private final val validAscii: Array[Int] = Array(
@@ -127,13 +128,16 @@ object Decoding extends Logging {
     /** Read a field into a mutable output builder
       *
       * @param buf ByteBuffer
-      * @param i field index
+      * @param row ColumnVector
+      * @param i row index
       */
     def get(buf: ByteBuffer, row: ColumnVector, i: Int): Unit
 
     def columnVector(maxSize: Int): Option[ColumnVector]
 
     def typeDescription: Option[TypeDescription]
+
+    def output: Boolean = true
   }
 
   case class StringDecoder(override val size: Int, ascii: Boolean = true) extends Decoder {
@@ -162,26 +166,36 @@ object Decoding extends Logging {
     override def toString: String = s"$size byte STRING"
   }
 
-  case class FillerDecoder() extends Decoder {
-    override val size: Int = 0
-
-    override def get(buf: ByteBuffer, row: ColumnVector, i: Int): Unit = {}
-
+  case class FillerDecoder(size: Int) extends Decoder {
+    override def get(buf: ByteBuffer, row: ColumnVector, i: Int): Unit = {
+      var i = 0
+      while (i < size) {
+        buf.get()
+        i += 1
+      }
+    }
     override def columnVector(maxSize: Int): Option[ColumnVector] = None
-
     override def typeDescription: Option[TypeDescription] = None
+    override def output: Boolean = false
   }
 
   case class TimestampDecoder(override val size: Int,
                               format: String = "YYYY/MM/DD") extends Decoder {
-
-    private val pattern = format.replace("DD","dd")
+    private final val charMap = EBCDIC2ASCII
+    private val pattern = format
+      .replace("DD","dd")
+      .replace("YYYY","yyyy")
+      .replace("YY","yy")
     private val formatter = DateTimeFormatter.ofPattern(pattern)
 
     override def get(buf: ByteBuffer, row: ColumnVector, i: Int): Unit = {
       val bcv = row.asInstanceOf[TimestampColumnVector]
       val bytes = new Array[Byte](size)
-      buf.get(bytes)
+      var i = 0
+      while (i < size) {
+        bytes(i) = charMap(uint(buf.get))
+        i += 1
+      }
       val dateString = new String(bytes, Charsets.UTF_8)
       val localDateTime = LocalDateTime.from(formatter.parse(dateString))
       val time = localDateTime.toEpochSecond(ZoneOffset.UTC)
