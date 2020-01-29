@@ -100,16 +100,24 @@ object JCLUtil extends Command[JCLUtilConfig] with Logging {
   def readWithReplacements(src: String, exprs: Seq[(String,String)], limit: Long): Iterator[String]
   = {
     val in = RecordReader.newReader(src, ZFileConstants.FLAG_DISP_SHR)
-    val it = new RecordIterator(in,limit).takeWhile(_ != null)
+    val it = new RecordIterator(in,limit).takeWhile(_ != null).buffered
+    val lrecl = it.head.length
+    val hasMarginDigits = it.head.takeRight(8).forall(_.isDigit)
+    if (lrecl == 80 && hasMarginDigits) {
+      // Trailing 8 characters separately
+      val it1 = it.map{line => (line.take(72),line.drop(72))}
 
-    // capture trailing 8 characters separately
-    val it1 = it.map{line => (line.take(72),line.drop(72))}
-
-    // lines with all replacements applied
-    exprs.foldLeft(it1){(a,b) =>
-      a.map{x => (x._1.replaceAllLiterally(b._1,b._2), x._2)}
-    }.map{x =>
-      x._1.take(72) + x._2
+      // lines with all replacements applied
+      exprs.foldLeft(it1){(a,b) =>
+        a.map{x => (x._1.replaceAllLiterally(b._1,b._2), x._2)}
+      }.map{x =>
+        x._1.take(72) + x._2
+      }
+    } else {
+      // Entire record is eligible for replacement
+      exprs.foldLeft[Iterator[String]](it){(a,b) =>
+        a.map{x => x.replaceAllLiterally(b._1,b._2)}
+      }
     }
   }
 
