@@ -4,7 +4,7 @@ case class JCLUtilConfig(src: String = "",
                          dest: String = "",
                          transform: String = "",
                          expressions: Seq[String] = Seq.empty,
-                         filter: String = "TD",
+                         filter: String = "^TD.*$",
                          limit: Int = 4096) {
   def exprs: Seq[(String,String)] = expressions.flatMap(parseExpr)
 

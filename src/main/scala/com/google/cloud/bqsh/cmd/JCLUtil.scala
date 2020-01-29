@@ -14,9 +14,18 @@ object JCLUtil extends Command[JCLUtilConfig] with Logging {
   override val name: String = "jclutil"
   override val parser: ArgParser[JCLUtilConfig] = JCLUtilOptionParser
 
+  def dsn(pds: String, member: String): String = s"//'$pds($member)'"
+  def dsn(pds: String): String = s"//'$pds'"
+
   override def run(config: JCLUtilConfig, zos: ZFileProvider): Result = {
     val transform: (String) => String = replacePrefix(_, "BQ")
-    val members = new PDSIterator(config.src)
+    val pdsExists = ZFile.locateDSN(dsn(config.src)).nonEmpty
+    if (!pdsExists) {
+      val msg = s"${config.src} not found"
+      System.err.println(msg)
+      return Result.Failure(msg)
+    }
+    val members = new PDSIterator(dsn(config.src))
 
     val exprs: Seq[(String,String)] =
       if (config.expressions.nonEmpty)
@@ -33,16 +42,17 @@ object JCLUtil extends Command[JCLUtilConfig] with Logging {
       )
 
     if (config.filter.nonEmpty){
-      System.out.println(s"Using member name filter regex '${config.filter}'")
+      System.out.println(s"Filter regex = '${config.filter}'")
     }
 
     while (members.hasNext){
       val member = members.next()
-      if (config.filter.isEmpty || member.name.startsWith(config.filter)){
-        val newName = transform(member.name)
-        val src = s"//'${config.src}(${member.name})'"
-        val dest = s"//'${config.dest}($newName)'"
-        val result = copy(src, dest, config.limit, exprs)
+      if (config.filter.isEmpty || member.name.matches(config.filter)){
+        System.out.println(s"Processing '${member.name}'")
+        val result = copy(dsn(config.src,member.name),
+                          dsn(config.dest,transform(member.name)),
+                          config.limit,
+                          exprs)
         if (result.exitCode != 0) {
           System.out.println(s"Non-zero exit code returned for ${member.name}")
           return result
@@ -66,7 +76,7 @@ object JCLUtil extends Command[JCLUtilConfig] with Logging {
     override def hasNext: Boolean = n > -1
     override def next(): String = {
       n = recordReader.read(buf)
-      if (n > -1 || count < limit) {
+      if (n > -1 && count < limit) {
         if (n == recordReader.getLrecl){
           count += 1
           new String(buf,Decoding.EBCDIC1)
@@ -145,8 +155,11 @@ object JCLUtil extends Command[JCLUtilConfig] with Logging {
          |""".stripMargin
   }
 
-  class PDSIterator(val pdsName: String) extends Iterator[PDSMember] {
-    private val dir = new PdsDirectory(s"//'$pdsName'")
+  /** Partitioned Data Set Iterator
+    * @param dsn DSN in format //'HLQ.MEMBER'
+    */
+  class PDSIterator(val dsn: String) extends Iterator[PDSMember] {
+    private val dir = new PdsDirectory(dsn)
     import scala.collection.JavaConverters.asScalaIteratorConverter
     private val iter = dir.iterator().asScala
 
