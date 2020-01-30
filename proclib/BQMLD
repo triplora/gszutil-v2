@@ -5,7 +5,7 @@
 //           REGN='4096K',WTOACT=WTOR,
 //           WTOLIB='WM.PARMLIB',WTOMBR=MLDABND
 //*********************************************************************
-//JAVA EXEC PGM=JVMLDM86,REGION=&REGN,
+//BQMLD EXEC PGM=JVMLDM86,REGION=&REGN,
 //         PARM='/+I com.google.cloud.bqmload.BQMLD &MLPARM'
 //SYSPRINT DD SYSOUT=&SSPRT
 //SYSOUT   DD SYSOUT=&SSOUT

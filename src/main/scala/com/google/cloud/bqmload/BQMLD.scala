@@ -65,6 +65,7 @@ object BQMLD {
     content.put("jobtime", zos.jobTime)
     content.put("jobname", zos.jobName)
     content.put("stepname", info.stepName)
+    content.put("procstepname", info.procStepName)
     content.put("symbols", info.symbols.map(x => s"${x._1}=${x._2}").mkString("\n"))
     content.put("user", info.user)
     if (!substituted.contentEquals(script)) {

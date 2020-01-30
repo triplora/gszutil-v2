@@ -16,7 +16,7 @@
 //* limitations under the License.
 //*
 //*******************************************************************
-//JAVA EXEC PGM=JVMLDM86,REGION=0M,
+//BQSH EXEC PGM=JVMLDM86,REGION=0M,
 //  PARM='/+I com.google.cloud.bqsh.Bqsh'
 //SYSPRINT DD SYSOUT=*
 //SYSOUT   DD SYSOUT=*

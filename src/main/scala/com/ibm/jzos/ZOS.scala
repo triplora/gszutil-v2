@@ -180,6 +180,7 @@ protected object ZOS extends Logging {
       ZUtil.getCurrentJobId,
       ZUtil.getCurrentJobname,
       ZUtil.getCurrentStepname,
+      ZUtil.getCurrentProcStepname,
       ZUtil.getCurrentUser,
       getSymbols
     )
