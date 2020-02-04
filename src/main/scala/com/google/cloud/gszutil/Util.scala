@@ -77,6 +77,23 @@ object Util {
                    user: String = "",
                    symbols: Map[String,String] = Map.empty)
 
+  def dsn(pds: String, member: String): String = s"//'$pds($member)'"
+  def dsn(pds: String): String = s"//'$pds'"
+
+  trait PDSMemberInfo {
+    def name: String
+    def currentLines: Int
+    def creationDate: java.util.Date
+    def modificationDate: java.util.Date
+    def userId: String
+    def version: Int
+  }
+
+  trait ZMVSJob {
+    def getStatus: String
+    def getOutput: Seq[String]
+  }
+
   trait CredentialProvider {
     def getCredentials: GoogleCredentials
   }

@@ -20,9 +20,10 @@ import java.nio.channels.FileChannel
 import java.nio.file.{Files, Paths, StandardOpenOption}
 import java.util.Calendar
 
-import com.google.cloud.gszutil.Util.{CredentialProvider, DefaultCredentialProvider, Logging, ZInfo}
-import com.google.cloud.gszutil.io.{ChannelRecordReader, ZRecordReaderT}
-import com.google.cloud.gszutil.{CopyBook,SchemaProvider, Util}
+import com.google.cloud.gszutil.Util.{CredentialProvider, DefaultCredentialProvider, Logging,
+  PDSMemberInfo, ZInfo, ZMVSJob}
+import com.google.cloud.gszutil.io.{ChannelRecordReader, ZRecordReaderT, ZRecordWriterT}
+import com.google.cloud.gszutil.{CopyBook, SchemaProvider, Util}
 import com.google.common.base.Charsets
 import com.google.common.io.ByteStreams
 
@@ -40,6 +41,8 @@ object Linux extends ZFileProvider with Logging {
   override def ddExists(dd: String): Boolean = {
     sys.env.contains(dd) && sys.env.contains(dd+"_LRECL") && sys.env.contains(dd+"_BLKSIZE")
   }
+
+  override def readDSN(dsn: String): ZRecordReaderT = throw new NotImplementedError()
 
   override def readDD(dd: String): ZRecordReaderT = ddFile(dd)
 
@@ -101,4 +104,14 @@ object Linux extends ZFileProvider with Logging {
   override def getInfo: ZInfo = ZInfo()
 
   override def substituteSystemSymbols(s: String): String = s
+
+  override def exists(dsn: String): Boolean = throw new NotImplementedError()
+
+  override def readDSNLines(dsn: String): Iterator[String] = throw new NotImplementedError()
+
+  override def writeDSN(dsn: String): ZRecordWriterT = throw new NotImplementedError()
+
+  override def listPDS(dsn: String): Iterator[PDSMemberInfo] = throw new NotImplementedError()
+
+  override def submitJCL(jcl: Seq[String]): Option[ZMVSJob] = throw new NotImplementedError()
 }

@@ -17,8 +17,8 @@
 package com.ibm.jzos
 
 import com.google.cloud.gszutil.{CopyBook, SchemaProvider}
-import com.google.cloud.gszutil.Util.{CredentialProvider, ZInfo}
-import com.google.cloud.gszutil.io.ZRecordReaderT
+import com.google.cloud.gszutil.Util.{CredentialProvider, PDSMemberInfo, ZInfo, ZMVSJob}
+import com.google.cloud.gszutil.io.{ZRecordReaderT, ZRecordWriterT}
 
 object ZFileProvider {
   def getProvider(): ZFileProvider = {
@@ -40,10 +40,15 @@ trait ZFileProvider {
     */
   def readDDWithCopyBook(dd: String, copyBook: SchemaProvider): ZRecordReaderT
   def ddExists(dd: String): Boolean
+  def exists(dsn: String): Boolean
+  def readDSN(dsn: String): ZRecordReaderT
+  def readDSNLines(dsn: String): Iterator[String]
+  def writeDSN(dsn: String): ZRecordWriterT
   def readDD(dd: String): ZRecordReaderT
   def readStdin(): String
   def readDDString(dd: String, recordSeparator: String): String
   def getCredentialProvider(): CredentialProvider
+  def listPDS(dsn: String): Iterator[PDSMemberInfo]
   def loadCopyBook(dd: String): CopyBook
   def jobName: String
   def jobDate: String
@@ -51,5 +56,6 @@ trait ZFileProvider {
   def jobId: String = jobName+jobDate+jobTime
   def getInfo: ZInfo
   def substituteSystemSymbols(s: String): String
+  def submitJCL(jcl: Seq[String]): Option[ZMVSJob]
 }
 

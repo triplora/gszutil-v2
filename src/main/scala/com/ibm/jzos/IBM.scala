@@ -16,11 +16,13 @@
 
 package com.ibm.jzos
 
-import com.google.cloud.gszutil.Util.{CredentialProvider, GoogleCredentialsProvider, Logging, ZInfo}
-import com.google.cloud.gszutil.io.ZRecordReaderT
+import com.google.cloud.gszutil.Util.{CredentialProvider, GoogleCredentialsProvider, Logging,
+  PDSMemberInfo, ZInfo, ZMVSJob}
+import com.google.cloud.gszutil.io.{ZRecordReaderT, ZRecordWriterT}
 import com.google.cloud.gszutil.{CopyBook, Decoding, SchemaProvider, Util}
 import com.google.common.base.Charsets
 import com.google.common.io.ByteStreams
+import com.ibm.jzos.ZOS.{PDSIterator, RecordIterator}
 
 object IBM extends ZFileProvider with Logging {
   override def init(): Unit = {
@@ -36,7 +38,18 @@ object IBM extends ZFileProvider with Logging {
     rr
   }
 
+  override def exists(dsn: String): Boolean = ZOS.exists(dsn)
+
   override def ddExists(dd: String): Boolean = ZOS.ddExists(dd)
+
+  override def listPDS(dsn: String): Iterator[PDSMemberInfo] = new PDSIterator(dsn)
+
+  override def readDSN(dsn: String): ZRecordReaderT = ZOS.readDSN(dsn)
+
+  override def readDSNLines(dsn: String): Iterator[String] =
+    new RecordIterator(readDSN(dsn)).takeWhile(_ != null)
+
+  override def writeDSN(dsn: String): ZRecordWriterT = ZOS.writeDSN(dsn)
 
   override def readDD(dd: String): ZRecordReaderT = ZOS.readDD(dd)
 
@@ -82,4 +95,6 @@ object IBM extends ZFileProvider with Logging {
   override def getInfo: ZInfo = ZOS.getInfo
 
   override def substituteSystemSymbols(s: String): String = ZOS.substituteSystemSymbols(s)
+
+  override def submitJCL(jcl: Seq[String]): Option[ZMVSJob] = ZOS.submitJCL(jcl)
 }

@@ -1,0 +1,46 @@
+package com.google.cloud.bqsh.cmd
+
+
+import com.google.cloud.bqsh.{ArgParser, Command, JobUtilConfig, JobUtilOptionParser}
+import com.google.cloud.gszutil.Util.{dsn,Logging}
+import com.ibm.jzos.ZFileProvider
+
+
+object JobUtil extends Command[JobUtilConfig] with Logging {
+  override val name: String = "jclutil"
+  override val parser: ArgParser[JobUtilConfig] = JobUtilOptionParser
+
+  override def run(config: JobUtilConfig, zos: ZFileProvider): Result = {
+    if (config.filter.nonEmpty)
+      System.out.println(s"Filter regex = '${config.filter}'")
+
+    val members = zos.listPDS(dsn(config.src))
+
+    while (members.hasNext){
+      val member = members.next()
+      if (config.filter.isEmpty || member.name.matches(config.filter)){
+        System.out.println(s"Processing '${member.name}'")
+        val lines = zos.readDSNLines(dsn(config.src,member.name))
+        val jcl = readJCL(lines).toArray.toSeq
+        val result = zos.submitJCL(jcl)
+        if (result.isDefined) {
+          System.out.println(result.get.getStatus)
+          System.out.println(result.get.getOutput)
+        }
+      } else {
+        System.out.println(s"Ignored '${member.name}'")
+      }
+    }
+    Result.Success
+  }
+
+  def readJCL(lines: Iterator[String]): Iterator[String] = {
+    val it = lines.buffered
+    val lrecl = it.head.length
+    val hasMarginDigits = it.head.takeRight(8).forall(_.isDigit)
+    if (lrecl == 80 && hasMarginDigits) {
+      // Trailing 8 characters separately
+      it.map(_.take(72))
+    } else it
+  }
+}
