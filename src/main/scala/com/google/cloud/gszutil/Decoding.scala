@@ -284,6 +284,22 @@ object Decoding extends Logging {
         .setTyp(Field.FieldType.DECIMAL)
   }
 
+  def getDecoder(f: Field): Decoder = {
+    import Field.FieldType._
+    if (f.getTyp == STRING)
+      StringDecoder(f.getSize, f.getFiller)
+    else if (f.getTyp == INTEGER)
+      LongDecoder(f.getSize, f.getFiller)
+    else if (f.getTyp == DECIMAL)
+      Decimal64Decoder(f.getPrecision - f.getScale, f.getScale, f.getFiller)
+    else if (f.getTyp == DATE)
+      DateDecoder(f.getFiller)
+    else if (f.getTyp == UNSIGNED_INTEGER)
+      UnsignedLongDecoder(f.getSize, f.getFiller)
+    else
+      throw new IllegalArgumentException("unrecognized field type")
+  }
+
   private val charRegex = """PIC X\((\d{1,3})\)""".r
   private val numStrRegex = """PIC 9\((\d{1,3})\)""".r
   private val intRegex = """PIC S9\((\d{1,3})\) COMP""".r

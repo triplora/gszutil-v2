@@ -109,19 +109,17 @@ class V2Server(config: V2Config) extends Callable[Result] with Logging {
     logger.debug(s"Received BEGIN frame\n" + PackedDecimal.hexValue(frame1a))
     require(util.Arrays.equals(frame1a,Protocol.Begin), "expected BEGIN message")
 
-    // TODO support alternative SchemaProvider
-    // Copy Book
+    // Record proto message
     val frame2 = socket.recv(0)
     val record = Record.parseFrom(frame2)
 
     val schema: SchemaProvider =
-      if (record.getSource == Record.Source.COPYBOOK) {
+      if (record.getSource == Record.Source.COPYBOOK)
         CopyBook(record.getOriginal)
-      } else if (record.getSource == Record.Source.LAYOUT) {
-        throw new NotImplementedError()
-      } else {
-        throw new NotImplementedError()
-      }
+      else if (record.getSource == Record.Source.LAYOUT)
+        RecordSchema(record)
+      else throw new NotImplementedError()
+
     logger.info(s"Received Record Schema\n```$schema```\n")
 
     // GCS Prefix

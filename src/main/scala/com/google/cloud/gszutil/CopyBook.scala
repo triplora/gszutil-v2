@@ -33,7 +33,7 @@ case class CopyBook(raw: String) extends SchemaProvider {
         None
     }
 
-  override def decoders: Array[Decoder] = {
+  override lazy val decoders: Array[Decoder] = {
     val buf = ArrayBuffer.empty[Decoder]
     Fields.foreach{
       case CopyBookField(_, decoder) =>
