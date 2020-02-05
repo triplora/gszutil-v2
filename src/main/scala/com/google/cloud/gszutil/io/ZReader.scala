@@ -35,7 +35,7 @@ class ZReader(private val schemaProvider: SchemaProvider,
     x.columnVector(batchSize).getOrElse(new VoidColumnVector(batchSize))
   }
   private final val rowBatch: VectorizedRowBatch = {
-    val batch = new VectorizedRowBatch(decoders.count(_.output), batchSize)
+    val batch = new VectorizedRowBatch(decoders.count(!_.filler), batchSize)
     var j = 0
     for (i <- decoders.indices) {
       if (!cols(i).isInstanceOf[VoidColumnVector]) {

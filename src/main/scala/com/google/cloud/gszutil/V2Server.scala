@@ -31,6 +31,7 @@ import com.google.cloud.gszutil.V2Server.V2Config
 import com.google.cloud.gszutil.io.{BlockingBoundedBufferPool, V2ActorArgs, V2ReceiveActor, V2ReceiveCallable, V2SendCallable}
 import com.google.cloud.gszutil.orc.Protocol
 import com.google.cloud.gszutil.orc.Protocol.{PartFailed, UploadComplete}
+import com.google.cloud.gzos.pb.Schema.Record
 import com.google.cloud.storage.Storage
 import com.google.common.base.{Charsets, Preconditions}
 import com.google.common.collect.ImmutableMap
@@ -111,10 +112,17 @@ class V2Server(config: V2Config) extends Callable[Result] with Logging {
     // TODO support alternative SchemaProvider
     // Copy Book
     val frame2 = socket.recv(0)
-    val copyBookRaw = new String(frame2, Charsets.UTF_8)
-    logger.debug("Received Copy Book\n" + copyBookRaw)
-    val copyBook = CopyBook(copyBookRaw)
-    logger.info(s"Received Copy Book $copyBook")
+    val record = Record.parseFrom(frame2)
+
+    val schema: SchemaProvider =
+      if (record.getSource == Record.Source.COPYBOOK) {
+        CopyBook(record.getOriginal)
+      } else if (record.getSource == Record.Source.LAYOUT) {
+        throw new NotImplementedError()
+      } else {
+        throw new NotImplementedError()
+      }
+    logger.info(s"Received Record Schema\n```$schema```\n")
 
     // GCS Prefix
     val frame3 = socket.recv(0)
@@ -133,7 +141,7 @@ class V2Server(config: V2Config) extends Callable[Result] with Logging {
     logger.info(s"Allocating Buffer Pool with size ${1L*bufSize*config.nWriters*config.bufCt}")
     val pool = new BlockingBoundedBufferPool(bufSize, config.nWriters*config.bufCt)
 
-    val wArgs = V2ActorArgs(socket, blkSize, config.nWriters, copyBook, V2Server.PartitionBytes,
+    val wArgs = V2ActorArgs(socket, blkSize, config.nWriters, schema, V2Server.PartitionBytes,
       new Path(gcsUri), config.gcs, config.compress,
       pool, config.maxErrorPct, inbox.getRef())
 
@@ -144,7 +152,7 @@ class V2Server(config: V2Config) extends Callable[Result] with Logging {
     logger.info("Sending ACK")
     socket.send(frame1,ZMQ.SNDMORE) // sender identity
     socket.send(Protocol.Ack,ZMQ.SNDMORE) // ACK message
-    socket.send(V2SendCallable.encodeInt(copyBook.LRECL),0) // LRECL confirmation
+    socket.send(V2SendCallable.encodeInt(schema.LRECL),0) // LRECL confirmation
 
     // Set termination callback
     sys.whenTerminated.onComplete{

@@ -15,17 +15,14 @@
  */
 package com.google.cloud.gszutil
 
-import java.nio.{ByteBuffer, CharBuffer}
+import java.nio.ByteBuffer
 import java.nio.charset.Charset
-import java.sql.Timestamp
 import java.time.{LocalDate, LocalDateTime, LocalTime, Month, ZoneOffset}
-import java.time.format.DateTimeFormatter
 
 import com.google.cloud.gszutil.Util.Logging
+import com.google.cloud.gzos.pb.Schema.Field
 import com.google.common.base.Charsets
-import com.ibm.jzos.fields.daa
 import org.apache.hadoop.hive.ql.exec.vector._
-import org.apache.hadoop.hive.serde2.io.HiveDecimalWritable
 import org.apache.orc.TypeDescription
 
 
@@ -124,6 +121,7 @@ object Decoding extends Logging {
 
   trait Decoder {
     val size: Int
+    val filler: Boolean = false
 
     /** Read a field into a mutable output builder
       *
@@ -137,10 +135,13 @@ object Decoding extends Logging {
 
     def typeDescription: Option[TypeDescription]
 
-    def output: Boolean = true
+    /** Proto Representation */
+    def toFieldBuilder: Field.Builder
   }
 
-  case class StringDecoder(override val size: Int, ascii: Boolean = true) extends Decoder {
+  case class StringDecoder(override val size: Int,
+                           ascii: Boolean = true,
+                           override val filler: Boolean = false) extends Decoder {
     private final val charMap = if (ascii) EBCDIC2ASCII else EBCDIC
     override def get(buf: ByteBuffer, row: ColumnVector, i: Int): Unit = {
       val bcv = row.asInstanceOf[BytesColumnVector]
@@ -164,53 +165,15 @@ object Decoding extends Logging {
       Option(TypeDescription.createChar().withMaxLength(size))
 
     override def toString: String = s"$size byte STRING"
+
+    override def toFieldBuilder: Field.Builder =
+      Field.newBuilder()
+        .setSize(size)
+        .setFiller(filler)
+        .setTyp(Field.FieldType.STRING)
   }
 
-  case class FillerDecoder(size: Int) extends Decoder {
-    override def get(buf: ByteBuffer, row: ColumnVector, i: Int): Unit = {
-      var i = 0
-      while (i < size) {
-        buf.get()
-        i += 1
-      }
-    }
-    override def columnVector(maxSize: Int): Option[ColumnVector] = None
-    override def typeDescription: Option[TypeDescription] = None
-    override def output: Boolean = false
-  }
-
-  case class TimestampDecoder(override val size: Int,
-                              format: String = "YYYY/MM/DD") extends Decoder {
-    private final val charMap = EBCDIC2ASCII
-    private val pattern = format
-      .replace("DD","dd")
-      .replace("YYYY","yyyy")
-      .replace("YY","yy")
-    private val formatter = DateTimeFormatter.ofPattern(pattern)
-
-    override def get(buf: ByteBuffer, row: ColumnVector, i: Int): Unit = {
-      val bcv = row.asInstanceOf[TimestampColumnVector]
-      val bytes = new Array[Byte](size)
-      var i = 0
-      while (i < size) {
-        bytes(i) = charMap(uint(buf.get))
-        i += 1
-      }
-      val dateString = new String(bytes, Charsets.UTF_8)
-      val localDateTime = LocalDateTime.from(formatter.parse(dateString))
-      val time = localDateTime.toEpochSecond(ZoneOffset.UTC)
-      bcv.getScratchTimestamp.setTime(time)
-      bcv.setFromScratchTimestamp(i)
-    }
-
-    override def columnVector(maxSize: Int): Option[ColumnVector] =
-      Option(new TimestampColumnVector())
-
-    override def typeDescription: Option[TypeDescription] =
-      Option(TypeDescription.createTimestamp())
-  }
-
-  case class DateDecoder() extends Decoder {
+  case class DateDecoder(override val filler: Boolean = false) extends Decoder {
     override val size: Int = 4
     private final val Time = LocalTime.of(0,0,0)
 
@@ -233,9 +196,16 @@ object Decoding extends Logging {
 
     override def typeDescription: Option[TypeDescription] =
       Option(TypeDescription.createTimestamp())
+
+    override def toFieldBuilder: Field.Builder =
+      Field.newBuilder()
+        .setSize(size)
+        .setFiller(filler)
+        .setTyp(Field.FieldType.DATE)
   }
 
-  case class LongDecoder(override val size: Int) extends Decoder {
+  case class LongDecoder(override val size: Int,
+                         override val filler: Boolean = false) extends Decoder {
     override def get(buf: ByteBuffer, row: ColumnVector, i: Int): Unit = {
       row.asInstanceOf[LongColumnVector]
         .vector.update(i, Binary.decode(buf, size))
@@ -248,9 +218,16 @@ object Decoding extends Logging {
       Option(TypeDescription.createLong)
 
     override def toString: String = s"$size byte INT64"
+
+    override def toFieldBuilder: Field.Builder =
+      Field.newBuilder()
+        .setSize(size)
+        .setFiller(filler)
+        .setTyp(Field.FieldType.INTEGER)
   }
 
-  case class UnsignedLongDecoder(override val size: Int) extends Decoder {
+  case class UnsignedLongDecoder(override val size: Int,
+                                 override val filler: Boolean = false) extends Decoder {
     override def get(buf: ByteBuffer, row: ColumnVector, i: Int): Unit = {
       row.asInstanceOf[LongColumnVector]
         .vector.update(i, Binary.decodeUnsigned(buf, size))
@@ -263,49 +240,17 @@ object Decoding extends Logging {
       Option(TypeDescription.createLong)
 
     override def toString: String = s"$size byte INT64"
+
+    override def toFieldBuilder: Field.Builder =
+      Field.newBuilder()
+        .setSize(size)
+        .setFiller(filler)
+        .setTyp(Field.FieldType.UNSIGNED_INTEGER)
   }
 
-  /** The maximum length of a computational item is 18 decimal digits,
-    * except for a PACKED-DECIMAL item. If the ARITH(COMPAT) compiler option
-    * is in effect, then the maximum length of a PACKED-DECIMAL item is
-    * 18 decimal digits. If the ARITH(EXTEND) compiler option is in effect,
-    * then the maximum length of a PACKED-DECIMAL item is 31 decimal digits.
-    *
-    * @param p numeric character positions
-    * @param s decimal scaling positions
-    */
-  case class DecimalDecoder(p: Int, s: Int) extends Decoder {
+  case class Decimal64Decoder(p: Int, s: Int, override val filler: Boolean = false) extends Decoder {
     private val precision = p+s
-    require(p + s <= 31 && p + s > 18, s"precision $precision not in range [19,31]")
-    override val size: Int = PackedDecimal.sizeOf(p,s)
-
-    // Use scale 0 to avoid rounding when converting to BigInteger for HiveDecimal
-    private val field = new daa.PackedBigDecimalField(0, precision, 0)
-
-    override def get(buf: ByteBuffer, row: ColumnVector, i: Int): Unit = {
-      val r = row.asInstanceOf[DecimalColumnVector]
-      val bigIntegerBytes = field.getBigDecimal(buf.array, buf.position)
-        .toBigIntegerExact
-        .toByteArray
-      buf.position(buf.position + size)
-      val w = new HiveDecimalWritable()
-      w.setFromBigIntegerBytesAndScale(bigIntegerBytes, s)
-      r.set(i, w)
-    }
-
-    override def columnVector(maxSize: Int): Option[ColumnVector] =
-      Option(new DecimalColumnVector(maxSize, p+s, s))
-
-    override def typeDescription: Option[TypeDescription] =
-      Option(TypeDescription.createDecimal
-        .withScale(s)
-        .withPrecision(p+s))
-
-    override def toString: String = s"$size byte NUMERIC($p,$s)"
-  }
-
-  case class Decimal64Decoder(p: Int, s: Int) extends Decoder {
-    require(p+s <= 18 && p+s > 0, s"precision ${p+s} not in range [1,18]")
+    require(precision <= 18 && precision > 0, s"precision $precision not in range [1,18]")
     override val size: Int = PackedDecimal.sizeOf(p,s)
 
     override def get(buf: ByteBuffer, row: ColumnVector, i: Int): Unit = {
@@ -329,6 +274,14 @@ object Decoding extends Logging {
         .withPrecision(p+s))
 
     override def toString: String = s"$size byte NUMERIC($p,$s)"
+
+    override def toFieldBuilder: Field.Builder =
+      Field.newBuilder()
+        .setSize(size)
+        .setPrecision(precision)
+        .setScale(s)
+        .setFiller(filler)
+        .setTyp(Field.FieldType.DECIMAL)
   }
 
   private val charRegex = """PIC X\((\d{1,3})\)""".r
@@ -347,26 +300,11 @@ object Decoding extends Logging {
       case numStrRegex(size) =>
         StringDecoder(size.toInt)
       case decRegex(p) if p.toInt >= 1 =>
-        p.toInt match {
-          case x if x <= 18 =>
-            Decimal64Decoder(p.toInt, 0)
-          case _ =>
-            DecimalDecoder(p.toInt, 0)
-        }
+        Decimal64Decoder(p.toInt, 0)
       case decRegex2(p,s) if p.toInt >= 1 =>
-        (p.toInt, s.toInt) match {
-          case (p1,s1) if p1+s1 <= 18 =>
-            Decimal64Decoder(p1, s1)
-          case (p1,s1) =>
-            DecimalDecoder(p1, s1)
-        }
+        Decimal64Decoder(p.toInt, s.toInt)
       case decRegex3(p,s) if p.toInt >= 1 =>
-        (p.toInt, s.length) match {
-          case (p1,s1) if p1+s1 <= 18 =>
-            Decimal64Decoder(p1, s1)
-          case (p1,s1) =>
-            DecimalDecoder(p1, s1)
-        }
+        Decimal64Decoder(p.toInt, s.length)
       case "PIC S9 COMP" =>
         LongDecoder(2)
       case "PIC 9 COMP" =>

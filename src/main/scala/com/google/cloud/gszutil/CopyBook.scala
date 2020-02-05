@@ -17,7 +17,7 @@
 package com.google.cloud.gszutil
 
 import com.google.cloud.gszutil.Decoding.{CopyBookField, CopyBookLine, Decoder, parseCopyBookLine}
-import com.google.common.base.Charsets
+import com.google.cloud.gzos.pb.Schema.Record
 
 import scala.collection.mutable.ArrayBuffer
 
@@ -47,6 +47,21 @@ case class CopyBook(raw: String) extends SchemaProvider {
     s"LRECL=$LRECL\nFIELDS=${fieldNames.mkString(",")}\n$raw\n\nORC TypeDescription:\n${ORCSchema.toJson}"
 
   override def toByteArray: Array[Byte] =
-    raw.getBytes(Charsets.UTF_8)
+    toRecordBuilder.build().toByteArray
+
+  def toRecordBuilder: Record.Builder = {
+    val b = Record.newBuilder()
+        .setLrecl(LRECL)
+        .setSource(Record.Source.COPYBOOK)
+        .setOriginal(raw)
+
+    Fields.foreach{
+      case CopyBookField(name, decoder) =>
+        b.addField(decoder.toFieldBuilder.setName(name))
+      case _ =>
+    }
+
+    b
+  }
 }
 

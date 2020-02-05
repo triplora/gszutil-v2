@@ -19,7 +19,7 @@ package com.google.cloud.gszutil
 import java.nio.ByteBuffer
 import java.nio.charset.StandardCharsets
 
-import com.google.cloud.gszutil.Decoding.{Decimal64Decoder, DecimalDecoder, LongDecoder, StringDecoder, ebcdic2ASCIIString, validAscii}
+import com.google.cloud.gszutil.Decoding.{Decimal64Decoder, LongDecoder, StringDecoder, ebcdic2ASCIIString, validAscii}
 import com.google.common.base.Charsets
 import com.ibm.jzos.fields.daa
 import org.apache.hadoop.hive.ql.exec.vector.{BytesColumnVector, Decimal64ColumnVector, DecimalColumnVector, LongColumnVector}
@@ -260,19 +260,5 @@ class DecodingSpec extends FlatSpec {
         | 1
         | FROM DUAL""".stripMargin
     assert(result == expected)
-  }
-
-  it should "unpack 31 digit decimal" in {
-    // Calculate how many bytes should be used to represent 31 digits
-    val len = PackedDecimal.sizeOf(29,2) // precision = 29 + 2 = 31
-    val exampleData = Array.fill[Byte](len)(0x00.toByte)
-    exampleData(0) = 0x10.toByte
-    exampleData(len-1) = 0x1C.toByte
-    val decoder = DecimalDecoder(29,2)
-    val col = decoder.columnVector(1).get
-    decoder.get(ByteBuffer.wrap(exampleData), col, 0)
-    val expected = "10000000000000000000000000000.01"
-    val got = col.asInstanceOf[DecimalColumnVector].vector(0).toString
-    assert(got == expected)
   }
 }
