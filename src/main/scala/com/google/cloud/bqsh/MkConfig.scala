@@ -18,6 +18,20 @@ package com.google.cloud.bqsh
 
 import java.net.URI
 
+object MkConfig {
+  def create(externalTableDefinition: String,
+             tablespec: String,
+             datasetId: String,
+             location: String,
+             projectId: String): MkConfig = {
+    MkConfig(externalTableDefinition = externalTableDefinition,
+             tablespec = tablespec,
+             datasetId = datasetId,
+             location = location,
+             projectId = projectId)
+  }
+}
+
 case class MkConfig (
   // Standard options
   clusteringFields: Seq[String] = Seq.empty,
