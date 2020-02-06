@@ -94,6 +94,8 @@ object IBM extends ZFileProvider with Logging {
   override def jobTime: String = sys.env.getOrElse("JOBTIME","UNKNOWN")
   override def getInfo: ZInfo = ZOS.getInfo
 
+  override def getSymbol(s: String): Option[String] = ZOS.getSymbol(s)
+
   override def substituteSystemSymbols(s: String): String = ZOS.substituteSystemSymbols(s)
 
   override def submitJCL(jcl: Seq[String]): Option[ZMVSJob] = ZOS.submitJCL(jcl)

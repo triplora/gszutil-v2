@@ -10,6 +10,7 @@ import com.ibm.jzos.ZFileProvider
 object BQMLD {
   def main(args: Array[String]): Unit = {
     val zos = ZFileProvider.getProvider()
+    zos.init()
     System.out.println("Collecting Job Info")
     val jobInfo = collectJobInfo(zos)
     val project = sys.env.getOrElse("PROJECT", "")
@@ -17,8 +18,8 @@ object BQMLD {
       sys.env.getOrElse("LOCATION", "US"),
       zos.getCredentialProvider().getCredentials)
     val tableId = TableId.of(project,
-      sys.env.getOrElse("DATASET", "LOG"),
-      sys.env.getOrElse("TABLE", "BQMLD"))
+      sys.env.getOrElse("DATASET", "UTIL"),
+      sys.env.getOrElse("TABLE", "bqmld_job_log"))
 
     System.out.println("Inserting Job Info into BigQuery log table")
     insertRow(jobInfo, bq, tableId)
@@ -57,6 +58,9 @@ object BQMLD {
 
   def collectJobInfo(zos: ZFileProvider): util.Map[String,String] = {
     val info = zos.getInfo
+    System.out.println("JES Symbols:")
+    for ((k,v) <- info.symbols)
+      System.out.println(s"  $k=$v")
     val script = zos.readStdin()
     val substituted = zos.substituteSystemSymbols(script)
     val content = new util.HashMap[String,String]()

@@ -55,6 +55,7 @@ trait ZFileProvider {
   def jobTime: String
   def jobId: String = jobName+jobDate+jobTime
   def getInfo: ZInfo
+  def getSymbol(s: String): Option[String]
   def substituteSystemSymbols(s: String): String
   def submitJCL(jcl: Seq[String]): Option[ZMVSJob]
 }

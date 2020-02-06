@@ -103,6 +103,8 @@ object Linux extends ZFileProvider with Logging {
 
   override def getInfo: ZInfo = ZInfo()
 
+  override def getSymbol(s: String): Option[String] = throw new NotImplementedError()
+
   override def substituteSystemSymbols(s: String): String = s
 
   override def exists(dsn: String): Boolean = throw new NotImplementedError()

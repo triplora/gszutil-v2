@@ -269,6 +269,9 @@ protected object ZOS extends Logging {
 
   def getJobName: String = ZUtil.getCurrentJobname
 
+  def getSymbol(s: String): Option[String] =
+    Option(JesSymbols.extract(s).get(s))
+
   def getSymbols: Map[String,String] = {
     import scala.collection.JavaConverters.mapAsScalaMapConverter
     JesSymbols.extract("*").asScala.toMap
