@@ -17,6 +17,31 @@ package com.google.cloud.bqsh
 
 import com.google.cloud.gszutil.SchemaProvider
 
+object GsUtilConfig {
+  /** Minimal constructor */
+  def create(sourceDD: String,
+             schemaProvider: SchemaProvider,
+             destinationUri: String,
+             projectId: String,
+             datasetId: String,
+             location: String,
+             pkgUri: String,
+             zone: String,
+             subnet: String,
+             serviceAccount: String): GsUtilConfig = {
+    GsUtilConfig(source = sourceDD,
+      schemaProvider = Option(schemaProvider),
+      destinationUri = destinationUri,
+      projectId = projectId,
+      datasetId = datasetId,
+      location = location,
+      pkgUri = pkgUri,
+      zone = zone,
+      subnet = subnet,
+      serviceAccount = serviceAccount)
+  }
+}
+
 case class GsUtilConfig(source: String = "INFILE",
                         copyBook: String = "COPYBOOK",
                         keyFile: String = "KEYFILE",
@@ -33,9 +58,9 @@ case class GsUtilConfig(source: String = "INFILE",
                         timeOutMinutes: Int = -1,
 
                         // Global
+                        projectId: String = "",
                         datasetId: String = "",
                         location: String = "US",
-                        projectId: String = "",
 
                         // Custom
                         schemaProvider: Option[SchemaProvider] = None,
