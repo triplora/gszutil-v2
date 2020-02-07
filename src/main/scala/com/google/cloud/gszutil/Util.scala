@@ -15,7 +15,7 @@
  */
 package com.google.cloud.gszutil
 
-import java.io.{ByteArrayInputStream, ByteArrayOutputStream, FileInputStream}
+import java.io.{ByteArrayInputStream, ByteArrayOutputStream}
 import java.nio.ByteBuffer
 import java.nio.channels.{Channels, ReadableByteChannel, WritableByteChannel}
 import java.nio.charset.Charset
@@ -26,7 +26,8 @@ import com.google.cloud.storage.BlobInfo
 import com.google.common.base.Charsets
 import com.google.common.collect.ImmutableSet
 import com.google.common.io.{BaseEncoding, Resources}
-import org.apache.log4j._
+import com.ibm.jzos.{IBM, Linux, ZFileProvider}
+import org.apache.log4j.{ConsoleAppender, Level, LogManager, Logger, PatternLayout}
 
 import scala.util.Random
 
@@ -35,6 +36,12 @@ object Util {
     @transient
     protected lazy val logger: Logger = LogManager.getLogger(this.getClass.getCanonicalName.stripSuffix("$"))
   }
+
+  def zProvider: ZFileProvider =
+    if (System.getProperty("java.vm.vendor").contains("IBM"))
+      IBM
+    else
+      Linux
 
   def configureLogging(debugOverride: Boolean = false): Unit = {
     val debug = sys.env.getOrElse("BQSH_ROOT_LOGGER","").contains("DEBUG") || debugOverride

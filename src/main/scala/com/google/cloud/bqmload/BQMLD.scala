@@ -5,11 +5,12 @@ import java.util
 import com.google.cloud.bigquery.InsertAllRequest.RowToInsert
 import com.google.cloud.bigquery.{BigQuery, InsertAllRequest, TableId}
 import com.google.cloud.bqsh.BQ
+import com.google.cloud.gszutil.Util
 import com.ibm.jzos.ZFileProvider
 
 object BQMLD {
   def main(args: Array[String]): Unit = {
-    val zos = ZFileProvider.getProvider()
+    val zos = Util.zProvider
     zos.init()
     System.out.println("Collecting Job Info")
     val jobInfo = collectJobInfo(zos)

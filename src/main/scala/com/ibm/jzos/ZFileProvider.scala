@@ -20,15 +20,6 @@ import com.google.cloud.gszutil.{CopyBook, SchemaProvider}
 import com.google.cloud.gszutil.Util.{CredentialProvider, PDSMemberInfo, ZInfo, ZMVSJob}
 import com.google.cloud.gszutil.io.{ZRecordReaderT, ZRecordWriterT}
 
-object ZFileProvider {
-  def getProvider(): ZFileProvider = {
-    if (System.getProperty("java.vm.vendor").contains("IBM"))
-      IBM
-    else
-      Linux
-  }
-}
-
 trait ZFileProvider {
   def init(): Unit
 

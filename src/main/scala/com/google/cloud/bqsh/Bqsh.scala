@@ -28,7 +28,7 @@ object Bqsh extends Logging {
   val UserAgent = "google-pso-tool/gszutil/2.0"
 
   def main(args: Array[String]): Unit = {
-    val zos = ZFileProvider.getProvider()
+    val zos = Util.zProvider
     zos.init()
     val script = zos.readStdin()
     Util.configureLogging()

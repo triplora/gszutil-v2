@@ -92,7 +92,8 @@ class ShellSpec extends FlatSpec {
       """TABLE=project:dataset.table
         |SOURCE=gs://mybucket/path.orc/*
         |echo $TABLE $SOURCE""".stripMargin
-    val interpreter = new Bqsh.Interpreter(ZFileProvider.getProvider(), Map.empty, true, printCommands = true)
+    val interpreter = new Bqsh.Interpreter(Util.zProvider, Map.empty, true, printCommands =
+      true)
     val result = interpreter.runScript(script)
     val expected = Map[String,String](
       "TABLE" -> "project:dataset.table",
