@@ -19,12 +19,14 @@ package com.google.cloud.bqsh
 import java.net.URI
 
 object MkConfig {
-  def create(externalTableDefinition: String,
+  def create(sourceUris: String,
              tablespec: String,
              datasetId: String,
              location: String,
              projectId: String): MkConfig = {
-    MkConfig(externalTableDefinition = externalTableDefinition,
+    val externalTableUri = sourceUris.split(",")
+      .map(x => new URI(x.stripSuffix("/") + "/*.orc")).toSeq
+    MkConfig(externalTableUri = externalTableUri,
              tablespec = tablespec,
              datasetId = datasetId,
              location = location,

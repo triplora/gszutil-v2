@@ -19,6 +19,7 @@ import java.io.{ByteArrayInputStream, ByteArrayOutputStream}
 import java.nio.ByteBuffer
 import java.nio.channels.{Channels, ReadableByteChannel, WritableByteChannel}
 import java.nio.charset.Charset
+import java.util
 
 import com.google.auth.oauth2.GoogleCredentials
 import com.google.cloud.gszutil.io.ZRecordReaderT
@@ -42,6 +43,8 @@ object Util {
       IBM
     else
       Linux
+
+  def configureLogging(): Unit = configureLogging(false)
 
   def configureLogging(debugOverride: Boolean = false): Unit = {
     val debug = sys.env.getOrElse("BQSH_ROOT_LOGGER","").contains("DEBUG") || debugOverride
@@ -189,5 +192,30 @@ object Util {
     bytes.grouped(lRecl)
       .map{b => trimRight(new String(b, charset),' ')}
       .mkString(recordSeparator)
+  }
+
+  def collectJobInfo(zos: ZFileProvider): util.Map[String,String] = {
+    val info = zos.getInfo
+    System.out.println("JES Symbols:")
+    for ((k,v) <- info.symbols)
+      System.out.println(s"  $k=$v")
+    val script = zos.readStdin()
+    val substituted = zos.substituteSystemSymbols(script)
+    val content = new util.HashMap[String,String]()
+    content.put("jobid", zos.jobId)
+    content.put("jobdate", zos.jobDate)
+    content.put("jobtime", zos.jobTime)
+    content.put("jobname", zos.jobName)
+    content.put("stepname", info.stepName)
+    content.put("procstepname", info.procStepName)
+    content.put("symbols", info.symbols.map(x => s"${x._1}=${x._2}").mkString("\n"))
+    content.put("user", info.user)
+    if (!substituted.contentEquals(script)) {
+      content.put("script", substituted)
+      content.put("template", script)
+    } else {
+      content.put("script", script)
+    }
+    content
   }
 }

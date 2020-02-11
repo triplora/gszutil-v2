@@ -17,9 +17,11 @@
 package com.google.cloud.bigquery
 
 import java.text.SimpleDateFormat
+import java.util
 import java.util.{Date, TimeZone}
 
 import com.google.api.client.json.jackson2.JacksonFactory
+import com.google.cloud.bigquery.InsertAllRequest.RowToInsert
 import com.google.cloud.gszutil.Util.Logging
 import com.google.common.collect.ImmutableMap
 
@@ -127,6 +129,20 @@ object StatsUtil extends Logging {
     val response = bq.insertAll(request)
     if (response.hasErrors){
       logger.error(s"failed to insert stats for Job ID $id")
+    }
+  }
+
+  def insertRow(content: util.Map[String,String],
+                bq: BigQuery,
+                tableId: TableId): Unit = {
+    val request = InsertAllRequest.of(tableId, RowToInsert.of(content))
+    val result = bq.insertAll(request)
+    if (result.hasErrors) {
+      import scala.collection.JavaConverters.collectionAsScalaIterableConverter
+      val errors = result.getInsertErrors.values().asScala.flatMap(_.asScala)
+      System.err.println("BigQuery Insert errors:")
+      for (e <- errors)
+        System.err.println(s"${e.getMessage}")
     }
   }
 }

@@ -38,7 +38,8 @@ object GsUtilConfig {
       pkgUri = pkgUri,
       zone = zone,
       subnet = subnet,
-      serviceAccount = serviceAccount)
+      serviceAccount = serviceAccount,
+      replace = true)
   }
 }
 

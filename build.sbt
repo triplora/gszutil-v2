@@ -37,6 +37,7 @@ libraryDependencies ++= Seq(
   "com.google.protobuf" % "protobuf-java-util" % "3.11.3",
   "com.typesafe.akka" %% "akka-actor" % "2.5.29",
   "org.apache.hadoop" % "hadoop-common" % "2.9.2", // provided for orc-core
+  "org.apache.hadoop" % "hadoop-hdfs-client" % "2.9.2", // provided for orc-core
   "org.apache.hive" % "hive-storage-api" % "2.7.1",
   "org.apache.httpcomponents" % "httpclient" % "4.5.11",
   "org.apache.orc" % "orc-core" % "1.6.2",

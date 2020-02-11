@@ -45,20 +45,19 @@ object Cp extends Command[GsUtilConfig] with Logging {
     val batchSize = (c.blocksPerBatch * in.blkSize) / in.lRecl
     val gcs = GCS.defaultClient(creds)
     if (c.replace) {
-      GsUtilRm.run(c, zos)
+      GsUtilRm.run(c.copy(recursive = true), zos)
     } else {
       val uri = new URI(c.destinationUri)
-      val withTrailingSlash = uri.getPath.stripPrefix("/") + (if (uri.getPath.last == '/') "" else "/")
+      val withTrailingSlash = uri.getPath.stripPrefix("/").stripSuffix("/") + "/"
       val bucket = uri.getAuthority
       val lsResult = gcs.list(bucket,
         Storage.BlobListOption.prefix(withTrailingSlash),
         Storage.BlobListOption.currentDirectory())
       import scala.collection.JavaConverters.iterableAsScalaIterableConverter
-      val blobs = lsResult.getValues.asScala.toArray
-      if (blobs.nonEmpty) {
+      if (lsResult.getValues.asScala.nonEmpty) {
         val msg = "Data is already present at destination. " +
           "Use --replace to delete existing files prior to upload."
-        throw new RuntimeException(msg)
+        return Result.Failure(msg)
       }
     }
     val sourceDSN = in.getDsn

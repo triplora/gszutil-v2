@@ -18,9 +18,10 @@ package com.google.cloud.bqsh.cmd
 
 import com.google.cloud.bigquery._
 import com.google.cloud.bqsh._
+import com.google.cloud.gszutil.Util.Logging
 import com.ibm.jzos.ZFileProvider
 
-object Mk extends Command[MkConfig]{
+object Mk extends Command[MkConfig] with Logging {
   override val name: String = "bq mk"
   override val parser: ArgParser[MkConfig] = MkOptionParser
 
@@ -29,7 +30,7 @@ object Mk extends Command[MkConfig]{
     val bq = BQ.defaultClient(cfg.projectId, cfg.location, creds)
     val tableId = BQ.resolveTableSpec(cfg.tablespec, cfg.projectId, cfg.datasetId)
 
-    if (cfg.externalTableDefinition.nonEmpty){
+    if (cfg.externalTableUri.nonEmpty){
       createExternalTable(bq, tableId, cfg.externalTableUri.map(_.toString), cfg.expiration)
     } else if (cfg.table) {
       createTable(bq, cfg, tableId)
@@ -101,17 +102,20 @@ object Mk extends Command[MkConfig]{
                           lifetimeMillis: Long): Table = {
     import scala.collection.JavaConverters.seqAsJavaListConverter
 
-    val expirationTime = System.currentTimeMillis() + lifetimeMillis
-
     val tableDefinition = ExternalTableDefinition
       .newBuilder(sources.asJava, null, FormatOptions.orc())
       .build()
 
-    val tableInfo = TableInfo
-      .newBuilder(tableId, tableDefinition)
-      .setExpirationTime(expirationTime)
-      .build()
+    val tableInfoBuilder = TableInfo.newBuilder(tableId, tableDefinition)
 
+    if (lifetimeMillis > 60000L) {
+      val expirationTime = System.currentTimeMillis() + lifetimeMillis
+      tableInfoBuilder.setExpirationTime(expirationTime)
+    } else
+      tableInfoBuilder.setExpirationTime(System.currentTimeMillis() + 1000L*60*60*24*7)
+
+    val tableInfo = tableInfoBuilder.build
+    logger.debug("expiration time: " + tableInfo.getExpirationTime + "\n" + tableInfo)
     bq.create(tableInfo)
   }
 }
