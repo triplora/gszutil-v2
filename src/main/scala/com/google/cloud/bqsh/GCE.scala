@@ -3,8 +3,7 @@ package com.google.cloud.bqsh
 import com.google.api.client.googleapis.util.Utils
 import com.google.api.client.json.jackson2.JacksonFactory
 import com.google.api.services.compute.Compute
-import com.google.api.services.compute.model.{AttachedDisk, AttachedDiskInitializeParams, Instance,
-  Metadata, NetworkInterface, ServiceAccount}
+import com.google.api.services.compute.model.{AccessConfig, AttachedDisk, AttachedDiskInitializeParams, Instance, Metadata, NetworkInterface, ServiceAccount}
 import com.google.auth.Credentials
 import com.google.auth.http.HttpCredentialsAdapter
 import com.google.cloud.gszutil.Util.Logging
@@ -27,14 +26,14 @@ object GCE extends Logging {
     client
   }
 
-  val Debian10 = "projects/debian-cloud/global/images/debian-10-buster-v20190916"
+  val Debian10 = "projects/debian-cloud/global/images/family/debian-10"
 
   case class InstanceResult(ip: String, instance: Instance)
 
-  def getStartupScript(pkgUri: String): String = {
+  def getStartupScript(pkgUri: String): String =
     s"""#!/bin/bash
-       |gsutil cp '$pkgUri' pkg.tar && tar xvf pkg.tar && . run.sh""".stripMargin
-  }
+       |gsutil cp '$pkgUri' pkg.tar && tar xvf pkg.tar && . run.sh
+       |""".stripMargin
 
   /** Creates a gReceiver Compute Instance
     *
@@ -50,7 +49,8 @@ object GCE extends Logging {
     */
   def createVM(name: String, pkgUri: String, serviceAccount: String,
                project: String, zone: String, subnet: String,
-               gce: Compute, machineType: String = "n1-standard-8"): InstanceResult = {
+               gce: Compute, machineType: String = "n1-standard-8",
+               tlsEnabled: Boolean): InstanceResult = {
     val instance: Instance = new Instance()
       .setDescription("gReceiver")
       .setZone(zone)
@@ -60,7 +60,13 @@ object GCE extends Logging {
         .setItems(ImmutableList.of(
           new Metadata.Items()
             .setKey("startup-script")
-            .setValue(getStartupScript(pkgUri))
+            .setValue(getStartupScript(pkgUri)),
+          new Metadata.Items()
+            .setKey("gcspath")
+            .setValue(pkgUri.reverse.dropWhile(_ != '/').reverse),
+          new Metadata.Items()
+            .setKey("tlsenabled")
+            .setValue(if (tlsEnabled) "true" else "false")
         ))
       )
       .setMachineType(s"projects/$project/zones/$zone/machineTypes/$machineType")
@@ -94,9 +100,11 @@ object GCE extends Logging {
     // Create the Instance
     val req = gce.instances().insert(project, zone, instance)
     val res = req.execute()
+    logger.debug(res)
 
     // Verify Instance was created
     var status = res.getStatus
+    logger.debug(status + " - " + res.getStatusMessage)
     if (!(status == "RUNNING" || status == "DONE")) {
       res.setFactory(JacksonFactory.getDefaultInstance)
       throw new RuntimeException("Failed to create gReceiver Compute " +

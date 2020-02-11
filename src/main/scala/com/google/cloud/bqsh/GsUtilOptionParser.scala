@@ -76,7 +76,12 @@ object GsUtilOptionParser extends OptionParser[GsUtilConfig]("gsutil") with ArgP
       opt[Int]("remotePort")
         .optional()
         .action{(x,c) => c.copy(remotePort = x)}
-        .text("remote port (default: 8443"),
+        .text("remote port (default: 8443)"),
+
+      opt[Boolean]("tlsEnabled")
+        .optional()
+        .action{(x,c) => c.copy(tlsEnabled = x)}
+        .text("disable TLS"),
 
       opt[Int]("connections")
         .optional()

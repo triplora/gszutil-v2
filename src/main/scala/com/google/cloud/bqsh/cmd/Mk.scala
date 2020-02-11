@@ -16,7 +16,8 @@
 
 package com.google.cloud.bqsh.cmd
 
-import com.google.cloud.bigquery._
+import com.google.cloud.bigquery.{BigQuery,Clustering,ExternalTableDefinition,FormatOptions,
+  StandardTableDefinition,Table,TableDefinition,TableId,TableInfo,TimePartitioning,ViewDefinition}
 import com.google.cloud.bqsh._
 import com.google.cloud.gszutil.Util.Logging
 import com.ibm.jzos.ZFileProvider
@@ -101,6 +102,9 @@ object Mk extends Command[MkConfig] with Logging {
                           sources: Seq[String],
                           lifetimeMillis: Long): Table = {
     import scala.collection.JavaConverters.seqAsJavaListConverter
+
+    if (Option(bq.getTable(tableId)).isDefined)
+        bq.delete(tableId)
 
     val tableDefinition = ExternalTableDefinition
       .newBuilder(sources.asJava, null, FormatOptions.orc())

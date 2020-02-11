@@ -17,8 +17,10 @@
 package com.google.cloud.bqsh
 
 object QueryConfig {
-  def create(sql: String, datasetId: String, location: String, projectId: String): QueryConfig = {
-    QueryConfig(sql, datasetId = datasetId, location = location, projectId = projectId)
+  def create(sql: String, datasetId: String, location: String, projectId: String,
+             statsTable: String): QueryConfig = {
+    QueryConfig(sql, datasetId = datasetId, location = location, projectId = projectId,
+      statsTable = statsTable)
   }
 }
 

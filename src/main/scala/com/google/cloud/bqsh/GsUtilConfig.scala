@@ -28,7 +28,9 @@ object GsUtilConfig {
              pkgUri: String,
              zone: String,
              subnet: String,
-             serviceAccount: String): GsUtilConfig = {
+             serviceAccount: String,
+             tlsEnabled: Boolean,
+             remote: Boolean): GsUtilConfig = {
     GsUtilConfig(source = sourceDD,
       schemaProvider = Option(schemaProvider),
       destinationUri = destinationUri,
@@ -39,7 +41,9 @@ object GsUtilConfig {
       zone = zone,
       subnet = subnet,
       serviceAccount = serviceAccount,
-      replace = true)
+      remote = remote,
+      replace = true,
+      tlsEnabled = tlsEnabled)
   }
 }
 
@@ -70,6 +74,7 @@ case class GsUtilConfig(source: String = "INFILE",
                         remote: Boolean = false,
                         remoteHost: String = "",
                         remotePort: Int = 8443,
+                        tlsEnabled: Boolean = true,
                         blocks: Long = 1024,
                         nConnections: Int = 4,
                         pkgUri: String = "",

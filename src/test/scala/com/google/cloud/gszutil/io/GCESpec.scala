@@ -19,7 +19,8 @@ class GCESpec extends FlatSpec with Logging {
       "us-east1-b",
       s"projects/token-broker-poc/regions/us-east1/subnetworks/default",
       gce,
-      "n1-standard-4"
+      "n1-standard-4",
+      false
     )
     assert(instance.ip.nonEmpty)
     logger.info(JacksonFactory.getDefaultInstance.toPrettyString(instance.instance))

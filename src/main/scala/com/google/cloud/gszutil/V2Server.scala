@@ -150,7 +150,9 @@ class V2Server(config: V2Config) extends Callable[Result] with Logging {
     logger.info("Sending ACK")
     socket.send(frame1,ZMQ.SNDMORE) // sender identity
     socket.send(Protocol.Ack,ZMQ.SNDMORE) // ACK message
+    logger.info(s"Sending LRECL ${schema.LRECL}")
     socket.send(V2SendCallable.encodeInt(schema.LRECL),0) // LRECL confirmation
+    logger.info("Waiting to receive data")
 
     // Set termination callback
     sys.whenTerminated.onComplete{
@@ -167,7 +169,7 @@ class V2Server(config: V2Config) extends Callable[Result] with Logging {
         else
           FiniteDuration(1, DAYS)
 
-      logger.info("Waiting for ActorSystem termination...")
+      logger.info(s"ActorSystem timeout is $timeout")
       inbox.receive(timeout) match {
         case UploadComplete(read, written) =>
           logger.info(s"Upload complete:\n$read bytes read\n$written bytes written")
@@ -186,9 +188,9 @@ class V2Server(config: V2Config) extends Callable[Result] with Logging {
       }
     } catch {
       case _: TimeoutException =>
-        logger.error(s"Timed out after ${config.timeoutMinutes} minutes waiting for upload to " +
-          s"complete")
-        Result.Failure(s"Upload timed out after ${config.timeoutMinutes} minutes")
+        val msg = s"Upload timed out after ${config.timeoutMinutes} minutes"
+        logger.error(msg)
+        Result.Failure(msg)
     } finally {
       sys.stop(reader)
       sys.stop(inbox.getRef)

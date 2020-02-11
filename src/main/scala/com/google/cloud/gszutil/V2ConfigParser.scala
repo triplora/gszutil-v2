@@ -29,8 +29,8 @@ object V2ConfigParser extends OptionParser[V2Config]("gReceiver") {
 
   opt[Int]('p', "port")
     .optional()
-    .action{(x,c) => c.copy(nWriters = x)}
-    .text("number of concurrent writers (default: 4)")
+    .action{(x,c) => c.copy(port = x)}
+    .text("Bind Port (default: 5570)")
 
   opt[Int]("timeoutMinutes")
     .optional()

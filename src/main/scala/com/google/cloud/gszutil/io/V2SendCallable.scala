@@ -33,7 +33,7 @@ object V2SendCallable extends Logging {
   final val TargetBlocks = 128
   final val GzipBufferSize = 32*1024
   case class ReaderOpts(in: ZRecordReaderT,
-                        copyBook: SchemaProvider,
+                        schemaProvider: SchemaProvider,
                         gcsUri: String,
                         blkSize: Int,
                         ctx: ZContext, nConnections: Int, host: String, port: Int,
@@ -64,8 +64,8 @@ object V2SendCallable extends Logging {
     socket.setReceiveTimeOut(FiveMinutesInMillis)
     logger.debug(s"Sending BEGIN\n${PackedDecimal.hexValue(Protocol.Begin)}")
     socket.send(Protocol.Begin, ZMQ.SNDMORE)
-    logger.debug(s"CopyBook with LRECL ${opts.copyBook.LRECL}")
-    socket.send(opts.copyBook.toByteArray, ZMQ.SNDMORE)
+    logger.debug(s"CopyBook with LRECL ${opts.schemaProvider.LRECL}")
+    socket.send(opts.schemaProvider.toByteArray, ZMQ.SNDMORE)
     logger.debug(s"GCS prefix ${opts.gcsUri}")
     socket.send(opts.gcsUri.getBytes(Charsets.UTF_8), ZMQ.SNDMORE)
     logger.debug(s"Block size ${opts.blkSize}")
@@ -77,10 +77,9 @@ object V2SendCallable extends Logging {
     val lreclConfirmation = decodeInt(frame2)
     if (ack == null) {
       throw new RuntimeException("Timed out waiting for ACK from Receiver")
-    } else if (util.Arrays.equals(ack, Protocol.Ack) && lreclConfirmation == opts
-      .copyBook
-      .LRECL){
-      logger.debug(s"Received ACK and LRECL $lreclConfirmation = ${opts.copyBook.LRECL}")
+    } else if (util.Arrays.equals(ack, Protocol.Ack) &&
+               lreclConfirmation == opts.schemaProvider.LRECL){
+      logger.debug(s"Received ACK and LRECL=$lreclConfirmation")
       new V2SendCallable(opts.in, opts.blkSize, sockets, opts.blocks)
     } else {
       throw new RuntimeException("Received invalid ACK message: $ack")
@@ -144,8 +143,10 @@ final class V2SendCallable(in: ZRecordReaderT, blkSize: Int, sockets: Seq[Socket
     deflater.reset()
     IOUtil.reset()
 
+    if (in.isOpen)
+      logger.info("Starting to send")
     try {
-      while (in.isOpen) {
+      while (in.isOpen && bytesRead >= 0) {
         // Socket round-robin
         socketId = socketId+1 % sockets.length
 
@@ -160,6 +161,8 @@ final class V2SendCallable(in: ZRecordReaderT, blkSize: Int, sockets: Seq[Socket
             msgLimit += blocks
             Thread.`yield`()
           }
+        } else {
+          logger.debug(s"bytesRead = $bytesRead")
         }
       }
       logger.info(s"Input exhausted after $bytesIn bytes $msgCount messages")

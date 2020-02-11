@@ -18,11 +18,14 @@ package com.google.cloud.gszutil
 
 import java.nio.ByteBuffer
 import java.nio.charset.StandardCharsets
+import java.nio.file.{Files, Paths}
+import java.time.LocalDate
+import java.time.format.DateTimeFormatter
 
-import com.google.cloud.gszutil.Decoding.{Decimal64Decoder, LongDecoder, StringDecoder, ebcdic2ASCIIString, validAscii}
+import com.google.cloud.gszutil.Decoding.{Decimal64Decoder, LongDecoder, StringAsDateDecoder, StringAsDecimalDecoder, StringAsIntDecoder, StringDecoder, ebcdic2ASCIIString, validAscii}
 import com.google.common.base.Charsets
 import com.ibm.jzos.fields.daa
-import org.apache.hadoop.hive.ql.exec.vector.{BytesColumnVector, Decimal64ColumnVector, DecimalColumnVector, LongColumnVector}
+import org.apache.hadoop.hive.ql.exec.vector.{BytesColumnVector, DateColumnVector, Decimal64ColumnVector, DecimalColumnVector, LongColumnVector, TimestampColumnVector}
 import org.apache.hadoop.hive.serde2.io.HiveDecimalWritable
 import org.scalatest.FlatSpec
 
@@ -32,7 +35,7 @@ class DecodingSpec extends FlatSpec {
     val exampleData = Array[Byte](20.toByte, 140.toByte)
     val buf = ByteBuffer.wrap(exampleData)
     val decoder = LongDecoder(2)
-    val col = decoder.columnVector(1).get
+    val col = decoder.columnVector(1)
     val minTwoByteInt = -32768
     val maxTwoByteInt = 32767
     val testValues = Seq(minTwoByteInt, -1, 0, 1, 5260, maxTwoByteInt)
@@ -49,7 +52,7 @@ class DecodingSpec extends FlatSpec {
     val exampleData = new Array[Byte](4)
     val buf = ByteBuffer.wrap(exampleData)
     val decoder = LongDecoder(4)
-    val col = decoder.columnVector(1).get
+    val col = decoder.columnVector(1)
 
     val minFourByteInt = Int.MinValue
     val maxFourByteInt = Int.MaxValue
@@ -68,7 +71,7 @@ class DecodingSpec extends FlatSpec {
     val exampleData = new Array[Byte](8)
     val buf = ByteBuffer.wrap(exampleData)
     val decoder = LongDecoder(8)
-    val col = decoder.columnVector(1).get
+    val col = decoder.columnVector(1)
     val minEightByteInteger = Long.MinValue
     val maxEightByteInteger = Long.MaxValue
     val testValues = Seq(minEightByteInteger, -174, -1, 1, 0, maxEightByteInteger)
@@ -85,7 +88,7 @@ class DecodingSpec extends FlatSpec {
     val exampleData = new Array[Byte](4)
     val buf = ByteBuffer.wrap(exampleData)
     val decoder = LongDecoder(4)
-    val col = decoder.columnVector(1).get
+    val col = decoder.columnVector(1)
     val testValues = Seq(0, 1, Int.MaxValue)
     for (testValue <- testValues) {
       field.putInt(testValue, exampleData, 0)
@@ -100,7 +103,7 @@ class DecodingSpec extends FlatSpec {
     val exampleData = new Array[Byte](8)
     val buf = ByteBuffer.wrap(exampleData)
     val decoder = LongDecoder(8)
-    val col = decoder.columnVector(1).get
+    val col = decoder.columnVector(1)
     val testValues = Seq(0, 1, Long.MaxValue)
     for (testValue <- testValues) {
       field.putLong(testValue, exampleData, 0)
@@ -115,7 +118,7 @@ class DecodingSpec extends FlatSpec {
     val exampleData = Array[Byte](0x00.toByte,0x00.toByte,0x17.toByte, 0x4D.toByte)
     val buf = ByteBuffer.wrap(exampleData)
     val decoder = Decimal64Decoder(7,0)
-    val col = decoder.columnVector(1).get
+    val col = decoder.columnVector(1)
     // 4 bytes contains 8 half-bytes, with 1 reserved for sign
     // so this field type supports a maximum of 7 digits
     val min7DigitInt = -9999999
@@ -134,7 +137,7 @@ class DecodingSpec extends FlatSpec {
     val exampleData = new Array[Byte](6)
     val buf = ByteBuffer.wrap(exampleData)
     val decoder = Decimal64Decoder(9,2)
-    val col = decoder.columnVector(1).get
+    val col = decoder.columnVector(1)
     val w = new HiveDecimalWritable()
     // 6 bytes contains 12 half-bytes, with 1 reserved for sign
     // so this field type supports a maximum of 11 digits
@@ -158,7 +161,7 @@ class DecodingSpec extends FlatSpec {
     val exampleData = new Array[Byte](10)
     val buf = ByteBuffer.wrap(exampleData)
     val decoder = Decimal64Decoder(16,2)
-    val col = decoder.columnVector(1).get
+    val col = decoder.columnVector(1)
     // 10 bytes contains 20 half-bytes, with 1 reserved for sign
     // but the first half-byte is not usable
     // so this field type supports a maximum of 18 digits
@@ -190,7 +193,7 @@ class DecodingSpec extends FlatSpec {
     val expected = 100000000000000001L
     assert(unpackedLong == expected)
     val decoder = Decimal64Decoder(16,2)
-    val col = decoder.columnVector(1).get
+    val col = decoder.columnVector(1)
     decoder.get(buf, col, 0)
     val got = col.asInstanceOf[Decimal64ColumnVector].vector(0)
     assert(got == expected)
@@ -219,7 +222,7 @@ class DecodingSpec extends FlatSpec {
   it should "decode string" in {
     val buf = ByteBuffer.wrap(Array[Byte](228.toByte,201.toByte))
     val decoder = StringDecoder(2)
-    val col = decoder.columnVector(1).get
+    val col = decoder.columnVector(1)
     decoder.get(buf, col, 0)
     val vec = col.asInstanceOf[BytesColumnVector].vector
     assert(vec.length == 1)
@@ -229,6 +232,43 @@ class DecodingSpec extends FlatSpec {
     val chars = x.slice(0,2).toSeq
     val expected = "UI".getBytes(Charsets.UTF_8).toSeq
     assert(chars == expected)
+  }
+
+  it should "decode string as int" in {
+    val examples = Seq((" 0", 0), ("00", 0), ("08",8), ("42",42))
+    val decoder = StringAsIntDecoder(2)
+    val col = decoder.columnVector(1)
+    for ((a,b) <- examples){
+      val buf = Decoding.EBCDIC1.encode(a)
+      decoder.get(buf, col, 0)
+      val vec: Array[Long] = col.asInstanceOf[LongColumnVector].vector
+      assert(vec(0) == b)
+    }
+  }
+
+  it should "decode string as date" in {
+    val exampleDate = "02/01/2020"
+    val fmt = DateTimeFormatter.ofPattern("MM/dd/yyyy")
+    val ld = LocalDate.from(fmt.parse(exampleDate))
+    val examples = Seq((exampleDate, ld.toEpochDay))
+    val decoder = StringAsDateDecoder(10, "MM/DD/YYYY")
+    val col = decoder.columnVector(1)
+    for ((a,b) <- examples){
+      decoder.get(Decoding.EBCDIC1.encode(a), col, 0)
+      assert(col.asInstanceOf[DateColumnVector].vector(0) == b)
+    }
+  }
+
+  it should "decode string as decimal" in {
+    val examples = Seq(("0000004.82", 482))
+    val decoder = StringAsDecimalDecoder(10,9,2)
+    val col = decoder.columnVector(1)
+    for ((a,b) <- examples){
+      val buf = Decoding.EBCDIC1.encode(a)
+      decoder.get(buf, col, 0)
+      val vec: Array[Long] = col.asInstanceOf[LongColumnVector].vector
+      assert(vec(0) == b)
+    }
   }
 
   it should "remove non-ascii characters" in {

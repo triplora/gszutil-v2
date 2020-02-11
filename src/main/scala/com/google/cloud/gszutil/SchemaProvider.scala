@@ -11,16 +11,14 @@ trait SchemaProvider {
 
   def toByteArray: Array[Byte]
 
-  def typeDescriptions: Array[TypeDescription] =
-    decoders.flatMap(_.typeDescription)
-
-  def ORCSchema: TypeDescription = {
-    val schema = new TypeDescription(Category.STRUCT)
-    fieldNames
-      .zip(typeDescriptions)
-      .foreach{ f => schema.addField(f._1, f._2) }
-    schema
-  }
+  def ORCSchema: TypeDescription =
+    fieldNames.zip(decoders.filterNot(_.filler))
+      .foldLeft(new TypeDescription(Category.STRUCT)){(a,b) =>
+          a.addField(b._1,b._2.typeDescription)
+      }
 
   def LRECL: Int = decoders.foldLeft(0){_ + _.size}
+
+  override def toString: String =
+    decoders.map{x => s"${x.toString} (${x.filler})"}.mkString("\n")
 }

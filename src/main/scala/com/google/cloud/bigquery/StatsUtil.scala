@@ -70,7 +70,9 @@ object StatsUtil extends Logging {
        |  description="Log table for mainframe jobs"
        |)""".stripMargin
 
-  def insertJobStats(jobName: String, jobDate: String, jobTime: String, job: scala.Option[Job], bq: BigQuery, tableId: TableId, jobType: String = "", source: String = "", dest: String = "", recordsIn: Long = -1, recordsOut: Long = -1): Unit = {
+  def insertJobStats(jobName: String, jobDate: String, jobTime: String, job: scala.Option[Job],
+                     bq: BigQuery, tableId: TableId, jobType: String = "", source: String = "",
+                     dest: String = "", recordsIn: Long = -1, recordsOut: Long = -1): Unit = {
     val id = job.map(_.getJobId.getJob)
       .getOrElse(s"${jobName}_${jobDate}_${jobTime}_$jobType")
 
@@ -90,7 +92,7 @@ object StatsUtil extends Logging {
       val jobData = job.get.toPb
       jobData.setFactory(JacksonFactory.getDefaultInstance)
       row.put("job_json", JacksonFactory.getDefaultInstance.toString(jobData))
-      logger.info(s"Job Data:\n${JacksonFactory.getDefaultInstance.toPrettyString(jobData)}")
+      logger.debug(s"Job Data:\n${JacksonFactory.getDefaultInstance.toPrettyString(jobData)}")
       if (jobType == "query") {
         val stats = jobData.getStatistics.getQuery
         if (stats != null) {
@@ -123,12 +125,18 @@ object StatsUtil extends Logging {
       row.put("records_out", recordsOut)
     row.build()
 
+    logger.info(s"inserting stats to ${tableId.getProject}:${tableId.getDataset}.${tableId
+      .getTable}")
     val request = InsertAllRequest.newBuilder(tableId)
         .addRow(id, row.build)
         .build()
     val response = bq.insertAll(request)
     if (response.hasErrors){
-      logger.error(s"failed to insert stats for Job ID $id")
+      val errors = response.getInsertErrors.asScala
+        .values.flatMap(_.asScala).mkString("\n")
+      logger.error(s"failed to insert stats for Job ID $id\n$errors")
+    } else {
+      logger.info(s"inserted job stats for Job ID $id")
     }
   }
 

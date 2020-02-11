@@ -22,7 +22,7 @@ import akka.actor.Actor
 import com.google.cloud.gszutil.Util.Logging
 import com.google.cloud.gszutil.io.ZReader
 import com.google.cloud.gszutil.orc.Protocol.{Close, PartComplete, PartFailed}
-import com.google.cloud.gszutil.{PackedDecimal, Util}
+import com.google.cloud.gszutil.{Decoding, PackedDecimal, Util}
 import org.apache.hadoop.conf.Configuration
 import org.apache.hadoop.fs.{FileSystem, SimpleGCSFileSystem}
 import org.apache.orc._
@@ -34,8 +34,8 @@ class ORCFileWriter(args: ORCFileWriterArgs) extends Actor with Logging {
   import args._
   private final val BytesBetweenFlush: Long = 32*1024*1024
   private final val stats = new FileSystem.Statistics(SimpleGCSFileSystem.Scheme)
-  private final val reader = new ZReader(copyBook, batchSize)
-  private final val errBuf = ByteBuffer.allocate(copyBook.LRECL * batchSize)
+  private final val reader = new ZReader(schemaProvider, batchSize)
+  private final val errBuf = ByteBuffer.allocate(schemaProvider.LRECL * batchSize)
 
   private var rowCount: Long = 0
   private var errorCount: Long = 0
@@ -58,14 +58,14 @@ class ORCFileWriter(args: ORCFileWriterArgs) extends Actor with Logging {
     OrcConf.OVERWRITE_OUTPUT_FILE.setBoolean(c, true)
     OrcConf.MEMORY_POOL.setDouble(c, 0.5d)
     OrcConf.BUFFER_SIZE.setLong(c, args.compressBuffer)
-    OrcConf.DIRECT_ENCODING_COLUMNS.setString(c, copyBook.fieldNames.mkString(","))
+    OrcConf.DIRECT_ENCODING_COLUMNS.setString(c, schemaProvider.fieldNames.mkString(","))
     c
   }
 
   override def preStart(): Unit = {
     val writerOptions = OrcFile
       .writerOptions(orcConfig)
-      .setSchema(copyBook.ORCSchema)
+      .setSchema(schemaProvider.ORCSchema)
       .memory(NoOpMemoryManager)
       .compress(if (compress) CompressionKind.ZLIB else CompressionKind.NONE)
       .bufferSize(compressBuffer)
@@ -87,9 +87,11 @@ class ORCFileWriter(args: ORCFileWriterArgs) extends Actor with Logging {
       errorCount += errorCt
       if (errBuf.position > 0){
         errBuf.flip()
-        val a = new Array[Byte](copyBook.LRECL)
+        val a = new Array[Byte](schemaProvider.LRECL)
         errBuf.get(a)
-        System.err.println(s"Failed to read row:\n${PackedDecimal.hexValue(a)}")
+        System.err.println(s"Failed to read row:")
+        System.err.println(Decoding.EBCDIC1.decode(ByteBuffer.wrap(a)).toString)
+        System.err.println(PackedDecimal.hexValue(a))
       }
       if (x.remaining > 0) {
         logger.warn(s"discarding ${x.remaining} bytes remaining in buffer")
@@ -134,7 +136,7 @@ class ORCFileWriter(args: ORCFileWriterArgs) extends Actor with Logging {
     logger.info(s"Stopping writer for ${args.path} after writing $rowCount records " +
       s"$bytesOut bytes in $elapsedTime ms ($mbps mbps) $dt ms total $idle ms idle " +
       s"$bytesIn bytes read ${f"$ratio%1.2f"} compression ratio ${Util.logMem()}")
-    val recordsIn = bytesIn / copyBook.LRECL
+    val recordsIn = bytesIn / schemaProvider.LRECL
     val errorPct = errorCount*1.0d / recordsIn
     if (errorPct > maxErrorPct) {
       val msg = s"error percent $errorPct exceeds threshold of $maxErrorPct"

@@ -68,12 +68,16 @@ object Cp extends Command[GsUtilConfig] with Logging {
       val instanceId = s"grecv-${zos.jobId.toLowerCase}"
       val remoteHost = if (c.remoteHost.isEmpty) {
         logger.info(s"Creating Compute Instance $instanceId")
+        val vmSubnet = if (c.subnet.split("/").length == 1) {
+          s"projects/${c.projectId}/regions/${c.zone.dropRight(2)}/subnetworks/${c.subnet}"
+        } else c.subnet
         Option(GCE.createVM(instanceId, c.pkgUri, c.serviceAccount,
-          c.projectId, c.zone, c.subnet, GCE.defaultClient(creds), c.machineType))
+          c.projectId, c.zone, vmSubnet, GCE.defaultClient(creds), c.machineType, c.tlsEnabled))
       } else None
       val host = remoteHost.map(_.ip).getOrElse(c.remoteHost)
+      val port = c.remotePort
       val opts = ReaderOpts(in, schemaProvider, c.destinationUri, in.blkSize,
-        new ZContext(), c.nConnections, host, c.remotePort, c.blocks)
+        new ZContext(), c.nConnections, host, port, c.blocks)
       try {
         logger.info("Starting Send...")
         val res = V2SendCallable(opts).call()

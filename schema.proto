@@ -37,6 +37,8 @@ message Field {
     string value = 2;
   }
   NullIf nullif = 7;
+  FieldType cast = 8;
+  string format = 9;
 }
 message Record {
   enum Source {

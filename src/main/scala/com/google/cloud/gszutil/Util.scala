@@ -200,7 +200,6 @@ object Util {
     for ((k,v) <- info.symbols)
       System.out.println(s"  $k=$v")
     val script = zos.readStdin()
-    val substituted = zos.substituteSystemSymbols(script)
     val content = new util.HashMap[String,String]()
     content.put("jobid", zos.jobId)
     content.put("jobdate", zos.jobDate)
@@ -210,12 +209,7 @@ object Util {
     content.put("procstepname", info.procStepName)
     content.put("symbols", info.symbols.map(x => s"${x._1}=${x._2}").mkString("\n"))
     content.put("user", info.user)
-    if (!substituted.contentEquals(script)) {
-      content.put("script", substituted)
-      content.put("template", script)
-    } else {
-      content.put("script", script)
-    }
+    content.put("script", script)
     content
   }
 }

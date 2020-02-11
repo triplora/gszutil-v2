@@ -54,11 +54,13 @@ object Query extends Command[QueryConfig] with Logging {
 
         // Publish results
         if (cfg.sync && cfg.statsTable.nonEmpty) {
-          val statsTable = BQ.resolveTableSpec(cfg.statsTable, cfg.datasetId, cfg.projectId)
-          StatsUtil.insertJobStats(zos.jobName, zos.jobDate, zos.jobTime, scala.Option(job), bq, statsTable, jobType = "query", dest = cfg.destinationTable)
+          val statsTable = BQ.resolveTableSpec(cfg.statsTable, cfg.projectId, cfg.datasetId)
+          StatsUtil.insertJobStats(zos.jobName, zos.jobDate, zos.jobTime, scala.Option(job), bq,
+            statsTable, jobType = "query", dest = cfg.destinationTable)
         }
 
         if (cfg.sync) {
+          logger.info(s"checking job status for ${jobId.getJob}")
           BQ.getStatus(job) match {
             case Some(status) =>
               logger.info(s"job ${jobId.getJob} has status ${status.state}")
@@ -69,6 +71,7 @@ object Query extends Command[QueryConfig] with Logging {
               } else result = Result.Success
               BQ.throwOnError(status)
             case _ =>
+              logger.error(s"job ${jobId.getJob} missing")
               result = Result.Failure("missing status")
           }
         } else {

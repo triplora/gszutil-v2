@@ -18,10 +18,10 @@ package com.ibm.jzos
 
 import java.nio.channels.FileChannel
 import java.nio.file.{Files, Paths, StandardOpenOption}
-import java.util.Calendar
+import java.util.Date
 
-import com.google.cloud.gszutil.Util.{CredentialProvider, DefaultCredentialProvider, Logging,
-  PDSMemberInfo, ZInfo, ZMVSJob}
+import com.google.cloud.bigquery.StatsUtil
+import com.google.cloud.gszutil.Util.{CredentialProvider, DefaultCredentialProvider, Logging, PDSMemberInfo, ZInfo, ZMVSJob}
 import com.google.cloud.gszutil.io.{ChannelRecordReader, ZRecordReaderT, ZRecordWriterT}
 import com.google.cloud.gszutil.{CopyBook, SchemaProvider, Util}
 import com.google.common.base.Charsets
@@ -72,11 +72,12 @@ object Linux extends ZFileProvider with Logging {
   /** On Linux DD is an environment variable pointing to a file
     */
   protected def ddFile(dd: String): ZRecordReaderT = {
+    val env = System.getenv()
+    require(env.containsKey(dd), s"$dd environment variable not set")
     val ddPath = Paths.get(System.getenv(dd))
     logger.info(s"Opening $dd $ddPath")
     val lReclKey = dd + "_LRECL"
     val blkSizeKey = dd + "_BLKSIZE"
-    val env = System.getenv()
     require(env.containsKey(lReclKey), s"$lReclKey environment variable not set")
     require(env.containsKey(blkSizeKey), s"$blkSizeKey environment variable not set")
     val lRecl: Int = env.get(dd + "_LRECL").toInt
@@ -87,21 +88,19 @@ object Linux extends ZFileProvider with Logging {
     new ChannelRecordReader(FileChannel.open(ddPath, StandardOpenOption.READ), lRecl, blkSize)
   }
 
-  def jobName: String = sys.env.getOrElse("JOBNAME","UNKNOWN")
+  override def jobName: String = sys.env.getOrElse("JOBNAME","JOBNAME")
 
-  override def jobDate: String = {
-    val c = Calendar.getInstance()
-    s"${c.get(Calendar.DAY_OF_MONTH)}${c.get(Calendar.MONTH)}${c.get(Calendar.YEAR)}"
-  }
+  override def jobDate: String = StatsUtil.JobDateFormat.format(new Date())
 
-  override def jobTime: String = {
-    val c = Calendar.getInstance()
-    s"${c.get(Calendar.HOUR_OF_DAY)}${c.get(Calendar.MINUTE)}${c.get(Calendar.SECOND)}"
-  }
+  override def jobTime: String = StatsUtil.JobTimeFormat.format(new Date())
 
-  override def jobId: String = s"${System.currentTimeMillis()/1000L}"
-
-  override def getInfo: ZInfo = ZInfo()
+  override def getInfo: ZInfo = ZInfo(
+    jobId = jobId,
+    jobName = jobName,
+    stepName = sys.env.getOrElse("JOB_STEP","STEP"),
+    procStepName = sys.env.getOrElse("PROC_STEP","STEP"),
+    user = System.getProperty("user.name")
+  )
 
   override def getSymbol(s: String): Option[String] = throw new NotImplementedError()
 

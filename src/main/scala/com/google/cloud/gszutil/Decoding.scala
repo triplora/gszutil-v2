@@ -17,6 +17,7 @@ package com.google.cloud.gszutil
 
 import java.nio.ByteBuffer
 import java.nio.charset.Charset
+import java.time.format.DateTimeFormatter
 import java.time.{LocalDate, LocalDateTime, LocalTime, Month, ZoneOffset}
 
 import com.google.cloud.gszutil.Util.Logging
@@ -92,20 +93,6 @@ object Decoding extends Logging {
 
   def ebcdic2utf8byte(b: Byte): Byte = EBCDIC(uint(b))
 
-  def ebcdic2utf8string(a: Array[Byte]): String = {
-    new String(ebcdic2utf8bytes(a), Charsets.UTF_8)
-  }
-
-  def ebcdic2utf8bytes(a: Array[Byte]): Array[Byte] = {
-    val a1 = new Array[Byte](a.length)
-    var i = 0
-    while (i < a.length){
-      a1(i) = ebcdic2utf8byte(a(i))
-      i += 1
-    }
-    a1
-  }
-
   def uint(b: Byte): Int = {
     if (b < 0) 256 + b
     else b
@@ -121,7 +108,7 @@ object Decoding extends Logging {
 
   trait Decoder {
     val size: Int
-    val filler: Boolean = false
+    def filler: Boolean
 
     /** Read a field into a mutable output builder
       *
@@ -131,9 +118,9 @@ object Decoding extends Logging {
       */
     def get(buf: ByteBuffer, row: ColumnVector, i: Int): Unit
 
-    def columnVector(maxSize: Int): Option[ColumnVector]
+    def columnVector(maxSize: Int): ColumnVector
 
-    def typeDescription: Option[TypeDescription]
+    def typeDescription: TypeDescription
 
     /** Proto Representation */
     def toFieldBuilder: Field.Builder
@@ -141,7 +128,7 @@ object Decoding extends Logging {
 
   case class StringDecoder(override val size: Int,
                            ascii: Boolean = true,
-                           override val filler: Boolean = false) extends Decoder {
+                           filler: Boolean = false) extends Decoder {
     private final val charMap = if (ascii) EBCDIC2ASCII else EBCDIC
     override def get(buf: ByteBuffer, row: ColumnVector, i: Int): Unit = {
       val bcv = row.asInstanceOf[BytesColumnVector]
@@ -155,14 +142,14 @@ object Decoding extends Logging {
       bcv.setValPreallocated(i, size)
     }
 
-    override def columnVector(maxSize: Int): Option[ColumnVector] = {
+    override def columnVector(maxSize: Int): ColumnVector = {
       val cv = new BytesColumnVector(maxSize)
       cv.initBuffer(size)
-      Option(cv)
+      cv
     }
 
-    override def typeDescription: Option[TypeDescription] =
-      Option(TypeDescription.createChar().withMaxLength(size))
+    override def typeDescription: TypeDescription =
+      TypeDescription.createChar().withMaxLength(size)
 
     override def toString: String = s"$size byte STRING"
 
@@ -173,7 +160,117 @@ object Decoding extends Logging {
         .setTyp(Field.FieldType.STRING)
   }
 
-  case class DateDecoder(override val filler: Boolean = false) extends Decoder {
+  case class StringAsIntDecoder(override val size: Int,
+                                filler: Boolean = false) extends Decoder {
+    private final val charMap = EBCDIC2ASCII
+    override def get(buf: ByteBuffer, row: ColumnVector, i: Int): Unit = {
+      val res = new Array[Byte](size)
+      buf.get(res)
+      var j = 0
+      while (j < size){
+        res(j) = charMap(uint(res(j)))
+        j += 1
+      }
+      val s = new String(res, Charsets.UTF_8).filter(_.isDigit)
+      row.asInstanceOf[LongColumnVector]
+        .vector.update(i, s.toLong)
+    }
+
+    override def columnVector(maxSize: Int): ColumnVector =
+      new LongColumnVector(maxSize)
+
+    override def typeDescription: TypeDescription =
+      TypeDescription.createLong
+
+    override def toString: String = s"$size byte INT64"
+
+    override def toFieldBuilder: Field.Builder =
+      Field.newBuilder()
+        .setSize(size)
+        .setFiller(filler)
+        .setTyp(Field.FieldType.INTEGER)
+  }
+
+  case class StringAsDateDecoder(override val size: Int,
+                                 format: String,
+                                 filler: Boolean = false) extends Decoder {
+    private final val charMap = EBCDIC2ASCII
+    private val pattern = format.replaceAllLiterally("D","d").replaceAllLiterally("Y","y")
+    private val fmt = DateTimeFormatter.ofPattern(pattern)
+
+    @scala.inline
+    def toEpochDay(buf: Array[Byte]): Long =
+      LocalDate.from(fmt.parse(new String(buf, Charsets.UTF_8))).toEpochDay
+
+    override def get(buf: ByteBuffer, row: ColumnVector, i: Int): Unit = {
+      val res = new Array[Byte](size)
+      buf.get(res)
+      var j = 0
+      while (j < size){
+        res(j) = charMap(uint(res(j)))
+        j += 1
+      }
+      row.asInstanceOf[DateColumnVector].vector.update(i, toEpochDay(res))
+    }
+
+    override def columnVector(maxSize: Int): ColumnVector =
+      new DateColumnVector(maxSize)
+
+    override def typeDescription: TypeDescription =
+      TypeDescription.createDate()
+
+    override def toString: String = s"$size byte DATE"
+
+    override def toFieldBuilder: Field.Builder =
+      Field.newBuilder()
+        .setSize(size)
+        .setFiller(filler)
+        .setTyp(Field.FieldType.DATE)
+  }
+
+  case class StringAsDecimalDecoder(override val size: Int,
+                                    precision: Int,
+                                    scale: Int,
+                                    filler: Boolean = false) extends Decoder {
+    private final val charMap = EBCDIC2ASCII
+
+    private def toDecimal(buf: Array[Byte]): Long =
+      new String(buf, Charsets.UTF_8)
+        .dropWhile(_=='0')
+        .filter(c => c.isDigit||c=='-').toLong
+
+    override def get(buf: ByteBuffer, row: ColumnVector, i: Int): Unit = {
+      val res = new Array[Byte](size)
+      buf.get(res)
+      var j = 0
+      while (j < size){
+        res(j) = charMap(uint(res(j)))
+        j += 1
+      }
+      row.asInstanceOf[Decimal64ColumnVector].vector.update(i, toDecimal(res))
+    }
+
+    override def columnVector(maxSize: Int): ColumnVector =
+      new Decimal64ColumnVector(maxSize, precision, scale)
+
+    override def typeDescription: TypeDescription =
+      TypeDescription.createDecimal
+        .withScale(scale)
+        .withPrecision(precision)
+
+    override def toString: String = s"$size byte NUMERIC($precision,$scale)"
+
+    override def toFieldBuilder: Field.Builder =
+      Field.newBuilder()
+        .setSize(size)
+        .setFiller(filler)
+        .setTyp(Field.FieldType.DECIMAL)
+        .setPrecision(precision)
+        .setScale(scale)
+  }
+
+
+  case class DateDecoder(filler: Boolean = false) extends Decoder {
     override val size: Int = 4
     private final val Time = LocalTime.of(0,0,0)
 
@@ -191,11 +288,11 @@ object Decoding extends Logging {
       bcv.setFromScratchTimestamp(i)
     }
 
-    override def columnVector(maxSize: Int): Option[ColumnVector] =
-      Option(new TimestampColumnVector())
+    override def columnVector(maxSize: Int): ColumnVector =
+      new TimestampColumnVector()
 
-    override def typeDescription: Option[TypeDescription] =
-      Option(TypeDescription.createTimestamp())
+    override def typeDescription: TypeDescription =
+      TypeDescription.createTimestamp()
 
     override def toFieldBuilder: Field.Builder =
       Field.newBuilder()
@@ -205,17 +302,17 @@ object Decoding extends Logging {
   }
 
   case class LongDecoder(override val size: Int,
-                         override val filler: Boolean = false) extends Decoder {
+                         filler: Boolean = false) extends Decoder {
     override def get(buf: ByteBuffer, row: ColumnVector, i: Int): Unit = {
       row.asInstanceOf[LongColumnVector]
         .vector.update(i, Binary.decode(buf, size))
     }
 
-    override def columnVector(maxSize: Int): Option[ColumnVector] =
-      Option(new LongColumnVector(maxSize))
+    override def columnVector(maxSize: Int): ColumnVector =
+      new LongColumnVector(maxSize)
 
-    override def typeDescription: Option[TypeDescription] =
-      Option(TypeDescription.createLong)
+    override def typeDescription: TypeDescription =
+      TypeDescription.createLong
 
     override def toString: String = s"$size byte INT64"
 
@@ -227,17 +324,17 @@ object Decoding extends Logging {
   }
 
   case class UnsignedLongDecoder(override val size: Int,
-                                 override val filler: Boolean = false) extends Decoder {
+                                 filler: Boolean = false) extends Decoder {
     override def get(buf: ByteBuffer, row: ColumnVector, i: Int): Unit = {
       row.asInstanceOf[LongColumnVector]
         .vector.update(i, Binary.decodeUnsigned(buf, size))
     }
 
-    override def columnVector(maxSize: Int): Option[ColumnVector] =
-      Option(new LongColumnVector(maxSize))
+    override def columnVector(maxSize: Int): ColumnVector =
+      new LongColumnVector(maxSize)
 
-    override def typeDescription: Option[TypeDescription] =
-      Option(TypeDescription.createLong)
+    override def typeDescription: TypeDescription =
+      TypeDescription.createLong
 
     override def toString: String = s"$size byte INT64"
 
@@ -248,7 +345,7 @@ object Decoding extends Logging {
         .setTyp(Field.FieldType.UNSIGNED_INTEGER)
   }
 
-  case class Decimal64Decoder(p: Int, s: Int, override val filler: Boolean = false) extends Decoder {
+  case class Decimal64Decoder(p: Int, s: Int, filler: Boolean = false) extends Decoder {
     private val precision = p+s
     require(precision <= 18 && precision > 0, s"precision $precision not in range [1,18]")
     override val size: Int = PackedDecimal.sizeOf(p,s)
@@ -265,13 +362,13 @@ object Decoding extends Logging {
       }
     }
 
-    override def columnVector(maxSize: Int): Option[ColumnVector] =
-      Option(new Decimal64ColumnVector(maxSize, p+s, s))
+    override def columnVector(maxSize: Int): ColumnVector =
+      new Decimal64ColumnVector(maxSize, precision, s)
 
-    override def typeDescription: Option[TypeDescription] =
-      Option(TypeDescription.createDecimal
+    override def typeDescription: TypeDescription =
+      TypeDescription.createDecimal
         .withScale(s)
-        .withPrecision(p+s))
+        .withPrecision(p+s)
 
     override def toString: String = s"$size byte NUMERIC($p,$s)"
 
@@ -286,16 +383,24 @@ object Decoding extends Logging {
 
   def getDecoder(f: Field): Decoder = {
     import Field.FieldType._
-    if (f.getTyp == STRING)
-      StringDecoder(f.getSize, f.getFiller)
+    val filler: Boolean = f.getFiller || f.getName.toUpperCase.startsWith("FILLER")
+    if (f.getTyp == STRING) {
+      if (f.getCast == INTEGER)
+        StringAsIntDecoder(f.getSize, filler)
+      else if (f.getCast == DATE)
+        StringAsDateDecoder(f.getSize, f.getFormat, filler)
+      else if (f.getCast == DECIMAL)
+        StringAsDecimalDecoder(f.getSize, f.getPrecision, f.getScale, filler)
+      else StringDecoder(f.getSize, filler = filler)
+    }
     else if (f.getTyp == INTEGER)
-      LongDecoder(f.getSize, f.getFiller)
+      LongDecoder(f.getSize, filler)
     else if (f.getTyp == DECIMAL)
-      Decimal64Decoder(f.getPrecision - f.getScale, f.getScale, f.getFiller)
+      Decimal64Decoder(f.getPrecision - f.getScale, f.getScale, filler)
     else if (f.getTyp == DATE)
-      DateDecoder(f.getFiller)
+      DateDecoder(filler)
     else if (f.getTyp == UNSIGNED_INTEGER)
-      UnsignedLongDecoder(f.getSize, f.getFiller)
+      UnsignedLongDecoder(f.getSize, filler)
     else
       throw new IllegalArgumentException("unrecognized field type")
   }

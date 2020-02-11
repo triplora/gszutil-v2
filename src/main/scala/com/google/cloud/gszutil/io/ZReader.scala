@@ -31,14 +31,13 @@ import org.apache.orc.Writer
 class ZReader(private val schemaProvider: SchemaProvider,
               private val batchSize: Int) extends Logging {
   private final val decoders: Array[Decoder] = schemaProvider.decoders
-  private final val cols: Array[ColumnVector] = decoders.map{x =>
-    x.columnVector(batchSize).getOrElse(new VoidColumnVector(batchSize))
-  }
+  private final val cols: Array[ColumnVector] = decoders.map(_.columnVector(batchSize))
   private final val rowBatch: VectorizedRowBatch = {
+    logger.debug(s"decoders:\n$schemaProvider")
     val batch = new VectorizedRowBatch(decoders.count(!_.filler), batchSize)
     var j = 0
     for (i <- decoders.indices) {
-      if (!cols(i).isInstanceOf[VoidColumnVector]) {
+      if (!decoders(i).filler) {
         batch.cols(j) = cols(i)
         j += 1
       }

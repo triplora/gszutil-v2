@@ -79,6 +79,29 @@ public final class Schema {
      * <code>.com.google.cloud.gzos.pb.Field.NullIf nullif = 7;</code>
      */
     com.google.cloud.gzos.pb.Schema.Field.NullIfOrBuilder getNullifOrBuilder();
+
+    /**
+     * <code>.com.google.cloud.gzos.pb.Field.FieldType cast = 8;</code>
+     * @return The enum numeric value on the wire for cast.
+     */
+    int getCastValue();
+    /**
+     * <code>.com.google.cloud.gzos.pb.Field.FieldType cast = 8;</code>
+     * @return The cast.
+     */
+    com.google.cloud.gzos.pb.Schema.Field.FieldType getCast();
+
+    /**
+     * <code>string format = 9;</code>
+     * @return The format.
+     */
+    java.lang.String getFormat();
+    /**
+     * <code>string format = 9;</code>
+     * @return The bytes for format.
+     */
+    com.google.protobuf.ByteString
+        getFormatBytes();
   }
   /**
    * Protobuf type {@code com.google.cloud.gzos.pb.Field}
@@ -95,6 +118,8 @@ public final class Schema {
     private Field() {
       name_ = "";
       typ_ = 0;
+      cast_ = 0;
+      format_ = "";
     }
 
     @java.lang.Override
@@ -170,6 +195,18 @@ public final class Schema {
                 nullif_ = subBuilder.buildPartial();
               }
 
+              break;
+            }
+            case 64: {
+              int rawValue = input.readEnum();
+
+              cast_ = rawValue;
+              break;
+            }
+            case 74: {
+              java.lang.String s = input.readStringRequireUtf8();
+
+              format_ = s;
               break;
             }
             default: {
@@ -1176,6 +1213,61 @@ public final class Schema {
       return getNullif();
     }
 
+    public static final int CAST_FIELD_NUMBER = 8;
+    private int cast_;
+    /**
+     * <code>.com.google.cloud.gzos.pb.Field.FieldType cast = 8;</code>
+     * @return The enum numeric value on the wire for cast.
+     */
+    public int getCastValue() {
+      return cast_;
+    }
+    /**
+     * <code>.com.google.cloud.gzos.pb.Field.FieldType cast = 8;</code>
+     * @return The cast.
+     */
+    public com.google.cloud.gzos.pb.Schema.Field.FieldType getCast() {
+      @SuppressWarnings("deprecation")
+      com.google.cloud.gzos.pb.Schema.Field.FieldType result = com.google.cloud.gzos.pb.Schema.Field.FieldType.valueOf(cast_);
+      return result == null ? com.google.cloud.gzos.pb.Schema.Field.FieldType.UNRECOGNIZED : result;
+    }
+
+    public static final int FORMAT_FIELD_NUMBER = 9;
+    private volatile java.lang.Object format_;
+    /**
+     * <code>string format = 9;</code>
+     * @return The format.
+     */
+    public java.lang.String getFormat() {
+      java.lang.Object ref = format_;
+      if (ref instanceof java.lang.String) {
+        return (java.lang.String) ref;
+      } else {
+        com.google.protobuf.ByteString bs = 
+            (com.google.protobuf.ByteString) ref;
+        java.lang.String s = bs.toStringUtf8();
+        format_ = s;
+        return s;
+      }
+    }
+    /**
+     * <code>string format = 9;</code>
+     * @return The bytes for format.
+     */
+    public com.google.protobuf.ByteString
+        getFormatBytes() {
+      java.lang.Object ref = format_;
+      if (ref instanceof java.lang.String) {
+        com.google.protobuf.ByteString b = 
+            com.google.protobuf.ByteString.copyFromUtf8(
+                (java.lang.String) ref);
+        format_ = b;
+        return b;
+      } else {
+        return (com.google.protobuf.ByteString) ref;
+      }
+    }
+
     private byte memoizedIsInitialized = -1;
     @java.lang.Override
     public final boolean isInitialized() {
@@ -1210,6 +1302,12 @@ public final class Schema {
       }
       if (nullif_ != null) {
         output.writeMessage(7, getNullif());
+      }
+      if (cast_ != com.google.cloud.gzos.pb.Schema.Field.FieldType.UNKNOWN.getNumber()) {
+        output.writeEnum(8, cast_);
+      }
+      if (!getFormatBytes().isEmpty()) {
+        com.google.protobuf.GeneratedMessageV3.writeString(output, 9, format_);
       }
       unknownFields.writeTo(output);
     }
@@ -1247,6 +1345,13 @@ public final class Schema {
         size += com.google.protobuf.CodedOutputStream
           .computeMessageSize(7, getNullif());
       }
+      if (cast_ != com.google.cloud.gzos.pb.Schema.Field.FieldType.UNKNOWN.getNumber()) {
+        size += com.google.protobuf.CodedOutputStream
+          .computeEnumSize(8, cast_);
+      }
+      if (!getFormatBytes().isEmpty()) {
+        size += com.google.protobuf.GeneratedMessageV3.computeStringSize(9, format_);
+      }
       size += unknownFields.getSerializedSize();
       memoizedSize = size;
       return size;
@@ -1278,6 +1383,9 @@ public final class Schema {
         if (!getNullif()
             .equals(other.getNullif())) return false;
       }
+      if (cast_ != other.cast_) return false;
+      if (!getFormat()
+          .equals(other.getFormat())) return false;
       if (!unknownFields.equals(other.unknownFields)) return false;
       return true;
     }
@@ -1306,6 +1414,10 @@ public final class Schema {
         hash = (37 * hash) + NULLIF_FIELD_NUMBER;
         hash = (53 * hash) + getNullif().hashCode();
       }
+      hash = (37 * hash) + CAST_FIELD_NUMBER;
+      hash = (53 * hash) + cast_;
+      hash = (37 * hash) + FORMAT_FIELD_NUMBER;
+      hash = (53 * hash) + getFormat().hashCode();
       hash = (29 * hash) + unknownFields.hashCode();
       memoizedHashCode = hash;
       return hash;
@@ -1457,6 +1569,10 @@ public final class Schema {
           nullif_ = null;
           nullifBuilder_ = null;
         }
+        cast_ = 0;
+
+        format_ = "";
+
         return this;
       }
 
@@ -1494,6 +1610,8 @@ public final class Schema {
         } else {
           result.nullif_ = nullifBuilder_.build();
         }
+        result.cast_ = cast_;
+        result.format_ = format_;
         onBuilt();
         return result;
       }
@@ -1563,6 +1681,13 @@ public final class Schema {
         }
         if (other.hasNullif()) {
           mergeNullif(other.getNullif());
+        }
+        if (other.cast_ != 0) {
+          setCastValue(other.getCastValue());
+        }
+        if (!other.getFormat().isEmpty()) {
+          format_ = other.format_;
+          onChanged();
         }
         this.mergeUnknownFields(other.unknownFields);
         onChanged();
@@ -1958,6 +2083,134 @@ public final class Schema {
           nullif_ = null;
         }
         return nullifBuilder_;
+      }
+
+      private int cast_ = 0;
+      /**
+       * <code>.com.google.cloud.gzos.pb.Field.FieldType cast = 8;</code>
+       * @return The enum numeric value on the wire for cast.
+       */
+      public int getCastValue() {
+        return cast_;
+      }
+      /**
+       * <code>.com.google.cloud.gzos.pb.Field.FieldType cast = 8;</code>
+       * @param value The enum numeric value on the wire for cast to set.
+       * @return This builder for chaining.
+       */
+      public Builder setCastValue(int value) {
+        cast_ = value;
+        onChanged();
+        return this;
+      }
+      /**
+       * <code>.com.google.cloud.gzos.pb.Field.FieldType cast = 8;</code>
+       * @return The cast.
+       */
+      public com.google.cloud.gzos.pb.Schema.Field.FieldType getCast() {
+        @SuppressWarnings("deprecation")
+        com.google.cloud.gzos.pb.Schema.Field.FieldType result = com.google.cloud.gzos.pb.Schema.Field.FieldType.valueOf(cast_);
+        return result == null ? com.google.cloud.gzos.pb.Schema.Field.FieldType.UNRECOGNIZED : result;
+      }
+      /**
+       * <code>.com.google.cloud.gzos.pb.Field.FieldType cast = 8;</code>
+       * @param value The cast to set.
+       * @return This builder for chaining.
+       */
+      public Builder setCast(com.google.cloud.gzos.pb.Schema.Field.FieldType value) {
+        if (value == null) {
+          throw new NullPointerException();
+        }
+        
+        cast_ = value.getNumber();
+        onChanged();
+        return this;
+      }
+      /**
+       * <code>.com.google.cloud.gzos.pb.Field.FieldType cast = 8;</code>
+       * @return This builder for chaining.
+       */
+      public Builder clearCast() {
+        
+        cast_ = 0;
+        onChanged();
+        return this;
+      }
+
+      private java.lang.Object format_ = "";
+      /**
+       * <code>string format = 9;</code>
+       * @return The format.
+       */
+      public java.lang.String getFormat() {
+        java.lang.Object ref = format_;
+        if (!(ref instanceof java.lang.String)) {
+          com.google.protobuf.ByteString bs =
+              (com.google.protobuf.ByteString) ref;
+          java.lang.String s = bs.toStringUtf8();
+          format_ = s;
+          return s;
+        } else {
+          return (java.lang.String) ref;
+        }
+      }
+      /**
+       * <code>string format = 9;</code>
+       * @return The bytes for format.
+       */
+      public com.google.protobuf.ByteString
+          getFormatBytes() {
+        java.lang.Object ref = format_;
+        if (ref instanceof String) {
+          com.google.protobuf.ByteString b = 
+              com.google.protobuf.ByteString.copyFromUtf8(
+                  (java.lang.String) ref);
+          format_ = b;
+          return b;
+        } else {
+          return (com.google.protobuf.ByteString) ref;
+        }
+      }
+      /**
+       * <code>string format = 9;</code>
+       * @param value The format to set.
+       * @return This builder for chaining.
+       */
+      public Builder setFormat(
+          java.lang.String value) {
+        if (value == null) {
+    throw new NullPointerException();
+  }
+  
+        format_ = value;
+        onChanged();
+        return this;
+      }
+      /**
+       * <code>string format = 9;</code>
+       * @return This builder for chaining.
+       */
+      public Builder clearFormat() {
+        
+        format_ = getDefaultInstance().getFormat();
+        onChanged();
+        return this;
+      }
+      /**
+       * <code>string format = 9;</code>
+       * @param value The bytes for format to set.
+       * @return This builder for chaining.
+       */
+      public Builder setFormatBytes(
+          com.google.protobuf.ByteString value) {
+        if (value == null) {
+    throw new NullPointerException();
+  }
+  checkByteStringIsUtf8(value);
+        
+        format_ = value;
+        onChanged();
+        return this;
       }
       @java.lang.Override
       public final Builder setUnknownFields(
@@ -3259,21 +3512,23 @@ public final class Schema {
   static {
     java.lang.String[] descriptorData = {
       "\n\014schema.proto\022\030com.google.cloud.gzos.pb" +
-      "\"\315\002\n\005Field\022\014\n\004name\030\001 \001(\t\0226\n\003typ\030\002 \001(\0162)." +
+      "\"\226\003\n\005Field\022\014\n\004name\030\001 \001(\t\0226\n\003typ\030\002 \001(\0162)." +
       "com.google.cloud.gzos.pb.Field.FieldType" +
       "\022\014\n\004size\030\003 \001(\005\022\021\n\tprecision\030\004 \001(\005\022\r\n\005sca" +
       "le\030\005 \001(\005\022\016\n\006filler\030\006 \001(\010\0226\n\006nullif\030\007 \001(\013" +
       "2&.com.google.cloud.gzos.pb.Field.NullIf" +
-      "\032&\n\006NullIf\022\r\n\005field\030\001 \001(\t\022\r\n\005value\030\002 \001(\t" +
-      "\"^\n\tFieldType\022\013\n\007UNKNOWN\020\000\022\n\n\006STRING\020\001\022\013" +
-      "\n\007INTEGER\020\002\022\013\n\007DECIMAL\020\003\022\010\n\004DATE\020\004\022\024\n\020UN" +
-      "SIGNED_INTEGER\020\005\"\303\001\n\006Record\022\r\n\005lrecl\030\001 \001" +
-      "(\005\0227\n\006source\030\002 \001(\0162\'.com.google.cloud.gz" +
-      "os.pb.Record.Source\022\020\n\010original\030\003 \001(\t\022.\n" +
-      "\005field\030\004 \003(\0132\037.com.google.cloud.gzos.pb." +
-      "Field\"/\n\006Source\022\013\n\007UNKNOWN\020\000\022\014\n\010COPYBOOK" +
-      "\020\001\022\n\n\006LAYOUT\020\002B$\n\030com.google.cloud.gzos." +
-      "pbB\006SchemaP\000b\006proto3"
+      "\0227\n\004cast\030\010 \001(\0162).com.google.cloud.gzos.p" +
+      "b.Field.FieldType\022\016\n\006format\030\t \001(\t\032&\n\006Nul" +
+      "lIf\022\r\n\005field\030\001 \001(\t\022\r\n\005value\030\002 \001(\t\"^\n\tFie" +
+      "ldType\022\013\n\007UNKNOWN\020\000\022\n\n\006STRING\020\001\022\013\n\007INTEG" +
+      "ER\020\002\022\013\n\007DECIMAL\020\003\022\010\n\004DATE\020\004\022\024\n\020UNSIGNED_" +
+      "INTEGER\020\005\"\303\001\n\006Record\022\r\n\005lrecl\030\001 \001(\005\0227\n\006s" +
+      "ource\030\002 \001(\0162\'.com.google.cloud.gzos.pb.R" +
+      "ecord.Source\022\020\n\010original\030\003 \001(\t\022.\n\005field\030" +
+      "\004 \003(\0132\037.com.google.cloud.gzos.pb.Field\"/" +
+      "\n\006Source\022\013\n\007UNKNOWN\020\000\022\014\n\010COPYBOOK\020\001\022\n\n\006L" +
+      "AYOUT\020\002B$\n\030com.google.cloud.gzos.pbB\006Sch" +
+      "emaP\000b\006proto3"
     };
     descriptor = com.google.protobuf.Descriptors.FileDescriptor
       .internalBuildGeneratedFileFrom(descriptorData,
@@ -3284,7 +3539,7 @@ public final class Schema {
     internal_static_com_google_cloud_gzos_pb_Field_fieldAccessorTable = new
       com.google.protobuf.GeneratedMessageV3.FieldAccessorTable(
         internal_static_com_google_cloud_gzos_pb_Field_descriptor,
-        new java.lang.String[] { "Name", "Typ", "Size", "Precision", "Scale", "Filler", "Nullif", });
+        new java.lang.String[] { "Name", "Typ", "Size", "Precision", "Scale", "Filler", "Nullif", "Cast", "Format", });
     internal_static_com_google_cloud_gzos_pb_Field_NullIf_descriptor =
       internal_static_com_google_cloud_gzos_pb_Field_descriptor.getNestedTypes().get(0);
     internal_static_com_google_cloud_gzos_pb_Field_NullIf_fieldAccessorTable = new
