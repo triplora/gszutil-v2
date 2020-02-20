@@ -13,13 +13,11 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+organization := "com.google.cloud"
 name := "gszutil"
+version := "3.0.0"
 
 scalaVersion := "2.11.12"
-
-organization := "com.google.cloud"
-
-version := "3.0.0-SNAPSHOT"
 
 val exGuava = ExclusionRule(organization = "com.google.guava")
 
@@ -65,7 +63,7 @@ assemblyExcludedJars in assembly := {
     .filter(file => IBMJars.contains(file.data.getName))
 }
 
-publishMavenStyle := false
+publishMavenStyle := true
 
 resourceGenerators in Compile += Def.task {
   val file = (resourceDirectory in Compile).value / "build.txt"
