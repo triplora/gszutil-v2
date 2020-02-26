@@ -182,7 +182,7 @@ object Decoding extends Logging {
     override def typeDescription: TypeDescription =
       TypeDescription.createLong
 
-    override def toString: String = s"$size byte INT64"
+    override def toString: String = s"$size STRING (INT64)"
 
     override def toFieldBuilder: Field.Builder =
       Field.newBuilder()
@@ -219,7 +219,7 @@ object Decoding extends Logging {
     override def typeDescription: TypeDescription =
       TypeDescription.createDate()
 
-    override def toString: String = s"$size byte DATE"
+    override def toString: String = s"$size byte STRING (DATE '$format')"
 
     override def toFieldBuilder: Field.Builder =
       Field.newBuilder()
@@ -258,7 +258,7 @@ object Decoding extends Logging {
         .withScale(scale)
         .withPrecision(precision)
 
-    override def toString: String = s"$size byte NUMERIC($precision,$scale)"
+    override def toString: String = s"$size byte STRING (NUMERIC($precision,$scale))"
 
     override def toFieldBuilder: Field.Builder =
       Field.newBuilder()

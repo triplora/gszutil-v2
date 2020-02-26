@@ -16,18 +16,22 @@
 
 package com.google.cloud.gszutil
 
-import java.nio.ByteBuffer
+import java.nio.{ByteBuffer, CharBuffer}
 import java.nio.charset.StandardCharsets
 import java.nio.file.{Files, Paths}
 import java.time.LocalDate
 import java.time.format.DateTimeFormatter
 
-import com.google.cloud.gszutil.Decoding.{Decimal64Decoder, LongDecoder, StringAsDateDecoder, StringAsDecimalDecoder, StringAsIntDecoder, StringDecoder, ebcdic2ASCIIString, validAscii}
+import com.google.cloud.gszutil.Decoding.{Decimal64Decoder, Decoder, LongDecoder, StringAsDateDecoder, StringAsDecimalDecoder, StringAsIntDecoder, StringDecoder, ebcdic2ASCIIString, validAscii}
+import com.google.cloud.gszutil.io.ZReader
+import com.google.cloud.gszutil.io.ZReader.readColumn
 import com.google.common.base.Charsets
 import com.ibm.jzos.fields.daa
 import org.apache.hadoop.hive.ql.exec.vector.{BytesColumnVector, DateColumnVector, Decimal64ColumnVector, DecimalColumnVector, LongColumnVector, TimestampColumnVector}
 import org.apache.hadoop.hive.serde2.io.HiveDecimalWritable
 import org.scalatest.FlatSpec
+
+import scala.collection.mutable.ArrayBuffer
 
 class DecodingSpec extends FlatSpec {
   "Decoder" should "decode 2 byte binary integer" in {
@@ -300,5 +304,65 @@ class DecodingSpec extends FlatSpec {
         | 1
         | FROM DUAL""".stripMargin
     assert(result == expected)
+  }
+
+  it should "decode example with cast" in {
+    val example =
+      "US.000000001.000100003.07.02/01/2020.02/09/2020.0000002.10.WK. .02/07/2020"
+
+    val decoders = Array[Decoder](
+      StringDecoder(2),
+      StringDecoder(1,filler = true),
+      StringAsIntDecoder(9),
+      StringDecoder(1,filler = true),
+      StringAsIntDecoder(9),
+      StringDecoder(1,filler = true),
+      StringAsIntDecoder(2),
+      StringDecoder(1,filler = true),
+      StringAsDateDecoder(10, "MM/DD/YYYY"),
+      StringDecoder(1,filler = true),
+      StringAsDateDecoder(10, "MM/DD/YYYY"),
+      StringDecoder(1,filler = true),
+      StringAsDecimalDecoder(10,9,2),
+      StringDecoder(1,filler = true),
+      StringDecoder(2),
+      StringDecoder(1,filler = true),
+      StringDecoder(1),
+      StringDecoder(1,filler = true),
+      StringAsDateDecoder(10, "MM/DD/YYYY")
+    )
+
+    val cols = decoders.map(_.columnVector(8))
+    val buf = ByteBuffer.wrap(example.getBytes(Decoding.EBCDIC1))
+
+    // Print field
+    //val copy = buf.asReadOnlyBuffer()
+    //val dec = Decoding.EBCDIC1.newDecoder()
+
+    var i = 0
+    var pos = 0
+    while (i < decoders.length){
+      val d = decoders(i)
+      val col = cols(i)
+
+      // Print field
+      //val a = ByteBuffer.allocate(d.size)
+      //copy.get(a.array())
+      //System.out.println(s"$i '${dec.decode(a).toString}' $d")
+
+      readColumn(buf, d, col, 0)
+      pos += d.size
+
+      assert(buf.position == pos)
+      i += 1
+    }
+
+    val dcv = cols(12).asInstanceOf[Decimal64ColumnVector]
+    assert(dcv.vector(0) == 210L)
+    assert(dcv.scale == 2)
+
+    val dateCol = cols.last.asInstanceOf[DateColumnVector]
+    val dt = dateCol.formatDate(0)
+    assert(dt == "2020-02-07")
   }
 }

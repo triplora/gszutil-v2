@@ -77,7 +77,7 @@ object ZReader {
     * @param col ColumnVector to receive decoded value
     * @param rowId index within ColumnVector to store decoded value
     */
-  private final def readColumn(buf: ByteBuffer, decoder: Decoder, col: ColumnVector, rowId: Int)
+  final def readColumn(buf: ByteBuffer, decoder: Decoder, col: ColumnVector, rowId: Int)
   : Unit = {
     decoder.get(buf, col, rowId)
   }
