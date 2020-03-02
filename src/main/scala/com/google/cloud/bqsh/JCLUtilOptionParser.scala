@@ -18,6 +18,7 @@ object JCLUtilOptionParser extends OptionParser[JCLUtilConfig]("jclutil") with A
     .action((x,c) => c.copy(src = x))
 
   opt[String]("dest")
+    .optional()
     .text("destination PDS")
     .validate{x =>
       if (x.length < 8) failure("invalid destination")
@@ -34,4 +35,7 @@ object JCLUtilOptionParser extends OptionParser[JCLUtilConfig]("jclutil") with A
     .maxOccurs(1024)
     .action((x,c) => c.copy(expressions = c.expressions ++ Seq(x)))
 
+  opt[Unit]("printSteps")
+    .optional()
+    .action((x,c) => c.copy(printSteps = true))
 }

@@ -1,7 +1,7 @@
 package com.google.cloud.bqsh.cmd
 
 import com.google.cloud.bqsh.{ArgParser, Command, JCLUtilConfig, JCLUtilOptionParser}
-import com.google.cloud.gszutil.Util.{dsn, Logging}
+import com.google.cloud.gszutil.Util.{Logging, dsn}
 import com.ibm.jzos.ZFileProvider
 
 
@@ -34,7 +34,9 @@ object JCLUtil extends Command[JCLUtilConfig] with Logging {
 
     while (members.hasNext){
       val member = members.next()
-      if (config.filter.isEmpty || member.name.matches(config.filter)){
+      if (config.printSteps) {
+        printSteps(dsn(config.src,member.name), zos)
+      } else if (config.filter.isEmpty || member.name.matches(config.filter)){
         System.out.println(s"Processing '${member.name}'")
         val result = copy(dsn(config.src,member.name),
                           dsn(config.dest,transform(member.name)),
@@ -75,6 +77,41 @@ object JCLUtil extends Command[JCLUtilConfig] with Logging {
       // Entire record is eligible for replacement
       exprs.foldLeft[Iterator[String]](it){(a,b) =>
         a.map{x => x.replaceAllLiterally(b._1,b._2)}
+      }
+    }
+  }
+
+  case class Step(name: String, proc: String, mbr: String){
+    override def toString: String = s"$name $proc $mbr"
+  }
+
+  def isStep(l: String): Boolean = {
+    l.startsWith("//STEP") || (l.startsWith("//") && l.contains(" EXEC "))
+  }
+
+  def captureStep(l: String): Step = {
+    val name = l.stripPrefix("//").takeWhile(_ != ' ')
+    val i1 = l.indexOf(" EXEC ")
+    val part2 = if (i1 > 0) l.substring(i1+" EXEC".length) else ""
+    val proc = part2.dropWhile(_ == ' ').takeWhile(_ != ',')
+    val i2 = part2.indexOf("MBR=")
+    val mbr = if (i2 > 0) part2.substring(i2+"MBR=".length).trim else ""
+    Step(name, proc, mbr)
+  }
+
+  def captureSteps(lines: Iterator[String]): Iterator[Step] = {
+    lines.filter(isStep)
+      .map(captureStep)
+  }
+
+  def printSteps(src: String, zos: ZFileProvider): Unit = {
+    val lines = zos.readDSNLines(src).take(10000)
+    val filtered = lines.filterNot{s => s.startsWith("//*")||s.startsWith("// ")}
+    if (filtered.hasNext){
+      val steps = captureSteps(lines)
+      while (steps.hasNext){
+        val step = steps.next
+        System.err.println(s"$src ${step.proc} ${step.name} ${step.mbr}")
       }
     }
   }

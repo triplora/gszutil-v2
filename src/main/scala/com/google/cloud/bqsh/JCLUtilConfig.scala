@@ -7,7 +7,8 @@ case class JCLUtilConfig(src: String = "",
                          transform: String = "",
                          expressions: Seq[String] = Seq.empty,
                          filter: String = "^TD.*$",
-                         limit: Int = 4096) {
+                         limit: Int = 4096,
+                         printSteps: Boolean = false) {
   def srcDSN: String = Util.dsn(src)
   def destDSN: String = Util.dsn(dest)
 
