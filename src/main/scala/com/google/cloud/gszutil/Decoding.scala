@@ -52,7 +52,7 @@ object Decoding extends Logging {
   final val Space: Byte = " ".getBytes(Charsets.US_ASCII).head
 
   // https://en.wikipedia.org/wiki/EBCDIC_1047
-  final val EBCDIC2ASCII: Array[Byte] = {
+  private final val EBCDIC2ASCII: Array[Byte] = {
     val buf = ByteBuffer.wrap((0 until 256).map(_.toByte).toArray)
     val cb = CP1047.decode(buf)
     val a = Array.fill(256)(Space)
@@ -64,13 +64,39 @@ object Decoding extends Logging {
     a
   }
 
-  def ebcdic2ASCIIByte(b: Byte): Byte = EBCDIC2ASCII(uint(b))
+  /** EBCDIC byte to ASCII byte */
+  @inline
+  final def e2a(b: Byte): Byte = EBCDIC2ASCII(uint(b))
+
+  @inline
+  final def e2a(a: Array[Byte]): Array[Byte] = e2a(a,0,a.length)
+
+  @inline
+  final def e2a(a: Array[Byte], i0: Int, n: Int): Array[Byte] = {
+    var i = i0
+    while (i < n){
+      a(i) = e2a(a(i))
+      i += 1
+    }
+    a
+  }
+
+  @inline
+  final def read(buf: ByteBuffer, size: Int, destPos: Int): Array[Byte] =
+    read(buf,new Array[Byte](size),size,destPos)
+
+  @inline
+  final def read(buf: ByteBuffer, a: Array[Byte], size: Int, destPos: Int): Array[Byte] = {
+    System.arraycopy(buf.array,buf.position,a,destPos,size)
+    buf.position(buf.position+size)
+    a
+  }
 
   def ebcdic2ASCIIBytes(a: Array[Byte]): Array[Byte] = {
     val a1 = new Array[Byte](a.length)
     var i = 0
     while (i < a.length){
-      a1(i) = EBCDIC2ASCII(uint(a(i)))
+      a1(i) = e2a(a(i))
       i += 1
     }
     a1
@@ -80,7 +106,7 @@ object Decoding extends Logging {
     new String(ebcdic2ASCIIBytes(a), Charsets.UTF_8)
   }
 
-  final val EBCDIC: Array[Byte] = {
+  private final val EBCDIC: Array[Byte] = {
     val buf = ByteBuffer.wrap((0 until 256).map(_.toByte).toArray)
     val a: Array[Byte] = CP1047.decode(buf)
       .toString
@@ -93,18 +119,8 @@ object Decoding extends Logging {
 
   def ebcdic2utf8byte(b: Byte): Byte = EBCDIC(uint(b))
 
-  def uint(b: Byte): Int = {
-    if (b < 0) 256 + b
-    else b
-  }
-
-  def pad(x: Int): String = {
-    val s = x.toString
-    val n = s.length
-    if (n < 4)
-      "    ".substring(0, 4 - n) + s
-    else s
-  }
+  @inline
+  final def uint(b: Byte): Int = if (b < 0) 256 + b else b
 
   trait Decoder {
     val size: Int
@@ -126,19 +142,11 @@ object Decoding extends Logging {
     def toFieldBuilder: Field.Builder
   }
 
-  case class StringDecoder(override val size: Int,
-                           ascii: Boolean = true,
-                           filler: Boolean = false) extends Decoder {
-    private final val charMap = if (ascii) EBCDIC2ASCII else EBCDIC
+  case class StringDecoder(size: Int, filler: Boolean = false) extends Decoder {
     override def get(buf: ByteBuffer, row: ColumnVector, i: Int): Unit = {
       val bcv = row.asInstanceOf[BytesColumnVector]
-      val res = bcv.getValPreallocatedBytes
-      var j = bcv.getValPreallocatedStart
-      val j1 = j + size
-      while (j < j1){
-        res(j) = charMap(uint(buf.get))
-        j += 1
-      }
+      val j = bcv.getValPreallocatedStart
+      e2a(read(buf,bcv.getValPreallocatedBytes,size,j),j,size)
       bcv.setValPreallocated(i, size)
     }
 
@@ -162,16 +170,8 @@ object Decoding extends Logging {
 
   case class StringAsIntDecoder(override val size: Int,
                                 filler: Boolean = false) extends Decoder {
-    private final val charMap = EBCDIC2ASCII
     override def get(buf: ByteBuffer, row: ColumnVector, i: Int): Unit = {
-      val res = new Array[Byte](size)
-      buf.get(res)
-      var j = 0
-      while (j < size){
-        res(j) = charMap(uint(res(j)))
-        j += 1
-      }
-      val s = new String(res, Charsets.UTF_8).filter(_.isDigit)
+      val s = new String(e2a(read(buf,size,0)), Charsets.UTF_8).filter(_.isDigit)
       row.asInstanceOf[LongColumnVector]
         .vector.update(i, s.toLong)
     }
@@ -194,23 +194,24 @@ object Decoding extends Logging {
   case class StringAsDateDecoder(override val size: Int,
                                  format: String,
                                  filler: Boolean = false) extends Decoder {
-    private final val charMap = EBCDIC2ASCII
     private val pattern = format.replaceAllLiterally("D","d").replaceAllLiterally("Y","y")
     private val fmt = DateTimeFormatter.ofPattern(pattern)
 
     @scala.inline
-    def toEpochDay(buf: Array[Byte]): Long =
-      LocalDate.from(fmt.parse(new String(buf, Charsets.UTF_8))).toEpochDay
+    def toEpochDay(bytes: Array[Byte]): Long =
+      LocalDate.from(fmt.parse(new String(bytes, Charsets.UTF_8))).toEpochDay
 
     override def get(buf: ByteBuffer, row: ColumnVector, i: Int): Unit = {
-      val res = new Array[Byte](size)
-      buf.get(res)
-      var j = 0
-      while (j < size){
-        res(j) = charMap(uint(res(j)))
-        j += 1
+      val res = e2a(read(buf,size,0))
+      val dcv = row.asInstanceOf[DateColumnVector]
+      val count = res.count(_ == 48) // count zeros in string
+      if (pattern.length == 10 && count == 8) {
+        dcv.vector.update(i, -1)
+        dcv.isNull.update(i, true)
+      } else {
+        val dt = toEpochDay(res)
+        dcv.vector.update(i, dt)
       }
-      row.asInstanceOf[DateColumnVector].vector.update(i, toEpochDay(res))
     }
 
     override def columnVector(maxSize: Int): ColumnVector =
@@ -232,22 +233,14 @@ object Decoding extends Logging {
                                     precision: Int,
                                     scale: Int,
                                     filler: Boolean = false) extends Decoder {
-    private final val charMap = EBCDIC2ASCII
-
     private def toDecimal(buf: Array[Byte]): Long =
       new String(buf, Charsets.UTF_8)
         .dropWhile(_=='0')
         .filter(c => c.isDigit||c=='-').toLong
 
     override def get(buf: ByteBuffer, row: ColumnVector, i: Int): Unit = {
-      val res = new Array[Byte](size)
-      buf.get(res)
-      var j = 0
-      while (j < size){
-        res(j) = charMap(uint(res(j)))
-        j += 1
-      }
-      row.asInstanceOf[Decimal64ColumnVector].vector.update(i, toDecimal(res))
+      val long = toDecimal(e2a(read(buf,size,0)))
+      row.asInstanceOf[Decimal64ColumnVector].vector.update(i, long)
     }
 
     override def columnVector(maxSize: Int): ColumnVector =

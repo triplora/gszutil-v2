@@ -219,8 +219,8 @@ class DecodingSpec extends FlatSpec {
   it should "decode char" in {
     assert(Decoding.ebcdic2utf8byte(228.toByte) == "U".getBytes(Charsets.UTF_8).head)
     assert(Decoding.ebcdic2utf8byte(201.toByte) == "I".getBytes(Charsets.UTF_8).head)
-    assert(Decoding.ebcdic2ASCIIByte(173.toByte) == "[".getBytes(Charsets.UTF_8).head)
-    assert(Decoding.ebcdic2ASCIIByte(189.toByte) == "]".getBytes(Charsets.UTF_8).head)
+    assert(Decoding.e2a(173.toByte) == "[".getBytes(Charsets.UTF_8).head)
+    assert(Decoding.e2a(189.toByte) == "]".getBytes(Charsets.UTF_8).head)
   }
 
   it should "decode string" in {
@@ -254,12 +254,19 @@ class DecodingSpec extends FlatSpec {
     val exampleDate = "02/01/2020"
     val fmt = DateTimeFormatter.ofPattern("MM/dd/yyyy")
     val ld = LocalDate.from(fmt.parse(exampleDate))
-    val examples = Seq((exampleDate, ld.toEpochDay))
+    val examples = Seq(
+      (exampleDate, ld.toEpochDay, false),
+      ("00/00/0000", -1L, true)
+    )
     val decoder = StringAsDateDecoder(10, "MM/DD/YYYY")
-    val col = decoder.columnVector(1)
-    for ((a,b) <- examples){
-      decoder.get(Decoding.EBCDIC1.encode(a), col, 0)
-      assert(col.asInstanceOf[DateColumnVector].vector(0) == b)
+    val col = decoder.columnVector(examples.length)
+    val vec: Array[Long] = col.asInstanceOf[DateColumnVector].vector
+    val isNull: Array[Boolean] = col.asInstanceOf[DateColumnVector].isNull
+    for (i <- examples.indices){
+      val (a,b,c) = examples(i)
+      decoder.get(Decoding.EBCDIC1.encode(a), col, i)
+      assert(vec(i) == b)
+      assert(isNull(i) == c)
     }
   }
 
@@ -339,6 +346,80 @@ class DecodingSpec extends FlatSpec {
     //val copy = buf.asReadOnlyBuffer()
     //val dec = Decoding.EBCDIC1.newDecoder()
 
+    var i = 0
+    var pos = 0
+    while (i < decoders.length){
+      val d = decoders(i)
+      val col = cols(i)
+
+      // Print field
+      //val a = ByteBuffer.allocate(d.size)
+      //copy.get(a.array())
+      //System.out.println(s"$i '${dec.decode(a).toString}' $d")
+
+      readColumn(buf, d, col, 0)
+      pos += d.size
+
+      assert(buf.position == pos)
+      i += 1
+    }
+
+    val dcv = cols(12).asInstanceOf[Decimal64ColumnVector]
+    assert(dcv.vector(0) == 210L)
+    assert(dcv.scale == 2)
+
+    val dateCol = cols.last.asInstanceOf[DateColumnVector]
+    val dt = dateCol.formatDate(0)
+    assert(dt == "2020-02-07")
+  }
+
+  it should "decode bigger example with cast" in {
+    val example =
+      """US.000000001.000100003.07.02/01/2020.02/09/2020.0000002.10.WK. .02/07/2020
+        |US.000000001.000100176.07.02/01/2020.02/09/2020.0000003.73.WK. .02/07/2020
+        |US.000000001.000100220.07.02/01/2020.02/09/2020.0000002.22.WK. .02/07/2020
+        |US.000000001.000100276.07.02/01/2020.02/09/2020.0000002.05.WK. .02/07/2020
+        |US.000000001.000100737.07.02/01/2020.02/09/2020.0000002.68.WK. .02/07/2020
+        |US.000000001.000100777.07.02/01/2020.02/09/2020.0000005.85.WK. .02/07/2020
+        |US.000000001.000101239.07.02/01/2020.02/09/2020.0000001.78.WK. .02/07/2020
+        |US.000000001.000101246.07.02/01/2020.02/09/2020.0000003.08.WK. .02/07/2020""".stripMargin
+
+    val data = example.lines.foldLeft(new ArrayBuffer[Byte]()){(a,b) =>
+      a.appendAll(b.getBytes(Decoding.EBCDIC1));a
+    }.toArray
+
+    val decoders = Array[Decoder](
+      StringDecoder(2),
+      StringDecoder(1,filler = true),
+      StringAsIntDecoder(9),
+      StringDecoder(1,filler = true),
+      StringAsIntDecoder(9),
+      StringDecoder(1,filler = true),
+      StringAsIntDecoder(2),
+      StringDecoder(1,filler = true),
+      StringAsDateDecoder(10, "MM/DD/YYYY"),
+      StringDecoder(1,filler = true),
+      StringAsDateDecoder(10, "MM/DD/YYYY"),
+      StringDecoder(1,filler = true),
+      StringAsDecimalDecoder(10,9,2),
+      StringDecoder(1,filler = true),
+      StringDecoder(2),
+      StringDecoder(1,filler = true),
+      StringDecoder(1),
+      StringDecoder(1,filler = true),
+      StringAsDateDecoder(10, "MM/DD/YYYY")
+    )
+
+    val cols = decoders.map(_.columnVector(8))
+    val buf = ByteBuffer.wrap(data)
+    ZReader.readBatch(buf, decoders, cols, 8, 74, ByteBuffer.allocate(74))
+
+    // Print field
+    //val copy = buf.asReadOnlyBuffer()
+    //val dec = Decoding.EBCDIC1.newDecoder()
+
+    // reset buffer to replay the data
+    buf.clear
     var i = 0
     var pos = 0
     while (i < decoders.length){

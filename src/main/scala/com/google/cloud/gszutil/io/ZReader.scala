@@ -109,19 +109,19 @@ object ZReader {
     * @param err ByteBuffer to receive failed rows
     * @return number of errors encountered
     */
-  private final def readBatch(buf: ByteBuffer,
-                              decoders: Array[Decoder],
-                              cols: Array[ColumnVector],
-                              batchSize: Int,
-                              lRecl: Int,
-                              err: ByteBuffer): (Int,Int) = {
+  final def readBatch(buf: ByteBuffer,
+                      decoders: Array[Decoder],
+                      cols: Array[ColumnVector],
+                      batchSize: Int,
+                      lRecl: Int,
+                      err: ByteBuffer): (Int,Int) = {
     err.clear()
     var errors: Int = 0
     var rowId = 0
     var rowStart = 0
     val errRecord = new Array[Byte](lRecl)
     while (rowId < batchSize && buf.remaining >= lRecl){
-      rowStart = buf.position()
+      rowStart = buf.position
       try {
         readRecord(buf, decoders, cols, rowId)
         rowId += 1

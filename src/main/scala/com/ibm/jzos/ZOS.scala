@@ -214,14 +214,14 @@ protected object ZOS extends Logging {
   }
 
   def readDSN(dsn: String): ZRecordReaderT = {
-    logger.debug(s"reading DD $dsn")
-    if (!ZFile.ddExists(dsn))
-      throw new RuntimeException(s"DD $dsn does not exist")
+    logger.debug(s"reading DSN $dsn")
+    //if (!ZFile.dsExists(dsn))
+    //  throw new RuntimeException(s"DSN $dsn does not exist")
 
     try {
       val reader = RecordReader.newReader(dsn, ZFileConstants.FLAG_DISP_SHR)
       logger.info(
-        s"""Reading DD $dsn with ${reader.getClass.getSimpleName}
+        s"""Reading DSN $dsn with ${reader.getClass.getSimpleName}
            |DSN=${reader.getDsn}
            |RECFM=${reader.getRecfm}
            |BLKSIZE=${reader.getBlksize}
