@@ -191,15 +191,27 @@ object Decoding extends Logging {
         .setTyp(Field.FieldType.INTEGER)
   }
 
-  case class StringAsDateDecoder(override val size: Int,
-                                 format: String,
-                                 filler: Boolean = false) extends Decoder {
-    private val pattern = format.replaceAllLiterally("D","d").replaceAllLiterally("Y","y")
-    private val fmt = DateTimeFormatter.ofPattern(pattern)
+  trait DateDecoderT extends Decoder {
+    val format: String
+    protected val pattern: String = format.replaceAllLiterally("D","d").replaceAllLiterally("Y","y")
+    protected val fmt: DateTimeFormatter = DateTimeFormatter.ofPattern(pattern)
 
-    @scala.inline
-    def toEpochDay(bytes: Array[Byte]): Long =
-      LocalDate.from(fmt.parse(new String(bytes, Charsets.UTF_8))).toEpochDay
+    @inline
+    protected def toEpochDay(bytes: Array[Byte]): Long =
+      toEpochDay(new String(bytes, Charsets.UTF_8))
+
+    @inline
+    protected def toEpochDay(s: String): Long =
+      LocalDate.from(fmt.parse(s)).toEpochDay
+
+    @inline
+    protected def toEpochDay(x: Long): Long =
+      LocalDate.from(fmt.parse(x.toString)).toEpochDay
+  }
+
+  case class StringAsDateDecoder(override val size: Int,
+                                 override val format: String,
+                                 filler: Boolean = false) extends DateDecoderT {
 
     override def get(buf: ByteBuffer, row: ColumnVector, i: Int): Unit = {
       val res = e2a(read(buf,size,0))
@@ -221,6 +233,37 @@ object Decoding extends Logging {
       TypeDescription.createDate()
 
     override def toString: String = s"$size byte STRING (DATE '$format')"
+
+    override def toFieldBuilder: Field.Builder =
+      Field.newBuilder()
+        .setSize(size)
+        .setFiller(filler)
+        .setTyp(Field.FieldType.DATE)
+  }
+
+  case class IntegerAsDateDecoder(override val size: Int,
+                                  override val format: String,
+                                  filler: Boolean = false) extends DateDecoderT {
+
+    override def get(buf: ByteBuffer, row: ColumnVector, i: Int): Unit = {
+      val long = Binary.decode(buf,size)
+      val dcv = row.asInstanceOf[DateColumnVector]
+      if (long <= 0) {
+        dcv.vector.update(i, -1)
+        dcv.isNull.update(i, true)
+      } else {
+        val dt = toEpochDay(long)
+        dcv.vector.update(i, dt)
+      }
+    }
+
+    override def columnVector(maxSize: Int): ColumnVector =
+      new DateColumnVector(maxSize)
+
+    override def typeDescription: TypeDescription =
+      TypeDescription.createDate()
+
+    override def toString: String = s"$size byte INT (DATE '$format')"
 
     override def toFieldBuilder: Field.Builder =
       Field.newBuilder()
@@ -269,6 +312,7 @@ object Decoding extends Logging {
 
     override def get(buf: ByteBuffer, row: ColumnVector, i: Int): Unit = {
       val bcv = row.asInstanceOf[TimestampColumnVector]
+      // Dates are stored 4 byte integer offset from 19000000
       val dt = Binary.decode(buf, size).toInt + 19000000
       val year = dt / 10000
       val y = year * 10000
@@ -386,9 +430,11 @@ object Decoding extends Logging {
         StringAsDecimalDecoder(f.getSize, f.getPrecision, f.getScale, filler)
       else StringDecoder(f.getSize, filler = filler)
     }
-    else if (f.getTyp == INTEGER)
-      LongDecoder(f.getSize, filler)
-    else if (f.getTyp == DECIMAL)
+    else if (f.getTyp == INTEGER) {
+      if (f.getCast == DATE){
+        IntegerAsDateDecoder(f.getSize, f.getFormat, filler)
+      } else LongDecoder(f.getSize, filler)
+    } else if (f.getTyp == DECIMAL)
       Decimal64Decoder(f.getPrecision - f.getScale, f.getScale, filler)
     else if (f.getTyp == DATE)
       DateDecoder(filler)
