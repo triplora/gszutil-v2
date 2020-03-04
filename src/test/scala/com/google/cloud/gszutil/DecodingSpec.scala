@@ -22,9 +22,12 @@ import java.nio.file.{Files, Paths}
 import java.time.LocalDate
 import java.time.format.DateTimeFormatter
 
-import com.google.cloud.gszutil.Decoding.{Decimal64Decoder, Decoder, LongDecoder, StringAsDateDecoder, StringAsDecimalDecoder, StringAsIntDecoder, StringDecoder, ebcdic2ASCIIString, validAscii}
+import com.google.cloud.gszutil.Decoding.{Decimal64Decoder, Decoder, IntegerAsDateDecoder, LongDecoder, StringAsDateDecoder, StringAsDecimalDecoder, StringAsIntDecoder, StringDecoder, ebcdic2ASCIIString, validAscii}
 import com.google.cloud.gszutil.io.ZReader
 import com.google.cloud.gszutil.io.ZReader.readColumn
+import com.google.cloud.gzos.pb.Schema
+import com.google.cloud.gzos.pb.Schema.Field
+import com.google.cloud.gzos.pb.Schema.Field.FieldType
 import com.google.common.base.Charsets
 import com.ibm.jzos.fields.daa
 import org.apache.hadoop.hive.ql.exec.vector.{BytesColumnVector, DateColumnVector, Decimal64ColumnVector, DecimalColumnVector, LongColumnVector, TimestampColumnVector}
@@ -445,5 +448,26 @@ class DecodingSpec extends FlatSpec {
     val dateCol = cols.last.asInstanceOf[DateColumnVector]
     val dt = dateCol.formatDate(0)
     assert(dt == "2020-02-07")
+
+    val strCol = cols.head.asInstanceOf[BytesColumnVector]
+    val strCol2 = cols.head.asInstanceOf[BytesColumnVector]
+    var j = 0
+    while (j < 8){
+      assert(new String(strCol.vector(j),strCol.start(j),strCol.length(j),Charsets.UTF_8) == "US"
+        , s"row $j")
+      assert(new String(strCol2.vector(j),strCol2.start(j),strCol2.length(j),Charsets.UTF_8) ==
+        "WK", s"row $j")
+      j += 1
+    }
+  }
+
+  it should "cast integer to date" in {
+    val b = Schema.Field.newBuilder
+      .setTyp(FieldType.INTEGER)
+      .setCast(FieldType.DATE)
+      .setFormat("YYMMDD")
+      .build
+    val decoder = Decoding.getDecoder(b)
+    assert(decoder.isInstanceOf[IntegerAsDateDecoder])
   }
 }

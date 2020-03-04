@@ -87,8 +87,10 @@ object Decoding extends Logging {
 
   @inline
   final def read(buf: ByteBuffer, a: Array[Byte], size: Int, destPos: Int): Array[Byte] = {
-    System.arraycopy(buf.array,buf.position,a,destPos,size)
-    buf.position(buf.position+size)
+    val i = buf.position
+    val i1 = buf.position + size
+    System.arraycopy(buf.array,i,a,destPos,size)
+    buf.position(i1)
     a
   }
 
@@ -146,8 +148,27 @@ object Decoding extends Logging {
     override def get(buf: ByteBuffer, row: ColumnVector, i: Int): Unit = {
       val bcv = row.asInstanceOf[BytesColumnVector]
       val j = bcv.getValPreallocatedStart
-      e2a(read(buf,bcv.getValPreallocatedBytes,size,j),j,size)
+      val arr = bcv.getValPreallocatedBytes
+      e2a(read(buf,arr,size,j),j,size)
       bcv.setValPreallocated(i, size)
+      var validChar = false
+      var j1 = j
+      // Detect
+      while (j1 < j+size && !validChar){
+        val b = arr(j1)
+        if (b >= 48 && b <= 122) // [A-Za-z0-9]
+          validChar = true
+        else
+          j1 += 1
+      }
+      if (!validChar) {
+        bcv.isNull(i) = true
+        bcv.noNulls = false
+        bcv.setValPreallocated(i,0)
+      } else {
+        bcv.isNull(i) = false
+        bcv.setValPreallocated(i, size)
+      }
     }
 
     override def columnVector(maxSize: Int): ColumnVector = {
@@ -249,6 +270,7 @@ object Decoding extends Logging {
       val long = Binary.decode(buf,size)
       val dcv = row.asInstanceOf[DateColumnVector]
       if (long <= 0) {
+        dcv.noNulls = false
         dcv.vector.update(i, -1)
         dcv.isNull.update(i, true)
       } else {
