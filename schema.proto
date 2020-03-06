@@ -25,6 +25,7 @@ message Field {
     DECIMAL = 3;
     DATE = 4;
     UNSIGNED_INTEGER = 5;
+    LATIN_STRING = 6;
   }
   string name = 1;
   FieldType typ = 2;

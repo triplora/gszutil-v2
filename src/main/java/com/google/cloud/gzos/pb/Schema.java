@@ -270,6 +270,10 @@ public final class Schema {
        * <code>UNSIGNED_INTEGER = 5;</code>
        */
       UNSIGNED_INTEGER(5),
+      /**
+       * <code>LATIN_STRING = 6;</code>
+       */
+      LATIN_STRING(6),
       UNRECOGNIZED(-1),
       ;
 
@@ -297,6 +301,10 @@ public final class Schema {
        * <code>UNSIGNED_INTEGER = 5;</code>
        */
       public static final int UNSIGNED_INTEGER_VALUE = 5;
+      /**
+       * <code>LATIN_STRING = 6;</code>
+       */
+      public static final int LATIN_STRING_VALUE = 6;
 
 
       public final int getNumber() {
@@ -329,6 +337,7 @@ public final class Schema {
           case 3: return DECIMAL;
           case 4: return DATE;
           case 5: return UNSIGNED_INTEGER;
+          case 6: return LATIN_STRING;
           default: return null;
         }
       }
@@ -3512,23 +3521,23 @@ public final class Schema {
   static {
     java.lang.String[] descriptorData = {
       "\n\014schema.proto\022\030com.google.cloud.gzos.pb" +
-      "\"\226\003\n\005Field\022\014\n\004name\030\001 \001(\t\0226\n\003typ\030\002 \001(\0162)." +
+      "\"\250\003\n\005Field\022\014\n\004name\030\001 \001(\t\0226\n\003typ\030\002 \001(\0162)." +
       "com.google.cloud.gzos.pb.Field.FieldType" +
       "\022\014\n\004size\030\003 \001(\005\022\021\n\tprecision\030\004 \001(\005\022\r\n\005sca" +
       "le\030\005 \001(\005\022\016\n\006filler\030\006 \001(\010\0226\n\006nullif\030\007 \001(\013" +
       "2&.com.google.cloud.gzos.pb.Field.NullIf" +
       "\0227\n\004cast\030\010 \001(\0162).com.google.cloud.gzos.p" +
       "b.Field.FieldType\022\016\n\006format\030\t \001(\t\032&\n\006Nul" +
-      "lIf\022\r\n\005field\030\001 \001(\t\022\r\n\005value\030\002 \001(\t\"^\n\tFie" +
+      "lIf\022\r\n\005field\030\001 \001(\t\022\r\n\005value\030\002 \001(\t\"p\n\tFie" +
       "ldType\022\013\n\007UNKNOWN\020\000\022\n\n\006STRING\020\001\022\013\n\007INTEG" +
       "ER\020\002\022\013\n\007DECIMAL\020\003\022\010\n\004DATE\020\004\022\024\n\020UNSIGNED_" +
-      "INTEGER\020\005\"\303\001\n\006Record\022\r\n\005lrecl\030\001 \001(\005\0227\n\006s" +
-      "ource\030\002 \001(\0162\'.com.google.cloud.gzos.pb.R" +
-      "ecord.Source\022\020\n\010original\030\003 \001(\t\022.\n\005field\030" +
-      "\004 \003(\0132\037.com.google.cloud.gzos.pb.Field\"/" +
-      "\n\006Source\022\013\n\007UNKNOWN\020\000\022\014\n\010COPYBOOK\020\001\022\n\n\006L" +
-      "AYOUT\020\002B$\n\030com.google.cloud.gzos.pbB\006Sch" +
-      "emaP\000b\006proto3"
+      "INTEGER\020\005\022\020\n\014LATIN_STRING\020\006\"\303\001\n\006Record\022\r" +
+      "\n\005lrecl\030\001 \001(\005\0227\n\006source\030\002 \001(\0162\'.com.goog" +
+      "le.cloud.gzos.pb.Record.Source\022\020\n\010origin" +
+      "al\030\003 \001(\t\022.\n\005field\030\004 \003(\0132\037.com.google.clo" +
+      "ud.gzos.pb.Field\"/\n\006Source\022\013\n\007UNKNOWN\020\000\022" +
+      "\014\n\010COPYBOOK\020\001\022\n\n\006LAYOUT\020\002B$\n\030com.google." +
+      "cloud.gzos.pbB\006SchemaP\000b\006proto3"
     };
     descriptor = com.google.protobuf.Descriptors.FileDescriptor
       .internalBuildGeneratedFileFrom(descriptorData,
