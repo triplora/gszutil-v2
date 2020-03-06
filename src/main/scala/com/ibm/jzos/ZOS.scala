@@ -277,6 +277,13 @@ protected object ZOS extends Logging {
     JesSymbols.extract("*").asScala.toMap
   }
 
+  def getDSN(dd: String): String = {
+    val rr = RecordReader.newReaderForDD(dd)
+    val dsn = rr.getDsn
+    rr.close()
+    dsn
+  }
+
   def getDSNInfo(dsn: String): DSCBChain = {
     val volume = ZFile.locateDSN(dsn).headOption.getOrElse("")
     new DSCBChain(ZFile.readDSCBChain(dsn, volume))

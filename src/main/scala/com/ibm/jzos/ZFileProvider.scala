@@ -31,6 +31,7 @@ trait ZFileProvider {
     */
   def readDDWithCopyBook(dd: String, copyBook: SchemaProvider): ZRecordReaderT
   def ddExists(dd: String): Boolean
+  def getDSN(dd: String): String
   def exists(dsn: String): Boolean
   def readDSN(dsn: String): ZRecordReaderT
   def readDSNLines(dsn: String): Iterator[String]

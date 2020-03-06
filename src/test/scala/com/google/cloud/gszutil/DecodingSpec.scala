@@ -22,7 +22,7 @@ import java.nio.file.{Files, Paths}
 import java.time.LocalDate
 import java.time.format.DateTimeFormatter
 
-import com.google.cloud.gszutil.Decoding.{Decimal64Decoder, Decoder, IntegerAsDateDecoder, LongDecoder, StringAsDateDecoder, StringAsDecimalDecoder, StringAsIntDecoder, StringDecoder, ebcdic2ASCIIString, validAscii}
+import com.google.cloud.gszutil.Decoding.{Decimal64Decoder, Decoder, IntegerAsDateDecoder, LongDecoder, NullableStringDecoder, StringAsDateDecoder, StringAsDecimalDecoder, StringAsIntDecoder, StringDecoder, ebcdic2ASCIIString, validAscii}
 import com.google.cloud.gszutil.io.ZReader
 import com.google.cloud.gszutil.io.ZReader.readColumn
 import com.google.cloud.gzos.pb.Schema
@@ -450,7 +450,7 @@ class DecodingSpec extends FlatSpec {
     assert(dt == "2020-02-07")
 
     val strCol = cols.head.asInstanceOf[BytesColumnVector]
-    val strCol2 = cols.head.asInstanceOf[BytesColumnVector]
+    val strCol2 = cols(14).asInstanceOf[BytesColumnVector]
     var j = 0
     while (j < 8){
       assert(new String(strCol.vector(j),strCol.start(j),strCol.length(j),Charsets.UTF_8) == "US"
@@ -469,5 +469,27 @@ class DecodingSpec extends FlatSpec {
       .build
     val decoder = Decoding.getDecoder(b)
     assert(decoder.isInstanceOf[IntegerAsDateDecoder])
+  }
+
+  it should "nullif" in {
+    val examples = Seq(
+      (Array[Byte](0x5b,0x5b,0x4a,0x4a,0,1,2,3),true),
+      (Array[Byte](0x5b,0x5b,0,0,0,1,2,3),false)
+    )
+
+    val nullIf = Array[Byte](0x5b,0x5b,0x4a,0x4a)
+    System.out.println(new String(nullIf,Decoding.EBCDIC1))
+    for (i <- nullIf.indices){
+      nullIf.update(i,Decoding.ebcdic2utf8byte(nullIf(i)))
+    }
+    System.out.println(new String(nullIf,Charsets.UTF_8))
+
+    for ((example,expected) <- examples) {
+      val buf = ByteBuffer.wrap(example)
+      val decoder = NullableStringDecoder(4, nullIf)
+      val bcv = decoder.columnVector(1)
+      decoder.get(buf, bcv, 0)
+      assert(bcv.isNull(0) == expected, "should be null")
+    }
   }
 }

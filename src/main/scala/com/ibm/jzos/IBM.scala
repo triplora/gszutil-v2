@@ -42,6 +42,8 @@ object IBM extends ZFileProvider with Logging {
 
   override def ddExists(dd: String): Boolean = ZOS.ddExists(dd)
 
+  override def getDSN(dd: String): String = ZOS.getDSN(dd)
+
   override def listPDS(dsn: String): Iterator[PDSMemberInfo] = new PDSIterator(dsn)
 
   override def readDSN(dsn: String): ZRecordReaderT = ZOS.readDSN(dsn)

@@ -16,12 +16,13 @@
 package com.google.cloud.gszutil
 
 import java.nio.ByteBuffer
-import java.nio.charset.Charset
+import java.nio.charset.{Charset, StandardCharsets}
 import java.time.format.DateTimeFormatter
 import java.time.{LocalDate, LocalDateTime, LocalTime, Month, ZoneOffset}
 
 import com.google.cloud.gszutil.Util.Logging
 import com.google.cloud.gzos.pb.Schema.Field
+import com.google.cloud.gzos.pb.Schema.Field.NullIf
 import com.google.common.base.Charsets
 import org.apache.hadoop.hive.ql.exec.vector._
 import org.apache.orc.TypeDescription
@@ -30,6 +31,7 @@ import org.apache.orc.TypeDescription
 object Decoding extends Logging {
   final val CP1047: Charset = Charset.forName("CP1047")
   final val EBCDIC1: Charset = new EBCDIC1()
+  final val LATIN: Charset = StandardCharsets.ISO_8859_1
 
   // EBCDIC decimal byte values that map to valid ASCII characters
   private final val validAscii: Array[Int] = Array(
@@ -108,6 +110,14 @@ object Decoding extends Logging {
     new String(ebcdic2ASCIIBytes(a), Charsets.UTF_8)
   }
 
+  private final val LATIN1: Array[Byte] = {
+    val buf = ByteBuffer.wrap((0 until 256).map(_.toByte).toArray)
+    LATIN.decode(buf)
+      .toString
+      .toCharArray
+      .map(_.toByte)
+  }
+
   private final val EBCDIC: Array[Byte] = {
     val buf = ByteBuffer.wrap((0 until 256).map(_.toByte).toArray)
     val a: Array[Byte] = CP1047.decode(buf)
@@ -144,31 +154,147 @@ object Decoding extends Logging {
     def toFieldBuilder: Field.Builder
   }
 
+  case class LatinStringDecoder(size: Int,
+                                nullIf: Array[Byte],
+                                filler: Boolean = false) extends Decoder {
+    override def get(buf: ByteBuffer, row: ColumnVector, i: Int): Unit = {
+      val bcv = row.asInstanceOf[BytesColumnVector]
+      val inBuf = buf.array
+      val outBuf = bcv.getValPreallocatedBytes
+
+      // copy to output buffer
+      val j0 = bcv.getValPreallocatedStart
+      val startPos = buf.position
+      val endPos = buf.position+size
+      System.arraycopy(inBuf,startPos,outBuf,j0,size)
+      buf.position(endPos)
+
+      // decode
+      var j = j0
+      val j1 = j + size
+      while (j < j1){
+        outBuf.update(j,LATIN1(uint(outBuf(j))))
+        j += 1
+      }
+
+      // check for null condition
+      var k = 0
+      var isNull = true
+      while (k < nullIf.length){
+        if (outBuf(j0+k) != nullIf(k))
+          isNull = false
+        k += 1
+      }
+      if (isNull){
+        bcv.isNull(i) = true
+        bcv.noNulls = false
+      }
+
+      // set output
+      bcv.setValPreallocated(i, size)
+    }
+
+    override def columnVector(maxSize: Int): ColumnVector = {
+      val cv = new BytesColumnVector(maxSize)
+      cv.initBuffer(size)
+      cv
+    }
+
+    override def typeDescription: TypeDescription =
+      TypeDescription.createChar.withMaxLength(size)
+
+    override def toString: String = s"$size byte STRING (LATIN_TO_UNICODE)"
+
+    override def toFieldBuilder: Field.Builder = {
+      val b = Field.newBuilder
+        .setSize(size)
+        .setFiller(filler)
+        .setTyp(Field.FieldType.STRING)
+
+      if (nullIf != null && nullIf.nonEmpty)
+        b.setNullif(NullIf.newBuilder
+          .setValue(new String(nullIf,Charsets.UTF_8)).build)
+      b
+    }
+  }
+
+
+  case class NullableStringDecoder(size: Int,
+                                   nullIf: Array[Byte],
+                                   filler: Boolean = false) extends Decoder {
+    override def get(buf: ByteBuffer, row: ColumnVector, i: Int): Unit = {
+      val bcv = row.asInstanceOf[BytesColumnVector]
+      val inBuf = buf.array
+      val outBuf = bcv.getValPreallocatedBytes
+
+      // copy to output buffer
+      val j0 = bcv.getValPreallocatedStart
+      val startPos = buf.position
+      val endPos = buf.position+size
+      System.arraycopy(inBuf,startPos,outBuf,j0,size)
+      buf.position(endPos)
+
+      // decode
+      var j = j0
+      val j1 = j + size
+      while (j < j1){
+        outBuf.update(j,EBCDIC(uint(outBuf(j))))
+        j += 1
+      }
+
+      // check for null condition
+      var k = 0
+      var isNull = true
+      while (k < nullIf.length){
+        if (outBuf(j0+k) != nullIf(k))
+          isNull = false
+        k += 1
+      }
+      if (isNull){
+        bcv.isNull(i) = true
+        bcv.noNulls = false
+      }
+
+      // set output
+      bcv.setValPreallocated(i, size)
+    }
+
+    override def columnVector(maxSize: Int): ColumnVector = {
+      val cv = new BytesColumnVector(maxSize)
+      cv.initBuffer(size)
+      cv
+    }
+
+    override def typeDescription: TypeDescription =
+      TypeDescription.createChar.withMaxLength(size)
+
+    override def toString: String = s"$size byte STRING"
+
+    override def toFieldBuilder: Field.Builder = {
+      val b = Field.newBuilder
+        .setSize(size)
+        .setFiller(filler)
+        .setTyp(Field.FieldType.STRING)
+
+      if (nullIf != null && nullIf.nonEmpty)
+        b.setNullif(NullIf.newBuilder
+          .setValue(new String(nullIf,Charsets.UTF_8)).build)
+      b
+    }
+  }
+
+
   case class StringDecoder(size: Int, filler: Boolean = false) extends Decoder {
     override def get(buf: ByteBuffer, row: ColumnVector, i: Int): Unit = {
       val bcv = row.asInstanceOf[BytesColumnVector]
-      val j = bcv.getValPreallocatedStart
-      val arr = bcv.getValPreallocatedBytes
-      e2a(read(buf,arr,size,j),j,size)
+      val outBuf = bcv.getValPreallocatedBytes
+      var j = bcv.getValPreallocatedStart
+      val j1 = j + size
+      while (j < j1){
+        outBuf.update(j,EBCDIC2ASCII(uint(buf.get)))
+        j += 1
+      }
       bcv.setValPreallocated(i, size)
-      var validChar = false
-      var j1 = j
-      // Detect
-      while (j1 < j+size && !validChar){
-        val b = arr(j1)
-        if (b >= 48 && b <= 122) // [A-Za-z0-9]
-          validChar = true
-        else
-          j1 += 1
-      }
-      if (!validChar) {
-        bcv.isNull(i) = true
-        bcv.noNulls = false
-        bcv.setValPreallocated(i,0)
-      } else {
-        bcv.isNull(i) = false
-        bcv.setValPreallocated(i, size)
-      }
     }
 
     override def columnVector(maxSize: Int): ColumnVector = {
@@ -180,7 +306,7 @@ object Decoding extends Logging {
     override def typeDescription: TypeDescription =
       TypeDescription.createChar().withMaxLength(size)
 
-    override def toString: String = s"$size byte STRING"
+    override def toString: String = s"$size byte STRING NOT NULL"
 
     override def toFieldBuilder: Field.Builder =
       Field.newBuilder()
@@ -450,7 +576,20 @@ object Decoding extends Logging {
         StringAsDateDecoder(f.getSize, f.getFormat, filler)
       else if (f.getCast == DECIMAL)
         StringAsDecimalDecoder(f.getSize, f.getPrecision, f.getScale, filler)
-      else StringDecoder(f.getSize, filler = filler)
+      else if (f.getCast == LATIN_STRING) {
+        val nullIf = Option(f.getNullif)
+          .map(_.getValue.getBytes(Charsets.UTF_8))
+          .getOrElse(Array.empty)
+        LatinStringDecoder(f.getSize, nullIf, filler = filler)
+      } else {
+        val nullIf = Option(f.getNullif)
+          .map(_.getValue.getBytes(Charsets.UTF_8))
+          .getOrElse(Array.empty)
+        if (nullIf.nonEmpty)
+          StringDecoder(f.getSize, filler = filler)
+        else
+          NullableStringDecoder(f.getSize, nullIf, filler = filler)
+      }
     }
     else if (f.getTyp == INTEGER) {
       if (f.getCast == DATE){

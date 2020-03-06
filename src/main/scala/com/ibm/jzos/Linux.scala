@@ -42,6 +42,8 @@ object Linux extends ZFileProvider with Logging {
     sys.env.contains(dd) && sys.env.contains(dd+"_LRECL") && sys.env.contains(dd+"_BLKSIZE")
   }
 
+  override def getDSN(dd: String): String = dd
+
   override def readDSN(dsn: String): ZRecordReaderT = throw new NotImplementedError()
 
   override def readDD(dd: String): ZRecordReaderT = ddFile(dd)
