@@ -50,5 +50,6 @@ trait ZFileProvider {
   def getSymbol(s: String): Option[String]
   def substituteSystemSymbols(s: String): String
   def submitJCL(jcl: Seq[String]): Option[ZMVSJob]
+  def transcoder: com.google.cloud.gszutil.Transcoder
 }
 

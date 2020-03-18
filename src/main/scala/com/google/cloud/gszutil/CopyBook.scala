@@ -16,14 +16,14 @@
 
 package com.google.cloud.gszutil
 
-import com.google.cloud.gszutil.Decoding.{CopyBookField, CopyBookLine, Decoder, parseCopyBookLine}
+import com.google.cloud.gszutil.Decoding.{CopyBookField, CopyBookLine, parseCopyBookLine}
 import com.google.cloud.gzos.pb.Schema.Record
 
 import scala.collection.mutable.ArrayBuffer
 
 
-case class CopyBook(raw: String) extends SchemaProvider {
-  final val Fields: Seq[CopyBookLine] = raw.lines.flatMap(parseCopyBookLine).toSeq
+case class CopyBook(raw: String, transcoder: Transcoder) extends SchemaProvider {
+  final val Fields: Seq[CopyBookLine] = raw.lines.flatMap(parseCopyBookLine(_,transcoder)).toSeq
 
   override def fieldNames: Seq[String] =
     Fields.flatMap{

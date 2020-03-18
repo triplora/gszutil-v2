@@ -18,7 +18,8 @@ package com.google.cloud.bqsh
 
 import com.google.cloud.gszutil.Decoding.{Decimal64Decoder, LongDecoder, StringDecoder, UnsignedLongDecoder}
 import com.google.cloud.gszutil.Util.Logging
-import com.google.cloud.gszutil.{CopyBook, Decoding, Util}
+import com.google.cloud.gszutil.{CopyBook, Decoding, Utf8, Util}
+import com.google.cloud.gzos.Ebcdic
 import org.scalatest.FlatSpec
 
 class CopyBookSpec extends FlatSpec with Logging {
@@ -81,13 +82,14 @@ class CopyBookSpec extends FlatSpec with Logging {
     val expectedLRECL = Seq(33, 27, 70, 12, 63)
     val expectedFieldCount = Seq(8, 6, 12, 3, 13)
     examples.indices.foreach{i =>
-      val cb = CopyBook(examples(i))
+      val cb = CopyBook(examples(i), Utf8)
       assert(cb.LRECL == expectedLRECL(i))
       assert(cb.fieldNames.length == expectedFieldCount(i))
     }
   }
 
   it should "map types" in {
+    val transcoder = Ebcdic
     Seq(
       "PIC S9 COMP." -> LongDecoder(2),
       "PIC S9(4) COMP." -> LongDecoder(2),
@@ -101,13 +103,13 @@ class CopyBookSpec extends FlatSpec with Logging {
       "PIC 9(9) COMP." -> UnsignedLongDecoder(4),
       "PIC 9(10) COMP." -> UnsignedLongDecoder(8),
       "PIC 9(18) COMP." -> UnsignedLongDecoder(8),
-      "PIC X." -> StringDecoder(1),
-      "PIC X(8)." -> StringDecoder(8),
-      "PIC X(16)." -> StringDecoder(16),
-      "PIC X(30)." -> StringDecoder(30),
-      "PIC X(20)." -> StringDecoder(20),
-      "PIC X(2)." -> StringDecoder(2),
-      "PIC X(10)." -> StringDecoder(10),
+      "PIC X." -> new StringDecoder(transcoder, 1),
+      "PIC X(8)." -> new StringDecoder(transcoder, 8),
+      "PIC X(16)." -> new StringDecoder(transcoder, 16),
+      "PIC X(30)." -> new StringDecoder(transcoder, 30),
+      "PIC X(20)." -> new StringDecoder(transcoder, 20),
+      "PIC X(2)." -> new StringDecoder(transcoder, 2),
+      "PIC X(10)." -> new StringDecoder(transcoder, 10),
       "PIC S9(9)V9(2) COMP-3." -> Decimal64Decoder(9,2),
       "PIC S9(9)V9(3) COMP-3." -> Decimal64Decoder(9,3),
       "PIC S9(13) COMP-3." -> Decimal64Decoder(13,0),
@@ -124,7 +126,7 @@ class CopyBookSpec extends FlatSpec with Logging {
     ).foreach{x =>
       val picString = x._1
       val expectedDecoder = x._2
-      assert(Decoding.typeMap(picString) == expectedDecoder)
+      assert(Decoding.typeMap(picString, transcoder) == expectedDecoder)
     }
   }
 

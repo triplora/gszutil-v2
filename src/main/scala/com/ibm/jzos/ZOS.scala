@@ -24,6 +24,7 @@ import java.util.Date
 import com.google.cloud.gszutil.Decoding
 import com.google.cloud.gszutil.Util.{Logging, PDSMemberInfo, ZInfo, ZMVSJob}
 import com.google.cloud.gszutil.io.{ZRecordReaderT, ZRecordWriterT}
+import com.google.cloud.gzos.Ebcdic
 
 import scala.util.Try
 
@@ -174,7 +175,7 @@ protected object ZOS extends Logging {
 
   class RecordIterator(val r: ZRecordReaderT,
                        limit: Long = 100000,
-                       charset: Charset = Decoding.EBCDIC1)
+                       charset: Charset = Ebcdic.charset)
     extends Iterator[String] with AutoCloseable {
     private val buf = new Array[Byte](r.lRecl)
     private var n = 0

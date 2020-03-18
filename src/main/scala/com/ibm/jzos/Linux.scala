@@ -21,9 +21,10 @@ import java.nio.file.{Files, Paths, StandardOpenOption}
 import java.util.Date
 
 import com.google.cloud.bigquery.StatsUtil
+import com.google.cloud.gszutil
 import com.google.cloud.gszutil.Util.{CredentialProvider, DefaultCredentialProvider, Logging, PDSMemberInfo, ZInfo, ZMVSJob}
 import com.google.cloud.gszutil.io.{ChannelRecordReader, ZRecordReaderT, ZRecordWriterT}
-import com.google.cloud.gszutil.{CopyBook, SchemaProvider, Util}
+import com.google.cloud.gszutil.{CopyBook, SchemaProvider, Utf8, Util}
 import com.google.common.base.Charsets
 import com.google.common.io.ByteStreams
 
@@ -68,7 +69,7 @@ object Linux extends ZFileProvider with Logging {
     require(ddValue != null, s"$dd environment variable not defined")
     val ddPath = Paths.get(ddValue)
     require(ddPath.toFile.exists(), s"$ddPath doesn't exist")
-    CopyBook(new String(Files.readAllBytes(ddPath), Charsets.UTF_8))
+    CopyBook(new String(Files.readAllBytes(ddPath), Charsets.UTF_8), transcoder)
   }
 
   /** On Linux DD is an environment variable pointing to a file
@@ -117,4 +118,6 @@ object Linux extends ZFileProvider with Logging {
   override def listPDS(dsn: String): Iterator[PDSMemberInfo] = throw new NotImplementedError()
 
   override def submitJCL(jcl: Seq[String]): Option[ZMVSJob] = throw new NotImplementedError()
+
+  override def transcoder: gszutil.Transcoder = Utf8
 }

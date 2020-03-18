@@ -16,10 +16,11 @@
 
 package com.ibm.jzos
 
-import com.google.cloud.gszutil.Util.{CredentialProvider, GoogleCredentialsProvider, Logging,
-  PDSMemberInfo, ZInfo, ZMVSJob}
+import com.google.cloud.gszutil
+import com.google.cloud.gszutil.Util.{CredentialProvider, GoogleCredentialsProvider, Logging, PDSMemberInfo, ZInfo, ZMVSJob}
 import com.google.cloud.gszutil.io.{ZRecordReaderT, ZRecordWriterT}
 import com.google.cloud.gszutil.{CopyBook, Decoding, SchemaProvider, Util}
+import com.google.cloud.gzos.Ebcdic
 import com.google.common.base.Charsets
 import com.google.common.io.ByteStreams
 import com.ibm.jzos.ZOS.{PDSIterator, RecordIterator}
@@ -57,13 +58,13 @@ object IBM extends ZFileProvider with Logging {
 
   override def readStdin(): String = {
     val in = ByteStreams.toByteArray(System.in)
-    new String(in, Decoding.CP1047)
+    new String(in, Ebcdic.charset)
   }
 
   override def readDDString(dd: String, recordSeparator: String): String = {
     val in = readDD(dd)
     val bytes = Util.readAllBytes(in)
-    val decoded = Decoding.ebcdic2ASCIIBytes(bytes)
+    val decoded = Ebcdic.decodeBytes(bytes)
     Util.records2string(decoded, in.lRecl, Charsets.UTF_8, recordSeparator)
   }
 
@@ -82,7 +83,7 @@ object IBM extends ZFileProvider with Logging {
     val raw = readDDString(dd, "\n")
     logger.debug(s"Parsing copy book:\n$raw")
     try {
-      val copyBook = CopyBook(raw)
+      val copyBook = CopyBook(raw, Ebcdic)
       logger.info(s"Loaded copy book:\n$copyBook")
       copyBook
     } catch {
@@ -101,4 +102,6 @@ object IBM extends ZFileProvider with Logging {
   override def substituteSystemSymbols(s: String): String = ZOS.substituteSystemSymbols(s)
 
   override def submitJCL(jcl: Seq[String]): Option[ZMVSJob] = ZOS.submitJCL(jcl)
+
+  override def transcoder: gszutil.Transcoder = Ebcdic
 }

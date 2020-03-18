@@ -23,6 +23,7 @@ import com.google.cloud.gszutil.Util.Logging
 import com.google.cloud.gszutil.io.ZReader
 import com.google.cloud.gszutil.orc.Protocol.{Close, PartComplete, PartFailed}
 import com.google.cloud.gszutil.{Decoding, PackedDecimal, Util}
+import com.google.cloud.gzos.Ebcdic
 import org.apache.hadoop.conf.Configuration
 import org.apache.hadoop.fs.{FileSystem, SimpleGCSFileSystem}
 import org.apache.orc._
@@ -90,7 +91,7 @@ class ORCFileWriter(args: ORCFileWriterArgs) extends Actor with Logging {
         val a = new Array[Byte](schemaProvider.LRECL)
         errBuf.get(a)
         System.err.println(s"Failed to read row:")
-        System.err.println(Decoding.EBCDIC1.decode(ByteBuffer.wrap(a)).toString)
+        System.err.println(Ebcdic.charset.decode(ByteBuffer.wrap(a)).toString)
         System.err.println(PackedDecimal.hexValue(a))
       }
       if (x.remaining > 0) {

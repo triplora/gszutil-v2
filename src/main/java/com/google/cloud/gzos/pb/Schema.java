@@ -407,16 +407,10 @@ public final class Schema {
           getFieldBytes();
 
       /**
-       * <code>string value = 2;</code>
+       * <code>bytes value = 2;</code>
        * @return The value.
        */
-      java.lang.String getValue();
-      /**
-       * <code>string value = 2;</code>
-       * @return The bytes for value.
-       */
-      com.google.protobuf.ByteString
-          getValueBytes();
+      com.google.protobuf.ByteString getValue();
     }
     /**
      * Protobuf type {@code com.google.cloud.gzos.pb.Field.NullIf}
@@ -432,7 +426,7 @@ public final class Schema {
       }
       private NullIf() {
         field_ = "";
-        value_ = "";
+        value_ = com.google.protobuf.ByteString.EMPTY;
       }
 
       @java.lang.Override
@@ -472,9 +466,8 @@ public final class Schema {
                 break;
               }
               case 18: {
-                java.lang.String s = input.readStringRequireUtf8();
 
-                value_ = s;
+                value_ = input.readBytes();
                 break;
               }
               default: {
@@ -546,39 +539,13 @@ public final class Schema {
       }
 
       public static final int VALUE_FIELD_NUMBER = 2;
-      private volatile java.lang.Object value_;
+      private com.google.protobuf.ByteString value_;
       /**
-       * <code>string value = 2;</code>
+       * <code>bytes value = 2;</code>
        * @return The value.
        */
-      public java.lang.String getValue() {
-        java.lang.Object ref = value_;
-        if (ref instanceof java.lang.String) {
-          return (java.lang.String) ref;
-        } else {
-          com.google.protobuf.ByteString bs = 
-              (com.google.protobuf.ByteString) ref;
-          java.lang.String s = bs.toStringUtf8();
-          value_ = s;
-          return s;
-        }
-      }
-      /**
-       * <code>string value = 2;</code>
-       * @return The bytes for value.
-       */
-      public com.google.protobuf.ByteString
-          getValueBytes() {
-        java.lang.Object ref = value_;
-        if (ref instanceof java.lang.String) {
-          com.google.protobuf.ByteString b = 
-              com.google.protobuf.ByteString.copyFromUtf8(
-                  (java.lang.String) ref);
-          value_ = b;
-          return b;
-        } else {
-          return (com.google.protobuf.ByteString) ref;
-        }
+      public com.google.protobuf.ByteString getValue() {
+        return value_;
       }
 
       private byte memoizedIsInitialized = -1;
@@ -598,8 +565,8 @@ public final class Schema {
         if (!getFieldBytes().isEmpty()) {
           com.google.protobuf.GeneratedMessageV3.writeString(output, 1, field_);
         }
-        if (!getValueBytes().isEmpty()) {
-          com.google.protobuf.GeneratedMessageV3.writeString(output, 2, value_);
+        if (!value_.isEmpty()) {
+          output.writeBytes(2, value_);
         }
         unknownFields.writeTo(output);
       }
@@ -613,8 +580,9 @@ public final class Schema {
         if (!getFieldBytes().isEmpty()) {
           size += com.google.protobuf.GeneratedMessageV3.computeStringSize(1, field_);
         }
-        if (!getValueBytes().isEmpty()) {
-          size += com.google.protobuf.GeneratedMessageV3.computeStringSize(2, value_);
+        if (!value_.isEmpty()) {
+          size += com.google.protobuf.CodedOutputStream
+            .computeBytesSize(2, value_);
         }
         size += unknownFields.getSerializedSize();
         memoizedSize = size;
@@ -785,7 +753,7 @@ public final class Schema {
           super.clear();
           field_ = "";
 
-          value_ = "";
+          value_ = com.google.protobuf.ByteString.EMPTY;
 
           return this;
         }
@@ -867,9 +835,8 @@ public final class Schema {
             field_ = other.field_;
             onChanged();
           }
-          if (!other.getValue().isEmpty()) {
-            value_ = other.value_;
-            onChanged();
+          if (other.getValue() != com.google.protobuf.ByteString.EMPTY) {
+            setValue(other.getValue());
           }
           this.mergeUnknownFields(other.unknownFields);
           onChanged();
@@ -976,47 +943,20 @@ public final class Schema {
           return this;
         }
 
-        private java.lang.Object value_ = "";
+        private com.google.protobuf.ByteString value_ = com.google.protobuf.ByteString.EMPTY;
         /**
-         * <code>string value = 2;</code>
+         * <code>bytes value = 2;</code>
          * @return The value.
          */
-        public java.lang.String getValue() {
-          java.lang.Object ref = value_;
-          if (!(ref instanceof java.lang.String)) {
-            com.google.protobuf.ByteString bs =
-                (com.google.protobuf.ByteString) ref;
-            java.lang.String s = bs.toStringUtf8();
-            value_ = s;
-            return s;
-          } else {
-            return (java.lang.String) ref;
-          }
+        public com.google.protobuf.ByteString getValue() {
+          return value_;
         }
         /**
-         * <code>string value = 2;</code>
-         * @return The bytes for value.
-         */
-        public com.google.protobuf.ByteString
-            getValueBytes() {
-          java.lang.Object ref = value_;
-          if (ref instanceof String) {
-            com.google.protobuf.ByteString b = 
-                com.google.protobuf.ByteString.copyFromUtf8(
-                    (java.lang.String) ref);
-            value_ = b;
-            return b;
-          } else {
-            return (com.google.protobuf.ByteString) ref;
-          }
-        }
-        /**
-         * <code>string value = 2;</code>
+         * <code>bytes value = 2;</code>
          * @param value The value to set.
          * @return This builder for chaining.
          */
-        public Builder setValue(
-            java.lang.String value) {
+        public Builder setValue(com.google.protobuf.ByteString value) {
           if (value == null) {
     throw new NullPointerException();
   }
@@ -1026,28 +966,12 @@ public final class Schema {
           return this;
         }
         /**
-         * <code>string value = 2;</code>
+         * <code>bytes value = 2;</code>
          * @return This builder for chaining.
          */
         public Builder clearValue() {
           
           value_ = getDefaultInstance().getValue();
-          onChanged();
-          return this;
-        }
-        /**
-         * <code>string value = 2;</code>
-         * @param value The bytes for value to set.
-         * @return This builder for chaining.
-         */
-        public Builder setValueBytes(
-            com.google.protobuf.ByteString value) {
-          if (value == null) {
-    throw new NullPointerException();
-  }
-  checkByteStringIsUtf8(value);
-          
-          value_ = value;
           onChanged();
           return this;
         }
@@ -2330,6 +2254,30 @@ public final class Schema {
      */
     com.google.cloud.gzos.pb.Schema.FieldOrBuilder getFieldOrBuilder(
         int index);
+
+    /**
+     * <code>string encoding = 5;</code>
+     * @return The encoding.
+     */
+    java.lang.String getEncoding();
+    /**
+     * <code>string encoding = 5;</code>
+     * @return The bytes for encoding.
+     */
+    com.google.protobuf.ByteString
+        getEncodingBytes();
+
+    /**
+     * <code>bool vartext = 6;</code>
+     * @return The vartext.
+     */
+    boolean getVartext();
+
+    /**
+     * <code>bytes delimiter = 7;</code>
+     * @return The delimiter.
+     */
+    com.google.protobuf.ByteString getDelimiter();
   }
   /**
    * Protobuf type {@code com.google.cloud.gzos.pb.Record}
@@ -2347,6 +2295,8 @@ public final class Schema {
       source_ = 0;
       original_ = "";
       field_ = java.util.Collections.emptyList();
+      encoding_ = "";
+      delimiter_ = com.google.protobuf.ByteString.EMPTY;
     }
 
     @java.lang.Override
@@ -2404,6 +2354,22 @@ public final class Schema {
               }
               field_.add(
                   input.readMessage(com.google.cloud.gzos.pb.Schema.Field.parser(), extensionRegistry));
+              break;
+            }
+            case 42: {
+              java.lang.String s = input.readStringRequireUtf8();
+
+              encoding_ = s;
+              break;
+            }
+            case 48: {
+
+              vartext_ = input.readBool();
+              break;
+            }
+            case 58: {
+
+              delimiter_ = input.readBytes();
               break;
             }
             default: {
@@ -2654,6 +2620,62 @@ public final class Schema {
       return field_.get(index);
     }
 
+    public static final int ENCODING_FIELD_NUMBER = 5;
+    private volatile java.lang.Object encoding_;
+    /**
+     * <code>string encoding = 5;</code>
+     * @return The encoding.
+     */
+    public java.lang.String getEncoding() {
+      java.lang.Object ref = encoding_;
+      if (ref instanceof java.lang.String) {
+        return (java.lang.String) ref;
+      } else {
+        com.google.protobuf.ByteString bs = 
+            (com.google.protobuf.ByteString) ref;
+        java.lang.String s = bs.toStringUtf8();
+        encoding_ = s;
+        return s;
+      }
+    }
+    /**
+     * <code>string encoding = 5;</code>
+     * @return The bytes for encoding.
+     */
+    public com.google.protobuf.ByteString
+        getEncodingBytes() {
+      java.lang.Object ref = encoding_;
+      if (ref instanceof java.lang.String) {
+        com.google.protobuf.ByteString b = 
+            com.google.protobuf.ByteString.copyFromUtf8(
+                (java.lang.String) ref);
+        encoding_ = b;
+        return b;
+      } else {
+        return (com.google.protobuf.ByteString) ref;
+      }
+    }
+
+    public static final int VARTEXT_FIELD_NUMBER = 6;
+    private boolean vartext_;
+    /**
+     * <code>bool vartext = 6;</code>
+     * @return The vartext.
+     */
+    public boolean getVartext() {
+      return vartext_;
+    }
+
+    public static final int DELIMITER_FIELD_NUMBER = 7;
+    private com.google.protobuf.ByteString delimiter_;
+    /**
+     * <code>bytes delimiter = 7;</code>
+     * @return The delimiter.
+     */
+    public com.google.protobuf.ByteString getDelimiter() {
+      return delimiter_;
+    }
+
     private byte memoizedIsInitialized = -1;
     @java.lang.Override
     public final boolean isInitialized() {
@@ -2680,6 +2702,15 @@ public final class Schema {
       for (int i = 0; i < field_.size(); i++) {
         output.writeMessage(4, field_.get(i));
       }
+      if (!getEncodingBytes().isEmpty()) {
+        com.google.protobuf.GeneratedMessageV3.writeString(output, 5, encoding_);
+      }
+      if (vartext_ != false) {
+        output.writeBool(6, vartext_);
+      }
+      if (!delimiter_.isEmpty()) {
+        output.writeBytes(7, delimiter_);
+      }
       unknownFields.writeTo(output);
     }
 
@@ -2704,6 +2735,17 @@ public final class Schema {
         size += com.google.protobuf.CodedOutputStream
           .computeMessageSize(4, field_.get(i));
       }
+      if (!getEncodingBytes().isEmpty()) {
+        size += com.google.protobuf.GeneratedMessageV3.computeStringSize(5, encoding_);
+      }
+      if (vartext_ != false) {
+        size += com.google.protobuf.CodedOutputStream
+          .computeBoolSize(6, vartext_);
+      }
+      if (!delimiter_.isEmpty()) {
+        size += com.google.protobuf.CodedOutputStream
+          .computeBytesSize(7, delimiter_);
+      }
       size += unknownFields.getSerializedSize();
       memoizedSize = size;
       return size;
@@ -2726,6 +2768,12 @@ public final class Schema {
           .equals(other.getOriginal())) return false;
       if (!getFieldList()
           .equals(other.getFieldList())) return false;
+      if (!getEncoding()
+          .equals(other.getEncoding())) return false;
+      if (getVartext()
+          != other.getVartext()) return false;
+      if (!getDelimiter()
+          .equals(other.getDelimiter())) return false;
       if (!unknownFields.equals(other.unknownFields)) return false;
       return true;
     }
@@ -2747,6 +2795,13 @@ public final class Schema {
         hash = (37 * hash) + FIELD_FIELD_NUMBER;
         hash = (53 * hash) + getFieldList().hashCode();
       }
+      hash = (37 * hash) + ENCODING_FIELD_NUMBER;
+      hash = (53 * hash) + getEncoding().hashCode();
+      hash = (37 * hash) + VARTEXT_FIELD_NUMBER;
+      hash = (53 * hash) + com.google.protobuf.Internal.hashBoolean(
+          getVartext());
+      hash = (37 * hash) + DELIMITER_FIELD_NUMBER;
+      hash = (53 * hash) + getDelimiter().hashCode();
       hash = (29 * hash) + unknownFields.hashCode();
       memoizedHashCode = hash;
       return hash;
@@ -2893,6 +2948,12 @@ public final class Schema {
         } else {
           fieldBuilder_.clear();
         }
+        encoding_ = "";
+
+        vartext_ = false;
+
+        delimiter_ = com.google.protobuf.ByteString.EMPTY;
+
         return this;
       }
 
@@ -2932,6 +2993,9 @@ public final class Schema {
         } else {
           result.field_ = fieldBuilder_.build();
         }
+        result.encoding_ = encoding_;
+        result.vartext_ = vartext_;
+        result.delimiter_ = delimiter_;
         onBuilt();
         return result;
       }
@@ -3015,6 +3079,16 @@ public final class Schema {
               fieldBuilder_.addAllMessages(other.field_);
             }
           }
+        }
+        if (!other.getEncoding().isEmpty()) {
+          encoding_ = other.encoding_;
+          onChanged();
+        }
+        if (other.getVartext() != false) {
+          setVartext(other.getVartext());
+        }
+        if (other.getDelimiter() != com.google.protobuf.ByteString.EMPTY) {
+          setDelimiter(other.getDelimiter());
         }
         this.mergeUnknownFields(other.unknownFields);
         onChanged();
@@ -3443,6 +3517,145 @@ public final class Schema {
         }
         return fieldBuilder_;
       }
+
+      private java.lang.Object encoding_ = "";
+      /**
+       * <code>string encoding = 5;</code>
+       * @return The encoding.
+       */
+      public java.lang.String getEncoding() {
+        java.lang.Object ref = encoding_;
+        if (!(ref instanceof java.lang.String)) {
+          com.google.protobuf.ByteString bs =
+              (com.google.protobuf.ByteString) ref;
+          java.lang.String s = bs.toStringUtf8();
+          encoding_ = s;
+          return s;
+        } else {
+          return (java.lang.String) ref;
+        }
+      }
+      /**
+       * <code>string encoding = 5;</code>
+       * @return The bytes for encoding.
+       */
+      public com.google.protobuf.ByteString
+          getEncodingBytes() {
+        java.lang.Object ref = encoding_;
+        if (ref instanceof String) {
+          com.google.protobuf.ByteString b = 
+              com.google.protobuf.ByteString.copyFromUtf8(
+                  (java.lang.String) ref);
+          encoding_ = b;
+          return b;
+        } else {
+          return (com.google.protobuf.ByteString) ref;
+        }
+      }
+      /**
+       * <code>string encoding = 5;</code>
+       * @param value The encoding to set.
+       * @return This builder for chaining.
+       */
+      public Builder setEncoding(
+          java.lang.String value) {
+        if (value == null) {
+    throw new NullPointerException();
+  }
+  
+        encoding_ = value;
+        onChanged();
+        return this;
+      }
+      /**
+       * <code>string encoding = 5;</code>
+       * @return This builder for chaining.
+       */
+      public Builder clearEncoding() {
+        
+        encoding_ = getDefaultInstance().getEncoding();
+        onChanged();
+        return this;
+      }
+      /**
+       * <code>string encoding = 5;</code>
+       * @param value The bytes for encoding to set.
+       * @return This builder for chaining.
+       */
+      public Builder setEncodingBytes(
+          com.google.protobuf.ByteString value) {
+        if (value == null) {
+    throw new NullPointerException();
+  }
+  checkByteStringIsUtf8(value);
+        
+        encoding_ = value;
+        onChanged();
+        return this;
+      }
+
+      private boolean vartext_ ;
+      /**
+       * <code>bool vartext = 6;</code>
+       * @return The vartext.
+       */
+      public boolean getVartext() {
+        return vartext_;
+      }
+      /**
+       * <code>bool vartext = 6;</code>
+       * @param value The vartext to set.
+       * @return This builder for chaining.
+       */
+      public Builder setVartext(boolean value) {
+        
+        vartext_ = value;
+        onChanged();
+        return this;
+      }
+      /**
+       * <code>bool vartext = 6;</code>
+       * @return This builder for chaining.
+       */
+      public Builder clearVartext() {
+        
+        vartext_ = false;
+        onChanged();
+        return this;
+      }
+
+      private com.google.protobuf.ByteString delimiter_ = com.google.protobuf.ByteString.EMPTY;
+      /**
+       * <code>bytes delimiter = 7;</code>
+       * @return The delimiter.
+       */
+      public com.google.protobuf.ByteString getDelimiter() {
+        return delimiter_;
+      }
+      /**
+       * <code>bytes delimiter = 7;</code>
+       * @param value The delimiter to set.
+       * @return This builder for chaining.
+       */
+      public Builder setDelimiter(com.google.protobuf.ByteString value) {
+        if (value == null) {
+    throw new NullPointerException();
+  }
+  
+        delimiter_ = value;
+        onChanged();
+        return this;
+      }
+      /**
+       * <code>bytes delimiter = 7;</code>
+       * @return This builder for chaining.
+       */
+      public Builder clearDelimiter() {
+        
+        delimiter_ = getDefaultInstance().getDelimiter();
+        onChanged();
+        return this;
+      }
       @java.lang.Override
       public final Builder setUnknownFields(
           final com.google.protobuf.UnknownFieldSet unknownFields) {
@@ -3528,16 +3741,18 @@ public final class Schema {
       "2&.com.google.cloud.gzos.pb.Field.NullIf" +
       "\0227\n\004cast\030\010 \001(\0162).com.google.cloud.gzos.p" +
       "b.Field.FieldType\022\016\n\006format\030\t \001(\t\032&\n\006Nul" +
-      "lIf\022\r\n\005field\030\001 \001(\t\022\r\n\005value\030\002 \001(\t\"p\n\tFie" +
+      "lIf\022\r\n\005field\030\001 \001(\t\022\r\n\005value\030\002 \001(\014\"p\n\tFie" +
       "ldType\022\013\n\007UNKNOWN\020\000\022\n\n\006STRING\020\001\022\013\n\007INTEG" +
       "ER\020\002\022\013\n\007DECIMAL\020\003\022\010\n\004DATE\020\004\022\024\n\020UNSIGNED_" +
-      "INTEGER\020\005\022\020\n\014LATIN_STRING\020\006\"\303\001\n\006Record\022\r" +
+      "INTEGER\020\005\022\020\n\014LATIN_STRING\020\006\"\371\001\n\006Record\022\r" +
       "\n\005lrecl\030\001 \001(\005\0227\n\006source\030\002 \001(\0162\'.com.goog" +
       "le.cloud.gzos.pb.Record.Source\022\020\n\010origin" +
       "al\030\003 \001(\t\022.\n\005field\030\004 \003(\0132\037.com.google.clo" +
-      "ud.gzos.pb.Field\"/\n\006Source\022\013\n\007UNKNOWN\020\000\022" +
-      "\014\n\010COPYBOOK\020\001\022\n\n\006LAYOUT\020\002B$\n\030com.google." +
-      "cloud.gzos.pbB\006SchemaP\000b\006proto3"
+      "ud.gzos.pb.Field\022\020\n\010encoding\030\005 \001(\t\022\017\n\007va" +
+      "rtext\030\006 \001(\010\022\021\n\tdelimiter\030\007 \001(\014\"/\n\006Source" +
+      "\022\013\n\007UNKNOWN\020\000\022\014\n\010COPYBOOK\020\001\022\n\n\006LAYOUT\020\002B" +
+      "$\n\030com.google.cloud.gzos.pbB\006SchemaP\000b\006p" +
+      "roto3"
     };
     descriptor = com.google.protobuf.Descriptors.FileDescriptor
       .internalBuildGeneratedFileFrom(descriptorData,
@@ -3560,7 +3775,7 @@ public final class Schema {
     internal_static_com_google_cloud_gzos_pb_Record_fieldAccessorTable = new
       com.google.protobuf.GeneratedMessageV3.FieldAccessorTable(
         internal_static_com_google_cloud_gzos_pb_Record_descriptor,
-        new java.lang.String[] { "Lrecl", "Source", "Original", "Field", });
+        new java.lang.String[] { "Lrecl", "Source", "Original", "Field", "Encoding", "Vartext", "Delimiter", });
   }
 
   // @@protoc_insertion_point(outer_class_scope)

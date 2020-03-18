@@ -35,7 +35,7 @@ message Field {
   bool filler = 6;
   message NullIf {
     string field = 1;
-    string value = 2;
+    bytes value = 2;
   }
   NullIf nullif = 7;
   FieldType cast = 8;
@@ -51,4 +51,7 @@ message Record {
   Source source = 2;
   string original = 3;
   repeated Field field = 4;
+  string encoding = 5;
+  bool vartext = 6;
+  bytes delimiter = 7;
 }

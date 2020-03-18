@@ -19,7 +19,7 @@ package com.google.cloud.gszutil.io
 import java.nio.ByteBuffer
 
 import com.google.cloud.gszutil.SchemaProvider
-import com.google.cloud.gszutil.Decoding.Decoder
+import com.google.cloud.gszutil.Decoder
 import com.google.cloud.gszutil.Util.Logging
 import org.apache.hadoop.hive.ql.exec.vector.{ColumnVector, VectorizedRowBatch, VoidColumnVector}
 import org.apache.orc.Writer

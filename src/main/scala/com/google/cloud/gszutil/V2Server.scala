@@ -31,6 +31,7 @@ import com.google.cloud.gszutil.V2Server.V2Config
 import com.google.cloud.gszutil.io.{BlockingBoundedBufferPool, V2ActorArgs, V2ReceiveActor, V2ReceiveCallable, V2SendCallable}
 import com.google.cloud.gszutil.orc.Protocol
 import com.google.cloud.gszutil.orc.Protocol.{PartFailed, UploadComplete}
+import com.google.cloud.gzos.Ebcdic
 import com.google.cloud.gzos.pb.Schema.Record
 import com.google.cloud.storage.Storage
 import com.google.common.base.{Charsets, Preconditions}
@@ -115,7 +116,7 @@ class V2Server(config: V2Config) extends Callable[Result] with Logging {
 
     val schema: SchemaProvider =
       if (record.getSource == Record.Source.COPYBOOK)
-        CopyBook(record.getOriginal)
+        CopyBook(record.getOriginal, if (record.getEncoding == "") Ebcdic else Utf8)
       else if (record.getSource == Record.Source.LAYOUT)
         RecordSchema(record)
       else throw new NotImplementedError()

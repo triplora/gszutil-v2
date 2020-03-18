@@ -1,6 +1,5 @@
 package com.google.cloud.gszutil
 
-import com.google.cloud.gszutil.Decoding.Decoder
 import org.apache.orc.TypeDescription
 import org.apache.orc.TypeDescription.Category
 

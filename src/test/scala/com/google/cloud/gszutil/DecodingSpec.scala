@@ -16,21 +16,22 @@
 
 package com.google.cloud.gszutil
 
-import java.nio.{ByteBuffer, CharBuffer}
+import java.nio.ByteBuffer
 import java.nio.charset.StandardCharsets
-import java.nio.file.{Files, Paths}
 import java.time.LocalDate
 import java.time.format.DateTimeFormatter
 
-import com.google.cloud.gszutil.Decoding.{Decimal64Decoder, Decoder, IntegerAsDateDecoder, LongDecoder, NullableStringDecoder, StringAsDateDecoder, StringAsDecimalDecoder, StringAsIntDecoder, StringDecoder, ebcdic2ASCIIString, validAscii}
+import com.google.cloud.gszutil.Decoding.{Decimal64Decoder, IntegerAsDateDecoder,
+  LongDecoder, NullableStringDecoder, StringAsDateDecoder, StringAsDecimalDecoder,
+  StringAsIntDecoder, StringDecoder}
 import com.google.cloud.gszutil.io.ZReader
 import com.google.cloud.gszutil.io.ZReader.readColumn
+import com.google.cloud.gzos.Ebcdic
 import com.google.cloud.gzos.pb.Schema
-import com.google.cloud.gzos.pb.Schema.Field
 import com.google.cloud.gzos.pb.Schema.Field.FieldType
 import com.google.common.base.Charsets
 import com.ibm.jzos.fields.daa
-import org.apache.hadoop.hive.ql.exec.vector.{BytesColumnVector, DateColumnVector, Decimal64ColumnVector, DecimalColumnVector, LongColumnVector, TimestampColumnVector}
+import org.apache.hadoop.hive.ql.exec.vector.{BytesColumnVector, DateColumnVector, Decimal64ColumnVector, LongColumnVector}
 import org.apache.hadoop.hive.serde2.io.HiveDecimalWritable
 import org.scalatest.FlatSpec
 
@@ -212,23 +213,23 @@ class DecodingSpec extends FlatSpec {
 
   it should "transcode EBCDIC" in {
     val test = Util.randString(10000)
-    val in = test.getBytes(Decoding.CP1047)
+    val in = test.getBytes(Ebcdic.charset)
     val expected = test.getBytes(StandardCharsets.UTF_8).toSeq
-    val got = in.map(Decoding.ebcdic2utf8byte)
+    val got = in.map(Ebcdic.decodeByte)
     assert(got.length == expected.length)
     assert(got.sameElements(expected))
   }
 
   it should "decode char" in {
-    assert(Decoding.ebcdic2utf8byte(228.toByte) == "U".getBytes(Charsets.UTF_8).head)
-    assert(Decoding.ebcdic2utf8byte(201.toByte) == "I".getBytes(Charsets.UTF_8).head)
-    assert(Decoding.e2a(173.toByte) == "[".getBytes(Charsets.UTF_8).head)
-    assert(Decoding.e2a(189.toByte) == "]".getBytes(Charsets.UTF_8).head)
+    assert(Ebcdic.decodeByte(228.toByte) == "U".getBytes(Charsets.UTF_8).head)
+    assert(Ebcdic.decodeByte(201.toByte) == "I".getBytes(Charsets.UTF_8).head)
+    assert(Ebcdic.decodeByte(173.toByte) == "[".getBytes(Charsets.UTF_8).head)
+    assert(Ebcdic.decodeByte(189.toByte) == "]".getBytes(Charsets.UTF_8).head)
   }
 
   it should "decode string" in {
     val buf = ByteBuffer.wrap(Array[Byte](228.toByte,201.toByte))
-    val decoder = StringDecoder(2)
+    val decoder = new StringDecoder(Ebcdic,2)
     val col = decoder.columnVector(1)
     decoder.get(buf, col, 0)
     val vec = col.asInstanceOf[BytesColumnVector].vector
@@ -243,10 +244,10 @@ class DecodingSpec extends FlatSpec {
 
   it should "decode string as int" in {
     val examples = Seq((" 0", 0), ("00", 0), ("08",8), ("42",42))
-    val decoder = StringAsIntDecoder(2)
+    val decoder = new StringAsIntDecoder(Ebcdic,2)
     val col = decoder.columnVector(1)
     for ((a,b) <- examples){
-      val buf = Decoding.EBCDIC1.encode(a)
+      val buf = Ebcdic.charset.encode(a)
       decoder.get(buf, col, 0)
       val vec: Array[Long] = col.asInstanceOf[LongColumnVector].vector
       assert(vec(0) == b)
@@ -261,13 +262,13 @@ class DecodingSpec extends FlatSpec {
       (exampleDate, ld.toEpochDay, false),
       ("00/00/0000", -1L, true)
     )
-    val decoder = StringAsDateDecoder(10, "MM/DD/YYYY")
+    val decoder = new StringAsDateDecoder(Ebcdic,10, "MM/DD/YYYY")
     val col = decoder.columnVector(examples.length)
     val vec: Array[Long] = col.asInstanceOf[DateColumnVector].vector
     val isNull: Array[Boolean] = col.asInstanceOf[DateColumnVector].isNull
     for (i <- examples.indices){
       val (a,b,c) = examples(i)
-      decoder.get(Decoding.EBCDIC1.encode(a), col, i)
+      decoder.get(Ebcdic.charset.encode(a), col, i)
       assert(vec(i) == b)
       assert(isNull(i) == c)
     }
@@ -275,32 +276,13 @@ class DecodingSpec extends FlatSpec {
 
   it should "decode string as decimal" in {
     val examples = Seq(("0000004.82", 482))
-    val decoder = StringAsDecimalDecoder(10,9,2)
+    val decoder = new StringAsDecimalDecoder(Ebcdic,10,9,2)
     val col = decoder.columnVector(1)
     for ((a,b) <- examples){
-      val buf = Decoding.EBCDIC1.encode(a)
+      val buf = Ebcdic.charset.encode(a)
       decoder.get(buf, col, 0)
       val vec: Array[Long] = col.asInstanceOf[LongColumnVector].vector
       assert(vec(0) == b)
-    }
-  }
-
-  it should "remove non-ascii characters" in {
-    // Map all possible byte values to ASCII
-    val exampleData: Seq[(Int,String)] = (0 until 256)
-      .map(x => (x, ebcdic2ASCIIString(Array(x.toByte))))
-
-    // The ranges below are EBCDIC byte values that can't be mapped to ASCII,
-    // determined by printing the converted values
-    val unmappableEBCDICBytes: Seq[Int] =
-      (0 to 74) ++ (81 to 90) ++ (98 to 106) ++
-      (112 to 120) ++ (138 to 144) ++ (154 to 160) ++ (170 to 172) ++
-      (174 to 185) ++ (190 to 191) ++ (202 to 207) ++ (218 to 223) ++
-      Seq(128, 188, 225) ++ (234 to 239) ++ (234 to 239) ++ (250 to 255)
-
-    unmappableEBCDICBytes.foreach{i =>
-      val decodedChar = exampleData(i)._2
-      assert(decodedChar == " ")
     }
   }
 
@@ -321,44 +303,35 @@ class DecodingSpec extends FlatSpec {
       "US.000000001.000100003.07.02/01/2020.02/09/2020.0000002.10.WK. .02/07/2020"
 
     val decoders = Array[Decoder](
-      StringDecoder(2),
-      StringDecoder(1,filler = true),
-      StringAsIntDecoder(9),
-      StringDecoder(1,filler = true),
-      StringAsIntDecoder(9),
-      StringDecoder(1,filler = true),
-      StringAsIntDecoder(2),
-      StringDecoder(1,filler = true),
-      StringAsDateDecoder(10, "MM/DD/YYYY"),
-      StringDecoder(1,filler = true),
-      StringAsDateDecoder(10, "MM/DD/YYYY"),
-      StringDecoder(1,filler = true),
-      StringAsDecimalDecoder(10,9,2),
-      StringDecoder(1,filler = true),
-      StringDecoder(2),
-      StringDecoder(1,filler = true),
-      StringDecoder(1),
-      StringDecoder(1,filler = true),
-      StringAsDateDecoder(10, "MM/DD/YYYY")
+      new StringDecoder(Ebcdic,2),
+      new StringDecoder(Ebcdic,1,filler = true),
+      new StringAsIntDecoder(Ebcdic,9),
+      new StringDecoder(Ebcdic,1,filler = true),
+      new StringAsIntDecoder(Ebcdic,9),
+      new StringDecoder(Ebcdic,1,filler = true),
+      new StringAsIntDecoder(Ebcdic,2),
+      new StringDecoder(Ebcdic,1,filler = true),
+      new StringAsDateDecoder(Ebcdic,10, "MM/DD/YYYY"),
+      new StringDecoder(Ebcdic,1,filler = true),
+      new StringAsDateDecoder(Ebcdic,10, "MM/DD/YYYY"),
+      new StringDecoder(Ebcdic,1,filler = true),
+      new StringAsDecimalDecoder(Ebcdic,10,9,2),
+      new StringDecoder(Ebcdic,1,filler = true),
+      new StringDecoder(Ebcdic,2),
+      new StringDecoder(Ebcdic,1,filler = true),
+      new StringDecoder(Ebcdic,1),
+      new StringDecoder(Ebcdic,1,filler = true),
+      new StringAsDateDecoder(Ebcdic,10, "MM/DD/YYYY")
     )
 
     val cols = decoders.map(_.columnVector(8))
-    val buf = ByteBuffer.wrap(example.getBytes(Decoding.EBCDIC1))
-
-    // Print field
-    //val copy = buf.asReadOnlyBuffer()
-    //val dec = Decoding.EBCDIC1.newDecoder()
+    val buf = ByteBuffer.wrap(example.getBytes(Ebcdic.charset))
 
     var i = 0
     var pos = 0
     while (i < decoders.length){
       val d = decoders(i)
       val col = cols(i)
-
-      // Print field
-      //val a = ByteBuffer.allocate(d.size)
-      //copy.get(a.array())
-      //System.out.println(s"$i '${dec.decode(a).toString}' $d")
 
       readColumn(buf, d, col, 0)
       pos += d.size
@@ -388,38 +361,34 @@ class DecodingSpec extends FlatSpec {
         |US.000000001.000101246.07.02/01/2020.02/09/2020.0000003.08.WK. .02/07/2020""".stripMargin
 
     val data = example.lines.foldLeft(new ArrayBuffer[Byte]()){(a,b) =>
-      a.appendAll(b.getBytes(Decoding.EBCDIC1));a
+      a.appendAll(b.getBytes(Ebcdic.charset));a
     }.toArray
 
     val decoders = Array[Decoder](
-      StringDecoder(2),
-      StringDecoder(1,filler = true),
-      StringAsIntDecoder(9),
-      StringDecoder(1,filler = true),
-      StringAsIntDecoder(9),
-      StringDecoder(1,filler = true),
-      StringAsIntDecoder(2),
-      StringDecoder(1,filler = true),
-      StringAsDateDecoder(10, "MM/DD/YYYY"),
-      StringDecoder(1,filler = true),
-      StringAsDateDecoder(10, "MM/DD/YYYY"),
-      StringDecoder(1,filler = true),
-      StringAsDecimalDecoder(10,9,2),
-      StringDecoder(1,filler = true),
-      StringDecoder(2),
-      StringDecoder(1,filler = true),
-      StringDecoder(1),
-      StringDecoder(1,filler = true),
-      StringAsDateDecoder(10, "MM/DD/YYYY")
+      new StringDecoder(Ebcdic,2),
+      new StringDecoder(Ebcdic,1,filler = true),
+      new StringAsIntDecoder(Ebcdic,9),
+      new StringDecoder(Ebcdic,1,filler = true),
+      new StringAsIntDecoder(Ebcdic,9),
+      new StringDecoder(Ebcdic,1,filler = true),
+      new StringAsIntDecoder(Ebcdic,2),
+      new StringDecoder(Ebcdic,1,filler = true),
+      new StringAsDateDecoder(Ebcdic,10, "MM/DD/YYYY"),
+      new StringDecoder(Ebcdic,1,filler = true),
+      new StringAsDateDecoder(Ebcdic,10, "MM/DD/YYYY"),
+      new StringDecoder(Ebcdic,1,filler = true),
+      new StringAsDecimalDecoder(Ebcdic,10,9,2),
+      new StringDecoder(Ebcdic,1,filler = true),
+      new StringDecoder(Ebcdic,2),
+      new StringDecoder(Ebcdic,1,filler = true),
+      new StringDecoder(Ebcdic,1),
+      new StringDecoder(Ebcdic,1,filler = true),
+      new StringAsDateDecoder(Ebcdic,10, "MM/DD/YYYY")
     )
 
     val cols = decoders.map(_.columnVector(8))
     val buf = ByteBuffer.wrap(data)
     ZReader.readBatch(buf, decoders, cols, 8, 74, ByteBuffer.allocate(74))
-
-    // Print field
-    //val copy = buf.asReadOnlyBuffer()
-    //val dec = Decoding.EBCDIC1.newDecoder()
 
     // reset buffer to replay the data
     buf.clear
@@ -428,11 +397,6 @@ class DecodingSpec extends FlatSpec {
     while (i < decoders.length){
       val d = decoders(i)
       val col = cols(i)
-
-      // Print field
-      //val a = ByteBuffer.allocate(d.size)
-      //copy.get(a.array())
-      //System.out.println(s"$i '${dec.decode(a).toString}' $d")
 
       readColumn(buf, d, col, 0)
       pos += d.size
@@ -467,7 +431,7 @@ class DecodingSpec extends FlatSpec {
       .setCast(FieldType.DATE)
       .setFormat("YYMMDD")
       .build
-    val decoder = Decoding.getDecoder(b)
+    val decoder = Decoding.getDecoder(b, Utf8)
     assert(decoder.isInstanceOf[IntegerAsDateDecoder])
   }
 
@@ -478,15 +442,11 @@ class DecodingSpec extends FlatSpec {
     )
 
     val nullIf = Array[Byte](0x5b,0x5b,0x4a,0x4a)
-    System.out.println(new String(nullIf,Decoding.EBCDIC1))
-    for (i <- nullIf.indices){
-      nullIf.update(i,Decoding.ebcdic2utf8byte(nullIf(i)))
-    }
-    System.out.println(new String(nullIf,Charsets.UTF_8))
+    Ebcdic.decodeBytes(nullIf)
 
     for ((example,expected) <- examples) {
       val buf = ByteBuffer.wrap(example)
-      val decoder = NullableStringDecoder(4, nullIf)
+      val decoder = new NullableStringDecoder(Ebcdic,4, nullIf)
       val bcv = decoder.columnVector(1)
       decoder.get(buf, bcv, 0)
       assert(bcv.isNull(0) == expected, "should be null")
