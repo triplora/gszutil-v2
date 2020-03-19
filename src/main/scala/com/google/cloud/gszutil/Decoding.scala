@@ -120,7 +120,7 @@ object Decoding extends Logging {
     override def typeDescription: TypeDescription =
       TypeDescription.createLong
 
-    override def toString: String = s"$size STRING (INT64)"
+    override def toString: String = s"$size byte STRING (INT64)"
 
     override def toFieldBuilder: Field.Builder =
       Field.newBuilder()

@@ -32,10 +32,10 @@ object IBM extends ZFileProvider with Logging {
     System.out.println("Build Info:\n" + Util.readS("build.txt"))
   }
 
-  override def readDDWithCopyBook(dd: String, copyBook: SchemaProvider): ZRecordReaderT = {
+  override def readDDWithCopyBook(dd: String, schemaProvider: SchemaProvider): ZRecordReaderT = {
     val rr = ZOS.readDD(dd)
 
-    require(rr.lRecl == copyBook.LRECL, s"Copybook LRECL ${copyBook.LRECL} doesn't match DSN LRECL ${rr.lRecl}")
+    require(rr.lRecl == schemaProvider.LRECL, s"Copybook LRECL ${schemaProvider.LRECL} doesn't match DSN LRECL ${rr.lRecl}")
     rr
   }
 

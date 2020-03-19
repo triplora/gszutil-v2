@@ -1,10 +1,7 @@
 package com.google.cloud.gszutil
 
-import java.nio.charset.Charset
-
 import com.google.cloud.gzos.Ebcdic
 import com.google.cloud.gzos.pb.Schema.{Field, Record}
-import com.google.common.base.Charsets
 
 case class RecordSchema(r: Record) extends SchemaProvider {
   import scala.collection.JavaConverters._
@@ -18,5 +15,7 @@ case class RecordSchema(r: Record) extends SchemaProvider {
   }
   private def transcoder: Transcoder = if (r.getEncoding == "") Ebcdic else Utf8
   override def toByteArray: Array[Byte] = r.toByteArray
+  override def LRECL: Int =
+    (if (r.getVartext) decoders.length - 1 else 0) + decoders.foldLeft(0){_ + _.size}
 }
 

@@ -3,7 +3,6 @@ package com.google.cloud.gszutil
 import java.nio.ByteBuffer
 import java.nio.charset.Charset
 
-import com.google.cloud.gszutil.Decoding.{StringAsDateDecoder, StringAsDecimalDecoder, StringAsIntDecoder, StringDecoder}
 import com.google.cloud.gszutil.VartextDecoding.{VartextStringAsDateDecoder, VartextStringAsDecimalDecoder, VartextStringAsIntDecoder, VartextStringDecoder}
 import com.google.cloud.gszutil.io.ZReader
 import com.google.cloud.gszutil.io.ZReader.readColumn
@@ -14,7 +13,7 @@ import org.apache.hadoop.hive.ql.exec.vector.{BytesColumnVector, DateColumnVecto
 import org.scalatest.FlatSpec
 
 class VartextSpec extends FlatSpec {
-  private def exampleDecoders(delim: String, transcoder: Transcoder) = {
+  private def exampleDecoders(delim: String, transcoder: Transcoder): Array[Decoder] = {
     val delimiter = delim.getBytes(transcoder.charset)
     Array[Decoder](
       new VartextStringDecoder(delimiter,transcoder,2),

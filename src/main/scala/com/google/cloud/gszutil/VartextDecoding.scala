@@ -5,7 +5,7 @@ import java.time.LocalDate
 
 import Decoding._
 import com.google.cloud.gzos.pb.Schema.Field
-import org.apache.hadoop.hive.ql.exec.vector.{ColumnVector, DateColumnVector, Decimal64ColumnVector}
+import org.apache.hadoop.hive.ql.exec.vector.{ColumnVector, DateColumnVector, Decimal64ColumnVector, LongColumnVector}
 
 object VartextDecoding {
   def getVartextDecoder(f: Field, delimiter: Array[Byte], transcoder: Transcoder): Decoder = {
@@ -77,7 +77,9 @@ object VartextDecoding {
                                   override val filler: Boolean = false)
     extends StringAsIntDecoder(transcoder, size, filler) with VartextDecoder {
     override def get(buf: ByteBuffer, row: ColumnVector, i: Int): Unit = {
-      super.get(getBuf(buf, delimiter, size),row,i)
+      val str = getStr(buf, transcoder.charset, size)
+      val long = str.toLong
+      row.asInstanceOf[LongColumnVector].vector.update(i, long)
     }
   }
 
