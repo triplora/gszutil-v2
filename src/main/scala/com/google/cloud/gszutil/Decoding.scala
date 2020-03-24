@@ -21,15 +21,12 @@ import java.time.{LocalDate, Month}
 import com.google.cloud.gszutil.Util.Logging
 import com.google.cloud.gzos.pb.Schema.Field
 import com.google.cloud.gzos.pb.Schema.Field.NullIf
-import com.google.common.base.Charsets
 import com.google.protobuf.ByteString
 import org.apache.hadoop.hive.ql.exec.vector._
 import org.apache.orc.TypeDescription
 
 
 object Decoding extends Logging {
-  final val Space: Byte = " ".getBytes(Charsets.US_ASCII).head
-
   @inline
   final def uint(b: Byte): Int = if (b < 0) 256 + b else b
 
@@ -95,7 +92,7 @@ object Decoding extends Logging {
     }
 
     override def typeDescription: TypeDescription =
-      TypeDescription.createChar().withMaxLength(size)
+      TypeDescription.createChar.withMaxLength(size)
 
     override def toString: String = s"$size byte STRING NOT NULL"
 

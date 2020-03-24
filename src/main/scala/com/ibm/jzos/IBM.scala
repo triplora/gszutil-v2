@@ -17,9 +17,10 @@
 package com.ibm.jzos
 
 import com.google.cloud.gszutil
-import com.google.cloud.gszutil.Util.{CredentialProvider, GoogleCredentialsProvider, Logging, PDSMemberInfo, ZInfo, ZMVSJob}
+import com.google.cloud.gszutil.Util.{CredentialProvider, GoogleCredentialsProvider, Logging,
+  PDSMemberInfo, ZInfo, ZMVSJob}
 import com.google.cloud.gszutil.io.{ZRecordReaderT, ZRecordWriterT}
-import com.google.cloud.gszutil.{CopyBook, Decoding, SchemaProvider, Util}
+import com.google.cloud.gszutil.{CopyBook, SchemaProvider, Util}
 import com.google.cloud.gzos.Ebcdic
 import com.google.common.base.Charsets
 import com.google.common.io.ByteStreams
@@ -35,26 +36,27 @@ object IBM extends ZFileProvider with Logging {
   override def readDDWithCopyBook(dd: String, schemaProvider: SchemaProvider): ZRecordReaderT = {
     val rr = ZOS.readDD(dd)
 
-    require(rr.lRecl == schemaProvider.LRECL, s"Copybook LRECL ${schemaProvider.LRECL} doesn't match DSN LRECL ${rr.lRecl}")
+    // for VARTEXT, schema LRECL acts as an upper bound
+    if (schemaProvider.vartext)
+      require(rr.lRecl <= schemaProvider.LRECL,
+        s"DSN LRECL ${rr.lRecl} must be less than Schema LRECL ${schemaProvider.LRECL}")
+    else
+      require(rr.lRecl == schemaProvider.LRECL,
+        s"DSN LRECL ${rr.lRecl} must be equal to Schema LRECL ${schemaProvider.LRECL}")
+
     rr
   }
 
   override def exists(dsn: String): Boolean = ZOS.exists(dsn)
-
   override def ddExists(dd: String): Boolean = ZOS.ddExists(dd)
-
   override def getDSN(dd: String): String = ZOS.getDSN(dd)
-
   override def listPDS(dsn: String): Iterator[PDSMemberInfo] = new PDSIterator(dsn)
-
   override def readDSN(dsn: String): ZRecordReaderT = ZOS.readDSN(dsn)
+  override def writeDSN(dsn: String): ZRecordWriterT = ZOS.writeDSN(dsn)
+  override def readDD(dd: String): ZRecordReaderT = ZOS.readDD(dd)
 
   override def readDSNLines(dsn: String): Iterator[String] =
     new RecordIterator(readDSN(dsn)).takeWhile(_ != null)
-
-  override def writeDSN(dsn: String): ZRecordWriterT = ZOS.writeDSN(dsn)
-
-  override def readDD(dd: String): ZRecordReaderT = ZOS.readDD(dd)
 
   override def readStdin(): String = {
     val in = ByteStreams.toByteArray(System.in)
@@ -96,12 +98,8 @@ object IBM extends ZFileProvider with Logging {
   override def jobDate: String = sys.env.getOrElse("JOBDATE","UNKNOWN")
   override def jobTime: String = sys.env.getOrElse("JOBTIME","UNKNOWN")
   override def getInfo: ZInfo = ZOS.getInfo
-
   override def getSymbol(s: String): Option[String] = ZOS.getSymbol(s)
-
   override def substituteSystemSymbols(s: String): String = ZOS.substituteSystemSymbols(s)
-
   override def submitJCL(jcl: Seq[String]): Option[ZMVSJob] = ZOS.submitJCL(jcl)
-
   override def transcoder: gszutil.Transcoder = Ebcdic
 }

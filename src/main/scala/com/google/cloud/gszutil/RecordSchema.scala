@@ -15,7 +15,12 @@ case class RecordSchema(r: Record) extends SchemaProvider {
   }
   private def transcoder: Transcoder = if (r.getEncoding == "") Ebcdic else Utf8
   override def toByteArray: Array[Byte] = r.toByteArray
-  override def LRECL: Int =
-    (if (r.getVartext) decoders.length - 1 else 0) + decoders.foldLeft(0){_ + _.size}
+  override def LRECL: Int = {
+    val lrecl = decoders.foldLeft(0){_ + _.size}
+    if (r.getVartext) lrecl + decoders.length - 1
+    else lrecl
+  }
+
+  override def vartext: Boolean = r.getVartext
 }
 

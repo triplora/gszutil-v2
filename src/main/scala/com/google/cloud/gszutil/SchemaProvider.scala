@@ -16,6 +16,8 @@ trait SchemaProvider {
           a.addField(b._1,b._2.typeDescription)
       }
 
+  def vartext: Boolean = false
+
   def LRECL: Int = decoders.foldLeft(0){_ + _.size}
 
   override def toString: String =
