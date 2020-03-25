@@ -94,7 +94,13 @@ object ZReader {
                                rowId: Int): Unit = {
     var i = 0
     while (i < decoders.length){
-      readColumn(buf, decoders(i), cols(i), rowId)
+      try {
+        readColumn(buf, decoders(i), cols(i), rowId)
+      } catch {
+        case e: Exception =>
+          System.err.println(s"failed on column $i")
+          throw e
+      }
       i += 1
     }
   }
@@ -122,7 +128,10 @@ object ZReader {
     val errRecord = new Array[Byte](lRecl)
     while (rowId < batchSize && buf.remaining >= lRecl){
       rowStart = buf.position
+      val limit = buf.limit
+      val nextPos = buf.position + lRecl
       try {
+        buf.limit(nextPos)
         readRecord(buf, decoders, cols, rowId)
         rowId += 1
       } catch {
@@ -131,6 +140,9 @@ object ZReader {
           buf.position(rowStart)
           buf.get(errRecord)
           err.put(errRecord)
+      } finally {
+        buf.position(nextPos)
+        buf.limit(limit)
       }
     }
     (rowId,errors)

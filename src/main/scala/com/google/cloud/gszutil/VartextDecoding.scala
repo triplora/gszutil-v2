@@ -8,7 +8,7 @@ import com.google.cloud.gzos.pb.Schema.Field
 import org.apache.hadoop.hive.ql.exec.vector.{BytesColumnVector, ColumnVector, DateColumnVector, Decimal64ColumnVector, LongColumnVector}
 
 object VartextDecoding {
-  def getVartextDecoder(f: Field, delimiter: Array[Byte], transcoder: Transcoder): Decoder = {
+  def getVartextDecoder(f: Field, delimiter: Byte, transcoder: Transcoder): Decoder = {
     import Field.FieldType._
     val filler: Boolean = f.getFiller || f.getName.toUpperCase.startsWith("FILLER")
     if (f.getTyp == STRING) {
@@ -50,28 +50,48 @@ object VartextDecoding {
       throw new IllegalArgumentException("unrecognized field type")
   }
 
-  class VartextStringDecoder(override val delimiter: Array[Byte],
+  class VartextStringDecoder(override val delimiter: Byte,
                              override val transcoder: Transcoder,
                              override val size: Int,
                              override val filler: Boolean = false)
     extends StringDecoder(transcoder, size, filler) with VartextDecoder {
     override def get(buf: ByteBuffer, row: ColumnVector, i: Int): Unit = {
-      super.get(getBuf(buf, delimiter, size),row,i)
+      val (len,newPos) = nextDelimiter(delimiter, buf, size)
+      val bcv = row.asInstanceOf[BytesColumnVector]
+      transcoder.arraycopy(buf, bcv.getValPreallocatedBytes, bcv.getValPreallocatedStart, len)
+      buf.position(newPos)
+      bcv.setValPreallocated(i, len)
     }
   }
 
-  class VartextNullableStringDecoder(override val delimiter: Array[Byte],
+  class VartextNullableStringDecoder(override val delimiter: Byte,
                                      override val transcoder: Transcoder,
                                      override val size: Int,
                                      override val nullIf: Array[Byte],
                                      override val filler: Boolean = false)
     extends NullableStringDecoder(transcoder, size, nullIf, filler) with VartextDecoder {
     override def get(buf: ByteBuffer, row: ColumnVector, i: Int): Unit = {
-      super.get(getBuf(buf, delimiter, size),row,i)
+      val bcv = row.asInstanceOf[BytesColumnVector]
+
+      // decode into output buffer
+      val destPos = bcv.getValPreallocatedStart
+      val dest = bcv.getValPreallocatedBytes
+      val (len,newPos) = nextDelimiter(delimiter, buf, size)
+      transcoder.arraycopy(buf, dest, destPos, len)
+      buf.position(newPos)
+
+      // set output
+      if (isNull(dest, destPos, nullIf)){
+        bcv.isNull(i) = true
+        bcv.noNulls = false
+        bcv.setValPreallocated(i, 0)
+      } else {
+        bcv.setValPreallocated(i, len)
+      }
     }
   }
 
-  class VartextStringAsIntDecoder(override val delimiter: Array[Byte],
+  class VartextStringAsIntDecoder(override val delimiter: Byte,
                                   override val transcoder: Transcoder,
                                   override val size: Int,
                                   override val filler: Boolean = false)
@@ -83,7 +103,7 @@ object VartextDecoding {
     }
   }
 
-  class VartextStringAsDateDecoder(override val delimiter: Array[Byte],
+  class VartextStringAsDateDecoder(override val delimiter: Byte,
                                    override val transcoder: Transcoder,
                                    override val size: Int,
                                    override val format: String,
@@ -102,7 +122,7 @@ object VartextDecoding {
     }
   }
 
-  class VartextIntegerAsDateDecoder(override val delimiter: Array[Byte],
+  class VartextIntegerAsDateDecoder(override val delimiter: Byte,
                                     override val transcoder: Transcoder,
                                     override val size: Int,
                                     override val format: String,
@@ -114,7 +134,7 @@ object VartextDecoding {
     }
   }
 
-  class VartextStringAsDecimalDecoder(override val delimiter: Array[Byte],
+  class VartextStringAsDecimalDecoder(override val delimiter: Byte,
                                       override val transcoder: Transcoder,
                                       override val size: Int,
                                       precision: Int,

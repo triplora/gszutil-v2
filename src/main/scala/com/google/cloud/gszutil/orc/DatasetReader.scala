@@ -21,6 +21,7 @@ import java.nio.ByteBuffer
 import akka.actor.{Actor, ActorRef, EscalatingSupervisorStrategy, Props, SupervisorStrategy, Terminated}
 import com.google.cloud.gszutil.Util
 import com.google.cloud.gszutil.Util.Logging
+import com.google.cloud.gszutil.io.ZRecordReaderT
 import com.google.cloud.gszutil.orc.Protocol.{Close, PartComplete, PartFailed, UploadComplete}
 import org.apache.hadoop.fs.Path
 
@@ -40,6 +41,11 @@ class DatasetReader(args: DatasetReaderArgs) extends Actor with Logging {
   private var totalBytesWritten: Long = 0
   private var continue = true
   private var debugLogCount = 0
+  private val lrecl =
+    args.in match {
+      case x: ZRecordReaderT => x.lRecl
+      case _ => args.schemaProvider.LRECL
+    }
   import args._
 
   override def preStart(): Unit = {
@@ -58,7 +64,7 @@ class DatasetReader(args: DatasetReaderArgs) extends Actor with Logging {
       bb.clear()
       var k = 0 // number of read attempts returning 0 bytes
       var n = 0 // number of bytes read
-      while (bb.hasRemaining && k < 5 && continue) {
+      while (bb.remaining >= lrecl && k < 5 && continue) {
         n = in.read(bb)
         if (n == 0) k += 1
         if (n < 0){

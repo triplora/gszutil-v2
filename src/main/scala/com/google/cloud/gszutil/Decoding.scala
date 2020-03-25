@@ -97,7 +97,7 @@ object Decoding extends Logging {
     override def toString: String = s"$size byte STRING NOT NULL"
 
     override def toFieldBuilder: Field.Builder =
-      Field.newBuilder()
+      Field.newBuilder
         .setSize(size)
         .setFiller(filler)
         .setTyp(Field.FieldType.STRING)

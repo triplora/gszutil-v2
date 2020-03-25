@@ -9,7 +9,7 @@ case class RecordSchema(r: Record) extends SchemaProvider {
   override def fieldNames: Seq[String] = fields.filterNot(_.getFiller).map(_.getName)
   override lazy val decoders: Array[Decoder] = {
     if (r.getVartext) {
-      val delimiter = r.getDelimiter.toByteArray
+      val delimiter = r.getDelimiter.toByteArray.head
       fields.map(VartextDecoding.getVartextDecoder(_, delimiter, transcoder))
     } else fields.map(Decoding.getDecoder(_, transcoder))
   }
