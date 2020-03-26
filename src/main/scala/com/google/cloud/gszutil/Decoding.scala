@@ -22,20 +22,18 @@ import com.google.cloud.gszutil.Util.Logging
 import com.google.cloud.gzos.pb.Schema.Field
 import com.google.cloud.gzos.pb.Schema.Field.NullIf
 import com.google.protobuf.ByteString
-import org.apache.hadoop.hive.ql.exec.vector._
+import org.apache.hadoop.hive.ql.exec.vector.{BytesColumnVector,ColumnVector,
+  DateColumnVector,Decimal64ColumnVector,LongColumnVector}
 import org.apache.orc.TypeDescription
 
 
 object Decoding extends Logging {
-  @inline
-  final def uint(b: Byte): Int = if (b < 0) 256 + b else b
-
   class NullableStringDecoder(transcoder: Transcoder,
                               override val size: Int,
                               override val nullIf: Array[Byte],
                               override val filler: Boolean = false) extends NullableDecoder {
-    override def get(buf: ByteBuffer, row: ColumnVector, i: Int): Unit = {
-      val bcv = row.asInstanceOf[BytesColumnVector]
+    override def get(buf: ByteBuffer, col: ColumnVector, i: Int): Unit = {
+      val bcv = col.asInstanceOf[BytesColumnVector]
 
       // decode into output buffer
       val destPos = bcv.getValPreallocatedStart
@@ -79,8 +77,8 @@ object Decoding extends Logging {
   class StringDecoder(transcoder: Transcoder,
                       override val size: Int,
                       override val filler: Boolean = false) extends Decoder {
-    override def get(buf: ByteBuffer, row: ColumnVector, i: Int): Unit = {
-      val bcv = row.asInstanceOf[BytesColumnVector]
+    override def get(buf: ByteBuffer, col: ColumnVector, i: Int): Unit = {
+      val bcv = col.asInstanceOf[BytesColumnVector]
       transcoder.arraycopy(buf, bcv.getValPreallocatedBytes, bcv.getValPreallocatedStart, size)
       bcv.setValPreallocated(i, size)
     }
@@ -106,9 +104,9 @@ object Decoding extends Logging {
   class StringAsIntDecoder(transcoder: Transcoder,
                            override val size: Int,
                            override val filler: Boolean = false) extends Decoder {
-    override def get(buf: ByteBuffer, row: ColumnVector, i: Int): Unit = {
+    override def get(buf: ByteBuffer, col: ColumnVector, i: Int): Unit = {
       val long = transcoder.getLong(buf,size)
-      row.asInstanceOf[LongColumnVector].vector.update(i, long)
+      col.asInstanceOf[LongColumnVector].vector.update(i, long)
     }
 
     override def columnVector(maxSize: Int): ColumnVector =
@@ -145,8 +143,8 @@ object Decoding extends Logging {
       zeros == 8
     }
 
-    override def get(buf: ByteBuffer, row: ColumnVector, i: Int): Unit = {
-      val dcv = row.asInstanceOf[DateColumnVector]
+    override def get(buf: ByteBuffer, col: ColumnVector, i: Int): Unit = {
+      val dcv = col.asInstanceOf[DateColumnVector]
       if (isNull(buf)) {
         val i1 = buf.position + size
         buf.position(i1)
@@ -177,9 +175,9 @@ object Decoding extends Logging {
                              override val format: String,
                              override val filler: Boolean = false) extends DateDecoder {
 
-    override def get(buf: ByteBuffer, row: ColumnVector, i: Int): Unit = {
+    override def get(buf: ByteBuffer, col: ColumnVector, i: Int): Unit = {
       val long = Binary.decode(buf,size)
-      putValue(long, row, i)
+      putValue(long, col, i)
     }
 
     protected def putValue(long: Long, row: ColumnVector, i: Int): Unit = {
@@ -214,9 +212,9 @@ object Decoding extends Logging {
                                precision: Int,
                                scale: Int,
                                override val filler: Boolean = false) extends Decoder {
-    override def get(buf: ByteBuffer, row: ColumnVector, i: Int): Unit = {
+    override def get(buf: ByteBuffer, col: ColumnVector, i: Int): Unit = {
       val long = transcoder.getLong(buf,size)
-      row.asInstanceOf[Decimal64ColumnVector].vector.update(i, long)
+      col.asInstanceOf[Decimal64ColumnVector].vector.update(i, long)
     }
 
     override def columnVector(maxSize: Int): ColumnVector =
@@ -242,8 +240,8 @@ object Decoding extends Logging {
   case class IntAsDateDecoder(filler: Boolean = false) extends Decoder {
     override val size: Int = 4
 
-    override def get(buf: ByteBuffer, row: ColumnVector, i: Int): Unit = {
-      val dcv = row.asInstanceOf[DateColumnVector]
+    override def get(buf: ByteBuffer, col: ColumnVector, i: Int): Unit = {
+      val dcv = col.asInstanceOf[DateColumnVector]
       val long = Binary.decode(buf, size)
       if (long == 0){
         dcv.noNulls = false
@@ -273,8 +271,8 @@ object Decoding extends Logging {
 
   case class LongDecoder(override val size: Int,
                          filler: Boolean = false) extends Decoder {
-    override def get(buf: ByteBuffer, row: ColumnVector, i: Int): Unit = {
-      row.asInstanceOf[LongColumnVector]
+    override def get(buf: ByteBuffer, col: ColumnVector, i: Int): Unit = {
+      col.asInstanceOf[LongColumnVector]
         .vector.update(i, Binary.decode(buf, size))
     }
 
@@ -295,8 +293,8 @@ object Decoding extends Logging {
 
   case class UnsignedLongDecoder(override val size: Int,
                                  filler: Boolean = false) extends Decoder {
-    override def get(buf: ByteBuffer, row: ColumnVector, i: Int): Unit = {
-      row.asInstanceOf[LongColumnVector]
+    override def get(buf: ByteBuffer, col: ColumnVector, i: Int): Unit = {
+      col.asInstanceOf[LongColumnVector]
         .vector.update(i, Binary.decodeUnsigned(buf, size))
     }
 
@@ -320,9 +318,9 @@ object Decoding extends Logging {
     require(precision <= 18 && precision > 0, s"precision $precision not in range [1,18]")
     override val size: Int = PackedDecimal.sizeOf(p,s)
 
-    override def get(buf: ByteBuffer, row: ColumnVector, i: Int): Unit = {
+    override def get(buf: ByteBuffer, col: ColumnVector, i: Int): Unit = {
       val x = PackedDecimal.unpack(buf, size)
-      val vec: Array[Long] = row.asInstanceOf[Decimal64ColumnVector].vector
+      val vec: Array[Long] = col.asInstanceOf[Decimal64ColumnVector].vector
       if (x > TypeDescription.MAX_DECIMAL64 && PackedDecimal.relaxedParsing) {
         vec.update(i, TypeDescription.MAX_DECIMAL64)
       } else if (x < TypeDescription.MIN_DECIMAL64 && PackedDecimal.relaxedParsing) {

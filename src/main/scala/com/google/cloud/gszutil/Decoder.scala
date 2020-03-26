@@ -13,10 +13,10 @@ trait Decoder {
   /** Read a field into a mutable output builder
     *
     * @param buf ByteBuffer
-    * @param row ColumnVector
+    * @param col ColumnVector
     * @param i row index
     */
-  def get(buf: ByteBuffer, row: ColumnVector, i: Int): Unit
+  def get(buf: ByteBuffer, col: ColumnVector, i: Int): Unit
 
   def columnVector(maxSize: Int): ColumnVector
 

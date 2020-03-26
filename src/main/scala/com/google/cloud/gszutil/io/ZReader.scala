@@ -17,9 +17,9 @@
 package com.google.cloud.gszutil.io
 
 import java.nio.ByteBuffer
+import java.nio.charset.Charset
 
-import com.google.cloud.gszutil.SchemaProvider
-import com.google.cloud.gszutil.Decoder
+import com.google.cloud.gszutil.{Decoder, SchemaProvider, VartextDecoder}
 import com.google.cloud.gszutil.Util.Logging
 import org.apache.hadoop.hive.ql.exec.vector.{ColumnVector, VectorizedRowBatch, VoidColumnVector}
 import org.apache.orc.Writer
@@ -57,10 +57,16 @@ class ZReader(private val schemaProvider: SchemaProvider,
     var rows: Long = 0
     while (buf.remaining >= schemaProvider.LRECL) {
       rowBatch.reset()
-      val (rowId,errCt) = ZReader.readBatch(buf,decoders,cols,batchSize,schemaProvider.LRECL,err)
+      val (rowId,errCt) =
+        if (schemaProvider.vartext)
+          ZReader.readVartextBatch(buf, decoders.asInstanceOf[Array[VartextDecoder]], cols,
+            schemaProvider.delimiter, schemaProvider.srcCharset, batchSize, schemaProvider.LRECL,
+            err)
+        else
+          ZReader.readBatch(buf,decoders,cols,batchSize,schemaProvider.LRECL,err)
       if (rowId == 0)
         rowBatch.endOfFile = true
-      rowBatch.size = rowId
+      rowBatch.size = rowId + 1
       rows += rowId
       errors += errCt
       writer.addRowBatch(rowBatch)
@@ -70,18 +76,6 @@ class ZReader(private val schemaProvider: SchemaProvider,
 }
 
 object ZReader {
-  /**
-    *
-    * @param buf ByteBuffer with position at column to be decoded
-    * @param decoder Decoder instance
-    * @param col ColumnVector to receive decoded value
-    * @param rowId index within ColumnVector to store decoded value
-    */
-  final def readColumn(buf: ByteBuffer, decoder: Decoder, col: ColumnVector, rowId: Int)
-  : Unit = {
-    decoder.get(buf, col, rowId)
-  }
-
   /** Read
     * @param buf input ByteBuffer with position set to start of record
     * @param decoders Array[Decoder] to read from input
@@ -93,15 +87,93 @@ object ZReader {
                                cols: Array[ColumnVector],
                                rowId: Int): Unit = {
     var i = 0
-    while (i < decoders.length){
-      try {
-        readColumn(buf, decoders(i), cols(i), rowId)
-      } catch {
-        case e: Exception =>
-          System.err.println(s"failed on column $i")
-          throw e
+    try {
+      while (i < decoders.length){
+        val decoder = decoders(i)
+        val col = cols(i)
+        decoder.get(buf, col, rowId)
+        i += 1
       }
-      i += 1
+    } catch {
+      case e: Exception =>
+        System.err.println(s"failed on column $i")
+        throw e
+    }
+  }
+
+  /**
+    *
+    * @param buf ByteBuffer containing data
+    * @param decoders Decoder instances
+    * @param cols VectorizedRowBatch
+    * @param batchSize rows per batch
+    * @param lRecl size of each row in bytes
+    * @param err ByteBuffer to receive failed rows
+    * @return rowId, number of errors encountered
+    */
+  final def readBatch(buf: ByteBuffer,
+                      decoders: Array[Decoder],
+                      cols: Array[ColumnVector],
+                      batchSize: Int,
+                      lRecl: Int,
+                      err: ByteBuffer): (Int,Int) = {
+    err.clear
+    var errors: Int = 0
+    var rowId = 0
+    val record = ByteBuffer.allocate(lRecl)
+    while (rowId < batchSize && buf.remaining >= lRecl){
+      System.arraycopy(buf.array,0,record.array,0,lRecl)
+      val newPos = buf.position + lRecl
+      buf.position(newPos)
+      record.clear // prepare record for reading
+      try {
+        readRecord(record, decoders, cols, rowId)
+      } catch {
+        case _: Exception =>
+          System.err.println(s"failed on row $rowId")
+          errors += 1
+          if (err.remaining >= lRecl)
+            err.put(record.array)
+      } finally {
+        rowId += 1
+      }
+    }
+    (rowId, errors)
+  }
+
+  /** Write delimiter locations into index buffer
+    *
+    * @param record delimited record
+    * @param delimiters Array containing indices of delimiters
+    */
+  def locateDelimiters(record: Array[Byte], delimiter: Array[Byte], delimiters: Array[Int]): Unit
+  = {
+    var k = 0 // delimiters
+    delimiters.update(k, 0 - delimiter.length)
+    k += 1
+    while (k < delimiters.length){
+      var i = 0 // record
+      while (i < record.length){
+        var equal = true
+        var i1 = i
+        var j = 0 // delimiter
+        while (equal && j < delimiter.length && i1 < record.length){
+          if (record(i1) != delimiter(j))
+            equal = false
+          i1 += 1
+          j += 1
+        }
+
+        if (equal) {
+          delimiters.update(k, i) // capture position of delimiter
+          k += 1 // next delimiter
+        }
+
+        i += 1
+      }
+      if (k < delimiters.length)
+        delimiters.update(k, record.length) // delimiter at end of record
+      k += 1
     }
   }
 
@@ -115,36 +187,59 @@ object ZReader {
     * @param err ByteBuffer to receive failed rows
     * @return number of errors encountered
     */
-  final def readBatch(buf: ByteBuffer,
-                      decoders: Array[Decoder],
-                      cols: Array[ColumnVector],
-                      batchSize: Int,
-                      lRecl: Int,
-                      err: ByteBuffer): (Int,Int) = {
-    err.clear()
+  final def readVartextBatch(buf: ByteBuffer,
+                             decoders: Array[VartextDecoder],
+                             cols: Array[ColumnVector],
+                             delimiter: Array[Byte],
+                             srcCharset: Charset,
+                             batchSize: Int,
+                             lRecl: Int,
+                             err: ByteBuffer): (Int,Int) = {
+    err.clear
     var errors: Int = 0
     var rowId = 0
-    var rowStart = 0
-    val errRecord = new Array[Byte](lRecl)
+    val record = new Array[Byte](lRecl)
+    val delimiters = new Array[Int](cols.length+1)
     while (rowId < batchSize && buf.remaining >= lRecl){
-      rowStart = buf.position
-      val limit = buf.limit
-      val nextPos = buf.position + lRecl
+      System.arraycopy(buf.array, buf.position, record, 0, lRecl)
+      val newPos = buf.position + lRecl
+      buf.position(newPos)
+      locateDelimiters(record, delimiter, delimiters)
       try {
-        buf.limit(nextPos)
-        readRecord(buf, decoders, cols, rowId)
-        rowId += 1
+        readVartextRecord(record, delimiters, delimiter.length, srcCharset, decoders, cols, rowId)
       } catch {
-        case _: IllegalArgumentException =>
+        case _: Exception =>
+          System.err.println(s"failed on row $rowId")
           errors += 1
-          buf.position(rowStart)
-          buf.get(errRecord)
-          err.put(errRecord)
-      } finally {
-        buf.position(nextPos)
-        buf.limit(limit)
+          err.put(record)
       }
+      rowId += 1
     }
     (rowId,errors)
+  }
+
+  final def readVartextRecord(record: Array[Byte],
+                              delimiters: Array[Int],
+                              delimiterLen: Int,
+                              srcCharset: Charset,
+                              decoders: Array[VartextDecoder],
+                              cols: Array[ColumnVector],
+                              rowId: Int): Unit = {
+    var i = 0
+    try {
+      while (i < decoders.length) {
+        val decoder = decoders(i)
+        val col = cols(i)
+        val offset = delimiters(i)+delimiterLen
+        val len = delimiters(i+1) - offset
+        val s = new String(record, offset, len, srcCharset)
+        decoder.get(s, col, rowId)
+        i += 1
+      }
+    } catch {
+      case e: Exception =>
+        System.err.println(s"failed on column $i")
+        throw e
+    }
   }
 }

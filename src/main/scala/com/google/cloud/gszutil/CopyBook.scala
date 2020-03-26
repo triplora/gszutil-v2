@@ -16,6 +16,8 @@
 
 package com.google.cloud.gszutil
 
+import java.nio.charset.Charset
+
 import com.google.cloud.gszutil.Decoding.{CopyBookField, CopyBookLine, parseCopyBookLine}
 import com.google.cloud.gzos.pb.Schema.Record
 
@@ -42,6 +44,10 @@ case class CopyBook(raw: String, transcoder: Transcoder) extends SchemaProvider 
     }
     buf.toArray
   }
+
+  override def srcCharset: Charset = transcoder.charset
+
+  override def delimiter: Array[Byte] = Array.emptyByteArray
 
   override def toString: String =
     s"LRECL=$LRECL\nFIELDS=${fieldNames.mkString(",")}\n$raw\n\nORC TypeDescription:\n${ORCSchema.toJson}"

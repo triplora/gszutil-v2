@@ -1,5 +1,8 @@
 package com.google.cloud.gszutil
 
+import java.nio.charset.Charset
+
+import com.google.cloud.gzos.Ebcdic
 import org.apache.orc.TypeDescription
 import org.apache.orc.TypeDescription.Category
 
@@ -17,6 +20,10 @@ trait SchemaProvider {
       }
 
   def vartext: Boolean = false
+
+  def delimiter: Array[Byte]
+
+  def srcCharset: Charset = Ebcdic.charset
 
   def LRECL: Int = decoders.foldLeft(0){_ + _.size}
 

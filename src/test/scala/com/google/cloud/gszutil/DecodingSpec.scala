@@ -21,11 +21,8 @@ import java.nio.charset.StandardCharsets
 import java.time.LocalDate
 import java.time.format.DateTimeFormatter
 
-import com.google.cloud.gszutil.Decoding.{Decimal64Decoder, IntegerAsDateDecoder,
-  LongDecoder, NullableStringDecoder, StringAsDateDecoder, StringAsDecimalDecoder,
-  StringAsIntDecoder, StringDecoder}
+import com.google.cloud.gszutil.Decoding.{Decimal64Decoder, IntegerAsDateDecoder, LongDecoder, NullableStringDecoder, StringAsDateDecoder, StringAsDecimalDecoder, StringAsIntDecoder, StringDecoder}
 import com.google.cloud.gszutil.io.ZReader
-import com.google.cloud.gszutil.io.ZReader.readColumn
 import com.google.cloud.gzos.Ebcdic
 import com.google.cloud.gzos.pb.Schema
 import com.google.cloud.gzos.pb.Schema.Field.FieldType
@@ -34,8 +31,6 @@ import com.ibm.jzos.fields.daa
 import org.apache.hadoop.hive.ql.exec.vector.{BytesColumnVector, DateColumnVector, Decimal64ColumnVector, LongColumnVector}
 import org.apache.hadoop.hive.serde2.io.HiveDecimalWritable
 import org.scalatest.FlatSpec
-
-import scala.collection.mutable.ArrayBuffer
 
 class DecodingSpec extends FlatSpec {
   "Decoder" should "decode 2 byte binary integer" in {
@@ -333,7 +328,7 @@ class DecodingSpec extends FlatSpec {
       val d = decoders(i)
       val col = cols(i)
 
-      readColumn(buf, d, col, 0)
+      d.get(buf, col, 0)
       pos += d.size
 
       assert(buf.position == pos)
@@ -350,20 +345,6 @@ class DecodingSpec extends FlatSpec {
   }
 
   it should "decode bigger example with cast" in {
-    val example =
-      """US.000000001.000100003.07.02/01/2020.02/09/2020.0000002.10.WK. .02/07/2020
-        |US.000000001.000100176.07.02/01/2020.02/09/2020.0000003.73.WK. .02/07/2020
-        |US.000000001.000100220.07.02/01/2020.02/09/2020.0000002.22.WK. .02/07/2020
-        |US.000000001.000100276.07.02/01/2020.02/09/2020.0000002.05.WK. .02/07/2020
-        |US.000000001.000100737.07.02/01/2020.02/09/2020.0000002.68.WK. .02/07/2020
-        |US.000000001.000100777.07.02/01/2020.02/09/2020.0000005.85.WK. .02/07/2020
-        |US.000000001.000101239.07.02/01/2020.02/09/2020.0000001.78.WK. .02/07/2020
-        |US.000000001.000101246.07.02/01/2020.02/09/2020.0000003.08.WK. .02/07/2020""".stripMargin
-
-    val data = example.lines.foldLeft(new ArrayBuffer[Byte]()){(a,b) =>
-      a.appendAll(b.getBytes(Ebcdic.charset));a
-    }.toArray
-
     val decoders = Array[Decoder](
       new StringDecoder(Ebcdic,2),
       new StringDecoder(Ebcdic,1,filler = true),
@@ -386,9 +367,14 @@ class DecodingSpec extends FlatSpec {
       new StringAsDateDecoder(Ebcdic,10, "MM/DD/YYYY")
     )
 
-    val cols = decoders.map(_.columnVector(8))
-    val buf = ByteBuffer.wrap(data)
-    ZReader.readBatch(buf, decoders, cols, 8, 74, ByteBuffer.allocate(74))
+    val batchSize = 8
+    val cols = decoders.map(_.columnVector(batchSize))
+    val buf = TestUtil.getBytes("mload0.dat")
+    val lrecl = buf.array.length / batchSize
+    val errBuf = ByteBuffer.allocate(lrecl)
+    val (rowId,errCt) = ZReader.readBatch(buf, decoders, cols, batchSize, lrecl, errBuf)
+    assert(rowId == batchSize)
+    assert(errCt == 0)
 
     // reset buffer to replay the data
     buf.clear
@@ -398,7 +384,7 @@ class DecodingSpec extends FlatSpec {
       val d = decoders(i)
       val col = cols(i)
 
-      readColumn(buf, d, col, 0)
+      d.get(buf, col, 0)
       pos += d.size
 
       assert(buf.position == pos)
@@ -416,11 +402,18 @@ class DecodingSpec extends FlatSpec {
     val strCol = cols.head.asInstanceOf[BytesColumnVector]
     val strCol2 = cols(14).asInstanceOf[BytesColumnVector]
     var j = 0
-    while (j < 8){
-      assert(new String(strCol.vector(j),strCol.start(j),strCol.length(j),Charsets.UTF_8) == "US"
-        , s"row $j")
-      assert(new String(strCol2.vector(j),strCol2.start(j),strCol2.length(j),Charsets.UTF_8) ==
-        "WK", s"row $j")
+    while (j < batchSize){
+      val a = strCol.vector(j)
+      val start = strCol.start(j)
+      val len = strCol.length(j)
+      val s = new String(a,start,len,Charsets.UTF_8)
+      assert(s == "US", s"row $j")
+
+      val a2 = strCol2.vector(j)
+      val start2 = strCol2.start(j)
+      val len2 = strCol2.length(j)
+      val s2 = new String(a2,start2,len2,Charsets.UTF_8)
+      assert(s2 == "WK", s"row $j")
       j += 1
     }
   }
