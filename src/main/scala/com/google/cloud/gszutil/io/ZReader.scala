@@ -153,7 +153,7 @@ object ZReader {
     k += 1
     while (k < delimiters.length){
       var i = 0 // record
-      while (i < record.length){
+      while (i < record.length && k < delimiters.length){
         var equal = true
         var i1 = i
         var j = 0 // delimiter
@@ -231,7 +231,7 @@ object ZReader {
         val decoder = decoders(i)
         val col = cols(i)
         val offset = delimiters(i)+delimiterLen
-        val len = delimiters(i+1) - offset
+        val len = math.min(decoder.size, delimiters(i+1) - offset)
         val s = new String(record, offset, len, srcCharset)
         decoder.get(s, col, rowId)
         i += 1

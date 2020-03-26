@@ -117,6 +117,16 @@ class VartextSpec extends FlatSpec {
     assert(delimiters.toSeq == expected)
   }
 
+  it should "locate delimiters 2" in {
+    val nCols = 3
+    val a = Array[Byte](0,79,0,79,0,79,79,79)
+    val delimiter = Array[Byte](79)
+    val delimiters = new Array[Int](nCols+1)
+    ZReader.locateDelimiters(a, delimiter, delimiters)
+    val expected = Seq(-1,1,3,5)
+    assert(delimiters.toSeq == expected)
+  }
+
   it should "locate multi byte delimiters" in {
     val nCols = 3
     val a = Array[Byte](0,79,79,0,79,79,0,79,79,0,0)
