@@ -59,7 +59,7 @@ class ZReader(private val schemaProvider: SchemaProvider,
       rowBatch.reset()
       val (rowId,errCt) =
         if (schemaProvider.vartext)
-          ZReader.readVartextBatch(buf, decoders.asInstanceOf[Array[VartextDecoder]], cols,
+          ZReader.readVartextBatch(buf, schemaProvider.vartextDecoders, cols,
             schemaProvider.delimiter, schemaProvider.srcCharset, batchSize, schemaProvider.LRECL,
             err)
         else

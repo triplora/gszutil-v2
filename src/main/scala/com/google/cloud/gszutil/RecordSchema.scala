@@ -15,6 +15,14 @@ case class RecordSchema(r: Record) extends SchemaProvider {
     else
       fields.map(Decoding.getDecoder(_, transcoder))
 
+  override def vartextDecoders: Array[VartextDecoder] = {
+    if (vartext) decoders.flatMap{
+      case x: VartextDecoder => Some(x)
+      case _ => None
+    }
+    else throw new RuntimeException("record is not stored as vartext")
+  }
+
   private def transcoder: Transcoder = if (r.getEncoding == "") Ebcdic else Utf8
   override def toByteArray: Array[Byte] = r.toByteArray
   override def LRECL: Int = {

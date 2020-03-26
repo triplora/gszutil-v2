@@ -209,8 +209,8 @@ object Decoding extends Logging {
 
   class StringAsDecimalDecoder(transcoder: Transcoder,
                                override val size: Int,
-                               precision: Int,
-                               scale: Int,
+                               val precision: Int,
+                               val scale: Int,
                                override val filler: Boolean = false) extends Decoder {
     override def get(buf: ByteBuffer, col: ColumnVector, i: Int): Unit = {
       val long = transcoder.getLong(buf,size)

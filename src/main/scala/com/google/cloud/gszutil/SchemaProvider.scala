@@ -10,6 +10,7 @@ trait SchemaProvider {
   def fieldNames: Seq[String]
 
   def decoders: Array[Decoder]
+  def vartextDecoders: Array[VartextDecoder] = Array.empty
 
   def toByteArray: Array[Byte]
 
