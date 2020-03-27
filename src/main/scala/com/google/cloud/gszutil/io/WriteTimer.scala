@@ -8,7 +8,6 @@ class WriteTimer {
   private var startTime: Long = System.currentTimeMillis()
   private var endTime: Long = -1
   private var t0: Long = -1
-  private var t1: Long = -1
 
   def reset(): Unit = {
     startTime = System.currentTimeMillis()

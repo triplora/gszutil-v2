@@ -1,12 +1,12 @@
 package com.google.cloud.gszutil
 
-import java.nio.ByteBuffer
 import java.nio.charset.StandardCharsets
 import java.time.LocalDate
 
-import Decoding._
+import com.google.cloud.gszutil.Decoding._
 import com.google.cloud.gzos.pb.Schema.Field
-import org.apache.hadoop.hive.ql.exec.vector.{BytesColumnVector, ColumnVector, DateColumnVector, Decimal64ColumnVector, LongColumnVector}
+import org.apache.hadoop.hive.ql.exec.vector.{BytesColumnVector, ColumnVector, DateColumnVector,
+  Decimal64ColumnVector, LongColumnVector}
 
 object VartextDecoding {
   def getVartextDecoder(f: Field, transcoder: Transcoder): Decoder = {
@@ -57,7 +57,11 @@ object VartextDecoding {
     extends StringDecoder(transcoder, size, filler) with VartextDecoder {
     override def get(s: String, row: ColumnVector, i: Int): Unit = {
       val bcv = row.asInstanceOf[BytesColumnVector]
-      bcv.setRef(i, s.getBytes(StandardCharsets.UTF_8), 0, s.length)
+      val bytes = s.getBytes(StandardCharsets.UTF_8)
+      val dest = bcv.getValPreallocatedBytes
+      val destPos = bcv.getValPreallocatedStart
+      System.arraycopy(bytes, 0, dest, destPos, bytes.length)
+      bcv.setValPreallocated(i, bytes.length)
     }
   }
 
@@ -74,7 +78,11 @@ object VartextDecoding {
         bcv.noNulls = false
         bcv.setValPreallocated(i, 0)
       } else {
-        bcv.setRef(i, s.getBytes(StandardCharsets.UTF_8), 0, s.length)
+        val bytes = s.getBytes(StandardCharsets.UTF_8)
+        val dest = bcv.getValPreallocatedBytes
+        val destPos = bcv.getValPreallocatedStart
+        System.arraycopy(bytes, 0, dest, destPos, bytes.length)
+        bcv.setValPreallocated(i, bytes.length)
       }
     }
   }

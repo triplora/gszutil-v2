@@ -66,7 +66,7 @@ class ZReader(private val schemaProvider: SchemaProvider,
           ZReader.readBatch(buf,decoders,cols,batchSize,schemaProvider.LRECL,err)
       if (rowId == 0)
         rowBatch.endOfFile = true
-      rowBatch.size = rowId + 1
+      rowBatch.size = rowId
       rows += rowId
       errors += errCt
       writer.addRowBatch(rowBatch)

@@ -21,7 +21,7 @@ import java.util.concurrent.{ForkJoinPool, TimeUnit}
 import com.google.cloud.gszutil.Util.Logging
 import com.google.cloud.gszutil.V2Server.V2Config
 import com.google.cloud.gszutil.io.V2SendCallable.ReaderOpts
-import com.google.cloud.gszutil.{CopyBook, Util, V2Server}
+import com.google.cloud.gszutil.{CopyBook, Utf8, Util, V2Server}
 import com.google.common.util.concurrent.MoreExecutors
 import org.scalatest.FlatSpec
 import org.zeromq.ZContext

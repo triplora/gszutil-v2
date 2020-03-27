@@ -18,7 +18,9 @@ package com.google.cloud.bqsh
 
 import com.google.api.gax.retrying.RetrySettings
 import com.google.api.gax.rpc.FixedHeaderProvider
+import com.google.api.services.storage.StorageScopes
 import com.google.auth.Credentials
+import com.google.auth.oauth2.GoogleCredentials
 import com.google.cloud.gszutil.CCATransportFactory
 import com.google.cloud.http.HttpTransportOptions
 import com.google.cloud.storage.{Storage, StorageOptions}
@@ -42,4 +44,9 @@ object GCS {
       .build
       .getService
   }
+
+  def defaultCredentials(): GoogleCredentials =
+    GoogleCredentials.getApplicationDefault.createScoped(StorageScopes.DEVSTORAGE_READ_WRITE)
+
+  def getDefaultClient(): Storage = defaultClient(defaultCredentials())
 }

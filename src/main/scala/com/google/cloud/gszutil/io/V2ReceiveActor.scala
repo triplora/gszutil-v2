@@ -36,9 +36,9 @@ class V2ReceiveActor(args: V2ActorArgs) extends Actor with Logging {
     }.toArray.toIndexedSeq
     val router = Router(RoundRobinRoutingLogic(), routees)
     val receiver = new V2ReceiveCallable(args.socket,
-      args.blkSize, args.compress, args.pool, router, context)
+      args.blkSize, args.pool, router, context)
     context.become(active(router, receiver))
-    self ! "start"
+    self ! Protocol.Start
   }
 
   override def receive: Receive = {
@@ -46,24 +46,24 @@ class V2ReceiveActor(args: V2ActorArgs) extends Actor with Logging {
   }
 
   def active(router: Router, receiver: V2ReceiveCallable): Receive = {
-    case s: String if s == "start" =>
+    case Protocol.Start =>
       timer.start()
       val result = receiver.call()
       timer.end()
       if (result.isDefined)
         self ! result.get
       else
-        self ! "failed"
+        self ! Protocol.Failed
 
     case result: ReceiveResult =>
       timer.close(logger, "Finished Receiving", result.bytesIn, result.bytesOut)
       context.become(stopping(result.bytesIn, result.bytesOut, success = true))
-      router.route(Broadcast("finished"), self)
+      router.route(Broadcast(Protocol.Close), self)
 
-    case s: String if s == "failed" =>
+    case Protocol.Failed =>
       timer.close(logger, "Receive failed", -1,-1)
       context.become(stopping(-1, -1, success = false))
-      router.route(Broadcast("finished"), self)
+      router.route(Broadcast(Protocol.Close), self)
 
     case Terminated(ref) =>
       writers.remove(ref)

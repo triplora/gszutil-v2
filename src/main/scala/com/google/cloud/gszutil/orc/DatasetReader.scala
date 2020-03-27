@@ -18,11 +18,12 @@ package com.google.cloud.gszutil.orc
 
 import java.nio.ByteBuffer
 
-import akka.actor.{Actor, ActorRef, EscalatingSupervisorStrategy, Props, SupervisorStrategy, Terminated}
+import akka.actor.{Actor, ActorRef, EscalatingSupervisorStrategy, Props, SupervisorStrategy,
+  Terminated}
 import com.google.cloud.gszutil.Util
 import com.google.cloud.gszutil.Util.Logging
-import com.google.cloud.gszutil.io.ZRecordReaderT
-import com.google.cloud.gszutil.orc.Protocol.{Close, PartComplete, PartFailed, UploadComplete}
+import com.google.cloud.gszutil.io.{V2ActorArgs, V2WriteActor, ZRecordReaderT}
+import com.google.cloud.gszutil.orc.Protocol.{PartComplete, PartFailed, UploadComplete}
 import org.apache.hadoop.fs.Path
 
 import scala.collection.mutable
@@ -40,41 +41,29 @@ class DatasetReader(args: DatasetReaderArgs) extends Actor with Logging {
   private var totalBytesRead = 0L
   private var totalBytesWritten: Long = 0
   private var continue = true
-  private var debugLogCount = 0
   private val lrecl =
     args.in match {
       case x: ZRecordReaderT => x.lRecl
       case _ => args.schemaProvider.LRECL
     }
-  import args._
 
   override def preStart(): Unit = {
     startTime = System.currentTimeMillis
-    for (_ <- 0 until nWorkers)
+    for (_ <- 0 until args.nWorkers)
       newPart()
   }
 
   override def receive: Receive = {
     case bb: ByteBuffer =>
-      if (logger.isDebugEnabled && debugLogCount < 1) {
-        logger.debug(s"Received $bb")
-        debugLogCount += 1
-      }
       lastRecv = System.currentTimeMillis
       bb.clear()
-      var k = 0 // number of read attempts returning 0 bytes
       var n = 0 // number of bytes read
-      while (bb.remaining >= lrecl && k < 5 && continue) {
-        n = in.read(bb)
-        if (n == 0) k += 1
+      while (bb.remaining >= lrecl && continue) {
+        n = args.in.read(bb)
         if (n < 0){
-          logger.info(s"${in.getClass.getSimpleName} reached end of input")
+          logger.info(s"${args.in.getClass.getSimpleName} reached end of input")
           continue = false
         }
-      }
-      if (k > 0 && debugLogCount < 2) {
-        logger.debug(s"0 bytes read from $k read attempts")
-        debugLogCount += 1
       }
 
       totalBytesRead += bb.position
@@ -86,7 +75,7 @@ class DatasetReader(args: DatasetReaderArgs) extends Actor with Logging {
       if (!continue) {
         val mbps = Util.fmbps(totalBytesRead,activeTime)
         logger.info(s"Finished reading $nSent chunks with $totalBytesRead bytes in $activeTime ms ($mbps mbps)")
-        for (w <- writers) w ! Close
+        for (w <- writers) w ! Protocol.Close
         context.become(finished)
       }
 
@@ -98,7 +87,7 @@ class DatasetReader(args: DatasetReaderArgs) extends Actor with Logging {
       totalBytesWritten += msg.bytesWritten
 
     case msg: PartFailed =>
-      notifyActor ! msg
+      args.notifyActor ! msg
 
     case msg =>
       logger.error(s"Unhandled message: $msg")
@@ -109,14 +98,14 @@ class DatasetReader(args: DatasetReaderArgs) extends Actor with Logging {
       totalBytesWritten += msg.bytesWritten
 
     case msg: PartFailed =>
-      notifyActor ! msg
+      args.notifyActor ! msg
 
     case Terminated(w) =>
       writers.remove(w)
       logger.debug(s"$w Terminated - ${writers.size} writers remaining")
       if (writers.isEmpty) {
         logger.info("Sending UploadComplete")
-        notifyActor ! UploadComplete(totalBytesRead, totalBytesWritten)
+        args.notifyActor ! UploadComplete(totalBytesRead, totalBytesWritten)
       }
 
     case _: ByteBuffer =>
@@ -130,9 +119,18 @@ class DatasetReader(args: DatasetReaderArgs) extends Actor with Logging {
 
   private def newPart(): Unit = {
     val partName = f"$partId%05d"
-    val path = new Path(s"gs://${uri.getAuthority}/${uri.getPath.stripPrefix("/") + s"/part-$partName.orc"}")
-    val args: ORCFileWriterArgs = ORCFileWriterArgs(schemaProvider, maxBytes, batchSize, path, gcs, compress, compressBuffer, pool, maxErrorPct)
-    val w = context.actorOf(Props(classOf[ORCFileWriter], args), s"OrcWriter-$partName")
+    val basePath = new Path(s"gs://${args.uri.getAuthority}/${args.uri.getPath.stripPrefix("/")}")
+    val actorArgs = V2ActorArgs(socket = null,
+      blkSize = -1,
+      nWriters = args.nWorkers,
+      schemaProvider = args.schemaProvider,
+      partitionBytes = args.maxBytes,
+      basePath = basePath,
+      gcs = args.gcs,
+      pool = args.pool,
+      maxErrorPct = args.maxErrorPct,
+      notifyActor = null)
+    val w = context.actorOf(Props(classOf[V2WriteActor], actorArgs), partName)
     context.watch(w)
     writers.add(w)
     partId += 1

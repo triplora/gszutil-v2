@@ -22,19 +22,17 @@ import java.util
 import java.util.concurrent.{Callable, TimeoutException}
 
 import akka.actor.{ActorSystem, Inbox, Props, Terminated}
-import com.google.api.services.storage.StorageScopes
-import com.google.auth.oauth2.GoogleCredentials
 import com.google.cloud.bqsh.GCS
 import com.google.cloud.bqsh.cmd.Result
 import com.google.cloud.gszutil.Util.Logging
 import com.google.cloud.gszutil.V2Server.V2Config
-import com.google.cloud.gszutil.io.{BlockingBoundedBufferPool, V2ActorArgs, V2ReceiveActor, V2ReceiveCallable, V2SendCallable}
+import com.google.cloud.gszutil.io.{BlockingBoundedBufferPool, V2ActorArgs, V2ReceiveActor,
+  V2ReceiveCallable, V2SendCallable}
 import com.google.cloud.gszutil.orc.Protocol
-import com.google.cloud.gszutil.orc.Protocol.{PartFailed, UploadComplete}
 import com.google.cloud.gzos.Ebcdic
 import com.google.cloud.gzos.pb.Schema.Record
 import com.google.cloud.storage.Storage
-import com.google.common.base.{Charsets, Preconditions}
+import com.google.common.base.Charsets
 import com.google.common.collect.ImmutableMap
 import com.typesafe.config.ConfigFactory
 import org.apache.hadoop.fs.Path
@@ -53,12 +51,9 @@ object V2Server extends Logging {
                       nWriters: Int = 4,
                       bufCt: Int = 64,
                       timeoutMinutes: Int = 300,
-                      compress: Boolean = true,
                       daemon: Boolean = true,
                       maxErrorPct: Double = 0.00d,
-                      gcs: Storage = GCS.defaultClient(GoogleCredentials
-                        .getApplicationDefault
-                        .createScoped(StorageScopes.DEVSTORAGE_READ_WRITE)))
+                      gcs: Storage = GCS.getDefaultClient())
 
   def main(args: Array[String]): Unit = {
     System.out.println("Build Info:\n" + Util.readS("build.txt"))
@@ -141,7 +136,7 @@ class V2Server(config: V2Config) extends Callable[Result] with Logging {
     val pool = new BlockingBoundedBufferPool(bufSize, config.nWriters*config.bufCt)
 
     val wArgs = V2ActorArgs(socket, blkSize, config.nWriters, schema, V2Server.PartitionBytes,
-      new Path(gcsUri), config.gcs, config.compress,
+      new Path(gcsUri), config.gcs,
       pool, config.maxErrorPct, inbox.getRef())
 
     val reader = sys.actorOf(Props(classOf[V2ReceiveActor], wArgs), "DatasetReader")
@@ -172,7 +167,7 @@ class V2Server(config: V2Config) extends Callable[Result] with Logging {
 
       logger.info(s"ActorSystem timeout is $timeout")
       inbox.receive(timeout) match {
-        case UploadComplete(read, written) =>
+        case Protocol.UploadComplete(read, written) =>
           logger.info(s"Upload complete:\n$read bytes read\n$written bytes written")
           Result.Success
         case Protocol.Failed =>

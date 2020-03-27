@@ -22,29 +22,34 @@ import akka.actor.Actor
 import com.google.cloud.gszutil.PackedDecimal
 import com.google.cloud.gszutil.Util.Logging
 import com.google.cloud.gszutil.orc.Protocol
-import com.google.cloud.gszutil.orc.Protocol.PartFailed
 
 /** Responsible for writing a single output partition
   */
 final class V2WriteActor(args: V2ActorArgs) extends Actor with Logging {
-  private val orc = new OrcContext(args.gcs, args.copyBook.ORCSchema, args.compress,
-    args.path, self.path.name, args.partitionBytes, args.pool)
+  private val orc = new OrcContext(args.gcs, args.schemaProvider.ORCSchema,
+    args.basePath, self.path.name, args.partitionBytes, args.pool)
   private val BatchSize = 1024
-  private val codec = new ZReader(args.copyBook, BatchSize)
-  private val errBuf = ByteBuffer.allocate(args.copyBook.LRECL * BatchSize)
+  private val reader = new ZReader(args.schemaProvider, BatchSize)
+  private val errBuf = ByteBuffer.allocate(args.schemaProvider.LRECL * BatchSize)
   private val timer = new WriteTimer
   private var errorCount: Long = 0
   private var bytesIn: Long = 0
 
   private def write(buf: ByteBuffer): Unit = {
     bytesIn += buf.limit
-    errorCount += orc.write(codec, buf, errBuf)
+    val res = orc.write(reader, buf, errBuf)
+    errorCount += res.errCount
     if (errBuf.position > 0){
       errBuf.flip()
-      val a = new Array[Byte](args.copyBook.LRECL)
+      val a = new Array[Byte](args.schemaProvider.LRECL)
       errBuf.get(a)
-      System.err.println(s"Failed to read row:\n${PackedDecimal.hexValue(a)}")
+      System.err.println(s"Failed to read row")
+      System.err.println(PackedDecimal.hexValue(a))
     }
+    if (orc.errPct > args.maxErrorPct)
+      context.parent ! Protocol.PartFailed(s"errPct ${orc.errPct} > ${args.maxErrorPct}")
+    else if (res.partFinished)
+      context.parent ! Protocol.PartComplete(res.partPath, res.partBytes)
   }
 
   override def receive: Receive = {
@@ -53,7 +58,7 @@ final class V2WriteActor(args: V2ActorArgs) extends Actor with Logging {
       write(buf)
       timer.end()
 
-    case s: String if s == "finished" =>
+    case Protocol.Close =>
       orc.close()
       context.parent ! Protocol.FinishedWriting(bytesIn, orc.getBytesWritten)
       context.stop(self)
@@ -68,12 +73,12 @@ final class V2WriteActor(args: V2ActorArgs) extends Actor with Logging {
     timer.close(logger,
       s"Stopping ${this.getClass.getSimpleName} ${self.path.name}",
       bytesIn, orc.getBytesWritten)
-    val recordsIn = bytesIn / args.copyBook.LRECL
+    val recordsIn = bytesIn / args.schemaProvider.LRECL
     val errorPct = errorCount*1.0d / recordsIn
     if (errorPct > args.maxErrorPct) {
       val msg = s"error percent $errorPct exceeds threshold of ${args.maxErrorPct}"
       logger.error(msg)
-      context.parent ! PartFailed(msg)
+      context.parent ! Protocol.PartFailed(msg)
     }
   }
 }

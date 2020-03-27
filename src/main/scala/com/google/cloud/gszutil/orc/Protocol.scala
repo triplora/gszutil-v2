@@ -26,7 +26,8 @@ object Protocol {
   case class PartComplete(path: String, bytesWritten: Long)
   case class FinishedWriting(bytesIn: Long, bytesOut: Long)
   case class PartFailed(msg: String)
-  case object Close
+  val Start = "start"
+  val Close = "finished"
+  val Failed = "failed"
   case class UploadComplete(totalBytesRead: Long, totalBytesWritten: Long)
-  case object Failed
 }

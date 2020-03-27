@@ -44,8 +44,11 @@ object V2ReceiveCallable {
   }
 }
 
-class V2ReceiveCallable(socket: Socket, blkSize: Int, compress: Boolean, bufferPool: BufferPool,
-                        router: Router, context: ActorContext)
+class V2ReceiveCallable(socket: Socket,
+                        blkSize: Int,
+                        bufferPool: BufferPool,
+                        router: Router,
+                        context: ActorContext)
   extends Callable[Option[ReceiveResult]] with Logging {
 
   override def call: Option[ReceiveResult] = {
@@ -78,24 +81,20 @@ class V2ReceiveCallable(socket: Socket, blkSize: Int, compress: Boolean, bufferP
           if (msgCount2 % 1000 == 0) {
             logger.debug(s"Received $msgCount2")
           }
-          if (compress) {
-            inflater.reset()
-            inputBuffer.flip()
-            inflater.setInput(inputBuffer.array(), 0, inputBuffer.limit())
-            val buf = bufferPool.acquire()
-            buf.clear()
-            val n = inflater.inflate(buf.array,0,buf.limit)
-            if (n > 0) {
-              buf.position(n)
-              bytesIn += inputBuffer.limit
-              bytesOut += n
-              if (router != null && context != null) {
-                buf.flip()
-                router.route(buf, context.self)
-              }
-            }
-          } else {
+          inflater.reset()
+          inputBuffer.flip()
+          inflater.setInput(inputBuffer.array(), 0, inputBuffer.limit())
+          val buf = bufferPool.acquire()
+          buf.clear()
+          val n = inflater.inflate(buf.array,0,buf.limit)
+          if (n > 0) {
+            buf.position(n)
             bytesIn += inputBuffer.limit
+            bytesOut += n
+            if (router != null && context != null) {
+              buf.flip()
+              router.route(buf, context.self)
+            }
           }
         } else if (bytesReceived == -1) {
           rc = 1
