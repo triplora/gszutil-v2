@@ -38,7 +38,7 @@ object Cp extends Command[GsUtilConfig] with Logging {
 
     val bq = BQ.defaultClient(c.projectId, c.location, creds)
     val schemaProvider = c.schemaProvider.getOrElse(zos.loadCopyBook(c.copyBook))
-    val in = zos.readDDWithCopyBook(c.source, c.schemaProvider.get)
+    val in = zos.readDDWithCopyBook(c.source, schemaProvider)
     logger.info(s"gsutil cp ${in.getDsn} ${c.destinationUri}")
 
     val batchSize = (c.blocksPerBatch * in.blkSize) / in.lRecl
