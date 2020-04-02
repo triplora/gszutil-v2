@@ -32,15 +32,15 @@ final class OrcContext(private val gcs: Storage, schema: TypeDescription,
 
   private var partId: Long = -1
   private var bytesSinceLastFlush: Long = 0
-  private var bytesIn: Long = 0
-  private var bytesOut: Long = 0
-  private var rowsOut: Long = 0
-  private var rowsOutPart: Long = 0
-  private var errors: Long = 0
+  private var bytesRead: Long = 0 // bytes received across all partitions
+  private var bytesWritten: Long = 0 // bytes written across all partitions
+  private var rowsWritten: Long = 0 // rows written across all partitions
+  private var partRowsWritten: Long = 0 // rows written to current partition
+  private var errors: Long = 0 // errors across all partitions
   private var writer: Writer = _
   private var currentPath: Path = _
 
-  def errPct: Double = errors.doubleValue / rowsOut
+  def errPct: Double = errors.doubleValue / rowsWritten
 
   next() // Initialize Writer and Path
 
@@ -77,21 +77,22 @@ final class OrcContext(private val gcs: Storage, schema: TypeDescription,
 
   override def close(): Unit = {
     if (writer != null){
-      writer.close()
-      bytesOut += fs.getBytesWritten()
-      fs.resetStats()
+      closeWriter()
       writer = null
     }
   }
 
-  def next(): Unit = {
-    if (writer != null) {
-      writer.close()
-      logger.info(s"Closed Writer for $currentPath")
-      bytesOut += fs.getBytesWritten()
-    }
-    rowsOutPart = 0
+  def closeWriter(): Unit = {
+    writer.close()
+    bytesWritten += fs.getBytesWritten()
+    logger.info(s"Closed Writer for $currentPath")
+    partRowsWritten = 0
     fs.resetStats()
+  }
+
+  def next(): Unit = {
+    if (writer != null)
+      closeWriter()
     val (p,w) = newWriter()
     writer = w
     currentPath = p
@@ -105,12 +106,12 @@ final class OrcContext(private val gcs: Storage, schema: TypeDescription,
     * @return errCount
     */
   def write(reader: ZReader, buf: ByteBuffer, err: ByteBuffer): WriteResult = {
-    bytesIn += buf.limit
+    bytesRead += buf.limit
     bytesSinceLastFlush += buf.limit
     val (rowCount,errorCount) = reader.readOrc(buf, writer, err)
     errors += errorCount
-    rowsOut += rowCount
-    rowsOutPart += rowCount
+    rowsWritten += rowCount
+    partRowsWritten += rowCount
     if (buf.remaining > 0) {
       logger.warn(s"ByteBuffer has ${buf.remaining} bytes remaining.")
     }
@@ -122,7 +123,7 @@ final class OrcContext(private val gcs: Storage, schema: TypeDescription,
     val partPath = currentPath
     if (partFinished) {
       logger.info(s"Current partition size $currentPartitionSize exceeds target " +
-        s"(rows part: $rowsOutPart total: $rowsOut)")
+        s"(rows part: $partRowsWritten total: $rowsWritten)")
       next()
     }
     pool.release(buf)
@@ -138,8 +139,9 @@ final class OrcContext(private val gcs: Storage, schema: TypeDescription,
     }
   }
 
-  def currentPartRows: Long = rowsOutPart
-  def totalRows: Long = rowsOut
-  def currentPartSize: Long = fs.getBytesWritten()
-  def getBytesWritten: Long = bytesOut + fs.getBytesWritten()
+  def getCurrentPartRowsWritten: Long = partRowsWritten
+  def getCurrentPartBytesWritten: Long = fs.getBytesWritten()
+  def getBytesRead: Long = bytesRead
+  def getBytesWritten: Long = bytesWritten + fs.getBytesWritten()
+  def getRowsWritten: Long = rowsWritten
 }

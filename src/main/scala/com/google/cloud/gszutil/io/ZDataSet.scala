@@ -31,14 +31,14 @@ class ZDataSet(srcBytes: Array[Byte], recordLength: Int, blockSize: Int, limit: 
     read(bytes, 0, bytes.length)
 
   override def read(bytes: Array[Byte], off: Int, len: Int): Int = {
-    if (buf.hasRemaining){
+    if (!buf.hasRemaining) -1
+    else {
       val n = math.min(buf.remaining, len)
       buf.get(bytes, off, n)
       bytesRead += n
-      if (n >= lRecl)
-        nRecordsRead += n / lRecl
+      nRecordsRead += 1
       n
-    } else -1
+    }
   }
 
   override def isOpen: Boolean = open || buf.hasRemaining

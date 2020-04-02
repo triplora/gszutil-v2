@@ -15,7 +15,7 @@
  */
 organization := "com.google.cloud"
 name := "gszutil"
-version := "3.1.0-SNAPSHOT"
+version := "3.1.0"
 
 scalaVersion := "2.11.12"
 

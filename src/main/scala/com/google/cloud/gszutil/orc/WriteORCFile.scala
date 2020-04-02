@@ -18,37 +18,15 @@ package com.google.cloud.gszutil.orc
 
 import java.net.URI
 import java.nio.channels.ReadableByteChannel
-import java.util.concurrent.TimeoutException
 
-import akka.actor.{ActorSystem, Inbox, Props, Terminated}
 import com.google.cloud.bqsh.cmd.Result
 import com.google.cloud.gszutil.SchemaProvider
 import com.google.cloud.gszutil.Util.Logging
-import com.google.cloud.gszutil.io.NoOpHeapBufferPool
-import com.google.cloud.gszutil.orc.Protocol.{PartFailed, UploadComplete}
+import com.google.cloud.gszutil.io.{NonBlockingHeapBufferPool, V2WriterArgs, WriterCore}
 import com.google.cloud.storage.Storage
-import com.google.common.collect.ImmutableMap
-import com.typesafe.config.ConfigFactory
-
-import scala.concurrent.duration.{FiniteDuration, MINUTES}
-import scala.concurrent.{Await, ExecutionContext}
-import scala.util.{Failure, Success}
+import org.apache.hadoop.fs.Path
 
 object WriteORCFile extends Logging {
-
-  def cleanup(sys: ActorSystem): Unit = {
-    logger.info("Cleaning up ActorSystem")
-    sys.terminate()
-    try {
-      Await.result(sys.whenTerminated, atMost = FiniteDuration(1, MINUTES))
-    } catch {
-      case e: InterruptedException =>
-        logger.warn("Interrupted waiting for ActorSystem cleanup")
-      case e: TimeoutException =>
-        logger.warn("Timed out waiting for ActorSystem cleanup")
-    }
-  }
-
   def run(gcsUri: String,
           in: ReadableByteChannel,
           schemaProvider: SchemaProvider,
@@ -59,67 +37,59 @@ object WriteORCFile extends Logging {
           timeoutMinutes: Int,
           compressBuffer: Int,
           maxErrorPct: Double): Result = {
-    import scala.concurrent.duration._
-    val conf = ConfigFactory.parseMap(ImmutableMap.of(
-      "akka.actor.guardian-supervisor-strategy","akka.actor.EscalatingSupervisorStrategy"))
-    val sys = ActorSystem("gsz", conf)
     val bufSize = schemaProvider.LRECL * batchSize
-    val inbox = Inbox.create(sys)
+    val uri = new URI(gcsUri)
+    val basePath = new Path(s"gs://${uri.getAuthority}/${uri.getPath.stripPrefix("/")}")
 
-    val pool = new NoOpHeapBufferPool(bufSize, parallelism)
-    val args: DatasetReaderArgs = DatasetReaderArgs(
-      in = in,
-      batchSize = batchSize,
-      uri = new URI(gcsUri),
-      maxBytes = partSizeMb*1024*1024,
-      nWorkers = parallelism,
+    logger.info("Allocating ByteBuffer pool")
+    val pool = new NonBlockingHeapBufferPool(bufSize, 32)
+    val actorArgs = V2WriterArgs(
       schemaProvider = schemaProvider,
+      partitionBytes = partSizeMb*1024*1024,
+      basePath = basePath,
       gcs = gcs,
-      compressBuffer = compressBuffer,
       pool = pool,
-      maxErrorPct = maxErrorPct,
-      notifyActor = inbox.getRef())
-    val reader = sys.actorOf(Props(classOf[DatasetReader], args), "DatasetReader")
-    inbox.watch(reader)
+      maxErrorPct = maxErrorPct)
 
-    sys.whenTerminated.onComplete{
-        case Success(_) =>
-          logger.info(s"Actor System terminated with Success")
-        case Failure(e) =>
-          logger.info(s"ActorSystem terminated with Failure\n${e.getMessage}\n${e.getCause}")
-    }(ExecutionContext.global)
-
-    try {
-      val timeout =
-        if (timeoutMinutes > 0)
-          FiniteDuration(timeoutMinutes, MINUTES)
-        else
-          FiniteDuration(1, DAYS)
-
-      inbox.receive(timeout) match {
-        case UploadComplete(read, written) =>
-          logger.info(s"Upload complete:\n$read bytes read\n$written bytes written")
-          Result.Success
-        case PartFailed(msg) =>
-          logger.error(s"Upload failed: $msg")
-          Result.Failure(msg, 2)
-        case x: Terminated =>
-          val msg = s"${x.actor} terminated"
-          logger.error(msg)
-          Result.Failure(msg, 3)
-        case msg =>
-          val errMsg = s"Unrecognized message type ${msg.getClass.getSimpleName}: $msg"
-          logger.error(errMsg)
-          Result.Failure(errMsg)
-      }
-    } catch {
-      case _: TimeoutException =>
-        logger.error(s"Timed out after $timeoutMinutes minutes waiting for upload to complete")
-        Result.Failure(s"Upload timed out after $timeoutMinutes minutes")
-    } finally {
-      sys.stop(reader)
-      sys.stop(inbox.getRef)
-      cleanup(sys)
+    logger.info(s"Starting $parallelism writers")
+    val writers: Array[WriterCore] = (0 until parallelism).toArray.map{i =>
+      new WriterCore(actorArgs, s"$i")
     }
+
+    var i = 0
+    var records = 0L
+    var blocks = 0L
+    var n = 1
+    var bytesRead = 0L
+
+    logger.info(s"reading")
+    while (n >= 0){
+      val buf = pool.acquire()
+      buf.clear()
+      // read until buffer is full
+      while (n >= 0 && buf.hasRemaining) {
+        // on z/OS this will read a single record
+        n = in.read(buf)
+        if (n > 0) {
+          bytesRead += n
+          records += 1
+          if (records % 100000 == 0)
+            logger.info(s"$records records read")
+        }
+      }
+      if (buf.position > 0) {
+        buf.flip
+        writers(i).write(buf)
+        blocks += 1
+        pool.release(buf)
+        i += 1
+        if (i >= writers.length) i = 0
+      }
+    }
+
+    logger.info(s"Closing writers")
+    writers.foreach(_.close())
+    logger.info(s"Upload complete: $records records")
+    Result.Success
   }
 }

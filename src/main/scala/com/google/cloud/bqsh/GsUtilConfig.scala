@@ -31,7 +31,8 @@ object GsUtilConfig {
                  destinationUri = destinationUri,
                  projectId = projectId,
                  datasetId = datasetId,
-                 location = location)
+                 location = location,
+                 replace = true)
   }
 
   def createRemote(sourceDD: String,

@@ -56,6 +56,7 @@ object Cp extends Command[GsUtilConfig] with Logging {
       if (lsResult.getValues.asScala.nonEmpty) {
         val msg = s"Data exists at $uri;" +
           "use --replace to remove existing files prior to upload."
+        logger.error(msg)
         return Result.Failure(msg)
       }
     }

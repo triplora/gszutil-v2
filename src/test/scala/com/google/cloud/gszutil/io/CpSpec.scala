@@ -72,6 +72,7 @@ class CpSpec extends FlatSpec {
                            testInput = Option(input),
                            parallelism = 1,
                            replace = true)
-    Cp.run(cfg, Linux)
+    val res = Cp.run(cfg, Linux)
+    assert(res.exitCode == 0)
   }
 }
