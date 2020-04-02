@@ -9,8 +9,7 @@ import org.apache.hadoop.conf.Configuration
 import org.apache.hadoop.fs.{FileSystem, Path, SimpleGCSFileSystem}
 import org.apache.orc.OrcFile.WriterOptions
 import org.apache.orc.impl.WriterImpl
-import org.apache.orc.{CompressionKind, NoOpMemoryManager, OrcConf, OrcFile,
-  TypeDescription, Writer}
+import org.apache.orc.{CompressionKind, InMemoryKeystore, NoOpMemoryManager, OrcConf, OrcFile, TypeDescription, Writer}
 
 /**
   *
@@ -30,7 +29,6 @@ final class OrcContext(private val gcs: Storage, schema: TypeDescription,
 
   private val fs = new SimpleGCSFileSystem(gcs,
     new FileSystem.Statistics(SimpleGCSFileSystem.Scheme))
-  private val timer = new WriteTimer
 
   private var partId: Long = -1
   private var bytesSinceLastFlush: Long = 0
@@ -65,6 +63,8 @@ final class OrcContext(private val gcs: Storage, schema: TypeDescription,
     .compress(CompressionKind.ZLIB)
     .bufferSize(OptimalGZipBuffer)
     .enforceBufferSize()
+    .encrypt("")
+    .setKeyProvider(new InMemoryKeystore())
     .fileSystem(fs)
 
   private def newWriter(): (Path,Writer) = {
@@ -77,12 +77,9 @@ final class OrcContext(private val gcs: Storage, schema: TypeDescription,
 
   override def close(): Unit = {
     if (writer != null){
-      timer.start()
       writer.close()
-      timer.end()
       bytesOut += fs.getBytesWritten()
       fs.resetStats()
-      timer.close(logger, s"Stopping writer for $currentPath", bytesIn, bytesOut)
       writer = null
     }
   }
@@ -95,7 +92,6 @@ final class OrcContext(private val gcs: Storage, schema: TypeDescription,
     }
     rowsOutPart = 0
     fs.resetStats()
-    timer.reset()
     val (p,w) = newWriter()
     writer = w
     currentPath = p
@@ -111,7 +107,6 @@ final class OrcContext(private val gcs: Storage, schema: TypeDescription,
   def write(reader: ZReader, buf: ByteBuffer, err: ByteBuffer): WriteResult = {
     bytesIn += buf.limit
     bytesSinceLastFlush += buf.limit
-    timer.start()
     val (rowCount,errorCount) = reader.readOrc(buf, writer, err)
     errors += errorCount
     rowsOut += rowCount
@@ -122,7 +117,6 @@ final class OrcContext(private val gcs: Storage, schema: TypeDescription,
     if (bytesSinceLastFlush > BytesBetweenFlush) {
       flush()
     }
-    timer.end()
     val currentPartitionSize = fs.getBytesWritten()
     val partFinished = currentPartitionSize > maxBytes
     val partPath = currentPath
@@ -138,9 +132,7 @@ final class OrcContext(private val gcs: Storage, schema: TypeDescription,
   def flush(): Unit = {
     writer match {
       case w: WriterImpl =>
-        timer.start()
         w.checkMemory(1.0d)
-        timer.end()
         bytesSinceLastFlush = 0
       case _ =>
     }

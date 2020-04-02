@@ -23,12 +23,15 @@ case class RecordSchema(r: Record) extends SchemaProvider {
     else throw new RuntimeException("record is not stored as vartext")
   }
 
-  private def transcoder: Transcoder = if (r.getEncoding == "") Ebcdic else Utf8
+  private def transcoder: Transcoder =
+    if (r.getEncoding == "" || r.getEncoding.equalsIgnoreCase("EBCDIC"))
+      Ebcdic
+    else Utf8
+
   override def toByteArray: Array[Byte] = r.toByteArray
   override def LRECL: Int = {
-    val lrecl = decoders.foldLeft(0){_ + _.size}
-    if (r.getVartext) lrecl + decoders.length - 1
-    else lrecl
+    if (r.getVartext) r.getLrecl
+    else decoders.foldLeft(0){_ + _.size}
   }
 
   override def vartext: Boolean = r.getVartext

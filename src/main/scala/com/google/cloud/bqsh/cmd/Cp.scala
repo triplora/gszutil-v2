@@ -20,7 +20,7 @@ import java.net.URI
 import com.google.cloud.bigquery.StatsUtil
 import com.google.cloud.bqsh.{ArgParser, BQ, Command, GCE, GCS, GsUtilConfig, GsUtilOptionParser}
 import com.google.cloud.gszutil.Util.Logging
-import com.google.cloud.gszutil.io.V2SendCallable
+import com.google.cloud.gszutil.io.{V2SendCallable, ZDataSet, ZRecordReaderT}
 import com.google.cloud.gszutil.io.V2SendCallable.ReaderOpts
 import com.google.cloud.gszutil.orc.WriteORCFile
 import com.google.cloud.storage.Storage
@@ -38,7 +38,7 @@ object Cp extends Command[GsUtilConfig] with Logging {
 
     val bq = BQ.defaultClient(c.projectId, c.location, creds)
     val schemaProvider = c.schemaProvider.getOrElse(zos.loadCopyBook(c.copyBook))
-    val in = zos.readDDWithCopyBook(c.source, schemaProvider)
+    val in: ZRecordReaderT = c.testInput.getOrElse(zos.readDDWithCopyBook(c.source, schemaProvider))
     logger.info(s"gsutil cp ${in.getDsn} ${c.destinationUri}")
 
     val batchSize = (c.blocksPerBatch * in.blkSize) / in.lRecl
@@ -54,8 +54,8 @@ object Cp extends Command[GsUtilConfig] with Logging {
         Storage.BlobListOption.currentDirectory())
       import scala.collection.JavaConverters.iterableAsScalaIterableConverter
       if (lsResult.getValues.asScala.nonEmpty) {
-        val msg = "Data is already present at destination. " +
-          "Use --replace to delete existing files prior to upload."
+        val msg = s"Data exists at $uri;" +
+          "use --replace to remove existing files prior to upload."
         return Result.Failure(msg)
       }
     }
@@ -107,11 +107,10 @@ object Cp extends Command[GsUtilConfig] with Logging {
                        in = in,
                        schemaProvider = schemaProvider,
                        gcs = gcs,
-                       maxWriters = c.parallelism,
+                       parallelism = c.parallelism,
                        batchSize = batchSize,
                        partSizeMb = c.partSizeMB,
                        timeoutMinutes = c.timeOutMinutes,
-                       compress = c.compress,
                        compressBuffer = c.compressBuffer,
                        maxErrorPct = c.maxErrorPct)
       logger.info("ORC Upload Complete")

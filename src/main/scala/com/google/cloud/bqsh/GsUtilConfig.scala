@@ -16,10 +16,25 @@
 package com.google.cloud.bqsh
 
 import com.google.cloud.gszutil.SchemaProvider
+import com.google.cloud.gszutil.io.ZDataSet
 
 object GsUtilConfig {
   /** Minimal constructor */
-  def create(sourceDD: String,
+  def createLocal(sourceDD: String,
+                  schemaProvider: SchemaProvider,
+                  destinationUri: String,
+                  projectId: String,
+                  datasetId: String,
+                  location: String): GsUtilConfig = {
+    GsUtilConfig(source = sourceDD,
+                 schemaProvider = Option(schemaProvider),
+                 destinationUri = destinationUri,
+                 projectId = projectId,
+                 datasetId = datasetId,
+                 location = location)
+  }
+
+  def createRemote(sourceDD: String,
              schemaProvider: SchemaProvider,
              destinationUri: String,
              projectId: String,
@@ -28,9 +43,9 @@ object GsUtilConfig {
              pkgUri: String,
              zone: String,
              subnet: String,
+             remotePort: Int,
              serviceAccount: String,
-             tlsEnabled: Boolean,
-             remote: Boolean): GsUtilConfig = {
+             tlsEnabled: Boolean): GsUtilConfig = {
     GsUtilConfig(source = sourceDD,
       schemaProvider = Option(schemaProvider),
       destinationUri = destinationUri,
@@ -40,8 +55,9 @@ object GsUtilConfig {
       pkgUri = pkgUri,
       zone = zone,
       subnet = subnet,
+      remotePort = remotePort,
       serviceAccount = serviceAccount,
-      remote = remote,
+      remote = true,
       replace = true,
       tlsEnabled = tlsEnabled)
   }
@@ -54,7 +70,6 @@ case class GsUtilConfig(source: String = "INFILE",
                         mode: String = "",
                         replace: Boolean = false,
                         recursive: Boolean = false,
-                        compress: Boolean = true,
                         compressBuffer: Int = 32*1024,
                         maxErrorPct: Double = 0,
                         blocksPerBatch: Int = 128,
@@ -81,5 +96,6 @@ case class GsUtilConfig(source: String = "INFILE",
                         zone: String = "",
                         subnet: String = "",
                         serviceAccount: String = "",
-                        machineType: String = "n1-standard-4"
+                        machineType: String = "n1-standard-4",
+                        testInput: Option[ZDataSet] = None
 )

@@ -23,13 +23,13 @@ import com.google.cloud.gszutil.orc.Protocol
 
 import scala.collection.mutable
 
-class V2ReceiveActor(args: V2ActorArgs) extends Actor with Logging {
+class V2ReceiveActor(args: V2ServerArgs) extends Actor with Logging {
   private val timer = new WriteTimer
   private val writers = mutable.Set[ActorRef]()
 
   override def preStart(): Unit = {
     val routees = (1 to args.nWriters).map{ i =>
-      val r = context.actorOf(Props(classOf[V2WriteActor], args), s"w$i")
+      val r = context.actorOf(Props(classOf[V2WriteActor], args.writeArgs), s"w$i")
       writers.add(r)
       context.watch(r)
       ActorRefRoutee(r)

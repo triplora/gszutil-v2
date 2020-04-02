@@ -36,14 +36,22 @@ import org.zeromq.ZMQ.Socket
   * @param maxErrorPct proportion of acceptable row decoding errors
   * @param notifyActor ActorRef to send results (reader only)
   */
-case class V2ActorArgs(socket: Socket, // Only for reader
-                       blkSize: Int, // Only for reader
-                       nWriters: Int,
-                       schemaProvider: SchemaProvider,
-                       partitionBytes: Long,
-                       basePath: Path,
-                       gcs: Storage,
-                       pool: BufferPool,
-                       maxErrorPct: Double,
-                       notifyActor: ActorRef // Only for reader
-                      )
+case class V2ServerArgs(socket: Socket, // Only for reader
+                        blkSize: Int, // Only for reader
+                        nWriters: Int, // Only for reader
+                        schemaProvider: SchemaProvider,
+                        partitionBytes: Long,
+                        basePath: Path,
+                        gcs: Storage,
+                        pool: BufferPool,
+                        maxErrorPct: Double,
+                        notifyActor: ActorRef // Only for reader
+                      ) {
+  def writeArgs: V2WriterArgs = V2WriterArgs(
+    schemaProvider = schemaProvider,
+    partitionBytes = partitionBytes,
+    basePath = basePath,
+    gcs = gcs,
+    pool = pool,
+    maxErrorPct = maxErrorPct)
+}

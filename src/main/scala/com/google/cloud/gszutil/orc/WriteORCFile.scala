@@ -53,11 +53,10 @@ object WriteORCFile extends Logging {
           in: ReadableByteChannel,
           schemaProvider: SchemaProvider,
           gcs: Storage,
-          maxWriters: Int,
+          parallelism: Int,
           batchSize: Int,
           partSizeMb: Long,
           timeoutMinutes: Int,
-          compress: Boolean,
           compressBuffer: Int,
           maxErrorPct: Double): Result = {
     import scala.concurrent.duration._
@@ -65,19 +64,17 @@ object WriteORCFile extends Logging {
       "akka.actor.guardian-supervisor-strategy","akka.actor.EscalatingSupervisorStrategy"))
     val sys = ActorSystem("gsz", conf)
     val bufSize = schemaProvider.LRECL * batchSize
-    //val pool = ByteBufferPool.allocate(bufSize, maxWriters)
     val inbox = Inbox.create(sys)
 
-    val pool = new NoOpHeapBufferPool(bufSize, maxWriters)
+    val pool = new NoOpHeapBufferPool(bufSize, parallelism)
     val args: DatasetReaderArgs = DatasetReaderArgs(
       in = in,
       batchSize = batchSize,
       uri = new URI(gcsUri),
       maxBytes = partSizeMb*1024*1024,
-      nWorkers = maxWriters,
+      nWorkers = parallelism,
       schemaProvider = schemaProvider,
       gcs = gcs,
-      compress = compress,
       compressBuffer = compressBuffer,
       pool = pool,
       maxErrorPct = maxErrorPct,

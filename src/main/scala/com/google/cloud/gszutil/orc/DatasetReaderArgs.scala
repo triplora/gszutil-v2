@@ -33,7 +33,6 @@ import com.google.cloud.storage.Storage
   * @param nWorkers worker count
   * @param schemaProvider SchemaProvider
   * @param gcs Storage client
-  * @param compress whether to enable compression
   * @param compressBuffer size of compression buffer
   * @param pool BufferPool providing ByteBuffer instances
   * @param maxErrorPct maximum proportion of invalid rows
@@ -46,7 +45,6 @@ case class DatasetReaderArgs(in: ReadableByteChannel,
                              nWorkers: Int,
                              schemaProvider: SchemaProvider,
                              gcs: Storage,
-                             compress: Boolean,
                              compressBuffer: Int,
                              pool: BufferPool,
                              maxErrorPct: Double,

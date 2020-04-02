@@ -22,7 +22,7 @@ import akka.actor.{Actor, ActorRef, EscalatingSupervisorStrategy, Props, Supervi
   Terminated}
 import com.google.cloud.gszutil.Util
 import com.google.cloud.gszutil.Util.Logging
-import com.google.cloud.gszutil.io.{V2ActorArgs, V2WriteActor, ZRecordReaderT}
+import com.google.cloud.gszutil.io.{V2WriterArgs, V2WriteActor, ZRecordReaderT}
 import com.google.cloud.gszutil.orc.Protocol.{PartComplete, PartFailed, UploadComplete}
 import org.apache.hadoop.fs.Path
 
@@ -95,18 +95,18 @@ class DatasetReader(args: DatasetReaderArgs) extends Actor with Logging {
 
   def finished: Receive = {
     case msg: PartComplete =>
-      totalBytesWritten += msg.bytesWritten
 
     case msg: PartFailed =>
       args.notifyActor ! msg
 
+    case msg: Protocol.FinishedWriting =>
+      totalBytesRead += msg.bytesIn
+      totalBytesWritten += msg.bytesOut
+
     case Terminated(w) =>
       writers.remove(w)
-      logger.debug(s"$w Terminated - ${writers.size} writers remaining")
-      if (writers.isEmpty) {
-        logger.info("Sending UploadComplete")
+      if (writers.isEmpty)
         args.notifyActor ! UploadComplete(totalBytesRead, totalBytesWritten)
-      }
 
     case _: ByteBuffer =>
 
@@ -120,17 +120,15 @@ class DatasetReader(args: DatasetReaderArgs) extends Actor with Logging {
   private def newPart(): Unit = {
     val partName = f"$partId%05d"
     val basePath = new Path(s"gs://${args.uri.getAuthority}/${args.uri.getPath.stripPrefix("/")}")
-    val actorArgs = V2ActorArgs(socket = null,
-      blkSize = -1,
-      nWriters = args.nWorkers,
+    val actorArgs = V2WriterArgs(
       schemaProvider = args.schemaProvider,
       partitionBytes = args.maxBytes,
       basePath = basePath,
       gcs = args.gcs,
       pool = args.pool,
-      maxErrorPct = args.maxErrorPct,
-      notifyActor = null)
+      maxErrorPct = args.maxErrorPct)
     val w = context.actorOf(Props(classOf[V2WriteActor], actorArgs), partName)
+    w ! Protocol.Start
     context.watch(w)
     writers.add(w)
     partId += 1

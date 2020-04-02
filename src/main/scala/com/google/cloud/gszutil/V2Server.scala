@@ -26,7 +26,7 @@ import com.google.cloud.bqsh.GCS
 import com.google.cloud.bqsh.cmd.Result
 import com.google.cloud.gszutil.Util.Logging
 import com.google.cloud.gszutil.V2Server.V2Config
-import com.google.cloud.gszutil.io.{BlockingBoundedBufferPool, V2ActorArgs, V2ReceiveActor,
+import com.google.cloud.gszutil.io.{BlockingBoundedBufferPool, V2ServerArgs, V2ReceiveActor,
   V2ReceiveCallable, V2SendCallable}
 import com.google.cloud.gszutil.orc.Protocol
 import com.google.cloud.gzos.Ebcdic
@@ -135,7 +135,7 @@ class V2Server(config: V2Config) extends Callable[Result] with Logging {
     logger.info(s"Allocating Buffer Pool with size ${1L*bufSize*config.nWriters*config.bufCt}")
     val pool = new BlockingBoundedBufferPool(bufSize, config.nWriters*config.bufCt)
 
-    val wArgs = V2ActorArgs(socket, blkSize, config.nWriters, schema, V2Server.PartitionBytes,
+    val wArgs = V2ServerArgs(socket, blkSize, config.nWriters, schema, V2Server.PartitionBytes,
       new Path(gcsUri), config.gcs,
       pool, config.maxErrorPct, inbox.getRef())
 

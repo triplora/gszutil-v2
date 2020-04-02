@@ -23,9 +23,7 @@ import com.google.cloud.gszutil.PackedDecimal
 import com.google.cloud.gszutil.Util.Logging
 import com.google.cloud.gszutil.orc.Protocol
 
-/** Responsible for writing a single output partition
-  */
-final class V2WriteActor(args: V2ActorArgs) extends Actor with Logging {
+final class V2WriteActor(args: V2WriterArgs) extends Actor with Logging {
   private val orc = new OrcContext(args.gcs, args.schemaProvider.ORCSchema,
     args.basePath, self.path.name, args.partitionBytes, args.pool)
   private val BatchSize = 1024
@@ -35,7 +33,7 @@ final class V2WriteActor(args: V2ActorArgs) extends Actor with Logging {
   private var errorCount: Long = 0
   private var bytesIn: Long = 0
 
-  private def write(buf: ByteBuffer): Unit = {
+  def write(buf: ByteBuffer): Unit = {
     bytesIn += buf.limit
     val res = orc.write(reader, buf, errBuf)
     errorCount += res.errCount
@@ -53,13 +51,18 @@ final class V2WriteActor(args: V2ActorArgs) extends Actor with Logging {
   }
 
   override def receive: Receive = {
+    case Protocol.Start =>
+      (0 until 10).foreach{_ => sender() ! args.pool.acquire()}
+
     case buf: ByteBuffer =>
       timer.start()
       write(buf)
       timer.end()
 
     case Protocol.Close =>
+      timer.start()
       orc.close()
+      timer.end()
       context.parent ! Protocol.FinishedWriting(bytesIn, orc.getBytesWritten)
       context.stop(self)
 
