@@ -2,8 +2,7 @@ package com.google.cloud.gszutil.io
 
 import java.nio.ByteBuffer
 
-import akka.io.BufferPool
-import com.google.cloud.gszutil.Util.Logging
+import com.google.cloud.imf.util.Logging
 import com.google.cloud.storage.Storage
 import org.apache.hadoop.conf.Configuration
 import org.apache.hadoop.fs.{FileSystem, Path, SimpleGCSFileSystem}
@@ -17,15 +16,14 @@ import org.apache.orc.{CompressionKind, InMemoryKeystore, NoOpMemoryManager, Orc
   * @param schema ORC TypeDescription
   * @param basePath GCS URI where parts will be written
   * @param prefix the id of this writer which will be appended to output paths
-  * @param maxBytes part size
-  * @param pool BufferPool
   */
 final class OrcContext(private val gcs: Storage, schema: TypeDescription,
-                       basePath: Path, prefix: String, maxBytes: Long, pool: BufferPool)
+                       basePath: Path, prefix: String)
   extends AutoCloseable with Logging {
 
-  private val BytesBetweenFlush: Long = 32*1024*1024
-  private val OptimalGZipBuffer = 32*1024
+  private final val BytesBetweenFlush: Long = 32*1024*1024
+  private final val OptimalGZipBuffer = 32*1024
+  private final val PartSize = 128L*1024*1024
 
   private val fs = new SimpleGCSFileSystem(gcs,
     new FileSystem.Statistics(SimpleGCSFileSystem.Scheme))
@@ -52,7 +50,9 @@ final class OrcContext(private val gcs: Storage, schema: TypeDescription,
     OrcConf.OVERWRITE_OUTPUT_FILE.setBoolean(c, true)
     OrcConf.MEMORY_POOL.setDouble(c, 0.5d)
     OrcConf.BUFFER_SIZE.setLong(c, OptimalGZipBuffer)
+    OrcConf.ROW_INDEX_STRIDE.setLong(c, 0)
     OrcConf.DIRECT_ENCODING_COLUMNS.setString(c, String.join(",",schema.getFieldNames))
+    OrcConf.ROWS_BETWEEN_CHECKS.setLong(c, 0)
     c
   }
 
@@ -83,9 +83,10 @@ final class OrcContext(private val gcs: Storage, schema: TypeDescription,
   }
 
   def closeWriter(): Unit = {
+    logger.debug(s"Closing ORCWriter $currentPath")
     writer.close()
     bytesWritten += fs.getBytesWritten()
-    logger.info(s"Closed Writer for $currentPath")
+    logger.info(s"Closed ORCWriter $currentPath")
     partRowsWritten = 0
     fs.resetStats()
   }
@@ -106,8 +107,8 @@ final class OrcContext(private val gcs: Storage, schema: TypeDescription,
     * @return errCount
     */
   def write(reader: ZReader, buf: ByteBuffer, err: ByteBuffer): WriteResult = {
-    bytesRead += buf.limit
-    bytesSinceLastFlush += buf.limit
+    bytesRead += buf.limit()
+    bytesSinceLastFlush += buf.limit()
     val (rowCount,errorCount) = reader.readOrc(buf, writer, err)
     errors += errorCount
     rowsWritten += rowCount
@@ -119,21 +120,21 @@ final class OrcContext(private val gcs: Storage, schema: TypeDescription,
       flush()
     }
     val currentPartitionSize = fs.getBytesWritten()
-    val partFinished = currentPartitionSize > maxBytes
+    val partFinished = currentPartitionSize > PartSize
     val partPath = currentPath
     if (partFinished) {
       logger.info(s"Current partition size $currentPartitionSize exceeds target " +
         s"(rows part: $partRowsWritten total: $rowsWritten)")
       next()
     }
-    pool.release(buf)
     WriteResult(rowCount, errorCount, currentPartitionSize, partFinished, partPath.toString)
   }
 
   def flush(): Unit = {
+    logger.debug(s"flushing writer $prefix $partId")
     writer match {
       case w: WriterImpl =>
-        w.checkMemory(1.0d)
+        w.checkMemory(0)
         bytesSinceLastFlush = 0
       case _ =>
     }

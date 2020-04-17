@@ -17,9 +17,8 @@
 package com.google.cloud.bqsh
 
 import com.google.cloud.bqsh.cmd._
-import com.google.cloud.gszutil.Util
-import com.google.cloud.gszutil.Util.Logging
-import com.ibm.jzos.ZFileProvider
+import com.google.cloud.imf.gzos.{MVS, Util}
+import com.google.cloud.imf.util.Logging
 
 import scala.collection.mutable
 import scala.collection.mutable.ListBuffer
@@ -38,7 +37,7 @@ object Bqsh extends Logging {
       System.exit(result.exitCode)
   }
 
-  class Interpreter(zos: ZFileProvider, sysEnv: Map[String,String], var exitOnError: Boolean = true, var printCommands: Boolean = true){
+  class Interpreter(zos: MVS, sysEnv: Map[String,String], var exitOnError: Boolean = true, var printCommands: Boolean = true){
     val env: mutable.Map[String,String] = mutable.Map.empty ++ sysEnv
     def runWithArgs(args: Seq[String]): Result = {
       System.out.println(s"+ ${args.mkString(" ")}")
@@ -64,7 +63,7 @@ object Bqsh extends Logging {
     }
   }
 
-  def runCommand[T](cmd: Command[T], args: Seq[String], zos: ZFileProvider): Result = {
+  def runCommand[T](cmd: Command[T], args: Seq[String], zos: MVS): Result = {
     cmd.parser.parse(args) match {
       case Some(c) =>
         cmd.run(c, zos)
@@ -73,7 +72,7 @@ object Bqsh extends Logging {
     }
   }
 
-  def exec(args: Seq[String], env: Map[String,String], zos: ZFileProvider): Result = {
+  def exec(args: Seq[String], env: Map[String,String], zos: MVS): Result = {
     BqshParser.parse(args, env) match {
       case Some(cmd) =>
         val sub = cmd.args.headOption.getOrElse("")

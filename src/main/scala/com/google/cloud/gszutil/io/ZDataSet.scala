@@ -18,7 +18,11 @@ package com.google.cloud.gszutil.io
 
 import java.nio.ByteBuffer
 
-class ZDataSet(srcBytes: Array[Byte], recordLength: Int, blockSize: Int, limit: Int = -1, position: Int = 0) extends ZRecordReaderT {
+class ZDataSet(srcBytes: Array[Byte],
+               override val lRecl: Int,
+               override val blkSize: Int,
+               limit: Int = -1,
+position: Int = 0) extends ZRecordReaderT {
   private val buf = ByteBuffer.wrap(srcBytes)
   private var open = true
   private var bytesRead: Long = 0
@@ -43,12 +47,10 @@ class ZDataSet(srcBytes: Array[Byte], recordLength: Int, blockSize: Int, limit: 
 
   override def isOpen: Boolean = open || buf.hasRemaining
   override def close(): Unit = open = false
-  override val lRecl: Int = recordLength
-  override val blkSize: Int = blockSize
 
   override def read(dst: ByteBuffer): Int = {
-    val i = dst.position
-    val n = read(dst.array, i, dst.remaining)
+    val i = dst.position()
+    val n = read(dst.array, i, lRecl)
     if (n > 0) dst.position(i + n)
     n
   }

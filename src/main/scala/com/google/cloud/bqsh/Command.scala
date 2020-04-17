@@ -17,10 +17,10 @@
 package com.google.cloud.bqsh
 
 import com.google.cloud.bqsh.cmd.Result
-import com.ibm.jzos.ZFileProvider
+import com.google.cloud.imf.gzos.MVS
 
 trait Command[T] {
   val name: String
   val parser: ArgParser[T]
-  def run(config: T, zos: ZFileProvider): Result
+  def run(config: T, zos: MVS): Result
 }

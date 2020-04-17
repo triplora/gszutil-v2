@@ -48,7 +48,7 @@ object SimpleGCSFileSystem {
 class SimpleGCSFileSystem(private val storage: Storage,
                           private var stats: FileSystem.Statistics)
   extends FileSystem {
-  import SimpleGCSFileSystem.{Scheme,toBlobId}
+  import SimpleGCSFileSystem.{Scheme, toBlobId}
 
   def resetStats(): Unit = stats.reset()
 

@@ -17,18 +17,18 @@
 package com.google.cloud.gszutil.orc
 
 import java.net.URI
-import java.nio.channels.ReadableByteChannel
+import java.nio.ByteBuffer
 
 import com.google.cloud.bqsh.cmd.Result
 import com.google.cloud.gszutil.SchemaProvider
-import com.google.cloud.gszutil.Util.Logging
-import com.google.cloud.gszutil.io.{NonBlockingHeapBufferPool, V2WriterArgs, WriterCore}
+import com.google.cloud.gszutil.io.{WriterCore, ZRecordReaderT}
+import com.google.cloud.imf.util.Logging
 import com.google.cloud.storage.Storage
 import org.apache.hadoop.fs.Path
 
 object WriteORCFile extends Logging {
   def run(gcsUri: String,
-          in: ReadableByteChannel,
+          in: ZRecordReaderT,
           schemaProvider: SchemaProvider,
           gcs: Storage,
           parallelism: Int,
@@ -37,23 +37,19 @@ object WriteORCFile extends Logging {
           timeoutMinutes: Int,
           compressBuffer: Int,
           maxErrorPct: Double): Result = {
-    val bufSize = schemaProvider.LRECL * batchSize
+    val bufSize = in.lRecl * batchSize
+    val buf = ByteBuffer.allocate(bufSize)
     val uri = new URI(gcsUri)
     val basePath = new Path(s"gs://${uri.getAuthority}/${uri.getPath.stripPrefix("/")}")
 
-    logger.info("Allocating ByteBuffer pool")
-    val pool = new NonBlockingHeapBufferPool(bufSize, 32)
-    val actorArgs = V2WriterArgs(
-      schemaProvider = schemaProvider,
-      partitionBytes = partSizeMb*1024*1024,
-      basePath = basePath,
-      gcs = gcs,
-      pool = pool,
-      maxErrorPct = maxErrorPct)
-
-    logger.info(s"Starting $parallelism writers")
+    logger.info(s"Opening $parallelism ORC Writers for $basePath")
     val writers: Array[WriterCore] = (0 until parallelism).toArray.map{i =>
-      new WriterCore(actorArgs, s"$i")
+      new WriterCore(schemaProvider = schemaProvider,
+        basePath = basePath,
+        gcs = gcs,
+        maxErrorPct = maxErrorPct,
+        name = s"$i",
+        lrecl = in.lRecl)
     }
 
     var i = 0
@@ -62,12 +58,11 @@ object WriteORCFile extends Logging {
     var n = 1
     var bytesRead = 0L
 
-    logger.info(s"reading")
+    logger.info(s"Starting to read from ${in.getDsn}")
     while (n >= 0){
-      val buf = pool.acquire()
       buf.clear()
       // read until buffer is full
-      while (n >= 0 && buf.hasRemaining) {
+      while (n >= 0 && buf.remaining >= in.lRecl) {
         // on z/OS this will read a single record
         n = in.read(buf)
         if (n > 0) {
@@ -77,19 +72,18 @@ object WriteORCFile extends Logging {
             logger.info(s"$records records read")
         }
       }
-      if (buf.position > 0) {
+      if (buf.position() > 0) {
         buf.flip
-        writers(i).write(buf)
+        val result = writers(i).write(buf)
         blocks += 1
-        pool.release(buf)
         i += 1
         if (i >= writers.length) i = 0
       }
     }
 
-    logger.info(s"Closing writers")
+    logger.debug(s"Closing writers")
     writers.foreach(_.close())
-    logger.info(s"Upload complete: $records records")
+    logger.info(s"Finished writing ORC: $records records $blocks blocks $bytesRead bytes")
     Result.Success
   }
 }

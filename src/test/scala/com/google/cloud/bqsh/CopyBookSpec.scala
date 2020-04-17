@@ -17,12 +17,12 @@
 package com.google.cloud.bqsh
 
 import com.google.cloud.gszutil.Decoding.{Decimal64Decoder, LongDecoder, StringDecoder, UnsignedLongDecoder}
-import com.google.cloud.gszutil.Util.Logging
-import com.google.cloud.gszutil.{CopyBook, Decoding, Utf8, Util}
-import com.google.cloud.gzos.Ebcdic
-import org.scalatest.FlatSpec
+import com.google.cloud.gszutil.{CopyBook, Decoding, Utf8}
+import com.google.cloud.imf.gzos.{Ebcdic, Util}
+import com.google.cloud.imf.util.Logging
+import org.scalatest.flatspec.AnyFlatSpec
 
-class CopyBookSpec extends FlatSpec with Logging {
+class CopyBookSpec extends AnyFlatSpec with Logging {
   Util.configureLogging(true)
   "CopyBook" should "parse" in {
     val examples = Seq(
@@ -126,7 +126,7 @@ class CopyBookSpec extends FlatSpec with Logging {
     ).foreach{x =>
       val picString = x._1
       val expectedDecoder = x._2
-      assert(Decoding.typeMap(picString, transcoder) == expectedDecoder)
+      assert(Decoding.typeMap(picString, transcoder, filler = false) == expectedDecoder)
     }
   }
 

@@ -2,14 +2,14 @@ package com.google.cloud.gszutil.io
 
 import com.google.cloud.bqsh.GsUtilConfig
 import com.google.cloud.bqsh.cmd.Cp
-import com.google.cloud.gszutil.{RecordSchema, TestUtil, Util}
-import com.google.cloud.gzos.Ebcdic
-import com.google.cloud.gzos.pb.Schema.{Field, Record}
+import com.google.cloud.gszutil.{RecordSchema, TestUtil}
+import com.google.cloud.imf.gzos.pb.GRecvProto.Record
+import com.google.cloud.imf.gzos.pb.GRecvProto.Record.Field
+import com.google.cloud.imf.gzos.{Ebcdic, Linux, Util}
 import com.google.protobuf.ByteString
-import com.ibm.jzos.Linux
-import org.scalatest.FlatSpec
+import org.scalatest.flatspec.AnyFlatSpec
 
-class CpSpec extends FlatSpec {
+class CpSpec extends AnyFlatSpec {
   Util.configureLogging()
   "Cp" should "copy" in {
     val b = Record.newBuilder
@@ -17,7 +17,6 @@ class CpSpec extends FlatSpec {
       .setEncoding("EBCDIC")
       .setDelimiter(ByteString.copyFrom("|", Ebcdic.charset))
       .setSource(Record.Source.LAYOUT)
-      .setLrecl(111)
 
     b.addFieldBuilder().setName("PO_ACTIVITY_ID")
       .setTyp(Field.FieldType.STRING)

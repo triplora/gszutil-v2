@@ -73,29 +73,24 @@ object GsUtilOptionParser extends OptionParser[GsUtilConfig]("gsutil") with ArgP
         .action{(x,c) => c.copy(blocks = x)}
         .text("blocks before yield (default: 1024"),
 
+      opt[String]("remoteHost")
+        .optional()
+        .action{(x,c) => c.copy(remoteHost = x)}
+        .text("remote host or ip address"),
+
       opt[Int]("remotePort")
         .optional()
         .action{(x,c) => c.copy(remotePort = x)}
-        .text("remote port (default: 8443)"),
-
-      opt[Boolean]("tlsEnabled")
-        .optional()
-        .action{(x,c) => c.copy(tlsEnabled = x)}
-        .text("disable TLS"),
+        .text("remote port (default: 51770)"),
 
       opt[Int]("connections")
         .optional()
         .action{(x,c) => c.copy(nConnections = x)}
         .text("number of connections to remote receiver (default: 10"),
 
-      opt[String]("remoteHost")
-        .optional()
-        .action{(x,c) => c.copy(remoteHost = x)}
-        .text("remote host or ip address"),
-
       opt[String]("pkgUri")
         .optional()
-        .action{(x,c) => c.copy(pkgUri = x)}
+        .action{(x,c) => c.copy(pkgUri = x.stripSuffix("/"))}
         .text("GCS uri to tar file containing run.sh"),
 
       opt[String]("zone")
@@ -171,21 +166,13 @@ object GsUtilOptionParser extends OptionParser[GsUtilConfig]("gsutil") with ArgP
 
   checkConfig{x =>
     if (x.remote) {
-      val missing = new StringBuilder
-      if (x.subnet.isEmpty) {
-        missing.append(" --subnet")
-      }
-      if (x.pkgUri.isEmpty) {
-        missing.append(" --pkgUri")
-      }
-      if (x.serviceAccount.isEmpty) {
-        missing.append(" --serviceAccount")
-      }
-      if (x.zone.isEmpty) {
-        missing.append(" --zone")
-      }
+      if (x.remoteHost.isEmpty) {
+        val missing = new StringBuilder
+        if (x.subnet.isEmpty) missing.append(" --subnet")
+        if (x.pkgUri.isEmpty) missing.append(" --pkgUri")
+        if (x.serviceAccount.isEmpty) missing.append(" --serviceAccount")
+        if (x.zone.isEmpty) missing.append(" --zone")
 
-      if (x.remoteHost.nonEmpty) {
         if (x.projectId.isEmpty)
           failure("must specify --project_id if --remoteHost is set")
         else if (missing.nonEmpty)

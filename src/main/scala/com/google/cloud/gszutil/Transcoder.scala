@@ -22,8 +22,8 @@ trait Transcoder {
   /** Read String from EBCDIC in ByteBuffer */
   @inline
   final def getString(buf: ByteBuffer, size: Int): String = {
-    val i1 = buf.position + size
-    val s = new String(buf.array, buf.position, size, charset)
+    val i1 = buf.position() + size
+    val s = new String(buf.array, buf.position(), size, charset)
     buf.position(i1)
     s
   }
@@ -31,8 +31,8 @@ trait Transcoder {
   /** Read EBCDIC in ByteBuffer */
   @inline
   final def arraycopy(buf: ByteBuffer, dest: Array[Byte], destPos: Int, size: Int): Array[Byte] = {
-    val i1 = buf.position + size
-    System.arraycopy(buf.array, buf.position, dest, destPos, size)
+    val i1 = buf.position() + size
+    System.arraycopy(buf.array, buf.position(), dest, destPos, size)
     buf.position(i1)
     var i = destPos
     while (i < destPos + size){
@@ -45,8 +45,8 @@ trait Transcoder {
   /** Read Long from EBCDIC in ByteBuffer */
   @inline
   final def getLong(buf: ByteBuffer, size: Int): Long = {
-    val i1 = buf.position + size
-    val s = new String(buf.array, buf.position, size, charset).filter(c => c.isDigit || c == '-')
+    val i1 = buf.position() + size
+    val s = new String(buf.array, buf.position(), size, charset).filter(c => c.isDigit || c == '-')
     buf.position(i1)
     s.toLong
   }
@@ -54,8 +54,8 @@ trait Transcoder {
   /** Read Epoch Day from EBCDIC in ByteBuffer */
   @inline
   final def getEpochDay(buf: ByteBuffer, size: Int, fmt: DateTimeFormatter): Long = {
-    val i1 = buf.position + size
-    val s = new String(buf.array, buf.position, size, charset)
+    val i1 = buf.position() + size
+    val s = new String(buf.array, buf.position(), size, charset).filter(_.isDigit)
     buf.position(i1)
     LocalDate.from(fmt.parse(s)).toEpochDay
   }

@@ -1,6 +1,6 @@
 package com.google.cloud.bqsh
 
-import com.google.cloud.gszutil.Util
+import com.google.cloud.imf.gzos.MVSStorage.{DSN, MVSDataset}
 
 case class JCLUtilConfig(src: String = "",
                          dest: String = "",
@@ -9,8 +9,8 @@ case class JCLUtilConfig(src: String = "",
                          filter: String = "^TD.*$",
                          limit: Int = 4096,
                          printSteps: Boolean = false) {
-  def srcDSN: String = Util.dsn(src)
-  def destDSN: String = Util.dsn(dest)
+  def srcDSN: DSN = MVSDataset(src)
+  def destDSN: DSN = MVSDataset(dest)
 
   def exprs: Seq[(String,String)] = expressions.flatMap(parseExpr)
 

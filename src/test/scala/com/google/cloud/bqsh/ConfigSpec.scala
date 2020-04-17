@@ -16,9 +16,9 @@
 
 package com.google.cloud.bqsh
 
-import org.scalatest.FlatSpec
+import org.scalatest.flatspec.AnyFlatSpec
 
-class ConfigSpec extends FlatSpec {
+class ConfigSpec extends AnyFlatSpec {
   "BQZ" should "parse command" in {
     val args = """bq load --project_id=project --dataset_id=dataset --location=EU --source_format=ORC project:dataset.table gs://mybucket/00/*.orc,gs://mybucket/01/*.orc"""
 

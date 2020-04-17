@@ -23,7 +23,7 @@ class RandomBytes(val size: Long, blkSz: Int, lrecl: Int) extends ZRecordReaderT
   private var bb: ByteBuffer = _
 
   override def read(dst: ByteBuffer): Int = {
-    val startPos = dst.position
+    val startPos = dst.position()
     if (consumed >= size) return -1
     var i = 111111L
     while (dst.remaining >= 32) {
@@ -35,7 +35,7 @@ class RandomBytes(val size: Long, blkSz: Int, lrecl: Int) extends ZRecordReaderT
     }
     while (dst.hasRemaining)
       dst.put('x'.toByte)
-    val n = dst.position - startPos
+    val n = dst.position() - startPos
     consumed += n
     n
   }

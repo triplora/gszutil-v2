@@ -19,14 +19,14 @@ package com.google.cloud.bqsh.cmd
 import java.net.URI
 
 import com.google.cloud.bqsh._
-import com.google.cloud.gszutil.Util.Logging
+import com.google.cloud.imf.gzos.MVS
+import com.google.cloud.imf.util.Logging
 import com.google.cloud.storage.{BlobId, Storage}
-import com.ibm.jzos.ZFileProvider
 
 object GsUtilRm extends Command[GsUtilConfig] with Logging {
   override val name: String = "gsutil rm"
   override val parser: ArgParser[GsUtilConfig] = GsUtilOptionParser
-  override def run(c: GsUtilConfig, zos: ZFileProvider): Result = {
+  override def run(c: GsUtilConfig, zos: MVS): Result = {
     val creds = zos.getCredentialProvider()
       .getCredentials
     logger.info(s"gsutil rm ${c.destinationUri}")
@@ -35,11 +35,15 @@ object GsUtilRm extends Command[GsUtilConfig] with Logging {
     val bucket = uri.getAuthority
     if (c.recursive) {
       logger.debug(s"deleting recursively from ${c.destinationUri}")
-      val withTrailingSlash = uri.getPath.stripPrefix("/") + (if (uri.getPath.last == '/') "" else "/")
+      val withTrailingSlash =
+        uri.getPath.stripPrefix("/") + (
+          if (uri.getPath.length > 0 && uri.getPath.last == '/') ""
+          else "/"
+        )
       var ls = gcs.list(bucket,
         Storage.BlobListOption.prefix(withTrailingSlash),
         Storage.BlobListOption.currentDirectory())
-      import scala.collection.JavaConverters.iterableAsScalaIterableConverter
+      import scala.jdk.CollectionConverters.IterableHasAsScala
       var deleted: Long = 0
       var notDeleted: Long = 0
       while (ls != null) {

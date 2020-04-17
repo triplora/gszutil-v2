@@ -2,7 +2,7 @@ package com.google.cloud.gszutil
 
 import java.nio.ByteBuffer
 
-import com.google.cloud.gzos.pb.Schema.Field
+import com.google.cloud.imf.gzos.pb.GRecvProto.Record.Field
 import org.apache.hadoop.hive.ql.exec.vector.ColumnVector
 import org.apache.orc.TypeDescription
 

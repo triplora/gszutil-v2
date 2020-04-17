@@ -84,35 +84,4 @@ public class Binary {
         }
         return scratchLong;
     }
-
-    /** Prints a byte as Binary. Used for debugging.
-     *
-     * @param b byte
-     * @return String of 0 and 1 representing byte b
-     */
-    public static String binValue(byte b) {
-        StringBuilder sb = new StringBuilder(8);
-        for (int i = 0; i < 8; i++) {
-            if ((b & 0x01) == 0x01) {
-                sb.append('1');
-            } else {
-                sb.append('0');
-            }
-            b >>>= 1;
-        }
-        return sb.reverse().toString();
-    }
-
-    /** Prints a byte array as Binary. Used for debugging.
-     *
-     * @param bytes byte[]
-     * @return String of 0's and 1s representing byte[] bytes
-     */
-    public static String binValue(byte[] bytes) {
-        StringBuilder sb = new StringBuilder(8*bytes.length);
-        for (int j = 0; j< bytes.length; j++){
-            sb.append(binValue(bytes[j]));
-        }
-        return sb.toString();
-    }
 }

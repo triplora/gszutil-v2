@@ -1,6 +1,6 @@
 package com.google.cloud.gszutil.io
 
-import com.google.cloud.gszutil.Util
+import com.google.cloud.imf.gzos.Util
 import org.apache.log4j.Logger
 
 class WriteTimer {

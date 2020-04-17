@@ -16,6 +16,8 @@
 
 package com.google.cloud.bqsh
 
+import com.google.cloud.imf.gzos.MVSStorage.{DSN, MVSDataset, MVSPDSMember}
+
 object QueryConfig {
   def create(sql: String, datasetId: String, location: String, projectId: String,
              statsTable: String, replace: Boolean, destinationTable: String): QueryConfig = {
@@ -27,6 +29,7 @@ object QueryConfig {
 case class QueryConfig(
   // Custom Options
   sql: String = "",
+  queryDSN: String = "",
   timeoutMinutes: Int = 60,
   parametersFromFile: Seq[String] = Seq.empty,
   createIfNeeded: Boolean = false,
@@ -65,4 +68,14 @@ case class QueryConfig(
   sync: Boolean = true,
 
   statsTable: String = ""
-)
+) {
+  def dsn: Option[DSN] = {
+    val i = queryDSN.indexOf('(')
+    val j = queryDSN.indexOf(')')
+    if (i > 1 && j > i+1){
+      Option(MVSPDSMember(queryDSN.substring(0,i),queryDSN.substring(i+1,j)))
+    } else if (i > 0 && j > i+1) {
+      Option(MVSDataset(queryDSN))
+    } else None
+  }
+}

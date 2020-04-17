@@ -21,7 +21,7 @@ import java.util.concurrent.TimeUnit
 import com.google.api.client.http.HttpTransport
 import com.google.api.client.http.apache.v2.ApacheHttpTransport
 import com.google.auth.http.HttpTransportFactory
-import com.google.cloud.gszutil.Util.Logging
+import com.google.cloud.imf.util.Logging
 import org.apache.http.HttpHost
 import org.apache.http.client.HttpClient
 import org.apache.http.config.SocketConfig

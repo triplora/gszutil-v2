@@ -1,15 +1,16 @@
 package com.google.cloud.bqsh.cmd
 
 import com.google.cloud.bqsh.{ArgParser, Command, JCLUtilConfig, JCLUtilOptionParser}
-import com.google.cloud.gszutil.Util.{Logging, dsn}
-import com.ibm.jzos.ZFileProvider
+import com.google.cloud.imf.gzos.MVS
+import com.google.cloud.imf.gzos.MVSStorage.{DSN, MVSPDSMember}
+import com.google.cloud.imf.util.Logging
 
 
 object JCLUtil extends Command[JCLUtilConfig] with Logging {
   override val name: String = "jclutil"
   override val parser: ArgParser[JCLUtilConfig] = JCLUtilOptionParser
 
-  override def run(config: JCLUtilConfig, zos: ZFileProvider): Result = {
+  override def run(config: JCLUtilConfig, zos: MVS): Result = {
     val transform: (String) => String = replacePrefix(_, "BQ")
     val members = zos.listPDS(config.srcDSN)
 
@@ -35,11 +36,11 @@ object JCLUtil extends Command[JCLUtilConfig] with Logging {
     while (members.hasNext){
       val member = members.next()
       if (config.printSteps) {
-        printSteps(dsn(config.src,member.name), zos)
+        printSteps(MVSPDSMember(config.src,member.name), zos)
       } else if (config.filter.isEmpty || member.name.matches(config.filter)){
         System.out.println(s"Processing '${member.name}'")
-        val result = copy(dsn(config.src,member.name),
-                          dsn(config.dest,transform(member.name)),
+        val result = copy(MVSPDSMember(config.src,member.name),
+                          MVSPDSMember(config.dest,transform(member.name)),
                           config.limit,
                           exprs,
                           zos)
@@ -104,7 +105,7 @@ object JCLUtil extends Command[JCLUtilConfig] with Logging {
       .map(captureStep)
   }
 
-  def printSteps(src: String, zos: ZFileProvider): Unit = {
+  def printSteps(src: DSN, zos: MVS): Unit = {
     val lines = zos.readDSNLines(src).take(10000)
     val filtered = lines.filterNot{s => s.startsWith("//*")||s.startsWith("// ")}
     if (filtered.hasNext){
@@ -116,8 +117,8 @@ object JCLUtil extends Command[JCLUtilConfig] with Logging {
     }
   }
 
-  def copy(src: String, dest: String, limit: Int, exprs: Seq[(String,String)],
-           zos: ZFileProvider): Result = {
+  def copy(src: DSN, dest: DSN, limit: Int, exprs: Seq[(String,String)],
+           zos: MVS): Result = {
     System.out.println(s"$src -> $dest")
     if (zos.exists(dest)) {
       val msg = s"Error: $dest already exists"

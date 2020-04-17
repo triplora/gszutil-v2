@@ -20,6 +20,7 @@ import java.net.URI
 
 import scopt.OptionParser
 
+import scala.collection.immutable.ArraySeq
 import scala.util.Try
 
 object MkOptionParser extends OptionParser[MkConfig]("mk") with ArgParser[MkConfig] {
@@ -80,8 +81,7 @@ object MkOptionParser extends OptionParser[MkConfig]("mk") with ArgParser[MkConf
     }
 
   private def extractUris(x: String): Seq[URI] = {
-    x.stripPrefix("ORC=")
-      .split(",")
+    ArraySeq.unsafeWrapArray(x.stripPrefix("ORC=").split(","))
       .flatMap(x => Try(new URI(x)).toOption)
       .filter(x => x.getScheme == "gs" && x.getAuthority.nonEmpty && x.getPath.nonEmpty)
   }

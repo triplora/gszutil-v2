@@ -23,16 +23,16 @@ import java.time.format.DateTimeFormatter
 
 import com.google.cloud.gszutil.Decoding.{Decimal64Decoder, IntegerAsDateDecoder, LongDecoder, NullableStringDecoder, StringAsDateDecoder, StringAsDecimalDecoder, StringAsIntDecoder, StringDecoder}
 import com.google.cloud.gszutil.io.ZReader
-import com.google.cloud.gzos.Ebcdic
-import com.google.cloud.gzos.pb.Schema
-import com.google.cloud.gzos.pb.Schema.Field.FieldType
+import com.google.cloud.imf.gzos.pb.GRecvProto.Record.Field
+import com.google.cloud.imf.gzos.pb.GRecvProto.Record.Field.FieldType
+import com.google.cloud.imf.gzos.{Ebcdic, Util}
 import com.google.common.base.Charsets
 import com.ibm.jzos.fields.daa
 import org.apache.hadoop.hive.ql.exec.vector.{BytesColumnVector, DateColumnVector, Decimal64ColumnVector, LongColumnVector}
 import org.apache.hadoop.hive.serde2.io.HiveDecimalWritable
-import org.scalatest.FlatSpec
+import org.scalatest.flatspec.AnyFlatSpec
 
-class DecodingSpec extends FlatSpec {
+class DecodingSpec extends AnyFlatSpec {
   "Decoder" should "decode 2 byte binary integer" in {
     val field = new daa.BinarySignedIntL2Field(0)
     val exampleData = Array[Byte](20.toByte, 140.toByte)
@@ -331,7 +331,7 @@ class DecodingSpec extends FlatSpec {
       d.get(buf, col, 0)
       pos += d.size
 
-      assert(buf.position == pos)
+      assert(buf.position() == pos)
       i += 1
     }
 
@@ -371,8 +371,9 @@ class DecodingSpec extends FlatSpec {
     val cols = decoders.map(_.columnVector(batchSize))
     val buf = TestUtil.getBytes("mload0.dat")
     val lrecl = buf.array.length / batchSize
+    val rBuf = ByteBuffer.allocate(lrecl)
     val errBuf = ByteBuffer.allocate(lrecl)
-    val (rowId,errCt) = ZReader.readBatch(buf, decoders, cols, batchSize, lrecl, errBuf)
+    val (rowId,errCt) = ZReader.readBatch(buf, decoders, cols, batchSize, lrecl, rBuf, errBuf)
     assert(rowId == batchSize)
     assert(errCt == 0)
 
@@ -387,7 +388,7 @@ class DecodingSpec extends FlatSpec {
       d.get(buf, col, 0)
       pos += d.size
 
-      assert(buf.position == pos)
+      assert(buf.position() == pos)
       i += 1
     }
 
@@ -419,7 +420,7 @@ class DecodingSpec extends FlatSpec {
   }
 
   it should "cast integer to date" in {
-    val b = Schema.Field.newBuilder
+    val b = Field.newBuilder
       .setTyp(FieldType.INTEGER)
       .setCast(FieldType.DATE)
       .setFormat("YYMMDD")

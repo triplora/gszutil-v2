@@ -20,8 +20,10 @@ import java.nio.ByteBuffer
 import java.nio.charset.Charset
 
 import com.google.cloud.gszutil.{Decoder, SchemaProvider, VartextDecoder}
-import com.google.cloud.gszutil.Util.Logging
-import org.apache.hadoop.hive.ql.exec.vector.{ColumnVector, VectorizedRowBatch, VoidColumnVector}
+import com.google.cloud.imf.gzos.Ebcdic
+import com.google.cloud.imf.io.Bytes
+import com.google.cloud.imf.util.Logging
+import org.apache.hadoop.hive.ql.exec.vector.{ColumnVector, VectorizedRowBatch}
 import org.apache.orc.Writer
 
 /** Decodes MVS data set records into ORC row batch
@@ -29,9 +31,17 @@ import org.apache.orc.Writer
   * @param batchSize size of ORC VectorizedRowBatch
   */
 class ZReader(private val schemaProvider: SchemaProvider,
-              private val batchSize: Int) extends Logging {
+              private val batchSize: Int,
+              private val lrecl: Int) extends Logging {
+  private final val rBuf: ByteBuffer = ByteBuffer.allocate(schemaProvider.LRECL)
   private final val decoders: Array[Decoder] = schemaProvider.decoders
+
+  // we keep all columns including fillers to simplify decoding
+  // fillers columns are there to accept data but are not added to the row batch
   private final val cols: Array[ColumnVector] = decoders.map(_.columnVector(batchSize))
+
+  // only non-filler columns are added to the row batch
+  // by excluding filler columns here, they will not be written
   private final val rowBatch: VectorizedRowBatch = {
     logger.debug(s"decoders:\n$schemaProvider")
     val batch = new VectorizedRowBatch(decoders.count(!_.filler), batchSize)
@@ -55,7 +65,8 @@ class ZReader(private val schemaProvider: SchemaProvider,
   def readOrc(buf: ByteBuffer, writer: Writer, err: ByteBuffer): (Long,Long) = {
     var errors: Long = 0
     var rows: Long = 0
-    while (buf.remaining >= schemaProvider.LRECL) {
+    val lrecl = rBuf.capacity()
+    while (buf.remaining >= lrecl) {
       rowBatch.reset()
       val (rowId,errCt) =
         if (schemaProvider.vartext)
@@ -63,7 +74,7 @@ class ZReader(private val schemaProvider: SchemaProvider,
             schemaProvider.delimiter, schemaProvider.srcCharset, batchSize, schemaProvider.LRECL,
             err)
         else
-          ZReader.readBatch(buf,decoders,cols,batchSize,schemaProvider.LRECL,err)
+          ZReader.readBatch(buf,decoders,cols,batchSize,lrecl,rBuf,err)
       if (rowId == 0)
         rowBatch.endOfFile = true
       rowBatch.size = rowId
@@ -77,26 +88,33 @@ class ZReader(private val schemaProvider: SchemaProvider,
 
 object ZReader {
   /** Read
-    * @param buf input ByteBuffer with position set to start of record
+    * @param rBuf input ByteBuffer with position set to start of record
     * @param decoders Array[Decoder] to read from input
     * @param cols Array[ColumnVector] to receive Decoder output
     * @param rowId index within the batch
     */
-  private final def readRecord(buf: ByteBuffer,
-                               decoders: Array[Decoder],
-                               cols: Array[ColumnVector],
-                               rowId: Int): Unit = {
+  private def readRecord(rBuf: ByteBuffer,
+                         decoders: Array[Decoder],
+                         cols: Array[ColumnVector],
+                         rowId: Int): Unit = {
     var i = 0
     try {
       while (i < decoders.length){
         val decoder = decoders(i)
         val col = cols(i)
-        decoder.get(buf, col, rowId)
+        decoder.get(rBuf, col, rowId)
         i += 1
       }
     } catch {
       case e: Exception =>
-        System.err.println(s"failed on column $i")
+        System.err.println(s"failed on column $i pos:${rBuf.position()} limit:${rBuf.limit()} " +
+          s"decoder: ${decoders(i)}")
+        val i0 = rBuf.position() - decoders(i).size
+        val i1 = i0 + decoders(i).size
+        rBuf.position(i0)
+        rBuf.limit(i1)
+        System.err.println(Ebcdic.charset.decode(rBuf).toString)
+        System.err.println(Bytes.hexValue(rBuf.array().slice(i0,i1)))
         throw e
     }
   }
@@ -116,24 +134,25 @@ object ZReader {
                       cols: Array[ColumnVector],
                       batchSize: Int,
                       lRecl: Int,
+                      rBuf: ByteBuffer,
                       err: ByteBuffer): (Int,Int) = {
+    rBuf.clear
     err.clear
     var errors: Int = 0
     var rowId = 0
-    val record = ByteBuffer.allocate(lRecl)
-    while (rowId < batchSize && buf.remaining >= lRecl){
-      System.arraycopy(buf.array,0,record.array,0,lRecl)
-      val newPos = buf.position + lRecl
+    while (rowId < batchSize && buf.remaining >= rBuf.capacity()){
+      System.arraycopy(buf.array,buf.position(),rBuf.array,0,rBuf.capacity())
+      val newPos = buf.position() + lRecl
       buf.position(newPos)
-      record.clear // prepare record for reading
+      rBuf.clear // prepare record for reading
       try {
-        readRecord(record, decoders, cols, rowId)
+        readRecord(rBuf, decoders, cols, rowId)
       } catch {
         case _: Exception =>
           System.err.println(s"failed on row $rowId")
           errors += 1
-          if (err.remaining >= lRecl)
-            err.put(record.array)
+          if (err.remaining >= rBuf.capacity())
+            err.put(rBuf.array)
       } finally {
         rowId += 1
       }
@@ -201,8 +220,8 @@ object ZReader {
     val record = new Array[Byte](lRecl)
     val delimiters = new Array[Int](cols.length+1)
     while (rowId < batchSize && buf.remaining >= lRecl){
-      System.arraycopy(buf.array, buf.position, record, 0, lRecl)
-      val newPos = buf.position + lRecl
+      System.arraycopy(buf.array, buf.position(), record, 0, lRecl)
+      val newPos = buf.position() + lRecl
       buf.position(newPos)
       locateDelimiters(record, delimiter, delimiters)
       try {

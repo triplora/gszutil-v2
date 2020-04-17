@@ -6,12 +6,12 @@ import java.time.format.DateTimeFormatter
 
 import com.google.cloud.gszutil.VartextDecoding.{VartextStringAsDateDecoder, VartextStringAsDecimalDecoder, VartextStringAsIntDecoder, VartextStringDecoder}
 import com.google.cloud.gszutil.io.ZReader
-import com.google.cloud.gzos.Ebcdic
+import com.google.cloud.imf.gzos.Ebcdic
 import com.google.common.base.Charsets
 import org.apache.hadoop.hive.ql.exec.vector.{BytesColumnVector, DateColumnVector, Decimal64ColumnVector, LongColumnVector}
-import org.scalatest.FlatSpec
+import org.scalatest.flatspec.AnyFlatSpec
 
-class VartextSpec extends FlatSpec {
+class VartextSpec extends AnyFlatSpec {
   private def exampleDecoders(transcoder: Transcoder): Array[VartextDecoder] = {
     Array[VartextDecoder](
       new VartextStringDecoder(transcoder,2),

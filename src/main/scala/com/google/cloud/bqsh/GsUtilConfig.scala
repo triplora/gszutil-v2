@@ -45,8 +45,7 @@ object GsUtilConfig {
              zone: String,
              subnet: String,
              remotePort: Int,
-             serviceAccount: String,
-             tlsEnabled: Boolean): GsUtilConfig = {
+             serviceAccount: String): GsUtilConfig = {
     GsUtilConfig(source = sourceDD,
       schemaProvider = Option(schemaProvider),
       destinationUri = destinationUri,
@@ -59,8 +58,27 @@ object GsUtilConfig {
       remotePort = remotePort,
       serviceAccount = serviceAccount,
       remote = true,
-      replace = true,
-      tlsEnabled = tlsEnabled)
+      replace = true)
+  }
+
+  def createRemote2(sourceDD: String,
+                    schemaProvider: SchemaProvider,
+                    destinationUri: String,
+                    projectId: String,
+                    datasetId: String,
+                    location: String,
+                    remoteHostname: String,
+                    remotePort: Int): GsUtilConfig = {
+    GsUtilConfig(source = sourceDD,
+      schemaProvider = Option(schemaProvider),
+      destinationUri = destinationUri,
+      projectId = projectId,
+      datasetId = datasetId,
+      location = location,
+      remoteHost = remoteHostname,
+      remotePort = remotePort,
+      remote = true,
+      replace = true)
   }
 }
 
@@ -89,8 +107,8 @@ case class GsUtilConfig(source: String = "INFILE",
                         statsTable: String = "",
                         remote: Boolean = false,
                         remoteHost: String = "",
-                        remotePort: Int = 8443,
-                        tlsEnabled: Boolean = true,
+                        remotePort: Int = 51770,
+                        tls: Boolean = false,
                         blocks: Long = 1024,
                         nConnections: Int = 4,
                         pkgUri: String = "",

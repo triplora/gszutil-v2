@@ -22,10 +22,11 @@ import java.util.{Date, TimeZone}
 
 import com.google.api.client.json.jackson2.JacksonFactory
 import com.google.cloud.bigquery.InsertAllRequest.RowToInsert
-import com.google.cloud.gszutil.Util.Logging
+import com.google.cloud.imf.gzos.MVS
+import com.google.cloud.imf.util.Logging
 import com.google.common.collect.ImmutableMap
 
-import scala.collection.JavaConverters._
+import scala.jdk.CollectionConverters.{IterableHasAsScala, MapHasAsScala}
 
 object StatsUtil extends Logging {
   private def sdf(f: String): SimpleDateFormat = {
@@ -70,18 +71,15 @@ object StatsUtil extends Logging {
        |  description="Log table for mainframe jobs"
        |)""".stripMargin
 
-  def insertJobStats(jobName: String, jobDate: String, jobTime: String, job: scala.Option[Job],
+  def insertJobStats(zos: MVS, jobId: JobId, job: scala.Option[Job],
                      bq: BigQuery, tableId: TableId, jobType: String = "", source: String = "",
                      dest: String = "", recordsIn: Long = -1, recordsOut: Long = -1): Unit = {
-    val id = job.map(_.getJobId.getJob)
-      .getOrElse(s"${jobName}_${jobDate}_${jobTime}_$jobType")
-
     val row = ImmutableMap.builder[String,Any]()
-    row.put("job_name", jobName)
-    row.put("job_date", jobDate2Date(jobDate))
-    row.put("job_time", jobTime2Time(jobTime))
+    row.put("job_name", zos.jobName)
+    row.put("job_date", jobDate2Date(zos.jobDate))
+    row.put("job_time", jobTime2Time(zos.jobTime))
     row.put("timestamp", epochMillis2Timestamp(System.currentTimeMillis))
-    row.put("job_id", id)
+    row.put("job_id", jobId.getJob)
     if (jobType.nonEmpty)
       row.put("job_type", jobType)
     if (source.nonEmpty)
@@ -89,11 +87,19 @@ object StatsUtil extends Logging {
     if (dest.nonEmpty)
       row.put("destination", dest)
     if (job.isDefined) {
-      val jobData = job.get.toPb
-      jobData.setFactory(JacksonFactory.getDefaultInstance)
-      row.put("job_json", JacksonFactory.getDefaultInstance.toString(jobData))
-      logger.debug(s"Job Data:\n${JacksonFactory.getDefaultInstance.toPrettyString(jobData)}")
-      if (jobType == "query") {
+      var jobData: com.google.api.services.bigquery.model.Job = null
+      try {
+        jobData = job.get.toPb
+        jobData.setFactory(JacksonFactory.getDefaultInstance)
+        row.put("job_json", JacksonFactory.getDefaultInstance.toString(jobData))
+        logger.debug(s"Job Data:\n${JacksonFactory.getDefaultInstance.toPrettyString(jobData)}")
+      } catch {
+        case e: Throwable =>
+          logger.error("Failed to extract job stats. " +
+            "This may be due to a failed merge query", e)
+      }
+
+      if (jobType == "query" && jobData != null) {
         val stats = jobData.getStatistics.getQuery
         if (stats != null) {
           val plan = stats.getQueryPlan
@@ -107,7 +113,7 @@ object StatsUtil extends Logging {
               row.put("records_out", out)
           }
         }
-      } else if (jobType == "load") {
+      } else if (jobType == "load" && jobData != null) {
         val stats = jobData.getStatistics.getLoad
         if (stats != null) {
           if (stats.getOutputRows != null){
@@ -128,15 +134,15 @@ object StatsUtil extends Logging {
     logger.info(s"inserting stats to ${tableId.getProject}:${tableId.getDataset}.${tableId
       .getTable}")
     val request = InsertAllRequest.newBuilder(tableId)
-        .addRow(id, row.build)
+        .addRow(jobId.getJob, row.build)
         .build()
     val response = bq.insertAll(request)
     if (response.hasErrors){
       val errors = response.getInsertErrors.asScala
         .values.flatMap(_.asScala).mkString("\n")
-      logger.error(s"failed to insert stats for Job ID $id\n$errors")
+      logger.error(s"failed to insert stats for Job ID ${jobId.getJob}\n$errors")
     } else {
-      logger.info(s"inserted job stats for Job ID $id")
+      logger.info(s"inserted job stats for Job ID ${jobId.getJob}")
     }
   }
 
@@ -146,8 +152,7 @@ object StatsUtil extends Logging {
     val request = InsertAllRequest.of(tableId, RowToInsert.of(content))
     val result = bq.insertAll(request)
     if (result.hasErrors) {
-      import scala.collection.JavaConverters.collectionAsScalaIterableConverter
-      val errors = result.getInsertErrors.values().asScala.flatMap(_.asScala)
+      val errors = result.getInsertErrors.values.asScala.flatMap(_.asScala)
       System.err.println("BigQuery Insert errors:")
       for (e <- errors)
         System.err.println(s"${e.getMessage}")

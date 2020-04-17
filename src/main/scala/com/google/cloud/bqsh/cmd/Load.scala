@@ -18,28 +18,28 @@ package com.google.cloud.bqsh.cmd
 
 import com.google.cloud.bigquery._
 import com.google.cloud.bqsh._
-import com.google.cloud.gszutil.Util
-import com.google.cloud.gszutil.Util.Logging
-import com.ibm.jzos.ZFileProvider
+import com.google.cloud.imf.gzos.MVS
+import com.google.cloud.imf.util.Logging
 
 object Load extends Command[LoadConfig] with Logging {
   override val name: String = "bq load"
   override val parser: ArgParser[LoadConfig] = LoadOptionParser
 
-  override def run(cfg: LoadConfig, zos: ZFileProvider): Result = {
+  override def run(cfg: LoadConfig, zos: MVS): Result = {
     val creds = zos.getCredentialProvider().getCredentials
     val bq = BQ.defaultClient(cfg.projectId, cfg.location, creds)
     logger.info("configuring load job")
     val jobConfig = configureLoadJob(cfg)
     logger.info("submitting load job")
 
-    val jobId = JobId.of(s"${zos.jobName}_${zos.jobDate}_bq_load_${System.currentTimeMillis()}_${Util.randString(5)}")
-    val job = bq.create(JobInfo.of(jobId, jobConfig))
-    val completed = BQ.await(job, jobId, 3600)
+    val jobId = BQ.genJobId(zos, "load")
+    bq.create(JobInfo.of(jobId, jobConfig))
+    val completed = BQ.waitForJob(bq, jobId, timeoutMillis = 60L * 60L * 1000L)
 
     if (cfg.statsTable.nonEmpty){
       val statsTable = BQ.resolveTableSpec(cfg.statsTable, cfg.projectId, cfg.datasetId)
-      StatsUtil.insertJobStats(zos.jobName, zos.jobDate, zos.jobTime, scala.Option(completed), bq, statsTable, jobType = "load", source = cfg.path.mkString(","), dest = cfg.tablespec)
+      StatsUtil.insertJobStats(zos, jobId, scala.Option(completed), bq, statsTable, jobType =
+        "load", source = cfg.path.mkString(","), dest = cfg.tablespec)
     }
 
     BQ.getStatus(completed) match {
@@ -56,7 +56,7 @@ object Load extends Command[LoadConfig] with Logging {
   }
 
   def configureLoadJob(cfg: LoadConfig): LoadJobConfiguration = {
-    import scala.collection.JavaConverters.seqAsJavaListConverter
+    import scala.jdk.CollectionConverters.SeqHasAsJava
     val destinationTable = BQ.resolveTableSpec(cfg.tablespec, cfg.projectId, cfg.datasetId)
     logger.info(s"destination table=${destinationTable.getTable} sourceUris = ${cfg.path.mkString(",")}")
     val b = LoadJobConfiguration

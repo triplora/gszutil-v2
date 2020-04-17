@@ -16,17 +16,16 @@
 
 package com.google.cloud.bqsh.cmd
 
-import com.google.cloud.bigquery.{BigQuery,Clustering,ExternalTableDefinition,FormatOptions,
-  StandardTableDefinition,Table,TableDefinition,TableId,TableInfo,TimePartitioning,ViewDefinition}
+import com.google.cloud.bigquery.{BigQuery, Clustering, ExternalTableDefinition, FormatOptions, StandardTableDefinition, Table, TableDefinition, TableId, TableInfo, TimePartitioning, ViewDefinition}
 import com.google.cloud.bqsh._
-import com.google.cloud.gszutil.Util.Logging
-import com.ibm.jzos.ZFileProvider
+import com.google.cloud.imf.gzos.MVS
+import com.google.cloud.imf.util.Logging
 
 object Mk extends Command[MkConfig] with Logging {
   override val name: String = "bq mk"
   override val parser: ArgParser[MkConfig] = MkOptionParser
 
-  def run(cfg: MkConfig, zos: ZFileProvider): Result = {
+  def run(cfg: MkConfig, zos: MVS): Result = {
     val creds = zos.getCredentialProvider().getCredentials
     val bq = BQ.defaultClient(cfg.projectId, cfg.location, creds)
     val tableId = BQ.resolveTableSpec(cfg.tablespec, cfg.projectId, cfg.datasetId)
@@ -83,7 +82,7 @@ object Mk extends Command[MkConfig] with Logging {
     }
 
     if (cfg.clusteringFields.nonEmpty){
-      import scala.collection.JavaConverters.seqAsJavaListConverter
+      import scala.jdk.CollectionConverters.SeqHasAsJava
       val b = Clustering.newBuilder().setFields(cfg.clusteringFields.asJava)
       tableDefinition.setClustering(b.build())
     }
@@ -101,7 +100,7 @@ object Mk extends Command[MkConfig] with Logging {
                           tableId: TableId,
                           sources: Seq[String],
                           lifetimeMillis: Long): Table = {
-    import scala.collection.JavaConverters.seqAsJavaListConverter
+    import scala.jdk.CollectionConverters.SeqHasAsJava
 
     if (Option(bq.getTable(tableId)).isDefined)
         bq.delete(tableId)

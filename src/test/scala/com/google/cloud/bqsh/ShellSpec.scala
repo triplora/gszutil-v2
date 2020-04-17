@@ -16,11 +16,10 @@
 
 package com.google.cloud.bqsh
 
-import com.google.cloud.gszutil.Util
-import com.ibm.jzos.ZFileProvider
-import org.scalatest.FlatSpec
+import com.google.cloud.imf.gzos.Util
+import org.scalatest.flatspec.AnyFlatSpec
 
-class ShellSpec extends FlatSpec {
+class ShellSpec extends AnyFlatSpec {
   "InputParser" should "parse shell" in {
     val bqExample1 =
       """bq --project_id=project --dataset_id=dataset mk \

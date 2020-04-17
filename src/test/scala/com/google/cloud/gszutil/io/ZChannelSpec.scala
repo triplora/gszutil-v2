@@ -16,25 +16,21 @@
 
 package com.google.cloud.gszutil.io
 
-import java.util.concurrent.{ForkJoinPool, TimeUnit}
+import com.google.cloud.gszutil.CopyBook
+import com.google.cloud.imf.GRecv
+import com.google.cloud.imf.grecv.GRecvConfig
+import com.google.cloud.imf.grecv.grpc.GrpcReceiver
+import com.google.cloud.imf.grecv.socket.SocketClient
+import com.google.cloud.imf.gzos.Util
+import com.google.cloud.imf.gzos.pb.GRecvProto.GRecvRequest
+import com.google.cloud.imf.util.Logging
+import org.scalatest.flatspec.AnyFlatSpec
 
-import com.google.cloud.gszutil.Util.Logging
-import com.google.cloud.gszutil.V2Server.V2Config
-import com.google.cloud.gszutil.io.V2SendCallable.ReaderOpts
-import com.google.cloud.gszutil.{CopyBook, Utf8, Util, V2Server}
-import com.google.common.util.concurrent.MoreExecutors
-import org.scalatest.FlatSpec
-import org.zeromq.ZContext
-
-class ZChannelSpec extends FlatSpec with Logging {
+class ZChannelSpec extends AnyFlatSpec with Logging {
   Util.configureLogging(true)
 
   "ZChannel" should "rw" in {
-    val sendParallelism = 6
-    val readExecutor = MoreExecutors.listeningDecorator(new ForkJoinPool(2))
-    val ctx = new ZContext()
-
-    val gcsUri = "gs://gsztest/grecv-test/"
+    val sendParallelism = 2
     val copyBook = CopyBook(
       """    01  TEST-LAYOUT-FIVE.
         |        03  COL-A                    PIC S9(9) COMP.
@@ -55,23 +51,23 @@ class ZChannelSpec extends FlatSpec with Logging {
     val blkSize: Int = 32*1024 - (32*1024 % copyBook.LRECL)
     val inSize: Long = 256L*blkSize
     val host = "127.0.0.1"
-    val port = 5570
-    val serverCfg = V2Config(host, port)
-    val recvResult = readExecutor.submit(new V2Server(serverCfg))
+    val port = 51770
+    val serverCfg = GRecvConfig(host, port)
+    val recvResult = GrpcReceiver.run(serverCfg)
 
-    val readerOpts = ReaderOpts(new RandomBytes(inSize, blkSize, copyBook.LRECL), copyBook, gcsUri,
-      blkSize,
-      ctx, sendParallelism, host, port, 1024)
-
-    val sendResult = V2SendCallable(readerOpts).call()
-    assert(sendResult.isDefined)
+    val in = new RandomBytes(inSize, blkSize, copyBook.LRECL)
+    val request = GRecvRequest.newBuilder
+      .setSchema(copyBook.toRecordBuilder.build)
+      .setLrecl(in.lRecl)
+      .setBlksz(in.blkSize)
+      .setBasepath("gs://bucket/prefix")
+      .setMaxErrPct(0)
+      .build
+    val sendResult = SocketClient.clientBegin(in, request,
+      sendParallelism, host, port, tls = false)
+    assert(sendResult.isSuccess)
     assert(sendResult.get.rc == 0)
-    ctx.close()
     assert(sendResult.get.bytesIn == inSize)
-
-    recvResult.get(60, TimeUnit.SECONDS)
-    assert(recvResult.isDone)
-    assert(recvResult.get.exitCode == 0)
+    assert(recvResult.exitCode == 0)
   }
-
 }

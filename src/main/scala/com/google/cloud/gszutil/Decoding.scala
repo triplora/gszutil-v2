@@ -18,12 +18,11 @@ package com.google.cloud.gszutil
 import java.nio.ByteBuffer
 import java.time.{LocalDate, Month}
 
-import com.google.cloud.gszutil.Util.Logging
-import com.google.cloud.gzos.pb.Schema.Field
-import com.google.cloud.gzos.pb.Schema.Field.NullIf
+import com.google.cloud.imf.gzos.pb.GRecvProto.Record.Field
+import com.google.cloud.imf.gzos.pb.GRecvProto.Record.Field.NullIf
+import com.google.cloud.imf.util.Logging
 import com.google.protobuf.ByteString
-import org.apache.hadoop.hive.ql.exec.vector.{BytesColumnVector,ColumnVector,
-  DateColumnVector,Decimal64ColumnVector,LongColumnVector}
+import org.apache.hadoop.hive.ql.exec.vector.{BytesColumnVector, ColumnVector, DateColumnVector, Decimal64ColumnVector, LongColumnVector}
 import org.apache.orc.TypeDescription
 
 
@@ -36,6 +35,7 @@ object Decoding extends Logging {
       val bcv = col.asInstanceOf[BytesColumnVector]
 
       // decode into output buffer
+      bcv.ensureValPreallocated(size)
       val destPos = bcv.getValPreallocatedStart
       val dest = bcv.getValPreallocatedBytes
       transcoder.arraycopy(buf, dest, destPos, size)
@@ -79,13 +79,14 @@ object Decoding extends Logging {
                       override val filler: Boolean = false) extends Decoder {
     override def get(buf: ByteBuffer, col: ColumnVector, i: Int): Unit = {
       val bcv = col.asInstanceOf[BytesColumnVector]
+      bcv.ensureValPreallocated(size)
       transcoder.arraycopy(buf, bcv.getValPreallocatedBytes, bcv.getValPreallocatedStart, size)
       bcv.setValPreallocated(i, size)
     }
 
     override def columnVector(maxSize: Int): ColumnVector = {
       val cv = new BytesColumnVector(maxSize)
-      cv.initBuffer(size)
+      cv.initBuffer(size*2)
       cv
     }
 
@@ -133,8 +134,8 @@ object Decoding extends Logging {
     // count zeros to detect null
     protected def isNull(buf: ByteBuffer): Boolean = {
       var zeros = 0
-      var j = buf.position
-      val j1 = math.min(j+size, buf.limit)
+      var j = buf.position()
+      val j1 = math.min(j+size, buf.limit())
       val a = buf.array
       while (j < j1) {
         if (a(j) == Zero) zeros += 1
@@ -146,7 +147,7 @@ object Decoding extends Logging {
     override def get(buf: ByteBuffer, col: ColumnVector, i: Int): Unit = {
       val dcv = col.asInstanceOf[DateColumnVector]
       if (isNull(buf)) {
-        val i1 = buf.position + size
+        val i1 = buf.position() + size
         buf.position(i1)
         dcv.vector.update(i, -1)
         dcv.isNull.update(i, true)
@@ -172,7 +173,7 @@ object Decoding extends Logging {
   }
 
   class IntegerAsDateDecoder(override val size: Int,
-                             override val format: String,
+                             override val format: String = "YYYYMMDD",
                              override val filler: Boolean = false) extends DateDecoder {
 
     override def get(buf: ByteBuffer, col: ColumnVector, i: Int): Unit = {
@@ -376,7 +377,7 @@ object Decoding extends Logging {
     }
     else if (f.getTyp == INTEGER) {
       if (f.getCast == DATE){
-        new IntegerAsDateDecoder(f.getSize, f.getFormat, filler)
+        new IntegerAsDateDecoder(f.getSize, filler = filler)
       } else LongDecoder(f.getSize, filler)
     } else if (f.getTyp == DECIMAL)
       Decimal64Decoder(f.getPrecision - f.getScale, f.getScale, filler)
@@ -395,41 +396,41 @@ object Decoding extends Logging {
   private val decRegex = """PIC S9\((\d{1,3})\) COMP-3""".r
   private val decRegex2 = """PIC S9\((\d{1,3})\)V9\((\d{1,3})\) COMP-3""".r
   private val decRegex3 = """PIC S9\((\d{1,3})\)V(9{1,6}) COMP-3""".r
-  def typeMap(typ: String, transcoder: Transcoder): Decoder = {
+  def typeMap(typ: String, transcoder: Transcoder, filler: Boolean): Decoder = {
     typ.stripSuffix(".") match {
       case charRegex(size) =>
-        new StringDecoder(transcoder, size.toInt)
+        new StringDecoder(transcoder, size.toInt, filler = filler)
       case "PIC X" =>
-        new StringDecoder(transcoder, 1)
+        new StringDecoder(transcoder, 1, filler = filler)
       case numStrRegex(size) =>
-        new StringDecoder(transcoder, size.toInt)
+        new StringDecoder(transcoder, size.toInt, filler = filler)
       case decRegex(p) if p.toInt >= 1 =>
-        Decimal64Decoder(p.toInt, 0)
+        Decimal64Decoder(p.toInt, 0, filler = filler)
       case decRegex2(p,s) if p.toInt >= 1 =>
-        Decimal64Decoder(p.toInt, s.toInt)
+        Decimal64Decoder(p.toInt, s.toInt, filler = filler)
       case decRegex3(p,s) if p.toInt >= 1 =>
-        Decimal64Decoder(p.toInt, s.length)
+        Decimal64Decoder(p.toInt, s.length, filler = filler)
       case "PIC S9 COMP" =>
-        LongDecoder(2)
+        LongDecoder(2, filler = filler)
       case "PIC 9 COMP" =>
-        UnsignedLongDecoder(2)
+        UnsignedLongDecoder(2, filler = filler)
       case intRegex(p) if p.toInt <= 18 && p.toInt >= 1 =>
         val x = p.toInt
         if (x <= 4)
-          LongDecoder(2)
+          LongDecoder(2, filler = filler)
         else if (x <= 9)
-          LongDecoder(4)
+          LongDecoder(4, filler = filler)
         else
-          LongDecoder(8)
+          LongDecoder(8, filler = filler)
 
       case uintRegex(p) if p.toInt <= 18 && p.toInt >= 1 =>
         val x = p.toInt
         if (x <= 4)
-          UnsignedLongDecoder(2)
+          UnsignedLongDecoder(2, filler = filler)
         else if (x <= 9)
-          UnsignedLongDecoder(4)
+          UnsignedLongDecoder(4, filler = filler)
         else
-          UnsignedLongDecoder(8)
+          UnsignedLongDecoder(8, filler = filler)
       case x =>
         types(x)
     }
@@ -462,8 +463,10 @@ object Decoding extends Logging {
         val typ1 = typ
           .replaceFirst("""\s+COMP""", " COMP")
           .replaceFirst("""\(0""", """\(""")
-        val decoder = typeMap(typ1, transcoder)
-        Option(CopyBookField(name.trim, decoder))
+        val filler = name.toUpperCase.startsWith("FILLER")
+        val decoder = typeMap(typ1, transcoder, filler)
+
+        Option(CopyBookField(name.replace('-','_').trim, decoder))
       case titleRegex(name) =>
         Option(CopyBookTitle(name))
       case titleRegex2(name) =>

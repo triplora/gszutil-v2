@@ -21,7 +21,7 @@ import java.security.SecureRandom
 
 import com.google.api.client.googleapis.GoogleUtils
 import com.google.api.client.util.SslUtils
-import com.google.cloud.gszutil.Util.Logging
+import com.google.cloud.imf.util.Logging
 import javax.net.ssl.{SSLContext, SSLSocket, SSLSocketFactory}
 
 object CCASSLSocketFactory {

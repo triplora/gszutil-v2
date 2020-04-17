@@ -16,26 +16,31 @@
 
 package com.google.cloud.bqsh.cmd
 
-import com.google.cloud.bigquery.{BigQueryException, Clustering, JobId, JobInfo, QueryJobConfiguration, QueryParameterValue, StandardSQLTypeName, StatsUtil, TimePartitioning}
+import com.google.cloud.bigquery.{BigQueryException, Clustering, JobInfo, QueryJobConfiguration, QueryParameterValue, StandardSQLTypeName, StatsUtil, TimePartitioning}
 import com.google.cloud.bqsh.BQ.resolveDataset
 import com.google.cloud.bqsh.{ArgParser, BQ, Bqsh, Command, QueryConfig, QueryOptionParser}
-import com.google.cloud.gszutil.Util
-import com.google.cloud.gszutil.Util.Logging
-import com.ibm.jzos.ZFileProvider
+import com.google.cloud.imf.gzos.MVS
+import com.google.cloud.imf.util.Logging
 
 object Query extends Command[QueryConfig] with Logging {
   override val name: String = "bq query"
   override val parser: ArgParser[QueryConfig] = QueryOptionParser
 
-  def run(cfg: QueryConfig, zos: ZFileProvider): Result = {
+  def run(cfg: QueryConfig, zos: MVS): Result = {
     val creds = zos.getCredentialProvider().getCredentials
     val bq = BQ.defaultClient(cfg.projectId, cfg.location, creds)
 
     val queryString =
       if (cfg.sql.nonEmpty) cfg.sql
       else {
-        logger.info("Reading query from QUERY DD")
-        zos.readDDString("QUERY", " ")
+        cfg.dsn match {
+          case Some(dsn) =>
+            logger.info(s"Reading query from DSN: $dsn")
+            zos.readDSNLines(dsn).mkString(" ")
+          case None =>
+            logger.info("Reading query from DD: QUERY")
+            zos.readDDString("QUERY", " ")
+        }
       }
     logger.info(s"SQL Query:\n$queryString")
     require(queryString.nonEmpty, "query must not be empty")
@@ -47,23 +52,32 @@ object Query extends Command[QueryConfig] with Logging {
     var result: Result = null
     for (query <- queries) {
       val jobConfiguration = configureQueryJob(query, cfg, zos)
-      val jobId = JobId.of(s"${zos.jobName}_${zos.jobDate}_${zos.jobTime}_query_${System.currentTimeMillis()}_${Util.randString(5)}")
+      val jobId = BQ.genJobId(zos, "query")
+      logger.debug(s"generated job id ${jobId.getJob}")
 
       try {
+        logger.info("Submitting query job")
         val job = BQ.runJob(bq, jobConfiguration, jobId, cfg.timeoutMinutes * 60, cfg.sync)
+        if (cfg.sync){
+          logger.info("Query job finished")
+        }
 
         // Publish results
         if (cfg.sync && cfg.statsTable.nonEmpty) {
+          logger.debug("writing stats")
           val statsTable = BQ.resolveTableSpec(cfg.statsTable, cfg.projectId, cfg.datasetId)
-          StatsUtil.insertJobStats(zos.jobName, zos.jobDate, zos.jobTime, scala.Option(job), bq,
+          logger.debug(s"resolved stats table ${statsTable.getProject}:${statsTable.getDataset}" +
+            s".${statsTable.getTable}")
+          StatsUtil.insertJobStats(zos, jobId, scala.Option(job), bq,
             statsTable, jobType = "query", dest = cfg.destinationTable)
         }
 
+        // check for errors
         if (cfg.sync) {
-          logger.info(s"checking job status for ${jobId.getJob}")
+          logger.info(s"Checking for errors in job status")
           BQ.getStatus(job) match {
             case Some(status) =>
-              logger.info(s"job ${jobId.getJob} has status ${status.state}")
+              logger.info(s"Status = ${status.state}")
               if (status.hasError) {
                 val msg = s"Error:\n${status.error}\nExecutionErrors: ${status.executionErrors.mkString("\n")}"
                 logger.error(msg)
@@ -71,7 +85,7 @@ object Query extends Command[QueryConfig] with Logging {
               } else result = Result.Success
               BQ.throwOnError(status)
             case _ =>
-              logger.error(s"job ${jobId.getJob} missing")
+              logger.error(s"Job ${jobId.getJob} not found")
               result = Result.Failure("missing status")
           }
         } else {
@@ -129,8 +143,8 @@ object Query extends Command[QueryConfig] with Logging {
     (positionalValues, namedValues)
   }
 
-  def configureQueryJob(query: String, cfg: QueryConfig, zos: ZFileProvider): QueryJobConfiguration = {
-    import scala.collection.JavaConverters.{mapAsJavaMapConverter, seqAsJavaListConverter}
+  def configureQueryJob(query: String, cfg: QueryConfig, zos: MVS): QueryJobConfiguration = {
+    import scala.jdk.CollectionConverters.{MapHasAsJava, SeqHasAsJava}
 
     val b = QueryJobConfiguration.newBuilder(query)
       .setDryRun(cfg.dryRun)
@@ -147,9 +161,9 @@ object Query extends Command[QueryConfig] with Logging {
       b.setAllowLargeResults(cfg.allowLargeResults)
 
     if (cfg.clusteringFields.nonEmpty){
-      val clustering = Clustering.newBuilder()
+      val clustering = Clustering.newBuilder
         .setFields(cfg.clusteringFields.asJava)
-        .build()
+        .build
       b.setClustering(clustering)
     }
 

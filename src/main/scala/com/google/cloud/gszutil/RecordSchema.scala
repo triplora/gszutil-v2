@@ -2,13 +2,14 @@ package com.google.cloud.gszutil
 
 import java.nio.charset.Charset
 
-import com.google.cloud.gzos.Ebcdic
-import com.google.cloud.gzos.pb.Schema.{Field, Record}
+import com.google.cloud.imf.gzos.Ebcdic
+import com.google.cloud.imf.gzos.pb.GRecvProto.Record
+import com.google.cloud.imf.gzos.pb.GRecvProto.Record.Field
 
 case class RecordSchema(r: Record) extends SchemaProvider {
-  import scala.collection.JavaConverters._
+  import scala.jdk.CollectionConverters.ListHasAsScala
   private def fields: Array[Field] = r.getFieldList.asScala.toArray
-  override def fieldNames: Seq[String] = fields.filterNot(_.getFiller).map(_.getName)
+  override def fieldNames: Seq[String] = fields.toIndexedSeq.filterNot(_.getFiller).map(_.getName)
   override lazy val decoders: Array[Decoder] =
     if (r.getVartext)
       fields.map(VartextDecoding.getVartextDecoder(_, transcoder))
@@ -29,10 +30,8 @@ case class RecordSchema(r: Record) extends SchemaProvider {
     else Utf8
 
   override def toByteArray: Array[Byte] = r.toByteArray
-  override def LRECL: Int = {
-    if (r.getVartext) r.getLrecl
-    else decoders.foldLeft(0){_ + _.size}
-  }
+  override def toRecordBuilder: Record.Builder = r.toBuilder
+  override def LRECL: Int = decoders.foldLeft(0){_ + _.size}
 
   override def vartext: Boolean = r.getVartext
   override def delimiter: Array[Byte] = r.getDelimiter.toByteArray

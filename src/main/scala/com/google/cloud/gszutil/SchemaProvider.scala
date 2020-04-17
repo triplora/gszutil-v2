@@ -2,7 +2,8 @@ package com.google.cloud.gszutil
 
 import java.nio.charset.Charset
 
-import com.google.cloud.gzos.Ebcdic
+import com.google.cloud.imf.gzos.Ebcdic
+import com.google.cloud.imf.gzos.pb.GRecvProto.Record
 import org.apache.orc.TypeDescription
 import org.apache.orc.TypeDescription.Category
 
@@ -13,6 +14,7 @@ trait SchemaProvider {
   def vartextDecoders: Array[VartextDecoder] = Array.empty
 
   def toByteArray: Array[Byte]
+  def toRecordBuilder: Record.Builder
 
   def ORCSchema: TypeDescription =
     fieldNames.zip(decoders.filterNot(_.filler))

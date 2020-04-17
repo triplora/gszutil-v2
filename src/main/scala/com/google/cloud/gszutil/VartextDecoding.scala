@@ -4,13 +4,12 @@ import java.nio.charset.StandardCharsets
 import java.time.LocalDate
 
 import com.google.cloud.gszutil.Decoding._
-import com.google.cloud.gzos.pb.Schema.Field
-import org.apache.hadoop.hive.ql.exec.vector.{BytesColumnVector, ColumnVector, DateColumnVector,
-  Decimal64ColumnVector, LongColumnVector}
+import com.google.cloud.imf.gzos.pb.GRecvProto.Record.Field
+import com.google.cloud.imf.gzos.pb.GRecvProto.Record.Field.FieldType._
+import org.apache.hadoop.hive.ql.exec.vector.{BytesColumnVector, ColumnVector, DateColumnVector, Decimal64ColumnVector, LongColumnVector}
 
 object VartextDecoding {
   def getVartextDecoder(f: Field, transcoder: Transcoder): Decoder = {
-    import Field.FieldType._
     val filler: Boolean = f.getFiller || f.getName.toUpperCase.startsWith("FILLER")
     if (f.getTyp == STRING) {
       if (f.getCast == INTEGER)
@@ -38,7 +37,7 @@ object VartextDecoding {
       }
     } else if (f.getTyp == INTEGER) {
       if (f.getCast == DATE){
-        new VartextIntegerAsDateDecoder(transcoder, f.getSize, f.getFormat, filler)
+        new VartextIntegerAsDateDecoder(transcoder, f.getSize, filler)
       } else new VartextStringAsIntDecoder(transcoder, f.getSize, filler)
     } else if (f.getTyp == DECIMAL)
       new VartextStringAsDecimalDecoder(transcoder, f.getSize, f.getPrecision, f
@@ -107,7 +106,7 @@ object VartextDecoding {
         dcv.vector.update(i, -1)
         dcv.isNull.update(i, true)
       } else {
-        val dt = LocalDate.from(fmt.parse(s)).toEpochDay
+        val dt = LocalDate.from(fmt.parse(s.filter(_.isDigit))).toEpochDay
         dcv.vector.update(i, dt)
       }
     }
@@ -115,9 +114,8 @@ object VartextDecoding {
 
   class VartextIntegerAsDateDecoder(override val transcoder: Transcoder,
                                     override val size: Int,
-                                    override val format: String,
                                     override val filler: Boolean = false)
-    extends IntegerAsDateDecoder(size, format, filler) with VartextDecoder {
+    extends IntegerAsDateDecoder(size, filler = filler) with VartextDecoder {
     override def get(s: String, row: ColumnVector, i: Int): Unit = {
       putValue(s.toLong, row, i)
     }

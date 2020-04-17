@@ -1,18 +1,20 @@
 package com.google.cloud.bqsh
 
 import com.google.api.client.googleapis.util.Utils
-import com.google.api.client.json.jackson2.JacksonFactory
+import com.google.api.client.json.JsonFactory
 import com.google.api.services.compute.Compute
-import com.google.api.services.compute.model.{AccessConfig, AttachedDisk, AttachedDiskInitializeParams, Instance, Metadata, NetworkInterface, ServiceAccount}
+import com.google.api.services.compute.model.{AttachedDisk, AttachedDiskInitializeParams, Instance, Metadata, NetworkInterface, Operation, ServiceAccount}
 import com.google.auth.Credentials
 import com.google.auth.http.HttpCredentialsAdapter
-import com.google.cloud.gszutil.Util.Logging
+import com.google.cloud.imf.gzos.Util
+import com.google.cloud.imf.util.Logging
 import com.google.common.collect.ImmutableList
 
-import scala.util.Random
+import scala.annotation.tailrec
 
 object GCE extends Logging {
   private var client: Compute = _
+  private def JSON: JsonFactory = Utils.getDefaultJsonFactory
 
   def defaultClient(credentials: Credentials): Compute = {
     if (client == null)
@@ -27,114 +29,135 @@ object GCE extends Logging {
   }
 
   val Debian10 = "projects/debian-cloud/global/images/family/debian-10"
+  val StorageScope = "https://www.googleapis.com/auth/devstorage.read_write"
 
-  case class InstanceResult(ip: String, instance: Instance)
+  class EnhancedInstance(val instance: Instance,
+                         private val project: String,
+                         private val gce: Compute) {
+    def ipAddr: String = instance.getNetworkInterfaces.get(0).getNetworkIP
+    def terminate(): Unit = {
+      GCE.terminateVM(name = instance.getName,
+        project = project,
+        zone = instance.getZone,
+        gce = gce)
+    }
 
-  def getStartupScript(pkgUri: String): String =
-    s"""#!/bin/bash
-       |gsutil cp '$pkgUri' pkg.tar && tar xvf pkg.tar && . run.sh
-       |""".stripMargin
+    def createInstance(): EnhancedInstance = {
+      checkResponse(gce.instances.insert(project, instance.getZone, instance).execute)
+      waitForInstance(gce, instance.getName, project, instance.getZone)
+    }
+
+    override def toString: String = JSON.toPrettyString(instance)
+  }
+
+  def meta(k: String, v: String): Metadata.Items =
+    new Metadata.Items().setKey(k).setValue(v)
+
+  def toMetadata(m: Map[String,String]): Metadata = {
+    import scala.jdk.CollectionConverters.SeqHasAsJava
+    new Metadata().setItems(m.toSeq.map{ x => meta(x._1,x._2)}.asJava)
+  }
+
+  def checkResponse(res: Operation): Unit = {
+    logger.debug(res)
+    val status = res.getStatus
+    logger.debug(s"$status - ${res.getStatusMessage}")
+    if (!("RUNNING" == status  || "DONE" == status)) {
+      val msg = s"Failed to create gReceiver Compute Instance\n${JSON.toPrettyString(res)}"
+      throw new RuntimeException(msg)
+    }
+  }
 
   /** Creates a gReceiver Compute Instance
     *
     * @param name name of the instance
-    * @param pkgUri GCS URI for tar file containing run.sh (gs://bucket/prefix/pkg.tar)
+    * @param metadata Map containing key/value pairs of metadata
     * @param serviceAccount Service Account email (sv@project.iam.gserviceaccount.com)
     * @param project Project ID
     * @param zone Zone
     * @param subnet Subnet
     * @param gce Compute client
-    * @param machineType Instance type (default: n1-standard-8)
+    * @param machineType Instance type (default: n1-standard-4)
     * @return InstanceResult containing IP address and Instance object
     */
-  def createVM(name: String, pkgUri: String, serviceAccount: String,
-               project: String, zone: String, subnet: String,
-               gce: Compute, machineType: String = "n1-standard-8",
-               tlsEnabled: Boolean): InstanceResult = {
+  def createVM(name: String,
+               description: String,
+               metadata: Map[String,String],
+               serviceAccount: String,
+               project: String,
+               zone: String,
+               subnet: String,
+               gce: Compute,
+               machineType: String = "n1-standard-4"): EnhancedInstance = {
+    val serviceAccounts = ImmutableList.of(new ServiceAccount()
+        .setEmail(serviceAccount)
+        .setScopes(ImmutableList.of(StorageScope)))
+
+    val networkInterfaces = ImmutableList.of(new NetworkInterface().setSubnetwork(subnet))
+
+    val disks = ImmutableList.of(new AttachedDisk()
+      .setType("PERSISTENT")
+      .setBoot(true)
+      .setMode("READ_WRITE")
+      .setAutoDelete(true)
+      .setDeviceName(name)
+      .setInitializeParams(new AttachedDiskInitializeParams()
+        .setSourceImage(Debian10)
+        .setDiskType(s"projects/$project/zones/$zone/diskTypes/pd-standard")
+        .setDiskSizeGb(32L)
+      ))
+
     val instance: Instance = new Instance()
-      .setDescription("gReceiver")
+      .setDescription(description)
       .setZone(zone)
       .setName(name)
       .setCanIpForward(false)
-      .setMetadata(new Metadata()
-        .setItems(ImmutableList.of(
-          new Metadata.Items()
-            .setKey("startup-script")
-            .setValue(getStartupScript(pkgUri)),
-          new Metadata.Items()
-            .setKey("gcspath")
-            .setValue(pkgUri.reverse.dropWhile(_ != '/').reverse),
-          new Metadata.Items()
-            .setKey("tlsenabled")
-            .setValue(if (tlsEnabled) "true" else "false")
-        ))
-      )
+      .setMetadata(toMetadata(metadata))
       .setMachineType(s"projects/$project/zones/$zone/machineTypes/$machineType")
-      .setNetworkInterfaces(ImmutableList.of(
-        new NetworkInterface()
-          .setSubnetwork(subnet)
-      ))
-      .setServiceAccounts(ImmutableList.of(
-        new ServiceAccount()
-          .setEmail(serviceAccount)
-          .setScopes(ImmutableList.of("https://www.googleapis.com/auth/devstorage.read_write"))
-      ))
-      .setDisks(ImmutableList.of(
-        new AttachedDisk()
-          .setType("PERSISTENT")
-          .setBoot(true)
-          .setMode("READ_WRITE")
-          .setAutoDelete(true)
-          .setDeviceName(name)
-          .setInitializeParams(
-            new AttachedDiskInitializeParams()
-              .setSourceImage(Debian10)
-              .setDiskType(s"projects/$project/zones/$zone/diskTypes/pd-standard")
-              .setDiskSizeGb(200L)
-          )
-      ))
+      .setNetworkInterfaces(networkInterfaces)
+      .setServiceAccounts(serviceAccounts)
+      .setDisks(disks)
 
-    val instanceRequest = JacksonFactory.getDefaultInstance.toPrettyString(instance)
-    logger.debug("Requesting creation of instance:\n" + instanceRequest)
+    logger.info("Requesting creation of instance")
+    val eInstance = new EnhancedInstance(instance, project, gce)
+    logger.debug(eInstance)
 
-    // Create the Instance
-    val req = gce.instances().insert(project, zone, instance)
-    val res = req.execute()
-    logger.debug(res)
+    // Create the Instance and wait for it to be running
+    eInstance.createInstance()
+  }
 
-    // Verify Instance was created
-    var status = res.getStatus
-    logger.debug(status + " - " + res.getStatusMessage)
-    if (!(status == "RUNNING" || status == "DONE")) {
-      res.setFactory(JacksonFactory.getDefaultInstance)
-      throw new RuntimeException("Failed to create gReceiver Compute " +
-        "Instance:\nRequest:\n" + instanceRequest + "\nResponse:\n" + res.toPrettyString)
+  val BadStatus = Set("STOPPING","STOPPED","SUSPENDING","SUSPENDED","TERMINATED")
+
+  @tailrec
+  def waitForInstance(gce: Compute,
+                      instanceName: String,
+                      project: String,
+                      zone: String,
+                      timeout: Long = 300000,
+                      wait: Long = 5000): EnhancedInstance = {
+    if (timeout <= 0)
+      throw new RuntimeException("timed out waiting for instance creation")
+
+    Option(gce.instances.get(project, zone, instanceName).execute) match {
+      case Some(value) if BadStatus.contains(value.getStatus) =>
+        throw new RuntimeException(s"$instanceName has status ${value.getStatus}")
+      case Some(value) if "RUNNING" == value.getStatus =>
+        new EnhancedInstance(value, project, gce)
+      case _ =>
+        Util.sleepOrYield(wait)
+        waitForInstance(gce = gce,
+                        instanceName = instanceName,
+                        project = project,
+                        zone = zone,
+                        timeout = timeout - wait,
+                        wait = wait)
     }
-
-    // Get the IP Address
-    var created: Instance = null
-    var totalWait = 0L
-    status = "PROVISIONING"
-    while (status == "PROVISIONING"){
-      val waitMs = 10000L + Random.nextInt(20000)
-      logger.debug(s"Waiting $waitMs ms for Instance creation")
-      Thread.sleep(waitMs)
-      totalWait += waitMs
-      created = gce.instances().get(project, zone, name).execute()
-      status = created.getStatus
-      if (totalWait > 15L * 60L * 1000L)
-        throw new RuntimeException("timed out waiting for instance creation")
-    }
-    val ip = created.getNetworkInterfaces.get(0).getNetworkIP
-
-    // Return the result
-    InstanceResult(ip, created)
   }
 
   def terminateVM(name: String, project: String, zone: String, gce: Compute): Unit = {
-    val req = gce.instances().delete(project, zone, name)
+    val req = gce.instances.delete(project, zone, name)
     logger.info(s"Requesting deletion of Instance $name")
-    val res = req.execute()
+    val res = req.execute
     logger.info(s"Delete request returned status ${res.getStatus}")
   }
 }

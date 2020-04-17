@@ -18,19 +18,20 @@ package com.google.cloud.gszutil
 
 import java.nio.charset.Charset
 
-import com.google.cloud.gszutil.Decoding.{CopyBookField, CopyBookLine, parseCopyBookLine}
-import com.google.cloud.gzos.Ebcdic
-import com.google.cloud.gzos.pb.Schema.Record
+import com.google.cloud.gszutil.Decoding.{CopyBookField, CopyBookLine}
+import com.google.cloud.imf.gzos.Ebcdic
+import com.google.cloud.imf.gzos.pb.GRecvProto.Record
 
 import scala.collection.mutable.ArrayBuffer
 
 
 case class CopyBook(raw: String, transcoder: Transcoder = Ebcdic) extends SchemaProvider {
-  final val Fields: Seq[CopyBookLine] = raw.lines.flatMap(parseCopyBookLine(_,transcoder)).toSeq
+  final val Fields: Seq[CopyBookLine] = raw.linesIterator
+    .flatMap(Decoding.parseCopyBookLine(_,transcoder)).toSeq
 
   override def fieldNames: Seq[String] =
     Fields.flatMap{
-      case CopyBookField(name, _) =>
+      case CopyBookField(name, decoder) if !decoder.filler =>
         Option(name.replaceAllLiterally("-","_"))
       case _ =>
         None
@@ -56,9 +57,8 @@ case class CopyBook(raw: String, transcoder: Transcoder = Ebcdic) extends Schema
   override def toByteArray: Array[Byte] =
     toRecordBuilder.build().toByteArray
 
-  def toRecordBuilder: Record.Builder = {
+  override def toRecordBuilder: Record.Builder = {
     val b = Record.newBuilder()
-        .setLrecl(LRECL)
         .setSource(Record.Source.COPYBOOK)
         .setOriginal(raw)
 

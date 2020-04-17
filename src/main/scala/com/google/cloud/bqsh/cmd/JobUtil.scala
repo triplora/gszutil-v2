@@ -2,25 +2,26 @@ package com.google.cloud.bqsh.cmd
 
 
 import com.google.cloud.bqsh.{ArgParser, Command, JobUtilConfig, JobUtilOptionParser}
-import com.google.cloud.gszutil.Util.{dsn,Logging}
-import com.ibm.jzos.ZFileProvider
+import com.google.cloud.imf.gzos.MVS
+import com.google.cloud.imf.gzos.MVSStorage.MVSPDSMember
+import com.google.cloud.imf.util.Logging
 
 
 object JobUtil extends Command[JobUtilConfig] with Logging {
   override val name: String = "jclutil"
   override val parser: ArgParser[JobUtilConfig] = JobUtilOptionParser
 
-  override def run(config: JobUtilConfig, zos: ZFileProvider): Result = {
+  override def run(config: JobUtilConfig, zos: MVS): Result = {
     if (config.filter.nonEmpty)
       System.out.println(s"Filter regex = '${config.filter}'")
 
-    val members = zos.listPDS(dsn(config.src))
+    val members = zos.listPDS(config.srcDSN)
 
     while (members.hasNext){
       val member = members.next()
       if (config.filter.isEmpty || member.name.matches(config.filter)){
         System.out.println(s"Processing '${member.name}'")
-        val lines = zos.readDSNLines(dsn(config.src,member.name))
+        val lines = zos.readDSNLines(MVSPDSMember(config.src,member.name))
         val jcl = readJCL(lines).toArray.toSeq
         val result = zos.submitJCL(jcl)
         if (result.isDefined) {

@@ -28,6 +28,11 @@ object QueryOptionParser extends OptionParser[QueryConfig]("query") with ArgPars
     .text("prints this usage text")
 
   // z/OS Options
+  opt[String]("query_dsn")
+    .optional
+    .text("(optional) DSN to read query from in format HLQ.MEMBER or HLQ.PDS(MEMBER)")
+    .action((x,c) => c.copy(queryDSN = x))
+
   opt[Seq[String]]("parameters_from_file")
     .text("Comma-separated query parameters in the form [NAME]:[TYPE]:[DDNAME]. An empty name creates a positional parameter. [TYPE] may be omitted to assume a STRING value in the form: name::ddname or ::ddname. NULL produces a null value.")
     .action((x,c) => c.copy(parametersFromFile = x))
