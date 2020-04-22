@@ -16,4 +16,5 @@ target
 *.bin
 *.cpy
 tmp
+**/*.pem
 src/main/resources/build.txt
