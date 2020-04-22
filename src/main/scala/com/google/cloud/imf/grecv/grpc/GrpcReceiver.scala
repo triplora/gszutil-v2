@@ -21,6 +21,7 @@ object GrpcReceiver extends Receiver with Logging {
       Result.Success
     } catch {
       case t: Throwable =>
+        logger.error(t.getMessage, t)
         Result.Failure(t.getMessage)
     }
   }

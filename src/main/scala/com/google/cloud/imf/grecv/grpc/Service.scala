@@ -43,7 +43,7 @@ class Service(cfg: GRecvConfig, gcs: Storage) extends Logging {
   }
 
   def start(block: Boolean = true): Unit = {
-    logger.info("starting server")
+    logger.info(s"starting server on ${cfg.host}:${cfg.port}")
     server.start()
     if (block) {
       logger.info("awaiting server termination")
