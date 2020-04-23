@@ -86,7 +86,7 @@ class ZReader(private val schemaProvider: SchemaProvider,
   }
 }
 
-object ZReader {
+object ZReader extends Logging {
   /** Read
     * @param rBuf input ByteBuffer with position set to start of record
     * @param decoders Array[Decoder] to read from input
@@ -140,6 +140,7 @@ object ZReader {
     err.clear
     var errors: Int = 0
     var rowId = 0
+    var print: Int = 0
     while (rowId < batchSize && buf.remaining >= rBuf.capacity()){
       System.arraycopy(buf.array,buf.position(),rBuf.array,0,rBuf.capacity())
       val newPos = buf.position() + lRecl
@@ -148,8 +149,11 @@ object ZReader {
       try {
         readRecord(rBuf, decoders, cols, rowId)
       } catch {
-        case _: Exception =>
-          System.err.println(s"failed on row $rowId")
+        case e: Exception =>
+          if (print < 10){
+            logger.error(s"failed on row $rowId", e)
+            print += 1
+          }
           errors += 1
           if (err.remaining >= rBuf.capacity())
             err.put(rBuf.array)
@@ -217,6 +221,7 @@ object ZReader {
     err.clear
     var errors: Int = 0
     var rowId = 0
+    var print = 0
     val record = new Array[Byte](lRecl)
     val delimiters = new Array[Int](cols.length+1)
     while (rowId < batchSize && buf.remaining >= lRecl){
@@ -227,8 +232,11 @@ object ZReader {
       try {
         readVartextRecord(record, delimiters, delimiter.length, srcCharset, decoders, cols, rowId)
       } catch {
-        case _: Exception =>
-          System.err.println(s"failed on row $rowId")
+        case e: Exception =>
+          if (print < 10){
+            logger.error(s"failed on row $rowId", e)
+            print += 1
+          }
           errors += 1
           err.put(record)
       }

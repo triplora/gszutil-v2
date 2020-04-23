@@ -53,11 +53,12 @@ trait Transcoder {
 
   /** Read Epoch Day from EBCDIC in ByteBuffer */
   @inline
-  final def getEpochDay(buf: ByteBuffer, size: Int, fmt: DateTimeFormatter): Long = {
+  def getEpochDay(buf: ByteBuffer, size: Int, fmt: DateTimeFormatter): Long = {
     val i1 = buf.position() + size
-    val s = new String(buf.array, buf.position(), size, charset).filter(_.isDigit)
+    val s = new String(buf.array, buf.position(), size, charset)
+    val s1 = s.filter(_.isDigit)
     buf.position(i1)
-    LocalDate.from(fmt.parse(s)).toEpochDay
+    LocalDate.from(fmt.parse(s1)).toEpochDay
   }
 
   /** Convert byte from EBCDIC to ASCII */

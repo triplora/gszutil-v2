@@ -59,4 +59,58 @@ public class PackedDecimal {
         }
         return x;
     }
+
+    public static long[] pows = new long[]{
+        1L,
+        10L,
+        100L,
+        1000L,
+        10000L,
+        100000L,
+        1000000L,
+        10000000L,
+        100000000L,
+        1000000000L,
+        10000000000L,
+        100000000000L,
+        1000000000000L,
+        10000000000000L,
+        100000000000000L,
+        1000000000000000L,
+        10000000000000000L,
+        100000000000000000L,
+        1000000000000000000L
+    };
+
+    public static int pow(long x){
+        if      (x >= 100000000000000000L) return 18;
+        else if (x >= 10000000000000000L ) return 17;
+        else if (x >= 1000000000000000L  ) return 15;
+        else if (x >= 100000000000000L   ) return 14;
+        else if (x >= 10000000000000L    ) return 13;
+        else if (x >= 1000000000000L     ) return 12;
+        else if (x >= 100000000000L      ) return 11;
+        else if (x >= 10000000000L       ) return 10;
+        else if (x >= 1000000000L        ) return 9;
+        else if (x >= 100000000L         ) return 8;
+        else if (x >= 10000000L          ) return 7;
+        else if (x >= 1000000L           ) return 6;
+        else if (x >= 100000L            ) return 5;
+        else if (x >= 10000L             ) return 4;
+        else if (x >= 1000L              ) return 3;
+        else if (x >= 100L               ) return 2;
+        else if (x >= 10L                ) return 1;
+        else if (x >= 1L                 ) return 0;
+        else return -1;
+    }
+
+    public static byte[] pack(long x, int len){
+        return pack(x,len,new byte[len],0);
+    }
+
+    public static byte[] pack(long x, int len, byte[] buf, int off){
+        com.ibm.dataaccess.DecimalData.convertLongToPackedDecimal(x, buf, off,
+                precisionOf(len), true);
+        return buf;
+    }
 }

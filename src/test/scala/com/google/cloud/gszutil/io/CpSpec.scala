@@ -3,6 +3,7 @@ package com.google.cloud.gszutil.io
 import com.google.cloud.bqsh.GsUtilConfig
 import com.google.cloud.bqsh.cmd.Cp
 import com.google.cloud.gszutil.{RecordSchema, TestUtil}
+import com.google.cloud.imf.gzos.gen.{DataGenUtil, DataGenerator}
 import com.google.cloud.imf.gzos.pb.GRecvProto.Record
 import com.google.cloud.imf.gzos.pb.GRecvProto.Record.Field
 import com.google.cloud.imf.gzos.{Ebcdic, Linux, Util}
@@ -10,8 +11,9 @@ import com.google.protobuf.ByteString
 import org.scalatest.flatspec.AnyFlatSpec
 
 class CpSpec extends AnyFlatSpec {
-  Util.configureLogging()
-  "Cp" should "copy" in {
+  Util.configureLogging(debugOverride = true)
+
+  val mload1Schema: RecordSchema = {
     val b = Record.newBuilder
       .setVartext(true)
       .setEncoding("EBCDIC")
@@ -25,7 +27,8 @@ class CpSpec extends AnyFlatSpec {
       .setTyp(Field.FieldType.STRING)
       .setSize(10)
     b.addFieldBuilder().setName("PO_ORDER_DATE")
-      .setTyp(Field.FieldType.DATE)
+      .setTyp(Field.FieldType.STRING)
+      .setCast(Field.FieldType.DATE)
       .setFormat("YYYYMMDD")
       .setSize(8)
     b.addFieldBuilder().setName("EQUIPMENT_TYPE_CD")
@@ -50,7 +53,8 @@ class CpSpec extends AnyFlatSpec {
       .setTyp(Field.FieldType.STRING)
       .setSize(2)
     b.addFieldBuilder().setName("LAST_CHANGE_DATE")
-      .setTyp(Field.FieldType.DATE)
+      .setTyp(Field.FieldType.STRING)
+      .setCast(Field.FieldType.DATE)
       .setFormat("YYYYMMDD")
       .setSize(8)
     b.addFieldBuilder().setName("LAST_CHANGE_TIME")
@@ -60,15 +64,39 @@ class CpSpec extends AnyFlatSpec {
       .setTyp(Field.FieldType.STRING)
       .setSize(8)
 
-    val schemaProvider = RecordSchema(b.build)
+    RecordSchema(b.build)
+  }
 
+  val mloadSchema: RecordSchema =
+    RecordSchema(mload1Schema.toRecordBuilder
+      .setVartext(false)
+      .clearDelimiter()
+      .build)
+
+  "Cp" should "copy" in {
     val input = new ZDataSet(TestUtil.resource("mload1.dat"),111, 1110)
-
-    val cfg = GsUtilConfig(schemaProvider = Option(schemaProvider),
-                           destinationUri = "gs://gszutil-test/v3/test1",
+    val sp = mloadSchema
+    val cfg = GsUtilConfig(schemaProvider = Option(sp),
+                           destinationUri = "gs://gszutil-test/mload1.dat",
                            projectId = "pso-wmt-dl",
                            datasetId = "dataset",
                            testInput = Option(input),
+                           parallelism = 1,
+                           replace = true)
+    val res = Cp.run(cfg, Linux)
+    assert(res.exitCode == 0)
+  }
+
+  it should "generate" in {
+    val sp = mloadSchema
+    val generator = DataGenUtil.generatorFor(sp)
+    System.out.println(generator.generators.zip(sp.decoders).map(_.toString).mkString("\n"))
+
+    val cfg = GsUtilConfig(schemaProvider = Option(sp),
+                           destinationUri = "gs://gszutil-test/mload1.gen",
+                           projectId = "pso-wmt-dl",
+                           datasetId = "dataset",
+                           testInput = Option(generator),
                            parallelism = 1,
                            replace = true)
     val res = Cp.run(cfg, Linux)

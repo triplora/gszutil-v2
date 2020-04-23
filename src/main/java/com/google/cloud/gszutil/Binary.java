@@ -16,6 +16,9 @@
 
 package com.google.cloud.gszutil;
 
+import com.google.cloud.imf.util.Bits;
+import io.netty.buffer.ByteBuf;
+
 import java.nio.ByteBuffer;
 
 public class Binary {
@@ -83,5 +86,33 @@ public class Binary {
             i++;
         }
         return scratchLong;
+    }
+
+    public static byte[] encode(int x, int size) {
+        return encode(x, size, new byte[size], 0);
+    }
+
+    public static byte[] encode(int x, int size, byte[] buf, int off) {
+        // TODO support negative values
+        int k = x;
+        for (int i = size-1; i >= 0; i--){
+            buf[off+i] = (byte)(k & 0xFF);
+            k >>= 8;
+        }
+        return buf;
+    }
+
+    public static byte[] encode(long x, int size) {
+        return encode(x, size, new byte[size], 0);
+    }
+
+    public static byte[] encode(long x, int size, byte[] buf, int off) {
+        // TODO support negative values
+        long k = x;
+        for (int i = size-1; i >= 0; i--){
+            buf[off+i] = (byte)(k & 0xFF);
+            k >>= 8;
+        }
+        return buf;
     }
 }

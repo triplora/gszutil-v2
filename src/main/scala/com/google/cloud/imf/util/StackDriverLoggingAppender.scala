@@ -41,7 +41,18 @@ case class StackDriverLoggingAppender(log: String,
     val m = new util.HashMap[String,Any]()
     m.put("name",e.getLoggerName)
     m.put("thread",e.getThreadName)
-    m.put("msg",e.getRenderedMessage)
+    e.getMessage match {
+      case s: String =>
+        m.put("msg",s)
+      case (k: String, v: String) =>
+        m.put(k,v)
+      case x: java.util.Map[String,String] =>
+        x.forEach{(k,v) => m.put(k,v)}
+      case x: Iterable[(String,String)] =>
+        for ((k,v) <- x) m.put(k,v)
+      case _ =>
+        m.put("msg",e.getRenderedMessage)
+    }
     m.put("timestamp", e.getTimeStamp)
     if (e.getThrowableInformation != null){
       val w = new ByteArrayWriter()

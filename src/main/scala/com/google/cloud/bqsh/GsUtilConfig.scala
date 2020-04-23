@@ -16,27 +16,32 @@
 package com.google.cloud.bqsh
 
 import com.google.cloud.gszutil.SchemaProvider
-import com.google.cloud.gszutil.io.ZDataSet
+import com.google.cloud.gszutil.io.{ZDataSet, ZRecordReaderT}
+import com.google.cloud.imf.gzos.gen.DataGenUtil
 
 object GsUtilConfig {
   /** Minimal constructor */
   def createLocal(sourceDD: String,
-                  schemaProvider: SchemaProvider,
+                  sp: SchemaProvider,
                   destinationUri: String,
                   projectId: String,
                   datasetId: String,
-                  location: String): GsUtilConfig = {
+                  location: String,
+                  genData: Boolean): GsUtilConfig = {
     GsUtilConfig(source = sourceDD,
-                 schemaProvider = Option(schemaProvider),
+                 schemaProvider = Option(sp),
                  destinationUri = destinationUri,
                  projectId = projectId,
                  datasetId = datasetId,
                  location = location,
-                 replace = true)
+                 replace = true,
+                 testInput =
+                   if (genData) Option(DataGenUtil.generatorFor(sp))
+                   else None)
   }
 
   def createRemote(sourceDD: String,
-             schemaProvider: SchemaProvider,
+                   sp: SchemaProvider,
              destinationUri: String,
              projectId: String,
              datasetId: String,
@@ -45,9 +50,10 @@ object GsUtilConfig {
              zone: String,
              subnet: String,
              remotePort: Int,
-             serviceAccount: String): GsUtilConfig = {
+             serviceAccount: String,
+             genData: Boolean): GsUtilConfig = {
     GsUtilConfig(source = sourceDD,
-      schemaProvider = Option(schemaProvider),
+      schemaProvider = Option(sp),
       destinationUri = destinationUri,
       projectId = projectId,
       datasetId = datasetId,
@@ -58,19 +64,23 @@ object GsUtilConfig {
       remotePort = remotePort,
       serviceAccount = serviceAccount,
       remote = true,
-      replace = true)
+      replace = true,
+      testInput =
+        if (genData) Option(DataGenUtil.generatorFor(sp))
+        else None)
   }
 
   def createRemote2(sourceDD: String,
-                    schemaProvider: SchemaProvider,
+                    sp: SchemaProvider,
                     destinationUri: String,
                     projectId: String,
                     datasetId: String,
                     location: String,
                     remoteHostname: String,
-                    remotePort: Int): GsUtilConfig = {
+                    remotePort: Int,
+                    genData: Boolean): GsUtilConfig = {
     GsUtilConfig(source = sourceDD,
-      schemaProvider = Option(schemaProvider),
+      schemaProvider = Option(sp),
       destinationUri = destinationUri,
       projectId = projectId,
       datasetId = datasetId,
@@ -78,7 +88,10 @@ object GsUtilConfig {
       remoteHost = remoteHostname,
       remotePort = remotePort,
       remote = true,
-      replace = true)
+      replace = true,
+      testInput =
+        if (genData) Option(DataGenUtil.generatorFor(sp))
+        else None)
   }
 }
 
@@ -116,5 +129,5 @@ case class GsUtilConfig(source: String = "INFILE",
                         subnet: String = "",
                         serviceAccount: String = "",
                         machineType: String = "n1-standard-4",
-                        testInput: Option[ZDataSet] = None
+                        testInput: Option[ZRecordReaderT] = None
 )
