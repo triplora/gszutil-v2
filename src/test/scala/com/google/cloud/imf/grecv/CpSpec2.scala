@@ -37,7 +37,7 @@ class CpSpec2 extends AnyFlatSpec {
     val input = new ZDataSet(TestUtil.resource("FLASH_STORE_DEPT_50k.bin"),136, 27880)
 
     val cfg1 = GsUtilConfig(schemaProvider = Option(schemaProvider),
-                           destinationUri = "gs://gszutil-test/v4",
+                           gcsUri = "gs://gszutil-test/v4",
                            projectId = "pso-wmt-dl",
                            datasetId = "dataset",
                            testInput = Option(input),

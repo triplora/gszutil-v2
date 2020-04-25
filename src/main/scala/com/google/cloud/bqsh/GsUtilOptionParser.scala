@@ -107,7 +107,17 @@ object GsUtilOptionParser extends OptionParser[GsUtilConfig]("gsutil") with ArgP
       opt[String]("serviceAccount")
         .optional()
         .action{(x,c) => c.copy(serviceAccount = x)}
-        .text("remote host service account")
+        .text("remote host service account"),
+
+      opt[String]("destPath")
+        .optional
+        .text("destination path")
+        .action((x, c) => c.copy(destPath = x)),
+
+      opt[String]("destDSN")
+        .optional
+        .text("destination DSN")
+        .action((x, c) => c.copy(destDSN = x))
     )
 
   cmd("rm")
@@ -124,9 +134,9 @@ object GsUtilOptionParser extends OptionParser[GsUtilConfig]("gsutil") with ArgP
         .text("delete without use interaction (always true)")
     )
 
-  arg[String]("destinationUri")
+  arg[String]("gcsUri")
     .required()
-    .text("Destination URI (gs://bucket/path)")
+    .text("GCS URI in format (gs://bucket/path)")
     .validate{x =>
       val uri = new URI(x)
       if (uri.getScheme != "gs" || uri.getAuthority.isEmpty)
@@ -134,7 +144,16 @@ object GsUtilOptionParser extends OptionParser[GsUtilConfig]("gsutil") with ArgP
       else
         success
     }
-    .action((x, c) => c.copy(destinationUri = x))
+    .action((x, c) => c.copy(gcsUri = x))
+
+  arg[String]("dest")
+    .optional
+    .text("(optional) local path or DSN (/path/to/file or DATASET.MEMBER or PDS(MBR))")
+    .action{(x, c) =>
+      if (x.contains("(")) c.copy(destDSN = x)
+      else if (x.contains("/")) c.copy(destPath = x)
+      else c.copy(destDSN = x)
+    }
 
   // Global Options from BigQuery
   opt[String]("dataset_id")

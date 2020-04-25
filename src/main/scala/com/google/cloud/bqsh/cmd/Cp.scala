@@ -16,6 +16,8 @@
 package com.google.cloud.bqsh.cmd
 
 import java.net.URI
+import java.nio.channels.Channels
+import java.nio.file.Paths
 
 import com.google.cloud.bigquery.StatsUtil
 import com.google.cloud.bqsh.{ArgParser, BQ, Command, GCS, GsUtilConfig, GsUtilOptionParser}
@@ -23,9 +25,9 @@ import com.google.cloud.gszutil.io.ZRecordReaderT
 import com.google.cloud.gszutil.orc.WriteORCFile
 import com.google.cloud.imf.grecv.GRecvClient
 import com.google.cloud.imf.grecv.grpc.GrpcReceiver
-import com.google.cloud.imf.gzos.MVS
+import com.google.cloud.imf.gzos.{MVS, MVSStorage}
 import com.google.cloud.imf.util.Logging
-import com.google.cloud.storage.Storage
+import com.google.cloud.storage.{BlobId, Storage}
 
 
 object Cp extends Command[GsUtilConfig] with Logging {
@@ -35,17 +37,23 @@ object Cp extends Command[GsUtilConfig] with Logging {
     val creds = zos
       .getCredentialProvider()
       .getCredentials
+    val gcs = GCS.defaultClient(creds)
+
+    if (c.destPath.nonEmpty) {
+      return cpFs(c.gcsUri, c.destPath, gcs, zos)
+    } else if (c.destDSN.nonEmpty) {
+      return cpDsn(c.gcsUri, c.destDSN, gcs, zos)
+    }
 
     val schemaProvider = c.schemaProvider.getOrElse(zos.loadCopyBook(c.copyBook))
     val in: ZRecordReaderT = c.testInput.getOrElse(zos.readDD(c.source))
-    logger.info(s"gsutil cp ${in.getDsn} ${c.destinationUri}")
-
+    logger.info(s"gsutil cp ${in.getDsn} ${c.gcsUri}")
     val batchSize = (c.blocksPerBatch * in.blkSize) / in.lRecl
-    val gcs = GCS.defaultClient(creds)
+
     if (c.replace) {
       GsUtilRm.run(c.copy(recursive = true), zos)
     } else {
-      val uri = new URI(c.destinationUri)
+      val uri = new URI(c.gcsUri)
       val withTrailingSlash = uri.getPath.stripPrefix("/").stripSuffix("/") + "/"
       val bucket = uri.getAuthority
       val lsResult = gcs.list(bucket,
@@ -68,7 +76,7 @@ object Cp extends Command[GsUtilConfig] with Logging {
       logger.debug(s"remote complete")
     } else {
       logger.debug("Starting ORC Upload")
-      result = WriteORCFile.run(gcsUri = c.destinationUri,
+      result = WriteORCFile.run(gcsUri = c.gcsUri,
                        in = in,
                        schemaProvider = schemaProvider,
                        gcs = gcs,
@@ -93,10 +101,37 @@ object Cp extends Command[GsUtilConfig] with Logging {
         tableId=statsTable,
         jobType="cp",
         source=sourceDSN,
-        dest=c.destinationUri,
+        dest=c.gcsUri,
         recordsIn=nRead)
     }
 
     result
+  }
+
+  def cpFs(srcUri: String, destPath: String, gcs: Storage, zos: MVS): Result = {
+    val uri = new URI(srcUri)
+    Option(gcs.get(BlobId.of(uri.getAuthority, uri.getPath))) match {
+      case Some(value) =>
+        val dest = Paths.get(destPath)
+        logger.debug(s"gsutil cp $uri $dest")
+        value.downloadTo(dest)
+        Result.Success
+      case None =>
+        Result.Failure(s"$srcUri doesn't exist")
+    }
+  }
+
+  def cpDsn(srcUri: String, destDSN: String, gcs: Storage, zos: MVS): Result = {
+    val uri = new URI(srcUri)
+    Option(gcs.get(BlobId.of(uri.getAuthority, uri.getPath))) match {
+      case Some(value) =>
+        val w = zos.writeDSN(MVSStorage.parseDSN(destDSN))
+
+        logger.debug(s"gsutil cp $uri $destDSN")
+        value.downloadTo(Channels.newOutputStream(w))
+        Result.Success
+      case None =>
+        Result.Failure(s"$srcUri doesn't exist")
+    }
   }
 }

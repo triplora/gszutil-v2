@@ -77,7 +77,7 @@ class CpSpec extends AnyFlatSpec {
     val input = new ZDataSet(TestUtil.resource("mload1.dat"),111, 1110)
     val sp = mloadSchema
     val cfg = GsUtilConfig(schemaProvider = Option(sp),
-                           destinationUri = "gs://gszutil-test/mload1.dat",
+                           gcsUri = "gs://gszutil-test/mload1.dat",
                            projectId = "pso-wmt-dl",
                            datasetId = "dataset",
                            testInput = Option(input),
@@ -93,7 +93,7 @@ class CpSpec extends AnyFlatSpec {
     System.out.println(generator.generators.zip(sp.decoders).map(_.toString).mkString("\n"))
 
     val cfg = GsUtilConfig(schemaProvider = Option(sp),
-                           destinationUri = "gs://gszutil-test/mload1.gen",
+                           gcsUri = "gs://gszutil-test/mload1.gen",
                            projectId = "pso-wmt-dl",
                            datasetId = "dataset",
                            testInput = Option(generator),

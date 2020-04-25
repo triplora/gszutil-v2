@@ -28,7 +28,7 @@ object GRecvClient extends Logging {
       val keypair = zos.getKeyPair()
       val req = GRecvRequest.newBuilder
           .setSchema(schemaProvider.toRecordBuilder.build)
-          .setBasepath(cfg.destinationUri)
+          .setBasepath(cfg.gcsUri)
           .setLrecl(in.lRecl)
           .setBlksz(in.blkSize)
           .setMaxErrPct(cfg.maxErrorPct)

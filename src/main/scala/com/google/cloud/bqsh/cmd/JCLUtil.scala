@@ -18,11 +18,17 @@ object JCLUtil extends Command[JCLUtilConfig] with Logging {
       if (config.expressions.nonEmpty)
         config.exprs
       else Seq(
-        "BTEQEXT"    -> "BQSHEXT",
+        "ARCHVEXT"   -> "IGNORED",
+        "BTEQ"       -> "BQSQLEXT",
+        "BTEQEXT"    -> "BQSQLEXT",
+        "DBCARC"     -> "IGNORED",
+        "DBCFDL"     -> "BQFLDEXT",
+        "DBCMLD"     -> "BQMLDEXT",
+        "DBCTPUMP"   -> "BQTPUEXT",
+        "FLOADEXT"   -> "BQFLDEXT",
         "MLOADEXT"   -> "BQMLDEXT",
-        "TPUMP"      -> "BQMLD",
-        "TDCMLD"     -> "BQMLD1",
-        "FEXPOEXT"   -> "BQXPOEXT",
+        "STATSEXT"   -> "IGNORED",
+        "FEXPOEXT"   -> "IGNORED",
         "//TD"       -> "//BQ",
         "JOBCHK=TD"  -> "JOBCHK=BQ",
         "JOBNAME=TD" -> "JOBNAME=BQ",

@@ -29,12 +29,12 @@ object GsUtilRm extends Command[GsUtilConfig] with Logging {
   override def run(c: GsUtilConfig, zos: MVS): Result = {
     val creds = zos.getCredentialProvider()
       .getCredentials
-    logger.info(s"gsutil rm ${c.destinationUri}")
+    logger.info(s"gsutil rm ${c.gcsUri}")
     val gcs = GCS.defaultClient(creds)
-    val uri = new URI(c.destinationUri)
+    val uri = new URI(c.gcsUri)
     val bucket = uri.getAuthority
     if (c.recursive) {
-      logger.debug(s"deleting recursively from ${c.destinationUri}")
+      logger.debug(s"deleting recursively from ${c.gcsUri}")
       val withTrailingSlash =
         uri.getPath.stripPrefix("/") + (
           if (uri.getPath.length > 0 && uri.getPath.last == '/') ""

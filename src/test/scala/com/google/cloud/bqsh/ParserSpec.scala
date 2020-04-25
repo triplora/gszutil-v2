@@ -145,7 +145,7 @@ class ParserSpec extends AnyFlatSpec {
     val parsed = GsUtilOptionParser.parse(parsed1.get.args)
     assert(parsed.isDefined)
     assert(parsed.get.mode == "rm")
-    assert(parsed.get.destinationUri == "gs://bucket/path")
+    assert(parsed.get.gcsUri == "gs://bucket/path")
   }
 
   "GsUtilCpOptionParser" should "parse" in {
@@ -168,7 +168,7 @@ class ParserSpec extends AnyFlatSpec {
     assert(parsed.get.parallelism == 4)
     assert(parsed.get.timeOutMinutes == 120)
     assert(parsed.get.replace)
-    assert(parsed.get.destinationUri == "gs://bucket/path")
+    assert(parsed.get.gcsUri == "gs://bucket/path")
   }
 
   "Bqsh" should "split SQL" in {

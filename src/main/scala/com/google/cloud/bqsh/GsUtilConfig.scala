@@ -30,7 +30,7 @@ object GsUtilConfig {
                   genData: Boolean): GsUtilConfig = {
     GsUtilConfig(source = sourceDD,
                  schemaProvider = Option(sp),
-                 destinationUri = destinationUri,
+                 gcsUri = destinationUri,
                  projectId = projectId,
                  datasetId = datasetId,
                  location = location,
@@ -54,7 +54,7 @@ object GsUtilConfig {
              genData: Boolean): GsUtilConfig = {
     GsUtilConfig(source = sourceDD,
       schemaProvider = Option(sp),
-      destinationUri = destinationUri,
+      gcsUri = destinationUri,
       projectId = projectId,
       datasetId = datasetId,
       location = location,
@@ -81,7 +81,7 @@ object GsUtilConfig {
                     genData: Boolean): GsUtilConfig = {
     GsUtilConfig(source = sourceDD,
       schemaProvider = Option(sp),
-      destinationUri = destinationUri,
+      gcsUri = destinationUri,
       projectId = projectId,
       datasetId = datasetId,
       location = location,
@@ -98,7 +98,9 @@ object GsUtilConfig {
 case class GsUtilConfig(source: String = "INFILE",
                         copyBook: String = "COPYBOOK",
                         keyFile: String = "KEYFILE",
-                        destinationUri: String = "",
+                        gcsUri: String = "",
+                        destPath: String = "",
+                        destDSN: String = "",
                         mode: String = "",
                         replace: Boolean = false,
                         recursive: Boolean = false,
