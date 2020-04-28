@@ -22,13 +22,6 @@ import scopt.OptionParser
 
 
 object GsUtilOptionParser extends OptionParser[GsUtilConfig]("gsutil") with ArgParser[GsUtilConfig] {
-  def main(args: Array[String]): Unit =
-    this.parse(("cp gs://bucket/app.jar /path/to/app.jar").split(" ").toIndexedSeq) match {
-      case Some(value) =>
-        System.out.println(value)
-      case None =>
-    }
-
   def parse(args: Seq[String]): Option[GsUtilConfig] =
     parse(args, GsUtilConfig())
 
