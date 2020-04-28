@@ -237,7 +237,7 @@ object Decoding extends Logging {
         .setScale(scale)
   }
 
-  /** Decode date from 4 byte binary integer offset from 1900000 */
+  /** Decode date from 4 byte binary integer offset from 19000000 */
   case class IntAsDateDecoder(filler: Boolean = false) extends Decoder {
     override val size: Int = 4
 

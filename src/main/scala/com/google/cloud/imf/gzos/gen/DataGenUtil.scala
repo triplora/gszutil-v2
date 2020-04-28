@@ -18,6 +18,8 @@ object DataGenUtil {
         new DecimalGenerator(f)
       case FieldType.INTEGER =>
         new IntegerGenerator(f)
+      case FieldType.DATE =>
+        new IntDateGenerator(f)
       case FieldType.STRING | FieldType.LATIN_STRING =>
         if (f.getCast == FieldType.DATE)
           new DateGenerator(f, charset)

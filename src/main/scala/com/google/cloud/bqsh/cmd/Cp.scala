@@ -112,7 +112,10 @@ object Cp extends Command[GsUtilConfig] with Logging {
     val uri = new URI(srcUri)
     Option(gcs.get(BlobId.of(uri.getAuthority, uri.getPath))) match {
       case Some(value) =>
-        val dest = Paths.get(destPath)
+        val dest =
+          if (!srcUri.endsWith("/")) Paths.get(destPath)
+          else Paths.get(destPath + srcUri.reverse.dropWhile(_ != '/').reverse)
+
         logger.debug(s"gsutil cp $uri $dest")
         value.downloadTo(dest)
         Result.Success

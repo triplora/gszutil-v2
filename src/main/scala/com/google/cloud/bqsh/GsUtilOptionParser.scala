@@ -22,6 +22,13 @@ import scopt.OptionParser
 
 
 object GsUtilOptionParser extends OptionParser[GsUtilConfig]("gsutil") with ArgParser[GsUtilConfig] {
+  def main(args: Array[String]): Unit =
+    this.parse(("cp gs://bucket/app.jar /path/to/app.jar").split(" ").toIndexedSeq) match {
+      case Some(value) =>
+        System.out.println(value)
+      case None =>
+    }
+
   def parse(args: Seq[String]): Option[GsUtilConfig] =
     parse(args, GsUtilConfig())
 
@@ -117,7 +124,28 @@ object GsUtilOptionParser extends OptionParser[GsUtilConfig]("gsutil") with ArgP
       opt[String]("destDSN")
         .optional
         .text("destination DSN")
-        .action((x, c) => c.copy(destDSN = x))
+        .action((x, c) => c.copy(destDSN = x)),
+
+      arg[String]("gcsUri")
+        .required()
+        .text("GCS URI in format (gs://bucket/path)")
+        .validate{x =>
+          val uri = new URI(x)
+          if (uri.getScheme != "gs" || uri.getAuthority.isEmpty)
+            failure("invalid GCS URI")
+          else
+            success
+        }
+        .action((x, c) => c.copy(gcsUri = x)),
+
+      arg[String]("dest")
+        .optional
+        .text("(optional) local path or DSN (/path/to/file or DATASET.MEMBER or PDS(MBR))")
+        .action{(x, c) =>
+          if (x.contains("(")) c.copy(destDSN = x)
+          else if (x.contains("/")) c.copy(destPath = x)
+          else c.copy(destDSN = x)
+        }
     )
 
   cmd("rm")
@@ -131,29 +159,20 @@ object GsUtilOptionParser extends OptionParser[GsUtilConfig]("gsutil") with ArgP
 
       opt[Unit]('f',"force")
         .optional()
-        .text("delete without use interaction (always true)")
+        .text("delete without use interaction (always true)"),
+
+      arg[String]("gcsUri")
+        .required()
+        .text("GCS URI in format (gs://bucket/path)")
+        .validate{x =>
+          val uri = new URI(x)
+          if (uri.getScheme != "gs" || uri.getAuthority.isEmpty)
+            failure("invalid GCS URI")
+          else
+            success
+        }
+        .action((x, c) => c.copy(gcsUri = x))
     )
-
-  arg[String]("gcsUri")
-    .required()
-    .text("GCS URI in format (gs://bucket/path)")
-    .validate{x =>
-      val uri = new URI(x)
-      if (uri.getScheme != "gs" || uri.getAuthority.isEmpty)
-        failure("invalid GCS URI")
-      else
-        success
-    }
-    .action((x, c) => c.copy(gcsUri = x))
-
-  arg[String]("dest")
-    .optional
-    .text("(optional) local path or DSN (/path/to/file or DATASET.MEMBER or PDS(MBR))")
-    .action{(x, c) =>
-      if (x.contains("(")) c.copy(destDSN = x)
-      else if (x.contains("/")) c.copy(destPath = x)
-      else c.copy(destDSN = x)
-    }
 
   // Global Options from BigQuery
   opt[String]("dataset_id")
