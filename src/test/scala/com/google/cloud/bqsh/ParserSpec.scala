@@ -171,6 +171,34 @@ class ParserSpec extends AnyFlatSpec {
     assert(parsed.get.gcsUri == "gs://bucket/path")
   }
 
+  it should "cp 1" in {
+    val args = "gsutil cp gs://bucket/object /path/to/file".split(" ").toIndexedSeq
+    val parsed1 = BqshParser.parse(args)
+    assert(parsed1.isDefined)
+    assert(parsed1.get.name == "gsutil")
+
+    val parsed = GsUtilOptionParser.parse(parsed1.get.args)
+    assert(parsed.isDefined)
+    assert(parsed.get.mode == "cp")
+    assert(parsed.get.gcsUri == "gs://bucket/object")
+    assert(parsed.get.destPath == "/path/to/file")
+    assert(parsed.get.destDSN == "")
+  }
+
+  it should "cp 2" in {
+    val args = "gsutil cp gs://bucket/object HLQ.FILE".split(" ").toIndexedSeq
+    val parsed1 = BqshParser.parse(args)
+    assert(parsed1.isDefined)
+    assert(parsed1.get.name == "gsutil")
+
+    val parsed = GsUtilOptionParser.parse(parsed1.get.args)
+    assert(parsed.isDefined)
+    assert(parsed.get.mode == "cp")
+    assert(parsed.get.gcsUri == "gs://bucket/object")
+    assert(parsed.get.destPath == "")
+    assert(parsed.get.destDSN == "HLQ.FILE")
+  }
+
   "Bqsh" should "split SQL" in {
     val queryString =
       """-- comment
