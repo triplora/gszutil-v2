@@ -23,6 +23,7 @@ import java.util.Date
 
 import com.google.cloud.gszutil.io.{ZRecordReaderT, ZRecordWriterT}
 import com.google.cloud.imf.gzos.MVSStorage.DSN
+import com.google.cloud.imf.gzos.pb.GRecvProto.ZOSJobInfo
 import com.google.cloud.imf.util.{Logging, SecurityUtils}
 import com.ibm.jzos.{DSCB, Exec, Format1DSCB, Format3DSCB, JesSymbols, MvsJobSubmitter, PdsDirectory, RcException, RecordReader, RecordWriter, ZFile, ZFileConstants, ZFileException, ZUtil}
 
@@ -320,16 +321,15 @@ protected object ZOS {
       .asInstanceOf[PdsDirectory.MemberInfo])
   }
 
-  def getInfo: ZInfo = ZInfo(
-    ZUtil.getCurrentJobId,
-    sys.env.getOrElse("JOBDATE","UNKNOWN"),
-    sys.env.getOrElse("JOBTIME","UNKNOWN"),
-    ZUtil.getCurrentJobname,
-    ZUtil.getCurrentStepname,
-    ZUtil.getCurrentProcStepname,
-    ZUtil.getCurrentUser,
-    getSymbols
-  )
+  def getInfo: ZOSJobInfo = ZOSJobInfo.newBuilder
+    .setJobid(ZUtil.getCurrentJobId)
+    .setJobdate(sys.env.getOrElse("JOBDATE","UNKNOWN"))
+    .setJobtime(sys.env.getOrElse("JOBTIME","UNKNOWN"))
+    .setJobname(ZUtil.getCurrentJobname)
+    .setStepName(ZUtil.getCurrentStepname)
+    .setProcStepName(ZUtil.getCurrentProcStepname)
+    .setUser(ZUtil.getCurrentUser)
+    .build
 
   def substituteSystemSymbols(s: String): String = ZUtil.substituteSystemSymbols(s)
 

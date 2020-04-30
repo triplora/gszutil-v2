@@ -28,6 +28,7 @@ import com.google.cloud.gszutil.io.{ZRecordReaderT, ZRecordWriterT}
 import com.google.cloud.imf.gzos.MVSStorage.DSN
 import com.google.cloud.imf.gzos.Util.GoogleCredentialsProvider
 import com.google.cloud.imf.gzos.ZOS.{PDSIterator, RecordIterator}
+import com.google.cloud.imf.gzos.pb.GRecvProto.ZOSJobInfo
 import com.google.cloud.imf.util.{Logging, SecurityUtils}
 import com.google.common.base.Charsets
 import com.google.common.io.ByteStreams
@@ -108,7 +109,7 @@ object IBM extends MVS with Logging {
   override def jobName: String = ZOS.getJobName
   override def jobDate: String = sys.env.getOrElse("JOBDATE","UNKNOWN")
   override def jobTime: String = sys.env.getOrElse("JOBTIME","UNKNOWN")
-  override def getInfo: ZInfo = ZOS.getInfo
+  override def getInfo: ZOSJobInfo = ZOS.getInfo
   override def getSymbol(s: String): Option[String] = ZOS.getSymbol(s)
   override def substituteSystemSymbols(s: String): String = ZOS.substituteSystemSymbols(s)
   override def submitJCL(jcl: Seq[String]): Option[ZMVSJob] = ZOS.submitJCL(jcl)

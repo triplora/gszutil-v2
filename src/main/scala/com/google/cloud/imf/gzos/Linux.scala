@@ -27,6 +27,7 @@ import com.google.cloud.gszutil.io.{ChannelRecordReader, ZRecordReaderT, ZRecord
 import com.google.cloud.gszutil.{CopyBook, Utf8}
 import com.google.cloud.imf.gzos.MVSStorage.DSN
 import com.google.cloud.imf.gzos.Util.DefaultCredentialProvider
+import com.google.cloud.imf.gzos.pb.GRecvProto.ZOSJobInfo
 import com.google.cloud.imf.util.Logging
 import com.google.common.base.Charsets
 import com.google.common.io.ByteStreams
@@ -96,15 +97,15 @@ object Linux extends MVS with Logging {
 
   override def jobTime: String = StatsUtil.JobTimeFormat.format(new Date())
 
-  override def getInfo: ZInfo = ZInfo(
-    jobId = jobId,
-    jobName = jobName,
-    jobDate = jobDate,
-    jobTime = jobTime,
-    stepName = sys.env.getOrElse("JOB_STEP","STEP"),
-    procStepName = sys.env.getOrElse("PROC_STEP","STEP"),
-    user = System.getProperty("user.name")
-  )
+  override def getInfo: ZOSJobInfo = ZOSJobInfo.newBuilder
+    .setJobid(jobId)
+    .setJobdate(jobDate)
+    .setJobtime(jobTime)
+    .setJobname(jobName)
+    .setStepName(sys.env.getOrElse("JOB_STEP","STEP01"))
+    .setProcStepName(sys.env.getOrElse("PROC_STEP","STEP01"))
+    .setUser(System.getProperty("user.name"))
+    .build
 
   override def getSymbol(s: String): Option[String] = throw new NotImplementedError()
 

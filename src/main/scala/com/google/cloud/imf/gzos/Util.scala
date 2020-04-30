@@ -56,15 +56,15 @@ object Util {
 
   private var sdlAppender: StackDriverLoggingAppender = _
 
-  def putInfo(zInfo: ZOSJobInfo, m: java.util.Map[String,Object]): Unit = {
+  def putInfo(zInfo: ZOSJobInfo, m: java.util.Map[String,String]): Unit = {
     if (zInfo != null){
-      m.put("jobname", zInfo.getJobname)
+      m.put("jobid",zInfo.getJobid)
       m.put("jobdate", zInfo.getJobdate)
       m.put("jobtime", zInfo.getJobtime)
-      m.put("procstepname",zInfo.getProcStepName)
+      m.put("jobname", zInfo.getJobname)
       m.put("stepname",zInfo.getStepName)
+      m.put("procstepname",zInfo.getProcStepName)
       m.put("user",zInfo.getUser)
-      m.put("jobid",zInfo.getJobid)
     }
   }
 
@@ -210,24 +210,5 @@ object Util {
     bytes.grouped(lRecl)
       .map{b => trimRight(new String(b, charset),' ')}
       .mkString(recordSeparator)
-  }
-
-  def collectJobInfo(zos: MVS): util.Map[String,String] = {
-    val info = zos.getInfo
-    System.out.println("JES Symbols:")
-    for ((k,v) <- info.symbols)
-      System.out.println(s"  $k=$v")
-    val script = zos.readStdin()
-    val content = new util.HashMap[String,String]()
-    content.put("jobid", zos.jobId)
-    content.put("jobdate", zos.jobDate)
-    content.put("jobtime", zos.jobTime)
-    content.put("jobname", zos.jobName)
-    content.put("stepname", info.stepName)
-    content.put("procstepname", info.procStepName)
-    content.put("symbols", info.symbols.map(x => s"${x._1}=${x._2}").mkString("\n"))
-    content.put("user", info.user)
-    content.put("script", script)
-    content
   }
 }

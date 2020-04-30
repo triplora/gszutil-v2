@@ -32,7 +32,7 @@ object GRecvClient extends Logging {
           .setLrecl(in.lRecl)
           .setBlksz(in.blkSize)
           .setMaxErrPct(cfg.maxErrorPct)
-          .setJobinfo(zos.getInfo.toJobInfo)
+          .setJobinfo(zos.getInfo)
           .setPrincipal(zos.getPrincipal())
           .setPublicKey(ByteString.copyFrom(keypair.getPublic.getEncoded))
           .setTimestamp(System.currentTimeMillis())

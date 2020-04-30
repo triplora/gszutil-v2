@@ -21,6 +21,7 @@ import java.security.KeyPair
 import com.google.cloud.gszutil.CopyBook
 import com.google.cloud.gszutil.io.{ZRecordReaderT, ZRecordWriterT}
 import com.google.cloud.imf.gzos.MVSStorage.DSN
+import com.google.cloud.imf.gzos.pb.GRecvProto.ZOSJobInfo
 
 trait MVS {
   def isIBM: Boolean
@@ -43,7 +44,7 @@ trait MVS {
   def jobDate: String
   def jobTime: String
   def jobId: String = jobName+jobDate+jobTime
-  def getInfo: ZInfo
+  def getInfo: ZOSJobInfo
   def getSymbol(s: String): Option[String]
   def substituteSystemSymbols(s: String): String
   def submitJCL(jcl: Seq[String]): Option[ZMVSJob]

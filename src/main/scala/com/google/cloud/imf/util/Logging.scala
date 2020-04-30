@@ -11,28 +11,28 @@ trait Logging {
   protected lazy val logger: Logger = LogManager.getLogger(this.getClass.getCanonicalName.stripSuffix("$"))
 
   def info(msg: String, zInfo: ZOSJobInfo): Unit = {
-    val m = new util.HashMap[String,Object]()
+    val m = new util.HashMap[String,String]()
     m.put("msg", msg)
     Util.putInfo(zInfo, m)
     logger.info(m)
   }
 
   def error(msg: String, zInfo: ZOSJobInfo): Unit = {
-    val m = new util.HashMap[String,Object]()
+    val m = new util.HashMap[String,String]()
     m.put("msg", msg)
     Util.putInfo(zInfo, m)
     logger.error(m)
   }
 
   def error(msg: String, t: Throwable, zInfo: ZOSJobInfo): Unit = {
-    val m = new util.HashMap[String,Object]()
+    val m = new util.HashMap[String,String]()
     m.put("msg", msg)
     Util.putInfo(zInfo, m)
     logger.error(m, t)
   }
 
   def warn(msg: String, zInfo: ZOSJobInfo): Unit = {
-    val m = new util.HashMap[String,Object]()
+    val m = new util.HashMap[String,String]()
     m.put("msg", msg)
     Util.putInfo(zInfo, m)
     logger.warn(m)
@@ -40,7 +40,7 @@ trait Logging {
 
   def debug(msg: String, zInfo: ZOSJobInfo): Unit = {
     if (logger.isDebugEnabled){
-      val m = new util.HashMap[String,Object]()
+      val m = new util.HashMap[String,String]()
       m.put("msg", msg)
       Util.putInfo(zInfo, m)
       logger.debug(m)
