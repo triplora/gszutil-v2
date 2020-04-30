@@ -15,7 +15,7 @@
  */
 organization := "com.google.cloud.imf"
 name := "mainframe-connector"
-version := "4.2.0-SNAPSHOT"
+version := "4.2.1-SNAPSHOT"
 
 scalaVersion := "2.13.1"
 
@@ -34,12 +34,12 @@ libraryDependencies ++= Seq("com.google.guava" % "guava" % "28.2-jre")
 
 libraryDependencies ++= Seq(
   "com.google.api-client" % "google-api-client" % "1.30.9", // provided for google-cloud-bigquery
+  "com.google.apis" % "google-api-services-logging" % "v2-rev656-1.25.0",
   "com.google.auto.value" % "auto-value-annotations" % "1.7", // provided for google-cloud-bigquery
   "com.google.http-client" % "google-http-client-apache-v2" % "1.34.2",
   "com.google.cloud" % "google-cloud-bigquery" % "1.110.0",
   "com.google.cloud" % "google-cloud-compute" % "0.117.0-alpha",
   "com.google.cloud" % "google-cloud-storage" % "1.103.1",
-  "com.google.cloud" % "google-cloud-logging" % "1.101.1",
   "com.google.protobuf" % "protobuf-java" % "3.11.4",
   "com.google.protobuf" % "protobuf-java-util" % "3.11.4",
   "io.grpc" % "grpc-netty" % "1.28.1",

@@ -30,7 +30,7 @@ object Bqsh extends Logging {
     val zos = Util.zProvider
     zos.init()
     val script = zos.readStdin()
-    Util.configureLogging()
+    Util.configureLogging(debugOverride = false, sys.env, zos.getCredentialProvider())
     val interpreter = new Interpreter(zos, sys.env,true, true)
     val result = interpreter.runScript(script)
     if (result.exitCode != 0)

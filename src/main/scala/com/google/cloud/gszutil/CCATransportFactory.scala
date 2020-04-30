@@ -31,7 +31,7 @@ import org.apache.http.impl.conn.DefaultProxyRoutePlanner
 
 
 object CCATransportFactory extends Logging {
-  private val Instance = new ApacheHttpTransport(newDefaultHttpClient)
+  val Instance = new ApacheHttpTransport(newDefaultHttpClient)
 
   def newDefaultHttpClient: HttpClient = {
     val socketConfig = SocketConfig.custom

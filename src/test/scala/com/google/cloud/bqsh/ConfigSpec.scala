@@ -22,7 +22,7 @@ class ConfigSpec extends AnyFlatSpec {
   "BQZ" should "parse command" in {
     val args = """bq load --project_id=project --dataset_id=dataset --location=EU --source_format=ORC project:dataset.table gs://mybucket/00/*.orc,gs://mybucket/01/*.orc"""
 
-    val parsed = BqshParser.parse(args.split(" "))
+    val parsed = BqshParser.parse(args.split(" ").toIndexedSeq)
     assert(parsed.isDefined)
 
     parsed match {

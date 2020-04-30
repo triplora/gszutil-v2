@@ -30,7 +30,9 @@ object GRecv extends Logging {
     val buildInfo = "Build Info:\n" + Util.readS("build.txt")
     GRecvConfigParser.parse(args) match {
       case Some(cfg) =>
-        Util.configureLogging(cfg.debug)
+        val zos = Util.zProvider
+        zos.init()
+        Util.configureLogging(debugOverride = false, sys.env, zos.getCredentialProvider())
         logger.info(buildInfo)
         SecurityUtils.useConscrypt()
         val result =

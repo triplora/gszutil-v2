@@ -21,11 +21,15 @@ import java.nio.channels.{Channels, ReadableByteChannel, WritableByteChannel}
 import java.nio.charset.Charset
 import java.util
 
+import com.google.api.client.googleapis.apache.GoogleApacheHttpTransport
+import com.google.api.client.json.jackson2.JacksonFactory
+import com.google.api.services.logging.v2.Logging
+import com.google.auth.http.HttpCredentialsAdapter
 import com.google.auth.oauth2.GoogleCredentials
+import com.google.cloud.gszutil.CCATransportFactory
 import com.google.cloud.gszutil.io.{ZDataSet, ZRecordReaderT}
 import com.google.cloud.imf.gzos.pb.GRecvProto.ZOSJobInfo
-import com.google.cloud.imf.util.{Logging, StackDriverLoggingAppender}
-import com.google.cloud.logging.LoggingOptions
+import com.google.cloud.imf.util.StackDriverLoggingAppender
 import com.google.cloud.storage.BlobInfo
 import com.google.common.base.Charsets
 import com.google.common.collect.ImmutableSet
@@ -34,45 +38,53 @@ import org.apache.log4j.{ConsoleAppender, Level, LogManager, PatternLayout}
 
 import scala.util.Random
 
-object Util extends Logging {
+object Util {
   final val isIbm = System.getProperty("java.vm.vendor").contains("IBM")
   def zProvider: MVS = if (isIbm) IBM else Linux
   def sleepOrYield(ms: Long): Unit = {
     if (isIbm) {
-      logger.debug(s"Yielding for $ms ms...")
+      System.out.println(s"Yielding for $ms ms...")
       val t1 = System.currentTimeMillis + ms
       while (System.currentTimeMillis < t1){
         Thread.`yield`()
       }
     } else {
-      logger.debug(s"Waiting for $ms ms...")
+      System.out.println(s"Waiting for $ms ms...")
       Thread.sleep(ms)
     }
   }
 
   private var sdlAppender: StackDriverLoggingAppender = _
-  def setZInfo(zInfo: ZOSJobInfo): Unit = {
-    if (sdlAppender != null)
-      sdlAppender.setJobInfo(zInfo)
+
+  def putInfo(zInfo: ZOSJobInfo, m: java.util.Map[String,Object]): Unit = {
+    if (zInfo != null){
+      m.put("jobname", zInfo.getJobname)
+      m.put("jobdate", zInfo.getJobdate)
+      m.put("jobtime", zInfo.getJobtime)
+      m.put("procstepname",zInfo.getProcStepName)
+      m.put("stepname",zInfo.getStepName)
+      m.put("user",zInfo.getUser)
+      m.put("jobid",zInfo.getJobid)
+    }
   }
 
-  def configureLogging(): Unit = configureLogging(false, sys.env)
-
-  def configureLogging(debugOverride: Boolean = false, env: Map[String,String] = sys.env): Unit = {
+  def configureLogging(debugOverride: Boolean = false,
+                       env: Map[String,String] = sys.env,
+                       cp: CredentialProvider = null): Unit = {
     val debug = env.getOrElse("BQSH_ROOT_LOGGER","").contains("DEBUG") || debugOverride
     val rootLogger = LogManager.getRootLogger
 
     if (!rootLogger.getAllAppenders.hasMoreElements) {
       rootLogger.addAppender(new ConsoleAppender(new PatternLayout("%d{ISO8601} %-5p %c %x - %m%n")))
 
-      (env.get("LOG_PROJECT"), env.get("LOG_NAME")) match {
-        case (Some(project), Some(logName)) =>
-          logger.debug("adding StackDriverLoggingAppender")
-          sdlAppender = StackDriverLoggingAppender(logName,
-            LoggingOptions.newBuilder().setProjectId(project).build.getService)
-          rootLogger.addAppender(sdlAppender)
-        case _ =>
-          None
+      // export LOG_NAME='projects/[PROJECT_ID]/logs/[LOG_ID]'
+      if (cp != null && env.contains("LOG_NAME")) {
+        System.out.println("adding StackDriverLoggingAppender")
+        sdlAppender = StackDriverLoggingAppender(env("LOG_NAME"),
+          new Logging.Builder(CCATransportFactory.Instance, JacksonFactory.getDefaultInstance,
+            new HttpCredentialsAdapter(cp.getCredentials)
+          ).setApplicationName("mainframe-connector").build)
+        rootLogger.addAppender(sdlAppender)
       }
 
       LogManager

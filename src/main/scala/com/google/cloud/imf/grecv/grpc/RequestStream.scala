@@ -5,8 +5,7 @@ import java.nio.ByteBuffer
 import com.google.cloud.gszutil.RecordSchema
 import com.google.cloud.gszutil.io.WriterCore
 import com.google.cloud.imf.grecv.GRecvProtocol
-import com.google.cloud.imf.gzos.Util
-import com.google.cloud.imf.gzos.pb.GRecvProto.{GRecvRequest, GRecvResponse, WriteRequest}
+import com.google.cloud.imf.gzos.pb.GRecvProto.{GRecvRequest, GRecvResponse, WriteRequest, ZOSJobInfo}
 import com.google.cloud.imf.util.{Logging, SecurityUtils}
 import com.google.cloud.storage.Storage
 import com.google.common.hash.Hashing
@@ -28,10 +27,13 @@ class RequestStream(gcs: Storage,
   private var rowCount: Long = 0
   private var status: Int = GRecvProtocol.OK
   private val TimeLimit: Long = 5L*50*1000
+  private var zInfo: ZOSJobInfo = _
 
   def authenticate(recvRequest: GRecvRequest): Unit = {
-    logger.info("received request\n" + JsonFormat.printer.print(recvRequest))
     req = recvRequest
+    zInfo = req.getJobinfo
+    info("received request\n" + JsonFormat.printer.print(recvRequest), zInfo)
+
     buf = ByteBuffer.allocate(req.getLrecl*1024)
     orc = new WriterCore(schemaProvider = RecordSchema(req.getSchema),
       basePath = new Path(req.getBasepath),
@@ -39,7 +41,6 @@ class RequestStream(gcs: Storage,
       maxErrorPct = req.getMaxErrPct,
       name = s"$id",
       lrecl = req.getLrecl)
-    Util.setZInfo(req.getJobinfo)
 
     if (!req.getPublicKey.isEmpty && !req.getSignature.isEmpty) {
       val verified = SecurityUtils.verify(
@@ -49,13 +50,13 @@ class RequestStream(gcs: Storage,
       val validTimestamp = System.currentTimeMillis - req.getTimestamp < TimeLimit
       if (verified && validTimestamp) {
         principal = req.getPrincipal
-        logger.info(s"Signature verified (principal=$principal)")
+        info(s"Signature verified (principal=$principal)", zInfo)
       }
       else {
         if (!validTimestamp)
-          logger.error(s"invalid timestamp ${req.getTimestamp}")
+          error(s"invalid timestamp ${req.getTimestamp}",zInfo)
         if (!verified)
-          logger.error(s"invalid signature")
+          error(s"invalid signature",zInfo)
         //throw new StatusRuntimeException(Status.UNAUTHENTICATED)
       }
     }
@@ -79,9 +80,7 @@ class RequestStream(gcs: Storage,
     }
   }
 
-  override def onError(t: Throwable): Unit = {
-    logger.error("error: " + t.getMessage, t)
-  }
+  override def onError(t: Throwable): Unit = error("error: " + t.getMessage, t, zInfo)
 
   def buildResponse(status: Int): GRecvResponse =
     GRecvResponse.newBuilder
@@ -95,12 +94,10 @@ class RequestStream(gcs: Storage,
   override def onCompleted(): Unit = {
     val response = buildResponse(status)
     val json = JsonFormat.printer().omittingInsignificantWhitespace().print(response)
-    logger.info(s"request complete $json")
-    logger.debug("closing orc")
+    debug("closing orc", zInfo)
     orc.close()
-    logger.debug("orc closed")
     responseObserver.onNext(response)
     responseObserver.onCompleted()
-    logger.debug("request completed")
+    info(s"request complete $json", zInfo)
   }
 }
