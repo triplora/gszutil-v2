@@ -19,9 +19,7 @@ import java.io.{ByteArrayInputStream, ByteArrayOutputStream}
 import java.nio.ByteBuffer
 import java.nio.channels.{Channels, ReadableByteChannel, WritableByteChannel}
 import java.nio.charset.Charset
-import java.util
 
-import com.google.api.client.googleapis.apache.GoogleApacheHttpTransport
 import com.google.api.client.json.jackson2.JacksonFactory
 import com.google.api.services.logging.v2.Logging
 import com.google.auth.http.HttpCredentialsAdapter
@@ -29,7 +27,7 @@ import com.google.auth.oauth2.GoogleCredentials
 import com.google.cloud.gszutil.CCATransportFactory
 import com.google.cloud.gszutil.io.{ZDataSet, ZRecordReaderT}
 import com.google.cloud.imf.gzos.pb.GRecvProto.ZOSJobInfo
-import com.google.cloud.imf.util.StackDriverLoggingAppender
+import com.google.cloud.imf.util.{StackDriverLogging, StackDriverLoggingAppender}
 import com.google.cloud.storage.BlobInfo
 import com.google.common.base.Charsets
 import com.google.common.collect.ImmutableSet
@@ -54,9 +52,7 @@ object Util {
     }
   }
 
-  private var sdlAppender: StackDriverLoggingAppender = _
-
-  def putInfo(zInfo: ZOSJobInfo, m: java.util.Map[String,String]): Unit = {
+  def putInfo(zInfo: ZOSJobInfo, m: java.util.Map[String,Any]): Unit = {
     if (zInfo != null){
       m.put("jobid",zInfo.getJobid)
       m.put("jobdate", zInfo.getJobdate)
@@ -79,12 +75,8 @@ object Util {
 
       // export LOG_NAME='projects/[PROJECT_ID]/logs/[LOG_ID]'
       if (cp != null && env.contains("LOG_NAME")) {
-        System.out.println("adding StackDriverLoggingAppender")
-        sdlAppender = StackDriverLoggingAppender(env("LOG_NAME"),
-          new Logging.Builder(CCATransportFactory.Instance, JacksonFactory.getDefaultInstance,
-            new HttpCredentialsAdapter(cp.getCredentials)
-          ).setApplicationName("mainframe-connector").build)
-        rootLogger.addAppender(sdlAppender)
+        StackDriverLogging.init(cp.getCredentials, env("LOG_NAME"))
+        System.out.println("Done.")
       }
 
       LogManager
