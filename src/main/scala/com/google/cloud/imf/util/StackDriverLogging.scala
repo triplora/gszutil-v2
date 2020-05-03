@@ -19,7 +19,8 @@ object StackDriverLogging {
     System.out.println(s"Initializing StackDriver Logging for log: '$logName'")
     Instance = new Logging.Builder(CCATransportFactory.Instance,
       JacksonFactory.getDefaultInstance,
-      new HttpCredentialsAdapter(credentials)).build
+      new HttpCredentialsAdapter(credentials))
+      .setApplicationName("mainframe-connector").build
     LogName = logName
   }
 
