@@ -78,4 +78,18 @@ case class QueryConfig(
       Option(MVSDataset(queryDSN))
     } else None
   }
+
+  def toMap: java.util.Map[String,Any] = {
+    val m = new java.util.HashMap[String,Any]()
+    m.put("type","QueryConfig")
+    m.put("sql",sql)
+    m.put("location",location)
+    m.put("projectId",projectId)
+    m.put("datasetId",datasetId)
+    if (jobId.nonEmpty)
+      m.put("jobId",jobId)
+    if (statsTable.nonEmpty)
+      m.put("statsTable",statsTable)
+    m
+  }
 }

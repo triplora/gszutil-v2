@@ -132,4 +132,22 @@ case class GsUtilConfig(source: String = "INFILE",
                         serviceAccount: String = "",
                         machineType: String = "n1-standard-4",
                         testInput: Option[ZRecordReaderT] = None
-)
+) {
+  def toMap: java.util.Map[String,Any] = {
+    val m = new java.util.HashMap[String,Any]()
+    m.put("type","GsUtilConfig")
+    m.put("gcsUri",gcsUri)
+    m.put("replace",replace)
+    m.put("maxErrorPct",maxErrorPct)
+    schemaProvider.map(_.toString).foreach(m.put("schemaProvider",_))
+    if (statsTable.nonEmpty)
+      m.put("statsTable",statsTable)
+    m.put("remote",remote)
+    if (remote && remoteHost.nonEmpty) {
+      m.put("remoteHost", remoteHost)
+      m.put("remoteHost", remotePort)
+      m.put("nConnections",nConnections)
+    }
+    m
+  }
+}

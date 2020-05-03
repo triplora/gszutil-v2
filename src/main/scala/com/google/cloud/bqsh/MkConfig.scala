@@ -18,6 +18,8 @@ package com.google.cloud.bqsh
 
 import java.net.URI
 
+import scala.jdk.CollectionConverters.SeqHasAsJava
+
 object MkConfig {
   def create(sourceUris: String,
              tablespec: String,
@@ -68,4 +70,40 @@ case class MkConfig (
   sync: Boolean = true,
 
   statsTable: String = ""
-)
+) {
+  def toMap: java.util.Map[String,Any] = {
+    val m = new java.util.HashMap[String,Any]()
+    m.put("type","MkConfig")
+    m.put("datasetId",datasetId)
+    if (jobId.nonEmpty)
+      m.put("jobId",jobId)
+    m.put("location",location)
+    m.put("projectId",projectId)
+
+    if (statsTable.nonEmpty)
+      m.put("statsTable",statsTable)
+
+    if (externalTableUri.nonEmpty)
+      m.put("externalTableUri",externalTableUri.map(_.toString).asJava)
+
+    if (externalTableDefinition.nonEmpty)
+      m.put("externalTableDefinition",externalTableDefinition)
+
+    if (description.nonEmpty)
+      m.put("description",description)
+
+    if (tablespec.nonEmpty)
+      m.put("tablespec",tablespec)
+
+    if (view)
+      m.put("view", view)
+
+    if (expiration > 0)
+      m.put("expiration", expiration)
+    if (statsTable.nonEmpty)
+      m.put("statsTable",statsTable)
+
+    m
+  }
+}
+
