@@ -32,7 +32,7 @@ class RequestStream(gcs: Storage,
   def authenticate(recvRequest: GRecvRequest): Unit = {
     req = recvRequest
     zInfo = req.getJobinfo
-    info("received request\n" + JsonFormat.printer.print(recvRequest), zInfo)
+    sdLogger.info("received request\n" + JsonFormat.printer.print(recvRequest), zInfo)
 
     buf = ByteBuffer.allocate(req.getLrecl*1024)
     orc = new WriterCore(schemaProvider = RecordSchema(req.getSchema),
@@ -50,13 +50,13 @@ class RequestStream(gcs: Storage,
       val validTimestamp = System.currentTimeMillis - req.getTimestamp < TimeLimit
       if (verified && validTimestamp) {
         principal = req.getPrincipal
-        info(s"Signature verified (principal=$principal)", zInfo)
+        sdLogger.info(s"Signature verified (principal=$principal)", zInfo)
       }
       else {
         if (!validTimestamp)
-          error(s"invalid timestamp ${req.getTimestamp}",zInfo)
+          sdLogger.error3(s"invalid timestamp ${req.getTimestamp}",zInfo)
         if (!verified)
-          error(s"invalid signature",zInfo)
+          sdLogger.error3(s"invalid signature",zInfo)
         //throw new StatusRuntimeException(Status.UNAUTHENTICATED)
       }
     }
@@ -80,7 +80,8 @@ class RequestStream(gcs: Storage,
     }
   }
 
-  override def onError(t: Throwable): Unit = error("error: " + t.getMessage, t, zInfo)
+  override def onError(t: Throwable): Unit =
+    sdLogger.error4("error: " + t.getMessage, t, zInfo)
 
   def buildResponse(status: Int): GRecvResponse =
     GRecvResponse.newBuilder
@@ -94,10 +95,10 @@ class RequestStream(gcs: Storage,
   override def onCompleted(): Unit = {
     val response = buildResponse(status)
     val json = JsonFormat.printer().omittingInsignificantWhitespace().print(response)
-    debug("closing orc", zInfo)
+    sdLogger.debug("closing orc", zInfo)
     orc.close()
     responseObserver.onNext(response)
     responseObserver.onCompleted()
-    info(s"request complete $json", zInfo)
+    sdLogger.info(s"request complete $json", zInfo)
   }
 }
