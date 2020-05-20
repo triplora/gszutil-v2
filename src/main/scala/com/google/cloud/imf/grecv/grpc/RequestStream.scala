@@ -6,7 +6,7 @@ import com.google.cloud.gszutil.RecordSchema
 import com.google.cloud.gszutil.io.WriterCore
 import com.google.cloud.imf.grecv.GRecvProtocol
 import com.google.cloud.imf.gzos.pb.GRecvProto.{GRecvRequest, GRecvResponse, WriteRequest, ZOSJobInfo}
-import com.google.cloud.imf.util.{Logging, SecurityUtils}
+import com.google.cloud.imf.util.{Logging, SecurityUtils, StackDriverLogger}
 import com.google.cloud.storage.Storage
 import com.google.common.hash.Hashing
 import com.google.protobuf.util.JsonFormat
@@ -17,6 +17,8 @@ class RequestStream(gcs: Storage,
                     id: String,
                     responseObserver: StreamObserver[GRecvResponse])
   extends StreamObserver[WriteRequest] with Logging {
+  private val sdLogger = new StackDriverLogger(this.getClass.getCanonicalName.stripSuffix("$"))
+
   private val hasher = Hashing.murmur3_128().newHasher()
   private var principal: String = _
   private var req: GRecvRequest = _
@@ -54,9 +56,9 @@ class RequestStream(gcs: Storage,
       }
       else {
         if (!validTimestamp)
-          sdLogger.error3(s"invalid timestamp ${req.getTimestamp}",zInfo)
+          sdLogger.error(s"invalid timestamp ${req.getTimestamp}",zInfo)
         if (!verified)
-          sdLogger.error3(s"invalid signature",zInfo)
+          sdLogger.error(s"invalid signature",zInfo)
         //throw new StatusRuntimeException(Status.UNAUTHENTICATED)
       }
     }
@@ -81,7 +83,7 @@ class RequestStream(gcs: Storage,
   }
 
   override def onError(t: Throwable): Unit =
-    sdLogger.error4("error: " + t.getMessage, t, zInfo)
+    sdLogger.error("error: " + t.getMessage, t, zInfo)
 
   def buildResponse(status: Int): GRecvResponse =
     GRecvResponse.newBuilder

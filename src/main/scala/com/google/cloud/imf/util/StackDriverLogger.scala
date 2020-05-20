@@ -28,23 +28,23 @@ class StackDriverLogger(loggerName: String) {
     StackDriverLogging.logJson(stringData(msg, zInfo), "INFO")
   }
 
-  def info2(entries: Iterable[(String,Any)], zInfo: ZOSJobInfo): Unit = {
+  def info(entries: Iterable[(String,Any)], zInfo: ZOSJobInfo): Unit = {
     val m = jsonData(entries, zInfo)
     StackDriverLogging.logJson(m, "INFO")
   }
 
   def error(entries: Iterable[(String,String)], zInfo: ZOSJobInfo): Unit = {
-    error2(entries, null, zInfo)
+    error(entries, null, zInfo)
   }
 
-  def error2(entries: Iterable[(String,String)], t: Throwable, zInfo: ZOSJobInfo): Unit = {
+  def error(entries: Iterable[(String,String)], t: Throwable, zInfo: ZOSJobInfo): Unit = {
     val data = jsonData(entries, zInfo)
     StackDriverLogging.logJson(data, "ERROR")
   }
 
-  def error3(msg: String, zInfo: ZOSJobInfo): Unit = error4(msg, null, zInfo)
+  def error(msg: String, zInfo: ZOSJobInfo): Unit = error(msg, null, zInfo)
 
-  def error4(msg: String, t: Throwable, zInfo: ZOSJobInfo): Unit = {
+  def error(msg: String, t: Throwable, zInfo: ZOSJobInfo): Unit = {
     val m = stringData(msg, zInfo)
     if (t != null) {
       val w = new StringWriter()
@@ -60,7 +60,7 @@ class StackDriverLogger(loggerName: String) {
     StackDriverLogging.logJson(m, "WARN")
   }
 
-  def warn2(entries: Iterable[(String,Any)], zInfo: ZOSJobInfo): Unit = {
+  def warn(entries: Iterable[(String,Any)], zInfo: ZOSJobInfo): Unit = {
     val m = jsonData(entries, zInfo)
     StackDriverLogging.logJson(m, "WARN")
   }
@@ -70,7 +70,7 @@ class StackDriverLogger(loggerName: String) {
     StackDriverLogging.logJson(m, "DEBUG")
   }
 
-  def debug2(entries: Iterable[(String,Any)], zInfo: ZOSJobInfo): Unit = {
+  def debug(entries: Iterable[(String,Any)], zInfo: ZOSJobInfo): Unit = {
     val m = jsonData(entries, zInfo)
     StackDriverLogging.logJson(m, "DEBUG")
   }
