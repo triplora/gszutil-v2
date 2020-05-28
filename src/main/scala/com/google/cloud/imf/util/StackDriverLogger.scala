@@ -5,7 +5,12 @@ import java.io.{PrintWriter, StringWriter}
 import com.google.cloud.imf.gzos.Util
 import com.google.cloud.imf.gzos.pb.GRecvProto.ZOSJobInfo
 
-class StackDriverLogger(loggerName: String) {
+class StackDriverLogger(loggerName: String, log: Log) {
+  val INFO = "INFO"
+  val ERROR = "ERROR"
+  val WARM = "WARN"
+  val DEBUG = "DEBUG"
+
   private def stringData(msg: String, zInfo: ZOSJobInfo): java.util.Map[String,Any] = {
     val m = new java.util.HashMap[String,Any]()
     m.put("msg", msg)
@@ -24,54 +29,20 @@ class StackDriverLogger(loggerName: String) {
     m
   }
 
-  def info(msg: String, zInfo: ZOSJobInfo): Unit = {
-    StackDriverLogging.logJson(stringData(msg, zInfo), "INFO")
-  }
+  def log(msg: String, zInfo: ZOSJobInfo, severity: String): Unit =
+    log.logJson(stringData(msg, zInfo), severity)
 
-  def info(entries: Iterable[(String,Any)], zInfo: ZOSJobInfo): Unit = {
-    val m = jsonData(entries, zInfo)
-    StackDriverLogging.logJson(m, "INFO")
-  }
+  def logJson(entries: Iterable[(String,Any)], zInfo: ZOSJobInfo, severity: String): Unit =
+    log.logJson(jsonData(entries, zInfo), severity)
 
-  def error(entries: Iterable[(String,String)], zInfo: ZOSJobInfo): Unit = {
-    error(entries, null, zInfo)
-  }
-
-  def error(entries: Iterable[(String,String)], t: Throwable, zInfo: ZOSJobInfo): Unit = {
-    val data = jsonData(entries, zInfo)
-    StackDriverLogging.logJson(data, "ERROR")
-  }
-
-  def error(msg: String, zInfo: ZOSJobInfo): Unit = error(msg, null, zInfo)
-
-  def error(msg: String, t: Throwable, zInfo: ZOSJobInfo): Unit = {
+  def error(msg: String, throwable: Throwable, zInfo: ZOSJobInfo): Unit = {
     val m = stringData(msg, zInfo)
-    if (t != null) {
+    if (throwable != null) {
       val w = new StringWriter()
-      t.printStackTrace(new PrintWriter(w))
-      m.put("throwable", t.getClass.getCanonicalName.stripSuffix("$"))
+      throwable.printStackTrace(new PrintWriter(w))
+      m.put("throwable", throwable.getClass.getCanonicalName.stripSuffix("$"))
       m.put("stackTrace", w.toString)
     }
-    StackDriverLogging.logJson(m, "ERROR")
-  }
-
-  def warn(msg: String, zInfo: ZOSJobInfo): Unit = {
-    val m = stringData(msg, zInfo)
-    StackDriverLogging.logJson(m, "WARN")
-  }
-
-  def warn(entries: Iterable[(String,Any)], zInfo: ZOSJobInfo): Unit = {
-    val m = jsonData(entries, zInfo)
-    StackDriverLogging.logJson(m, "WARN")
-  }
-
-  def debug(msg: String, zInfo: ZOSJobInfo): Unit = {
-    val m = stringData(msg, zInfo)
-    StackDriverLogging.logJson(m, "DEBUG")
-  }
-
-  def debug(entries: Iterable[(String,Any)], zInfo: ZOSJobInfo): Unit = {
-    val m = jsonData(entries, zInfo)
-    StackDriverLogging.logJson(m, "DEBUG")
+    log.logJson(m, ERROR)
   }
 }

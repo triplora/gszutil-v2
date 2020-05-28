@@ -73,9 +73,8 @@ object Util {
     if (!rootLogger.getAllAppenders.hasMoreElements) {
       rootLogger.addAppender(new ConsoleAppender(new PatternLayout("%d{ISO8601} %-5p %c %x - %m%n")))
 
-      // export LOG_NAME='projects/[PROJECT_ID]/logs/[LOG_ID]'
-      if (cp != null && env.contains("LOG_NAME")) {
-        StackDriverLogging.init(cp.getCredentials, env("LOG_NAME"))
+      if (cp != null && env.contains("LOG_PROJECT") && env.contains("LOG_ID")) {
+        StackDriverLogging.init(cp.getCredentials, env("LOG_PROJECT"), env("LOG_ID"))
         System.out.println("Done.")
       }
 

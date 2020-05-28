@@ -3,7 +3,7 @@ package com.google.cloud.imf.util
 import org.apache.log4j.spi.LoggingEvent
 import org.apache.log4j.{AppenderSkeleton, Level}
 
-class StackDriverLoggingAppender extends AppenderSkeleton {
+class StackDriverLoggingAppender(log: Log) extends AppenderSkeleton {
 
   private def toMap(e: LoggingEvent): java.util.Map[String,Any] = {
     val m = new java.util.HashMap[String,Any]
@@ -55,7 +55,7 @@ class StackDriverLoggingAppender extends AppenderSkeleton {
   }
 
   override def append(event: LoggingEvent): Unit =
-    StackDriverLogging.logJson(toMap(event), sev(event.getLevel))
+    log.logJson(toMap(event), sev(event.getLevel))
 
   override def close(): Unit = {}
 

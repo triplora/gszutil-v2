@@ -6,7 +6,7 @@ import com.google.cloud.gszutil.RecordSchema
 import com.google.cloud.gszutil.io.WriterCore
 import com.google.cloud.imf.grecv.GRecvProtocol
 import com.google.cloud.imf.gzos.pb.GRecvProto.{GRecvRequest, GRecvResponse, WriteRequest, ZOSJobInfo}
-import com.google.cloud.imf.util.{Logging, SecurityUtils, StackDriverLogger}
+import com.google.cloud.imf.util.{Logging, SecurityUtils, StackDriverLogger, StackDriverLogging}
 import com.google.cloud.storage.Storage
 import com.google.common.hash.Hashing
 import com.google.protobuf.util.JsonFormat
@@ -17,7 +17,7 @@ class RequestStream(gcs: Storage,
                     id: String,
                     responseObserver: StreamObserver[GRecvResponse])
   extends StreamObserver[WriteRequest] with Logging {
-  private val sdLogger = new StackDriverLogger(this.getClass.getCanonicalName.stripSuffix("$"))
+  private val stackDriver: StackDriverLogger = StackDriverLogging.getLogger(this.getClass)
 
   private val hasher = Hashing.murmur3_128().newHasher()
   private var principal: String = _
@@ -34,7 +34,7 @@ class RequestStream(gcs: Storage,
   def authenticate(recvRequest: GRecvRequest): Unit = {
     req = recvRequest
     zInfo = req.getJobinfo
-    sdLogger.info("received request\n" + JsonFormat.printer.print(recvRequest), zInfo)
+    stackDriver.log("received request\n" + JsonFormat.printer.print(recvRequest), zInfo, stackDriver.INFO)
 
     buf = ByteBuffer.allocate(req.getLrecl*1024)
     orc = new WriterCore(schemaProvider = RecordSchema(req.getSchema),
@@ -52,13 +52,13 @@ class RequestStream(gcs: Storage,
       val validTimestamp = System.currentTimeMillis - req.getTimestamp < TimeLimit
       if (verified && validTimestamp) {
         principal = req.getPrincipal
-        sdLogger.info(s"Signature verified (principal=$principal)", zInfo)
+        stackDriver.log(s"Signature verified (principal=$principal)", zInfo, stackDriver.INFO)
       }
       else {
         if (!validTimestamp)
-          sdLogger.error(s"invalid timestamp ${req.getTimestamp}",zInfo)
+          stackDriver.log(s"invalid timestamp ${req.getTimestamp}",zInfo, stackDriver.ERROR)
         if (!verified)
-          sdLogger.error(s"invalid signature",zInfo)
+          stackDriver.log(s"invalid signature", zInfo, stackDriver.ERROR)
         //throw new StatusRuntimeException(Status.UNAUTHENTICATED)
       }
     }
@@ -83,7 +83,7 @@ class RequestStream(gcs: Storage,
   }
 
   override def onError(t: Throwable): Unit =
-    sdLogger.error("error: " + t.getMessage, t, zInfo)
+    stackDriver.error("error: " + t.getMessage, t, zInfo)
 
   def buildResponse(status: Int): GRecvResponse =
     GRecvResponse.newBuilder
@@ -97,10 +97,10 @@ class RequestStream(gcs: Storage,
   override def onCompleted(): Unit = {
     val response = buildResponse(status)
     val json = JsonFormat.printer().omittingInsignificantWhitespace().print(response)
-    sdLogger.debug("closing orc", zInfo)
+    stackDriver.log("closing orc", zInfo, stackDriver.DEBUG)
     orc.close()
     responseObserver.onNext(response)
     responseObserver.onCompleted()
-    sdLogger.info(s"request complete $json", zInfo)
+    stackDriver.log(s"request complete $json", zInfo, stackDriver.INFO)
   }
 }
