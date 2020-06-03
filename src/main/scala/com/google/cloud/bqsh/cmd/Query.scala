@@ -16,6 +16,7 @@
 
 package com.google.cloud.bqsh.cmd
 
+import com.google.cloud.bigquery.JobStatistics.QueryStatistics
 import com.google.cloud.bigquery.{BigQueryException, Clustering, JobInfo, QueryJobConfiguration, QueryParameterValue, StandardSQLTypeName, StatsUtil, TimePartitioning}
 import com.google.cloud.bqsh.BQ.resolveDataset
 import com.google.cloud.bqsh.{ArgParser, BQ, Bqsh, Command, QueryConfig, QueryOptionParser}
@@ -82,7 +83,15 @@ object Query extends Command[QueryConfig] with Logging {
                 val msg = s"Error:\n${status.error}\nExecutionErrors: ${status.executionErrors.mkString("\n")}"
                 logger.error(msg)
                 result = Result.Failure(msg)
-              } else result = Result.Success
+              } else {
+                val stats = job.getStatistics[QueryStatistics]
+                val conf = job.getConfiguration[QueryJobConfiguration]
+                val activityCount: Long =
+                  Option[Long](stats.getNumDmlAffectedRows)
+                    .getOrElse(Option(bq.getTable(conf.getDestinationTable))
+                      .map(_.getNumRows.longValueExact()).getOrElse(0L))
+                result = Result(activityCount = activityCount)
+              }
               BQ.throwOnError(status)
             case _ =>
               logger.error(s"Job ${jobId.getJob} not found")

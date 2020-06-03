@@ -29,4 +29,10 @@ object Result {
   def Failure(msg: String, exitCode: Int = 1): Result =
     withExport("ERRMSG", msg, 1)
 }
-case class Result(env: Map[String,String] = Map.empty, exitCode: Int = 0)
+
+// https://docs.teradata.com/reader/1fdhoBglKXYl~W_OyMEtGQ/92K64CKQxrkuO4Hm7P8IEA
+case class Result(env: Map[String,String] = Map.empty,
+                  exitCode: Int = 0,
+                  activityCount: Long = 0) {
+  def errorCode: Int = exitCode
+}
