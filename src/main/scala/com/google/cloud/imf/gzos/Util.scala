@@ -74,6 +74,7 @@ object Util {
       rootLogger.addAppender(new ConsoleAppender(new PatternLayout("%d{ISO8601} %-5p %c %x - %m%n")))
 
       if (cp != null && env.contains("LOG_PROJECT") && env.contains("LOG_ID")) {
+        System.out.println("Initializing Cloud Logging.")
         StackDriverLogging.init(cp.getCredentials, env("LOG_PROJECT"), env("LOG_ID"))
         System.out.println("Done.")
       }
@@ -111,7 +112,8 @@ object Util {
   val StorageScope = "https://www.googleapis.com/auth/devstorage.read_write"
   val BigQueryScope = "https://www.googleapis.com/auth/bigquery"
   val ComputeScope = "https://www.googleapis.com/auth/compute"
-  final val Scopes = ImmutableSet.of(ComputeScope, StorageScope, BigQueryScope)
+  val LoggingScope = "https://www.googleapis.com/auth/logging.write"
+  final val Scopes = ImmutableSet.of(ComputeScope, StorageScope, BigQueryScope, LoggingScope)
 
   class DefaultCredentialProvider extends CredentialProvider {
     private val credentials =
