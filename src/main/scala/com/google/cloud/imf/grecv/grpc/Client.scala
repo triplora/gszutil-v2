@@ -1,20 +1,20 @@
 package com.google.cloud.imf.grecv.grpc
 
-import java.util.concurrent.TimeUnit
-
 import com.google.cloud.gszutil.io.ZRecordReaderT
 import com.google.cloud.imf.gzos.pb.GRecvGrpc
 import com.google.cloud.imf.gzos.pb.GRecvProto.{GRecvRequest, GRecvResponse}
 import com.google.cloud.imf.util.Logging
 import com.google.common.util.concurrent.MoreExecutors
-import io.grpc.Channel
+import io.grpc.ManagedChannel
 
 import scala.concurrent.duration.Duration
 import scala.concurrent.{Await, ExecutionContext, Future}
 
-class Client(ch: Channel) extends Logging {
+class Client(ch: ManagedChannel) extends AutoCloseable with Logging {
   private val asyncStub = GRecvGrpc.newStub(ch)
     .withCompression("gzip")
+
+  implicit val ec: ExecutionContext = ExecutionContext.fromExecutor(MoreExecutors.directExecutor())
 
   def send(request: GRecvRequest,
            in: ZRecordReaderT,
@@ -60,12 +60,12 @@ class Client(ch: Channel) extends Logging {
     streams.foreach(_.onCompleted())
     logger.debug("waiting for responses")
 
-    implicit val ec = ExecutionContext.fromExecutor(MoreExecutors.directExecutor())
-
     val responses = Await.result(
       Future.sequence(streams.map(_.response.future)),
-      Duration(1, TimeUnit.HOURS))
+      Duration.Inf)
     logger.debug(s"received ${responses.length} responses")
     responses.zip(streams.map(_.result))
   }
+
+  override def close(): Unit = ch.shutdown()
 }

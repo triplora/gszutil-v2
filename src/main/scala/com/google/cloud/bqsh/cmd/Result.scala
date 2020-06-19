@@ -25,14 +25,14 @@ object Result {
     Result(Map(name -> value.toString), exitCode)
   }
 
-  def Success = Result()
-  def Failure(msg: String, exitCode: Int = 1): Result =
-    withExport("ERRMSG", msg, 1)
+  def Success: Result = Result()
+  def Failure(msg: String, exitCode: Int = 1): Result = Result(exitCode = 1, message = msg)
 }
 
 // https://docs.teradata.com/reader/1fdhoBglKXYl~W_OyMEtGQ/92K64CKQxrkuO4Hm7P8IEA
 case class Result(env: Map[String,String] = Map.empty,
                   exitCode: Int = 0,
-                  activityCount: Long = 0) {
+                  activityCount: Long = 0,
+                  message: String = "") {
   def errorCode: Int = exitCode
 }

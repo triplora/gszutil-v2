@@ -8,6 +8,7 @@ import com.google.cloud.gszutil.io.ZRecordReaderT
 import com.google.cloud.imf.grecv.{GRecvConfig, GRecvProtocol, Receiver}
 import com.google.cloud.imf.gzos.pb.GRecvProto
 import com.google.cloud.imf.util.{Logging, TLSUtil}
+import com.google.common.util.concurrent.MoreExecutors
 import com.google.protobuf.util.JsonFormat
 import io.grpc.CompressorRegistry
 import io.grpc.netty.NettyChannelBuilder
@@ -26,6 +27,12 @@ object GrpcReceiver extends Receiver with Logging {
     }
   }
 
+  private final val GzipCR: CompressorRegistry = {
+    val cr = CompressorRegistry.newEmptyInstance
+    cr.register(new GzipCodec())
+    cr
+  }
+
   override def recv(req: GRecvProto.GRecvRequest,
                     host: String,
                     port: Int,
@@ -33,16 +40,12 @@ object GrpcReceiver extends Receiver with Logging {
                     parallelism: Int,
                     tls: Boolean,
                     in: ZRecordReaderT): Result = {
-    val cr = CompressorRegistry.newEmptyInstance
-    cr.register(new GzipCodec())
     val cb = NettyChannelBuilder.forAddress(host, port)
       .keepAliveTime(10, TimeUnit.MINUTES)
-      .compressorRegistry(cr)
-
-    if (parallelism <= 1)
-      cb.directExecutor()
-    else
-      cb.executor(Executors.newWorkStealingPool(parallelism))
+      .compressorRegistry(GzipCR)
+      .executor(
+        if (parallelism <= 1) MoreExecutors.directExecutor()
+        else Executors.newWorkStealingPool(parallelism))
 
     if (!tls) {
       logger.warn("Configuring Client Plaintext")
@@ -52,10 +55,10 @@ object GrpcReceiver extends Receiver with Logging {
       TLSUtil.addConscrypt(cb)
     }
 
-    val ch = new MultiChannel(cb, nConnections)
-    val client = new Client(ch)
+    val client = new Client(new MultiChannel(cb, nConnections))
 
     val sendResult = Try{client.send(req, in, nConnections)}
+    client.close()
     sendResult match {
       case Failure(e) =>
         logger.error(e.getMessage, e)
