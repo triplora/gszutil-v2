@@ -16,7 +16,10 @@
 
 package com.google.cloud.bqsh
 
+import com.google.api.services.logging.v2.LoggingScopes
+import com.google.auth.oauth2.GoogleCredentials
 import com.google.cloud.imf.gzos.Util
+import com.google.cloud.imf.util.CloudLogging
 import org.scalatest.flatspec.AnyFlatSpec
 
 class ShellSpec extends AnyFlatSpec {
@@ -85,7 +88,7 @@ class ShellSpec extends AnyFlatSpec {
   }
 
   it should "maintain env" in {
-    Util.configureLogging()
+    CloudLogging.configureLogging(debugOverride = false)
 
     val script =
       """TABLE=project:dataset.table

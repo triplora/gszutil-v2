@@ -19,11 +19,11 @@ package com.google.cloud.bqsh
 import com.google.cloud.gszutil.Decoding.{Decimal64Decoder, LongDecoder, StringDecoder, UnsignedLongDecoder}
 import com.google.cloud.gszutil.{CopyBook, Decoding, Utf8}
 import com.google.cloud.imf.gzos.{Ebcdic, Util}
-import com.google.cloud.imf.util.Logging
+import com.google.cloud.imf.util.{CloudLogging, Logging}
 import org.scalatest.flatspec.AnyFlatSpec
 
 class CopyBookSpec extends AnyFlatSpec with Logging {
-  Util.configureLogging(true)
+  CloudLogging.configureLogging(debugOverride = false)
   "CopyBook" should "parse" in {
     val examples = Seq(
       """       01 DAILY-ITEMS.

@@ -2,12 +2,11 @@ package com.google.cloud.gszutil.io
 
 import com.google.auth.oauth2.GoogleCredentials
 import com.google.cloud.bqsh.GCE
-import com.google.cloud.imf.gzos.Util
-import com.google.cloud.imf.util.Logging
+import com.google.cloud.imf.util.{CloudLogging, Logging}
 import org.scalatest.flatspec.AnyFlatSpec
 
 class GCESpec extends AnyFlatSpec with Logging {
-  Util.configureLogging(true)
+  CloudLogging.configureLogging(debugOverride = true)
 
   "GCE" should "launch VM" in {
     val gce = GCE.defaultClient(GoogleCredentials.getApplicationDefault)

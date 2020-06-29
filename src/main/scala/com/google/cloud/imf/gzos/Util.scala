@@ -20,19 +20,13 @@ import java.nio.ByteBuffer
 import java.nio.channels.{Channels, ReadableByteChannel, WritableByteChannel}
 import java.nio.charset.Charset
 
-import com.google.api.client.json.jackson2.JacksonFactory
-import com.google.api.services.logging.v2.Logging
-import com.google.auth.http.HttpCredentialsAdapter
 import com.google.auth.oauth2.GoogleCredentials
-import com.google.cloud.gszutil.CCATransportFactory
 import com.google.cloud.gszutil.io.{ZDataSet, ZRecordReaderT}
 import com.google.cloud.imf.gzos.pb.GRecvProto.ZOSJobInfo
-import com.google.cloud.imf.util.{StackDriverLogging, StackDriverLoggingAppender}
 import com.google.cloud.storage.BlobInfo
 import com.google.common.base.Charsets
 import com.google.common.collect.ImmutableSet
 import com.google.common.io.{BaseEncoding, Resources}
-import org.apache.log4j.{ConsoleAppender, Level, LogManager, PatternLayout}
 
 import scala.util.Random
 
@@ -52,7 +46,8 @@ object Util {
     }
   }
 
-  def putInfo(zInfo: ZOSJobInfo, m: java.util.Map[String,Any]): Unit = {
+  def toMap(zInfo: ZOSJobInfo): java.util.HashMap[String,Any] = {
+    val m = new java.util.HashMap[String,Any]()
     if (zInfo != null){
       m.put("jobid",zInfo.getJobid)
       m.put("jobdate", zInfo.getJobdate)
@@ -62,42 +57,7 @@ object Util {
       m.put("procstepname",zInfo.getProcStepName)
       m.put("user",zInfo.getUser)
     }
-  }
-
-  def configureLogging(debugOverride: Boolean = false,
-                       env: Map[String,String] = sys.env,
-                       cp: CredentialProvider = null): Unit = {
-    val debug = env.getOrElse("BQSH_ROOT_LOGGER","").contains("DEBUG") || debugOverride
-    val rootLogger = LogManager.getRootLogger
-
-    if (!rootLogger.getAllAppenders.hasMoreElements) {
-      rootLogger.addAppender(new ConsoleAppender(new PatternLayout("%d{ISO8601} %-5p %c %x - %m%n")))
-
-      if (cp != null && env.contains("LOG_PROJECT") && env.contains("LOG_ID")) {
-        System.out.println("Initializing Cloud Logging.")
-        StackDriverLogging.init(cp.getCredentials, env("LOG_PROJECT"), env("LOG_ID"))
-        System.out.println("Done.")
-      }
-
-      LogManager
-        .getLogger("org.apache.orc.impl")
-        .setLevel(Level.ERROR)
-      LogManager
-        .getLogger("io.grpc.netty")
-        .setLevel(Level.ERROR)
-      LogManager
-        .getLogger("io.netty")
-        .setLevel(Level.ERROR)
-      LogManager
-        .getLogger("org.apache.http")
-        .setLevel(Level.WARN)
-    }
-
-    if (debug) {
-      rootLogger.setLevel(Level.DEBUG)
-    } else {
-      rootLogger.setLevel(Level.INFO)
-    }
+    m
   }
 
   private val r = Runtime.getRuntime

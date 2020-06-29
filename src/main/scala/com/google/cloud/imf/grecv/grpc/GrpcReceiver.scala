@@ -2,12 +2,11 @@ package com.google.cloud.imf.grecv.grpc
 
 import java.util.concurrent.{Executors, TimeUnit}
 
-import com.google.cloud.bqsh.GCS
 import com.google.cloud.bqsh.cmd.Result
 import com.google.cloud.gszutil.io.ZRecordReaderT
 import com.google.cloud.imf.grecv.{GRecvConfig, GRecvProtocol, Receiver}
 import com.google.cloud.imf.gzos.pb.GRecvProto
-import com.google.cloud.imf.util.{Logging, TLSUtil}
+import com.google.cloud.imf.util.{Logging, Services, TLSUtil}
 import com.google.common.util.concurrent.MoreExecutors
 import com.google.protobuf.util.JsonFormat
 import io.grpc.CompressorRegistry
@@ -18,7 +17,7 @@ import scala.util.{Failure, Success, Try}
 object GrpcReceiver extends Receiver with Logging {
   override def run(cfg: GRecvConfig): Result = {
     try {
-      new Service(cfg, GCS.getDefaultClient()).start()
+      new Service(cfg, Services.storage()).start()
       Result.Success
     } catch {
       case t: Throwable =>

@@ -5,7 +5,6 @@ import java.security.cert.X509Certificate
 import java.security.spec.RSAKeyGenParameterSpec
 import java.security.{KeyPair, KeyPairGenerator, PrivateKey, SecureRandom, Security}
 
-import com.google.cloud.gszutil.CCASSLSocketFactory
 import com.typesafe.sslconfig.ssl.FakeKeyStore
 import io.grpc.netty.{GrpcSslContexts, NettyChannelBuilder, NettyServerBuilder}
 import io.netty.handler.ssl.{ClientAuth, SslContextBuilder, SslProvider}

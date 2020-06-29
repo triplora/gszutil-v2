@@ -20,13 +20,13 @@ import java.nio.channels.Channels
 import java.nio.file.Paths
 
 import com.google.cloud.bigquery.StatsUtil
-import com.google.cloud.bqsh.{ArgParser, BQ, Command, GCS, GsUtilConfig, GsUtilOptionParser}
+import com.google.cloud.bqsh.{ArgParser, BQ, Command, GsUtilConfig, GsUtilOptionParser}
 import com.google.cloud.gszutil.io.ZRecordReaderT
 import com.google.cloud.gszutil.orc.WriteORCFile
 import com.google.cloud.imf.grecv.GRecvClient
 import com.google.cloud.imf.grecv.grpc.GrpcReceiver
 import com.google.cloud.imf.gzos.{MVS, MVSStorage}
-import com.google.cloud.imf.util.Logging
+import com.google.cloud.imf.util.{Logging, Services}
 import com.google.cloud.storage.{BlobId, Storage}
 
 
@@ -37,7 +37,7 @@ object Cp extends Command[GsUtilConfig] with Logging {
     val creds = zos
       .getCredentialProvider()
       .getCredentials
-    val gcs = GCS.defaultClient(creds)
+    val gcs = Services.storage(creds)
 
     if (c.destPath.nonEmpty) {
       return cpFs(c.gcsUri, c.destPath, gcs, zos)
@@ -97,12 +97,12 @@ object Cp extends Command[GsUtilConfig] with Logging {
         .getDataset}:${statsTable.getTable}")
       val jobId = BQ.genJobId(zos,"cp")
       StatsUtil.insertJobStats(zos,jobId,job=None,
-        bq=BQ.defaultClient(c.projectId, c.location, creds),
-        tableId=statsTable,
-        jobType="cp",
-        source=sourceDSN,
-        dest=c.gcsUri,
-        recordsIn=nRead)
+        bq = Services.bigQuery(c.projectId, c.location, creds),
+        tableId = statsTable,
+        jobType = "cp",
+        source = sourceDSN,
+        dest = c.gcsUri,
+        recordsIn = nRead)
     }
 
     result

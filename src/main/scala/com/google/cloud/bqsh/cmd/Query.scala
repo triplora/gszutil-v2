@@ -21,7 +21,7 @@ import com.google.cloud.bigquery.{BigQueryException, Clustering, JobInfo, QueryJ
 import com.google.cloud.bqsh.BQ.resolveDataset
 import com.google.cloud.bqsh.{ArgParser, BQ, Bqsh, Command, QueryConfig, QueryOptionParser}
 import com.google.cloud.imf.gzos.MVS
-import com.google.cloud.imf.util.Logging
+import com.google.cloud.imf.util.{Logging, Services}
 
 object Query extends Command[QueryConfig] with Logging {
   override val name: String = "bq query"
@@ -29,7 +29,7 @@ object Query extends Command[QueryConfig] with Logging {
 
   def run(cfg: QueryConfig, zos: MVS): Result = {
     val creds = zos.getCredentialProvider().getCredentials
-    val bq = BQ.defaultClient(cfg.projectId, cfg.location, creds)
+    val bq = Services.bigQuery(cfg.projectId, cfg.location, creds)
 
     val queryString =
       if (cfg.sql.nonEmpty) cfg.sql

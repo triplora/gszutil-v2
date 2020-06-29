@@ -15,7 +15,7 @@
  */
 organization := "com.google.cloud.imf"
 name := "mainframe-connector"
-version := "4.3.1-SNAPSHOT"
+version := "4.4.0"
 
 scalaVersion := "2.13.1"
 
@@ -25,31 +25,22 @@ val exZk = ExclusionRule(organization = "org.apache.zookeeper")
 val exNs = ExclusionRule(organization = "io.grpc", name = "grpc-netty-shaded")
 
 libraryDependencies ++= Seq(
+  "com.google.cloud.imf" %% "mainframe-util" % "1.0.0",
   "com.github.scopt" %% "scopt" % "3.7.1",
   "com.typesafe" %% "ssl-config-core" % "0.4.2",
   "org.scalatest" %% "scalatest" % "3.1.1" % Test
 )
 
-libraryDependencies ++= Seq("com.google.guava" % "guava" % "28.2-jre")
-
 libraryDependencies ++= Seq(
-  "com.google.api-client" % "google-api-client" % "1.30.9", // provided for google-cloud-bigquery
-  "com.google.apis" % "google-api-services-logging" % "v2-rev656-1.25.0",
-  "com.google.auto.value" % "auto-value-annotations" % "1.7", // provided for google-cloud-bigquery
-  "com.google.http-client" % "google-http-client-apache-v2" % "1.34.2",
-  "com.google.cloud" % "google-cloud-bigquery" % "1.110.0",
   "com.google.cloud" % "google-cloud-compute" % "0.117.0-alpha",
-  "com.google.cloud" % "google-cloud-storage" % "1.103.1",
-  "com.google.protobuf" % "protobuf-java" % "3.11.4",
-  "com.google.protobuf" % "protobuf-java-util" % "3.11.4",
-  "io.grpc" % "grpc-netty" % "1.28.1",
-  "io.grpc" % "grpc-protobuf" % "1.28.1",
-  "io.grpc" % "grpc-stub" % "1.28.1",
+  "io.grpc" % "grpc-core" % "1.30.0",
+  "io.grpc" % "grpc-netty" % "1.30.0",
+  "io.grpc" % "grpc-protobuf" % "1.30.0",
+  "io.grpc" % "grpc-stub" % "1.30.0",
   "io.netty" % "netty-codec-http2" % "4.1.48.Final",
   "org.apache.hadoop" % "hadoop-common" % "2.9.2", // provided for orc-core
   "org.apache.hadoop" % "hadoop-hdfs-client" % "2.9.2", // provided for orc-core
   "org.apache.hive" % "hive-storage-api" % "2.7.1",
-  "org.apache.httpcomponents" % "httpclient" % "4.5.12",
   "org.apache.orc" % "orc-core" % "1.6.2",
   "org.conscrypt" % "conscrypt-openjdk-uber" % "2.4.0"
 ).map(_ excludeAll(exGuava,exJetty,exZk,exNs))

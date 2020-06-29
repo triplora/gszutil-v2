@@ -17,17 +17,14 @@
 package com.google.cloud.gszutil.io
 
 import com.google.cloud.gszutil.CopyBook
-import com.google.cloud.imf.GRecv
 import com.google.cloud.imf.grecv.GRecvConfig
 import com.google.cloud.imf.grecv.grpc.GrpcReceiver
-import com.google.cloud.imf.grecv.socket.SocketClient
-import com.google.cloud.imf.gzos.Util
 import com.google.cloud.imf.gzos.pb.GRecvProto.GRecvRequest
-import com.google.cloud.imf.util.Logging
+import com.google.cloud.imf.util.{CloudLogging, Logging}
 import org.scalatest.flatspec.AnyFlatSpec
 
 class ZChannelSpec extends AnyFlatSpec with Logging {
-  Util.configureLogging(true)
+  CloudLogging.configureLogging(debugOverride = true)
 
   "ZChannel" should "rw" in {
     val sendParallelism = 2
@@ -63,11 +60,8 @@ class ZChannelSpec extends AnyFlatSpec with Logging {
       .setBasepath("gs://bucket/prefix")
       .setMaxErrPct(0)
       .build
-    val sendResult = SocketClient.clientBegin(in, request,
-      sendParallelism, host, port, tls = false)
-    assert(sendResult.isSuccess)
-    assert(sendResult.get.rc == 0)
-    assert(sendResult.get.bytesIn == inSize)
-    assert(recvResult.exitCode == 0)
+
+    val sendResult = GrpcReceiver.recv(request, host, port, 1, sendParallelism, tls = false, in)
+    assert(sendResult.exitCode == 0)
   }
 }

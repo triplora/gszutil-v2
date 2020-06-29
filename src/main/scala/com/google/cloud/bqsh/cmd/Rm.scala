@@ -19,13 +19,14 @@ package com.google.cloud.bqsh.cmd
 import com.google.cloud.bigquery.DatasetId
 import com.google.cloud.bqsh._
 import com.google.cloud.imf.gzos.MVS
+import com.google.cloud.imf.util.Services
 
 object Rm extends Command[RmConfig] {
   override val name: String = "bq rm"
   override val parser: ArgParser[RmConfig] = RmOptionParser
   override def run(c: RmConfig, zos: MVS): Result = {
     val creds = zos.getCredentialProvider().getCredentials
-    val bq = BQ.defaultClient(c.projectId, c.location, creds)
+    val bq = Services.bigQuery(c.projectId, c.location, creds)
 
     if (c.dataset) {
       bq.delete(DatasetId.of(c.projectId, c.datasetId))

@@ -20,7 +20,7 @@ import java.net.URI
 
 import com.google.cloud.bqsh._
 import com.google.cloud.imf.gzos.MVS
-import com.google.cloud.imf.util.Logging
+import com.google.cloud.imf.util.{Logging, Services}
 import com.google.cloud.storage.{BlobId, Storage}
 
 object GsUtilRm extends Command[GsUtilConfig] with Logging {
@@ -30,7 +30,7 @@ object GsUtilRm extends Command[GsUtilConfig] with Logging {
     val creds = zos.getCredentialProvider()
       .getCredentials
     logger.info(s"gsutil rm ${c.gcsUri}")
-    val gcs = GCS.defaultClient(creds)
+    val gcs = Services.storage(creds)
     val uri = new URI(c.gcsUri)
     val bucket = uri.getAuthority
     if (c.recursive) {

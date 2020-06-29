@@ -2,12 +2,15 @@ package com.google.cloud.imf.grecv
 
 import java.nio.charset.StandardCharsets
 
+import com.google.api.services.logging.v2.LoggingScopes
+import com.google.auth.oauth2.GoogleCredentials
 import com.google.cloud.bqsh.cmd.Cp
-import com.google.cloud.bqsh.{GCS, GsUtilConfig}
+import com.google.cloud.bqsh.GsUtilConfig
 import com.google.cloud.gszutil.io.ZDataSet
 import com.google.cloud.gszutil.{CopyBook, RecordSchema, TestUtil}
 import com.google.cloud.imf.grecv.grpc.Service
 import com.google.cloud.imf.gzos.{Linux, Util}
+import com.google.cloud.imf.util.{CloudLogging, Services}
 import com.google.protobuf.util.JsonFormat
 import org.scalatest.flatspec.AnyFlatSpec
 
@@ -15,10 +18,10 @@ import scala.concurrent.ExecutionContext.Implicits.global
 import scala.concurrent.Future
 
 class CpSpec2 extends AnyFlatSpec {
-  Util.configureLogging(debugOverride = true)
+  CloudLogging.configureLogging(debugOverride = true)
 
   def server(cfg: GRecvConfig): Future[Service] = Future{
-    val s = new Service(cfg, GCS.getDefaultClient())
+    val s = new Service(cfg, Services.storage())
     s.start(block = false)
     s
   }

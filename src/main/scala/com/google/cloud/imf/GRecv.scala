@@ -16,11 +16,11 @@
 
 package com.google.cloud.imf
 
+import com.google.api.services.logging.v2.LoggingScopes
 import com.google.cloud.imf.grecv.GRecvConfigParser
 import com.google.cloud.imf.grecv.grpc.GrpcReceiver
-import com.google.cloud.imf.grecv.socket.SocketReceiver
 import com.google.cloud.imf.gzos.Util
-import com.google.cloud.imf.util.{Logging, SecurityUtils}
+import com.google.cloud.imf.util.{CloudLogging, Logging, SecurityUtils}
 
 object GRecv extends Logging {
   val BatchSize = 1024
@@ -32,14 +32,12 @@ object GRecv extends Logging {
       case Some(cfg) =>
         val zos = Util.zProvider
         zos.init()
-        Util.configureLogging(debugOverride = false, sys.env, zos.getCredentialProvider())
+        CloudLogging.configureLogging(debugOverride = false, sys.env,
+          errorLogs = Seq("org.apache.orc","io.grpc","io.netty","org.apache.http"),
+          credentials = zos.getCredentialProvider().getCredentials.createScoped(LoggingScopes.LOGGING_WRITE))
         logger.info(buildInfo)
         SecurityUtils.useConscrypt()
-        val result =
-          if (cfg.mode == "socket")
-            SocketReceiver.run(cfg)
-          else
-            GrpcReceiver.run(cfg)
+        val result = GrpcReceiver.run(cfg)
         if (result.exitCode != 0)
           System.err.println("Receiver returned non-zero exit code")
         System.exit(result.exitCode)

@@ -1,9 +1,10 @@
 package com.google.cloud.imf.grecv
 
+import com.google.api.services.logging.v2.LoggingScopes
 import com.google.cloud.imf.gzos.Util
 import com.google.cloud.imf.gzos.pb.GRecvProto.Record.Field
 import com.google.cloud.imf.gzos.pb.GRecvProto.{GRecvRequest, Record}
-import com.google.cloud.imf.util.{Logging, SecurityUtils}
+import com.google.cloud.imf.util.{CloudLogging, Logging, SecurityUtils}
 import com.google.protobuf.ByteString
 import org.scalatest.flatspec.AnyFlatSpec
 
@@ -11,7 +12,7 @@ trait TCPIPSpec extends AnyFlatSpec with Logging {
   val Host = "127.0.0.1"
   val PlaintextPort = 51771
   val Port = 51770
-  Util.configureLogging(true)
+  CloudLogging.configureLogging(debugOverride = false)
   SecurityUtils.useConscrypt()
 
   val lrecl = 100

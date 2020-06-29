@@ -16,9 +16,10 @@
 
 package com.google.cloud.bqsh
 
+import com.google.api.services.logging.v2.LoggingScopes
 import com.google.cloud.bqsh.cmd._
 import com.google.cloud.imf.gzos.{MVS, Util}
-import com.google.cloud.imf.util.Logging
+import com.google.cloud.imf.util.{CloudLogging, Logging}
 
 import scala.collection.mutable
 import scala.collection.mutable.ListBuffer
@@ -30,7 +31,9 @@ object Bqsh extends Logging {
     val zos = Util.zProvider
     zos.init()
     val script = zos.readStdin()
-    Util.configureLogging(debugOverride = false, sys.env, zos.getCredentialProvider())
+    CloudLogging.configureLogging(debugOverride = false, sys.env,
+      errorLogs = Seq("org.apache.orc","io.grpc","io.netty","org.apache.http"),
+      credentials = zos.getCredentialProvider().getCredentials.createScoped(LoggingScopes.LOGGING_WRITE))
     val interpreter = new Interpreter(zos, sys.env,true, true)
     val result = interpreter.runScript(script)
     if (result.exitCode != 0)

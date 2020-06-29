@@ -16,42 +16,16 @@
 
 package com.google.cloud.bqsh
 
-import com.google.api.gax.retrying.RetrySettings
-import com.google.api.gax.rpc.FixedHeaderProvider
-import com.google.auth.Credentials
 import com.google.cloud.bigquery.{BigQuery, BigQueryError, BigQueryException, BigQueryOptions, DatasetId, Field, FieldList, Job, JobId, JobInfo, JobStatus, QueryJobConfiguration, Schema, StandardSQLTypeName, TableId}
-import com.google.cloud.gszutil.CCATransportFactory
-import com.google.cloud.http.HttpTransportOptions
 import com.google.cloud.imf.gzos.{MVS, Util}
 import com.google.cloud.imf.util.Logging
 import com.google.common.collect.ImmutableList
-import org.threeten.bp.Duration
 
 import scala.annotation.tailrec
 import scala.jdk.CollectionConverters.IterableHasAsScala
 import scala.util.{Failure, Success, Try}
 
 object BQ extends Logging {
-  def defaultClient(project: String, location: String, credentials: Credentials): BigQuery = {
-    BigQueryOptions.newBuilder
-      .setLocation(location)
-      .setProjectId(project)
-      .setCredentials(credentials)
-      .setTransportOptions(HttpTransportOptions.newBuilder
-        .setHttpTransportFactory(new CCATransportFactory)
-        .build)
-      .setRetrySettings(RetrySettings.newBuilder
-        .setMaxAttempts(8)
-        .setTotalTimeout(Duration.ofMinutes(30))
-        .setInitialRetryDelay(Duration.ofSeconds(8))
-        .setMaxRetryDelay(Duration.ofSeconds(32))
-        .setRetryDelayMultiplier(2.0d)
-        .build)
-      .setHeaderProvider(FixedHeaderProvider.create("user-agent", Bqsh.UserAgent))
-      .build
-      .getService
-  }
-
   def genJobId(zos: MVS, jobType: String): JobId = {
     val t = System.currentTimeMillis
     val rand = Util.randString(5)

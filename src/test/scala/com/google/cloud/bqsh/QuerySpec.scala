@@ -1,10 +1,10 @@
 package com.google.cloud.bqsh
 
-import com.google.cloud.imf.gzos.Util
+import com.google.cloud.imf.util.CloudLogging
 import org.scalatest.flatspec.AnyFlatSpec
 
 class QuerySpec extends AnyFlatSpec {
-  Util.configureLogging(true)
+  CloudLogging.configureLogging(debugOverride = false)
   "Query" should "parse stats table" in {
     val example = "test-project-id:TEST_DATASET_A.TABLE_NAME"
     val resolved = BQ.resolveTableSpec(example,"","")

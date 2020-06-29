@@ -17,12 +17,10 @@
 package com.google.cloud.bqsh.cmd
 
 import com.google.cloud.bigquery.Field.Mode
-import com.google.cloud.bigquery.{ExternalTableDefinition, MaterializedViewDefinition,
-  ModelTableDefinition, Schema, StandardTableDefinition, TableDefinition, ViewDefinition}
-import com.google.cloud.bqsh.{ArgParser, BQ, Command, ReturnCodes, ShowTableConfig,
-  ShowTableOptionParser}
+import com.google.cloud.bigquery.{ExternalTableDefinition, MaterializedViewDefinition, ModelTableDefinition, Schema, StandardTableDefinition, TableDefinition, ViewDefinition}
+import com.google.cloud.bqsh.{ArgParser, BQ, Command, ReturnCodes, ShowTableConfig, ShowTableOptionParser}
 import com.google.cloud.imf.gzos.MVS
-import com.google.cloud.imf.util.Logging
+import com.google.cloud.imf.util.{Logging, Services}
 
 import scala.jdk.CollectionConverters.ListHasAsScala
 
@@ -56,7 +54,7 @@ object ShowTable extends Command[ShowTableConfig] with Logging {
 
   def run(cfg: ShowTableConfig, zos: MVS): Result = {
     val creds = zos.getCredentialProvider().getCredentials
-    val bq = BQ.defaultClient(cfg.projectId, cfg.location, creds)
+    val bq = Services.bigQuery(cfg.projectId, cfg.location, creds)
     val tableSpec = BQ.resolveTableSpec(cfg.tablespec, cfg.projectId, cfg.datasetId)
     val maybeTable = Option(bq.getTable(tableSpec))
     maybeTable match {

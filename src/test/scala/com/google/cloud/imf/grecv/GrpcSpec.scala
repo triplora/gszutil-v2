@@ -2,10 +2,9 @@ package com.google.cloud.imf.grecv
 
 import java.util.concurrent.TimeUnit
 
-import com.google.cloud.bqsh.GCS
-import com.google.cloud.imf.grecv.grpc.{Client, Service, GzipCodec, MultiChannel}
+import com.google.cloud.imf.grecv.grpc.{Client, GzipCodec, MultiChannel, Service}
 import com.google.cloud.imf.gzos.pb.GRecvProto.GRecvResponse
-import com.google.cloud.imf.util.TLSUtil
+import com.google.cloud.imf.util.{Services, TLSUtil}
 import io.grpc.CompressorRegistry
 import io.grpc.netty.NettyChannelBuilder
 
@@ -15,7 +14,7 @@ import scala.concurrent.{Await, Future}
 
 class GrpcSpec extends TCPIPSpec {
   def server(cfg: GRecvConfig): Future[Service] = Future{
-    val s = new Service(cfg, GCS.getDefaultClient())
+    val s = new Service(cfg, Services.storage())
     s.start(block = false)
     s
   }
