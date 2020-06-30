@@ -16,6 +16,8 @@
 
 package com.google.cloud.bqsh
 
+import com.google.cloud.imf.util.StaticMap
+
 case class ShowTableConfig(
   // Custom Options
   quiet: Boolean = false,
@@ -29,12 +31,12 @@ case class ShowTableConfig(
   projectId: String = ""
 ) {
   def toMap: java.util.Map[String,Any] = {
-    val m = new java.util.HashMap[String,Any]()
+    val m = StaticMap.builder
     m.put("type","ShowTableConfig")
     m.put("tablespec",tablespec)
     m.put("location",location)
     m.put("projectId",projectId)
     m.put("datasetId",datasetId)
-    m
+    m.build
   }
 }

@@ -76,7 +76,6 @@ class RequestStream(gcs: Storage,
   override def onNext(value: WriteRequest): Unit = {
     if (req == null)
       authenticate(value.getRequest)
-
     buf.clear()
     value.getData.copyTo(buf)
     hasher.putBytes(buf.array(),0,buf.position())
@@ -85,6 +84,9 @@ class RequestStream(gcs: Storage,
     errCount += result.errCount
     rowCount += result.rowCount
     msgCount += 1
+    if (msgCount == 1 || msgCount % 10000 == 0)
+      logger.debug("received WriteRequest")
+
     val errPct = errCount.doubleValue() / math.max(1,rowCount)
     if (errPct > req.getMaxErrPct) {
       status = GRecvProtocol.ERR
@@ -106,6 +108,7 @@ class RequestStream(gcs: Storage,
   override def onCompleted(): Unit = {
     val response = buildResponse(status)
     val json = JsonFormat.printer().omittingInsignificantWhitespace().print(response)
+    logger.info(s"request completed $json")
     orc.close()
     responseObserver.onNext(response)
     responseObserver.onCompleted()

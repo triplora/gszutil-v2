@@ -17,6 +17,8 @@
 package com.google.cloud.bqsh
 
 import com.google.cloud.imf.gzos.MVSStorage.{DSN, MVSDataset, MVSPDSMember}
+import com.google.cloud.imf.util.StaticMap
+import com.google.common.collect.ImmutableSortedMap
 
 object QueryConfig {
   def create(sql: String, datasetId: String, location: String, projectId: String,
@@ -80,7 +82,7 @@ case class QueryConfig(
   }
 
   def toMap: java.util.Map[String,Any] = {
-    val m = new java.util.HashMap[String,Any]()
+    val m = StaticMap.builder
     m.put("type","QueryConfig")
     m.put("sql",sql)
     m.put("location",location)
@@ -90,6 +92,6 @@ case class QueryConfig(
       m.put("jobId",jobId)
     if (statsTable.nonEmpty)
       m.put("statsTable",statsTable)
-    m
+    m.build()
   }
 }

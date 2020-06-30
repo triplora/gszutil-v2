@@ -16,6 +16,8 @@
 
 package com.google.cloud.bqsh
 
+import com.google.common.collect.ImmutableSortedMap
+
 case class RmConfig (
   dataset: Boolean = false,
   model: Boolean = false,
@@ -32,4 +34,12 @@ case class RmConfig (
   projectId: String = "",
   synchronousMode: Boolean = true,
   sync: Boolean = true
-)
+) {
+  def toMap: java.util.Map[String,Any] = ImmutableSortedMap.of(
+    "type", "RmConfig",
+    "tablespec", tablespec,
+    "projectId", projectId,
+    "location", location,
+    "recursive", recursive
+  )
+}

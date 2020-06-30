@@ -11,12 +11,12 @@ class ResponseStream(promise: Promise[GRecvResponse])
   extends StreamObserver[GRecvResponse] with Logging {
   private var v: GRecvResponse = _
   override def onNext(value: GRecvResponse): Unit = {
-    logger.debug(s"received ${value.getStatus}")
+    logger.info(s"received GRecvResponse with status ${value.getStatus}")
     v = value
   }
   override def onError(t: Throwable): Unit = promise.failure(t)
   override def onCompleted(): Unit = {
-    logger.debug("request complete")
+    logger.info("request complete")
     promise.complete(Success(v))
   }
 }

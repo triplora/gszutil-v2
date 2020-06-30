@@ -18,6 +18,8 @@ package com.google.cloud.bqsh
 
 import java.net.URI
 
+import com.google.cloud.imf.util.StaticMap
+
 import scala.jdk.CollectionConverters.SeqHasAsJava
 
 object MkConfig {
@@ -72,7 +74,7 @@ case class MkConfig (
   statsTable: String = ""
 ) {
   def toMap: java.util.Map[String,Any] = {
-    val m = new java.util.HashMap[String,Any]()
+    val m = StaticMap.builder
     m.put("type","MkConfig")
     m.put("datasetId",datasetId)
     if (jobId.nonEmpty)
@@ -103,7 +105,7 @@ case class MkConfig (
     if (statsTable.nonEmpty)
       m.put("statsTable",statsTable)
 
-    m
+    m.build()
   }
 }
 
