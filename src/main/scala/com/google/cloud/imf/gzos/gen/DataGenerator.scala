@@ -3,8 +3,8 @@ package com.google.cloud.imf.gzos.gen
 import java.nio.ByteBuffer
 import java.nio.charset.Charset
 
-import com.google.cloud.gszutil.io.ZRecordReaderT
 import com.google.cloud.gszutil.SchemaProvider
+import com.google.cloud.gszutil.io.ZRecordReaderT
 import com.google.cloud.imf.gzos.pb.GRecvProto.Record
 import com.google.cloud.imf.util.Logging
 

@@ -1,11 +1,9 @@
 package com.google.cloud.gszutil.io
 
-import com.google.api.services.logging.v2.LoggingScopes
-import com.google.auth.oauth2.GoogleCredentials
 import com.google.cloud.bqsh.GsUtilConfig
 import com.google.cloud.bqsh.cmd.Cp
 import com.google.cloud.gszutil.{RecordSchema, TestUtil}
-import com.google.cloud.imf.gzos.gen.{DataGenUtil, DataGenerator}
+import com.google.cloud.imf.gzos.gen.DataGenUtil
 import com.google.cloud.imf.gzos.pb.GRecvProto.Record
 import com.google.cloud.imf.gzos.pb.GRecvProto.Record.Field
 import com.google.cloud.imf.gzos.{Ebcdic, Linux}
@@ -14,7 +12,8 @@ import com.google.protobuf.ByteString
 import org.scalatest.flatspec.AnyFlatSpec
 
 class CpSpec extends AnyFlatSpec {
-  CloudLogging.configureLogging(debugOverride = true)
+  CloudLogging.configureLogging(debugOverride = true,
+    errorLogs = "org.apache.http"::"io.grpc"::"io.netty"::Nil)
 
   val mload1Schema: RecordSchema = {
     val b = Record.newBuilder
@@ -101,7 +100,10 @@ class CpSpec extends AnyFlatSpec {
                            datasetId = "dataset",
                            testInput = Option(generator),
                            parallelism = 1,
-                           replace = true)
+                           replace = true,
+                           remote = true,
+                           remoteHost = "127.0.0.1",
+                           remotePort = 51771)
     val res = Cp.run(cfg, Linux)
     assert(res.exitCode == 0)
   }

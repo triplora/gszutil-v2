@@ -13,7 +13,6 @@ import com.google.api.client.json.{GenericJson, JsonObjectParser}
 import com.google.api.client.util.PemReader
 import com.google.cloud.imf.gzos.Util
 import com.google.common.hash.Hashing
-import org.conscrypt.Conscrypt
 import sun.security.jca.GetInstance
 
 import scala.collection.mutable.ArrayBuffer
@@ -34,12 +33,11 @@ object SecurityUtils {
   def useConscrypt(): Unit = {
     if (!Util.isIbm && !(Security.getProviders.apply(0).getName == "Conscrypt"))
       try {
-        Security.insertProviderAt(Conscrypt.newProvider, 1)
+        Security.insertProviderAt(Security.getProvider("Conscrypt"), 1)
         System.out.println("using Conscrypt Security Provider")
       } catch {
         case e: Throwable =>
-          System.err.println(s"unable to install Conscrypt Security Provider: ${e.getMessage}")
-          e.printStackTrace(System.err)
+          System.err.println(s"unable to install Conscrypt Security Provider")
       }
   }
 

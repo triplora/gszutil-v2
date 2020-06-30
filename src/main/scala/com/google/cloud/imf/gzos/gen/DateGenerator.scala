@@ -1,8 +1,8 @@
 package com.google.cloud.imf.gzos.gen
 
 import java.nio.charset.Charset
-import java.time.{LocalDate, ZoneId}
 import java.time.format.DateTimeFormatter
+import java.time.{LocalDate, ZoneId}
 
 import com.google.cloud.imf.gzos.pb.GRecvProto.Record
 

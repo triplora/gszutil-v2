@@ -1,4 +1,4 @@
-package com.google.cloud.imf.grecv.grpc
+package com.google.cloud.imf.grecv.server
 
 import java.nio.ByteBuffer
 
@@ -15,9 +15,9 @@ import com.google.protobuf.util.JsonFormat
 import io.grpc.stub.StreamObserver
 import org.apache.hadoop.fs.Path
 
-class RequestStream(gcs: Storage,
-                    id: String,
-                    responseObserver: StreamObserver[GRecvResponse])
+class GRecvServerListener(gcs: Storage,
+                          id: String,
+                          responseObserver: StreamObserver[GRecvResponse])
   extends StreamObserver[WriteRequest] with Logging {
   private val cloudLogger: CloudLogger = CloudLogging.getLogger(this.getClass)
 
@@ -35,6 +35,7 @@ class RequestStream(gcs: Storage,
   private var jobInfo: java.util.Map[String,Any] = _
 
   def authenticate(recvRequest: GRecvRequest): Unit = {
+    logger.debug("authenticating request")
     req = recvRequest
     zInfo = req.getJobinfo
     jobInfo = Util.toMap(zInfo)
@@ -74,6 +75,7 @@ class RequestStream(gcs: Storage,
   }
 
   override def onNext(value: WriteRequest): Unit = {
+    logger.debug("onNext")
     if (req == null)
       authenticate(value.getRequest)
     buf.clear()
@@ -81,14 +83,14 @@ class RequestStream(gcs: Storage,
     hasher.putBytes(buf.array(),0,buf.position())
     buf.flip()
     val result = orc.write(buf)
+    logger.debug("wrote data to ORC")
     errCount += result.errCount
     rowCount += result.rowCount
     msgCount += 1
-    if (msgCount == 1 || msgCount % 10000 == 0)
-      logger.debug("received WriteRequest")
 
     val errPct = errCount.doubleValue() / math.max(1,rowCount)
     if (errPct > req.getMaxErrPct) {
+      logger.debug(s"errPct $errPct")
       status = GRecvProtocol.ERR
     }
   }
@@ -108,10 +110,11 @@ class RequestStream(gcs: Storage,
   override def onCompleted(): Unit = {
     val response = buildResponse(status)
     val json = JsonFormat.printer().omittingInsignificantWhitespace().print(response)
-    logger.info(s"request completed $json")
+    val msg = s"request completed $json"
+    logger.info(msg)
+    cloudLogger.log(msg, jobInfo, CloudLogging.Info)
     orc.close()
     responseObserver.onNext(response)
     responseObserver.onCompleted()
-    cloudLogger.log(s"request complete $json", jobInfo, CloudLogging.Info)
   }
 }

@@ -23,8 +23,7 @@ import com.google.cloud.bigquery.StatsUtil
 import com.google.cloud.bqsh.{ArgParser, BQ, Command, GsUtilConfig, GsUtilOptionParser}
 import com.google.cloud.gszutil.io.ZRecordReaderT
 import com.google.cloud.gszutil.orc.WriteORCFile
-import com.google.cloud.imf.grecv.GRecvClient
-import com.google.cloud.imf.grecv.grpc.GrpcReceiver
+import com.google.cloud.imf.grecv.client.GRecvClient
 import com.google.cloud.imf.gzos.{MVS, MVSStorage}
 import com.google.cloud.imf.util.{Logging, Services}
 import com.google.cloud.storage.{BlobId, Storage}
@@ -72,7 +71,7 @@ object Cp extends Command[GsUtilConfig] with Logging {
     var result = Result.Failure("")
     if (c.remote){
       logger.debug(s"running with remote")
-      result = GRecvClient.run(c, zos, creds, in, schemaProvider, GrpcReceiver)
+      result = GRecvClient.run(c, zos, in, schemaProvider, GRecvClient)
       logger.debug(s"remote complete")
     } else {
       logger.debug("Starting ORC Upload")

@@ -1,23 +1,21 @@
-package com.google.cloud.imf.grecv.grpc
+package com.google.cloud.imf.grecv.server
 
 import java.util.concurrent.atomic.AtomicInteger
 
 import com.google.cloud.imf.gzos.pb.GRecvGrpc.GRecvImplBase
-import com.google.cloud.imf.gzos.pb.GRecvProto
-import com.google.cloud.imf.gzos.pb.GRecvProto.{GRecvResponse, WriteRequest, HealthCheckRequest,
-  HealthCheckResponse}
+import com.google.cloud.imf.gzos.pb.GRecvProto.{GRecvResponse, HealthCheckRequest, HealthCheckResponse, WriteRequest}
 import com.google.cloud.imf.util.Logging
 import com.google.cloud.storage.Storage
 import io.grpc.stub.StreamObserver
 
 
-class GRecvImpl(gcs: Storage) extends GRecvImplBase with Logging {
+class GRecvService(gcs: Storage) extends GRecvImplBase with Logging {
   private val id: AtomicInteger = new AtomicInteger()
 
   override def write(responseObserver: StreamObserver[GRecvResponse]): StreamObserver[WriteRequest] = {
     val partId = s"${id.getAndIncrement()}"
     logger.debug("creating GRecvRequestStreamObserver")
-    new RequestStream(gcs, partId, responseObserver)
+    new GRecvServerListener(gcs, partId, responseObserver)
   }
 
   private val OK: HealthCheckResponse =

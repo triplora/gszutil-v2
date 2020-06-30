@@ -15,7 +15,7 @@
  */
 organization := "com.google.cloud.imf"
 name := "mainframe-connector"
-version := "4.4.1"
+version := "4.5.0"
 
 scalaVersion := "2.13.1"
 
@@ -23,27 +23,31 @@ val exGuava = ExclusionRule(organization = "com.google.guava")
 val exJetty = ExclusionRule(organization = "org.mortbay.jetty")
 val exZk = ExclusionRule(organization = "org.apache.zookeeper")
 val exNs = ExclusionRule(organization = "io.grpc", name = "grpc-netty-shaded")
+val exGrpc = ExclusionRule(organization = "io.grpc")
+val exAvro = ExclusionRule(organization = "org.apache.avro")
 
 libraryDependencies ++= Seq(
   "com.google.cloud.imf" %% "mainframe-util" % "1.0.0",
   "com.github.scopt" %% "scopt" % "3.7.1",
-  "com.typesafe" %% "ssl-config-core" % "0.4.2",
   "org.scalatest" %% "scalatest" % "3.1.1" % Test
-)
+).map(_ excludeAll(exGrpc))
 
+// orc and related dependencies
 libraryDependencies ++= Seq(
-  "com.google.cloud" % "google-cloud-compute" % "0.117.0-alpha",
-  "io.grpc" % "grpc-core" % "1.30.0",
-  "io.grpc" % "grpc-netty" % "1.30.0",
-  "io.grpc" % "grpc-protobuf" % "1.30.0",
-  "io.grpc" % "grpc-stub" % "1.30.0",
-  "io.netty" % "netty-codec-http2" % "4.1.48.Final",
-  "org.apache.hadoop" % "hadoop-common" % "2.9.2", // provided for orc-core
-  "org.apache.hadoop" % "hadoop-hdfs-client" % "2.9.2", // provided for orc-core
+  "org.apache.hadoop" % "hadoop-common" % "2.9.2",
+  "org.apache.hadoop" % "hadoop-hdfs-client" % "2.9.2",
   "org.apache.hive" % "hive-storage-api" % "2.7.1",
   "org.apache.orc" % "orc-core" % "1.6.2",
-  "org.conscrypt" % "conscrypt-openjdk-uber" % "2.4.0"
-).map(_ excludeAll(exGuava,exJetty,exZk,exNs))
+  "org.slf4j" % "slf4j-log4j12" % "1.7.30" // allow orc to use log4j-1.2
+).map(_ excludeAll(exGuava,exJetty,exZk,exNs,exGrpc,exAvro))
+
+libraryDependencies ++= Seq(
+  "io.grpc" % "grpc-core" % "1.28.1",
+  "io.grpc" % "grpc-netty" % "1.28.1",
+  "io.grpc" % "grpc-okhttp" % "1.28.1",
+  "io.grpc" % "grpc-protobuf" % "1.28.1",
+  "io.grpc" % "grpc-stub" % "1.28.1"
+)
 
 // Don't run tests during assembly
 test in assembly := Seq()

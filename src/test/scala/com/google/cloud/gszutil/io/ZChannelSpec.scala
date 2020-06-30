@@ -18,7 +18,7 @@ package com.google.cloud.gszutil.io
 
 import com.google.cloud.gszutil.CopyBook
 import com.google.cloud.imf.grecv.GRecvConfig
-import com.google.cloud.imf.grecv.grpc.GrpcReceiver
+import com.google.cloud.imf.grecv.client.GRecvClient
 import com.google.cloud.imf.gzos.pb.GRecvProto.GRecvRequest
 import com.google.cloud.imf.util.{CloudLogging, Logging}
 import org.scalatest.flatspec.AnyFlatSpec
@@ -50,7 +50,6 @@ class ZChannelSpec extends AnyFlatSpec with Logging {
     val host = "127.0.0.1"
     val port = 51770
     val serverCfg = GRecvConfig(host, port)
-    val recvResult = GrpcReceiver.run(serverCfg)
 
     val in = new RandomBytes(inSize, blkSize, copyBook.LRECL)
     val request = GRecvRequest.newBuilder
@@ -61,7 +60,7 @@ class ZChannelSpec extends AnyFlatSpec with Logging {
       .setMaxErrPct(0)
       .build
 
-    val sendResult = GrpcReceiver.recv(request, host, port, 1, sendParallelism, tls = false, in)
+    val sendResult = GRecvClient.upload(request, host, port, 1, in)
     assert(sendResult.exitCode == 0)
   }
 }

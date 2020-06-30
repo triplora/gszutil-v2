@@ -8,7 +8,7 @@ import com.google.cloud.bqsh.cmd.Cp
 import com.google.cloud.bqsh.GsUtilConfig
 import com.google.cloud.gszutil.io.ZDataSet
 import com.google.cloud.gszutil.{CopyBook, RecordSchema, TestUtil}
-import com.google.cloud.imf.grecv.grpc.Service
+import com.google.cloud.imf.grecv.server.GRecvServer
 import com.google.cloud.imf.gzos.{Linux, Util}
 import com.google.cloud.imf.util.{CloudLogging, Services}
 import com.google.protobuf.util.JsonFormat
@@ -20,8 +20,8 @@ import scala.concurrent.Future
 class CpSpec2 extends AnyFlatSpec {
   CloudLogging.configureLogging(debugOverride = true)
 
-  def server(cfg: GRecvConfig): Future[Service] = Future{
-    val s = new Service(cfg, Services.storage())
+  def server(cfg: GRecvConfig): Future[GRecvServer] = Future{
+    val s = new GRecvServer(cfg, Services.storage())
     s.start(block = false)
     s
   }
