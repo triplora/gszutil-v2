@@ -5145,7 +5145,7 @@ public final class GRecvProto {
     double getMaxErrPct();
 
     /**
-     * <code>bytes publicKey = 6;</code>
+     * <code>bytes public_key = 6;</code>
      * @return The publicKey.
      */
     com.google.protobuf.ByteString getPublicKey();
@@ -5188,6 +5188,18 @@ public final class GRecvProto {
      * @return The timestamp.
      */
     long getTimestamp();
+
+    /**
+     * <code>string src_uri = 11;</code>
+     * @return The srcUri.
+     */
+    java.lang.String getSrcUri();
+    /**
+     * <code>string src_uri = 11;</code>
+     * @return The bytes for srcUri.
+     */
+    com.google.protobuf.ByteString
+        getSrcUriBytes();
   }
   /**
    * Protobuf type {@code com.google.cloud.imf.gzos.GRecvRequest}
@@ -5206,6 +5218,7 @@ public final class GRecvProto {
       publicKey_ = com.google.protobuf.ByteString.EMPTY;
       signature_ = com.google.protobuf.ByteString.EMPTY;
       principal_ = "";
+      srcUri_ = "";
     }
 
     @java.lang.Override
@@ -5304,6 +5317,12 @@ public final class GRecvProto {
             case 80: {
 
               timestamp_ = input.readInt64();
+              break;
+            }
+            case 90: {
+              java.lang.String s = input.readStringRequireUtf8();
+
+              srcUri_ = s;
               break;
             }
             default: {
@@ -5427,10 +5446,10 @@ public final class GRecvProto {
       return maxErrPct_;
     }
 
-    public static final int PUBLICKEY_FIELD_NUMBER = 6;
+    public static final int PUBLIC_KEY_FIELD_NUMBER = 6;
     private com.google.protobuf.ByteString publicKey_;
     /**
-     * <code>bytes publicKey = 6;</code>
+     * <code>bytes public_key = 6;</code>
      * @return The publicKey.
      */
     public com.google.protobuf.ByteString getPublicKey() {
@@ -5516,6 +5535,42 @@ public final class GRecvProto {
       return timestamp_;
     }
 
+    public static final int SRC_URI_FIELD_NUMBER = 11;
+    private volatile java.lang.Object srcUri_;
+    /**
+     * <code>string src_uri = 11;</code>
+     * @return The srcUri.
+     */
+    public java.lang.String getSrcUri() {
+      java.lang.Object ref = srcUri_;
+      if (ref instanceof java.lang.String) {
+        return (java.lang.String) ref;
+      } else {
+        com.google.protobuf.ByteString bs = 
+            (com.google.protobuf.ByteString) ref;
+        java.lang.String s = bs.toStringUtf8();
+        srcUri_ = s;
+        return s;
+      }
+    }
+    /**
+     * <code>string src_uri = 11;</code>
+     * @return The bytes for srcUri.
+     */
+    public com.google.protobuf.ByteString
+        getSrcUriBytes() {
+      java.lang.Object ref = srcUri_;
+      if (ref instanceof java.lang.String) {
+        com.google.protobuf.ByteString b = 
+            com.google.protobuf.ByteString.copyFromUtf8(
+                (java.lang.String) ref);
+        srcUri_ = b;
+        return b;
+      } else {
+        return (com.google.protobuf.ByteString) ref;
+      }
+    }
+
     private byte memoizedIsInitialized = -1;
     @java.lang.Override
     public final boolean isInitialized() {
@@ -5559,6 +5614,9 @@ public final class GRecvProto {
       }
       if (timestamp_ != 0L) {
         output.writeInt64(10, timestamp_);
+      }
+      if (!getSrcUriBytes().isEmpty()) {
+        com.google.protobuf.GeneratedMessageV3.writeString(output, 11, srcUri_);
       }
       unknownFields.writeTo(output);
     }
@@ -5607,6 +5665,9 @@ public final class GRecvProto {
         size += com.google.protobuf.CodedOutputStream
           .computeInt64Size(10, timestamp_);
       }
+      if (!getSrcUriBytes().isEmpty()) {
+        size += com.google.protobuf.GeneratedMessageV3.computeStringSize(11, srcUri_);
+      }
       size += unknownFields.getSerializedSize();
       memoizedSize = size;
       return size;
@@ -5649,6 +5710,8 @@ public final class GRecvProto {
       }
       if (getTimestamp()
           != other.getTimestamp()) return false;
+      if (!getSrcUri()
+          .equals(other.getSrcUri())) return false;
       if (!unknownFields.equals(other.unknownFields)) return false;
       return true;
     }
@@ -5673,7 +5736,7 @@ public final class GRecvProto {
       hash = (37 * hash) + MAX_ERR_PCT_FIELD_NUMBER;
       hash = (53 * hash) + com.google.protobuf.Internal.hashLong(
           java.lang.Double.doubleToLongBits(getMaxErrPct()));
-      hash = (37 * hash) + PUBLICKEY_FIELD_NUMBER;
+      hash = (37 * hash) + PUBLIC_KEY_FIELD_NUMBER;
       hash = (53 * hash) + getPublicKey().hashCode();
       hash = (37 * hash) + SIGNATURE_FIELD_NUMBER;
       hash = (53 * hash) + getSignature().hashCode();
@@ -5686,6 +5749,8 @@ public final class GRecvProto {
       hash = (37 * hash) + TIMESTAMP_FIELD_NUMBER;
       hash = (53 * hash) + com.google.protobuf.Internal.hashLong(
           getTimestamp());
+      hash = (37 * hash) + SRC_URI_FIELD_NUMBER;
+      hash = (53 * hash) + getSrcUri().hashCode();
       hash = (29 * hash) + unknownFields.hashCode();
       memoizedHashCode = hash;
       return hash;
@@ -5847,6 +5912,8 @@ public final class GRecvProto {
         }
         timestamp_ = 0L;
 
+        srcUri_ = "";
+
         return this;
       }
 
@@ -5891,6 +5958,7 @@ public final class GRecvProto {
           result.jobinfo_ = jobinfoBuilder_.build();
         }
         result.timestamp_ = timestamp_;
+        result.srcUri_ = srcUri_;
         onBuilt();
         return result;
       }
@@ -5970,6 +6038,10 @@ public final class GRecvProto {
         }
         if (other.getTimestamp() != 0L) {
           setTimestamp(other.getTimestamp());
+        }
+        if (!other.getSrcUri().isEmpty()) {
+          srcUri_ = other.srcUri_;
+          onChanged();
         }
         this.mergeUnknownFields(other.unknownFields);
         onChanged();
@@ -6287,14 +6359,14 @@ public final class GRecvProto {
 
       private com.google.protobuf.ByteString publicKey_ = com.google.protobuf.ByteString.EMPTY;
       /**
-       * <code>bytes publicKey = 6;</code>
+       * <code>bytes public_key = 6;</code>
        * @return The publicKey.
        */
       public com.google.protobuf.ByteString getPublicKey() {
         return publicKey_;
       }
       /**
-       * <code>bytes publicKey = 6;</code>
+       * <code>bytes public_key = 6;</code>
        * @param value The publicKey to set.
        * @return This builder for chaining.
        */
@@ -6308,7 +6380,7 @@ public final class GRecvProto {
         return this;
       }
       /**
-       * <code>bytes publicKey = 6;</code>
+       * <code>bytes public_key = 6;</code>
        * @return This builder for chaining.
        */
       public Builder clearPublicKey() {
@@ -6575,6 +6647,82 @@ public final class GRecvProto {
         onChanged();
         return this;
       }
+
+      private java.lang.Object srcUri_ = "";
+      /**
+       * <code>string src_uri = 11;</code>
+       * @return The srcUri.
+       */
+      public java.lang.String getSrcUri() {
+        java.lang.Object ref = srcUri_;
+        if (!(ref instanceof java.lang.String)) {
+          com.google.protobuf.ByteString bs =
+              (com.google.protobuf.ByteString) ref;
+          java.lang.String s = bs.toStringUtf8();
+          srcUri_ = s;
+          return s;
+        } else {
+          return (java.lang.String) ref;
+        }
+      }
+      /**
+       * <code>string src_uri = 11;</code>
+       * @return The bytes for srcUri.
+       */
+      public com.google.protobuf.ByteString
+          getSrcUriBytes() {
+        java.lang.Object ref = srcUri_;
+        if (ref instanceof String) {
+          com.google.protobuf.ByteString b = 
+              com.google.protobuf.ByteString.copyFromUtf8(
+                  (java.lang.String) ref);
+          srcUri_ = b;
+          return b;
+        } else {
+          return (com.google.protobuf.ByteString) ref;
+        }
+      }
+      /**
+       * <code>string src_uri = 11;</code>
+       * @param value The srcUri to set.
+       * @return This builder for chaining.
+       */
+      public Builder setSrcUri(
+          java.lang.String value) {
+        if (value == null) {
+    throw new NullPointerException();
+  }
+  
+        srcUri_ = value;
+        onChanged();
+        return this;
+      }
+      /**
+       * <code>string src_uri = 11;</code>
+       * @return This builder for chaining.
+       */
+      public Builder clearSrcUri() {
+        
+        srcUri_ = getDefaultInstance().getSrcUri();
+        onChanged();
+        return this;
+      }
+      /**
+       * <code>string src_uri = 11;</code>
+       * @param value The bytes for srcUri to set.
+       * @return This builder for chaining.
+       */
+      public Builder setSrcUriBytes(
+          com.google.protobuf.ByteString value) {
+        if (value == null) {
+    throw new NullPointerException();
+  }
+  checkByteStringIsUtf8(value);
+        
+        srcUri_ = value;
+        onChanged();
+        return this;
+      }
       @java.lang.Override
       public final Builder setUnknownFields(
           final com.google.protobuf.UnknownFieldSet unknownFields) {
@@ -6623,804 +6771,6 @@ public final class GRecvProto {
 
     @java.lang.Override
     public com.google.cloud.imf.gzos.pb.GRecvProto.GRecvRequest getDefaultInstanceForType() {
-      return DEFAULT_INSTANCE;
-    }
-
-  }
-
-  public interface WriteRequestOrBuilder extends
-      // @@protoc_insertion_point(interface_extends:com.google.cloud.imf.gzos.WriteRequest)
-      com.google.protobuf.MessageOrBuilder {
-
-    /**
-     * <code>bytes data = 1;</code>
-     * @return The data.
-     */
-    com.google.protobuf.ByteString getData();
-
-    /**
-     * <code>.com.google.cloud.imf.gzos.GRecvRequest request = 2;</code>
-     * @return Whether the request field is set.
-     */
-    boolean hasRequest();
-    /**
-     * <code>.com.google.cloud.imf.gzos.GRecvRequest request = 2;</code>
-     * @return The request.
-     */
-    com.google.cloud.imf.gzos.pb.GRecvProto.GRecvRequest getRequest();
-    /**
-     * <code>.com.google.cloud.imf.gzos.GRecvRequest request = 2;</code>
-     */
-    com.google.cloud.imf.gzos.pb.GRecvProto.GRecvRequestOrBuilder getRequestOrBuilder();
-
-    public com.google.cloud.imf.gzos.pb.GRecvProto.WriteRequest.PayloadCase getPayloadCase();
-  }
-  /**
-   * Protobuf type {@code com.google.cloud.imf.gzos.WriteRequest}
-   */
-  public  static final class WriteRequest extends
-      com.google.protobuf.GeneratedMessageV3 implements
-      // @@protoc_insertion_point(message_implements:com.google.cloud.imf.gzos.WriteRequest)
-      WriteRequestOrBuilder {
-  private static final long serialVersionUID = 0L;
-    // Use WriteRequest.newBuilder() to construct.
-    private WriteRequest(com.google.protobuf.GeneratedMessageV3.Builder<?> builder) {
-      super(builder);
-    }
-    private WriteRequest() {
-    }
-
-    @java.lang.Override
-    @SuppressWarnings({"unused"})
-    protected java.lang.Object newInstance(
-        UnusedPrivateParameter unused) {
-      return new WriteRequest();
-    }
-
-    @java.lang.Override
-    public final com.google.protobuf.UnknownFieldSet
-    getUnknownFields() {
-      return this.unknownFields;
-    }
-    private WriteRequest(
-        com.google.protobuf.CodedInputStream input,
-        com.google.protobuf.ExtensionRegistryLite extensionRegistry)
-        throws com.google.protobuf.InvalidProtocolBufferException {
-      this();
-      if (extensionRegistry == null) {
-        throw new java.lang.NullPointerException();
-      }
-      com.google.protobuf.UnknownFieldSet.Builder unknownFields =
-          com.google.protobuf.UnknownFieldSet.newBuilder();
-      try {
-        boolean done = false;
-        while (!done) {
-          int tag = input.readTag();
-          switch (tag) {
-            case 0:
-              done = true;
-              break;
-            case 10: {
-              payloadCase_ = 1;
-              payload_ = input.readBytes();
-              break;
-            }
-            case 18: {
-              com.google.cloud.imf.gzos.pb.GRecvProto.GRecvRequest.Builder subBuilder = null;
-              if (payloadCase_ == 2) {
-                subBuilder = ((com.google.cloud.imf.gzos.pb.GRecvProto.GRecvRequest) payload_).toBuilder();
-              }
-              payload_ =
-                  input.readMessage(com.google.cloud.imf.gzos.pb.GRecvProto.GRecvRequest.parser(), extensionRegistry);
-              if (subBuilder != null) {
-                subBuilder.mergeFrom((com.google.cloud.imf.gzos.pb.GRecvProto.GRecvRequest) payload_);
-                payload_ = subBuilder.buildPartial();
-              }
-              payloadCase_ = 2;
-              break;
-            }
-            default: {
-              if (!parseUnknownField(
-                  input, unknownFields, extensionRegistry, tag)) {
-                done = true;
-              }
-              break;
-            }
-          }
-        }
-      } catch (com.google.protobuf.InvalidProtocolBufferException e) {
-        throw e.setUnfinishedMessage(this);
-      } catch (java.io.IOException e) {
-        throw new com.google.protobuf.InvalidProtocolBufferException(
-            e).setUnfinishedMessage(this);
-      } finally {
-        this.unknownFields = unknownFields.build();
-        makeExtensionsImmutable();
-      }
-    }
-    public static final com.google.protobuf.Descriptors.Descriptor
-        getDescriptor() {
-      return com.google.cloud.imf.gzos.pb.GRecvProto.internal_static_com_google_cloud_imf_gzos_WriteRequest_descriptor;
-    }
-
-    @java.lang.Override
-    protected com.google.protobuf.GeneratedMessageV3.FieldAccessorTable
-        internalGetFieldAccessorTable() {
-      return com.google.cloud.imf.gzos.pb.GRecvProto.internal_static_com_google_cloud_imf_gzos_WriteRequest_fieldAccessorTable
-          .ensureFieldAccessorsInitialized(
-              com.google.cloud.imf.gzos.pb.GRecvProto.WriteRequest.class, com.google.cloud.imf.gzos.pb.GRecvProto.WriteRequest.Builder.class);
-    }
-
-    private int payloadCase_ = 0;
-    private java.lang.Object payload_;
-    public enum PayloadCase
-        implements com.google.protobuf.Internal.EnumLite,
-            com.google.protobuf.AbstractMessage.InternalOneOfEnum {
-      DATA(1),
-      REQUEST(2),
-      PAYLOAD_NOT_SET(0);
-      private final int value;
-      private PayloadCase(int value) {
-        this.value = value;
-      }
-      /**
-       * @param value The number of the enum to look for.
-       * @return The enum associated with the given number.
-       * @deprecated Use {@link #forNumber(int)} instead.
-       */
-      @java.lang.Deprecated
-      public static PayloadCase valueOf(int value) {
-        return forNumber(value);
-      }
-
-      public static PayloadCase forNumber(int value) {
-        switch (value) {
-          case 1: return DATA;
-          case 2: return REQUEST;
-          case 0: return PAYLOAD_NOT_SET;
-          default: return null;
-        }
-      }
-      public int getNumber() {
-        return this.value;
-      }
-    };
-
-    public PayloadCase
-    getPayloadCase() {
-      return PayloadCase.forNumber(
-          payloadCase_);
-    }
-
-    public static final int DATA_FIELD_NUMBER = 1;
-    /**
-     * <code>bytes data = 1;</code>
-     * @return The data.
-     */
-    public com.google.protobuf.ByteString getData() {
-      if (payloadCase_ == 1) {
-        return (com.google.protobuf.ByteString) payload_;
-      }
-      return com.google.protobuf.ByteString.EMPTY;
-    }
-
-    public static final int REQUEST_FIELD_NUMBER = 2;
-    /**
-     * <code>.com.google.cloud.imf.gzos.GRecvRequest request = 2;</code>
-     * @return Whether the request field is set.
-     */
-    public boolean hasRequest() {
-      return payloadCase_ == 2;
-    }
-    /**
-     * <code>.com.google.cloud.imf.gzos.GRecvRequest request = 2;</code>
-     * @return The request.
-     */
-    public com.google.cloud.imf.gzos.pb.GRecvProto.GRecvRequest getRequest() {
-      if (payloadCase_ == 2) {
-         return (com.google.cloud.imf.gzos.pb.GRecvProto.GRecvRequest) payload_;
-      }
-      return com.google.cloud.imf.gzos.pb.GRecvProto.GRecvRequest.getDefaultInstance();
-    }
-    /**
-     * <code>.com.google.cloud.imf.gzos.GRecvRequest request = 2;</code>
-     */
-    public com.google.cloud.imf.gzos.pb.GRecvProto.GRecvRequestOrBuilder getRequestOrBuilder() {
-      if (payloadCase_ == 2) {
-         return (com.google.cloud.imf.gzos.pb.GRecvProto.GRecvRequest) payload_;
-      }
-      return com.google.cloud.imf.gzos.pb.GRecvProto.GRecvRequest.getDefaultInstance();
-    }
-
-    private byte memoizedIsInitialized = -1;
-    @java.lang.Override
-    public final boolean isInitialized() {
-      byte isInitialized = memoizedIsInitialized;
-      if (isInitialized == 1) return true;
-      if (isInitialized == 0) return false;
-
-      memoizedIsInitialized = 1;
-      return true;
-    }
-
-    @java.lang.Override
-    public void writeTo(com.google.protobuf.CodedOutputStream output)
-                        throws java.io.IOException {
-      if (payloadCase_ == 1) {
-        output.writeBytes(
-            1, (com.google.protobuf.ByteString) payload_);
-      }
-      if (payloadCase_ == 2) {
-        output.writeMessage(2, (com.google.cloud.imf.gzos.pb.GRecvProto.GRecvRequest) payload_);
-      }
-      unknownFields.writeTo(output);
-    }
-
-    @java.lang.Override
-    public int getSerializedSize() {
-      int size = memoizedSize;
-      if (size != -1) return size;
-
-      size = 0;
-      if (payloadCase_ == 1) {
-        size += com.google.protobuf.CodedOutputStream
-          .computeBytesSize(
-              1, (com.google.protobuf.ByteString) payload_);
-      }
-      if (payloadCase_ == 2) {
-        size += com.google.protobuf.CodedOutputStream
-          .computeMessageSize(2, (com.google.cloud.imf.gzos.pb.GRecvProto.GRecvRequest) payload_);
-      }
-      size += unknownFields.getSerializedSize();
-      memoizedSize = size;
-      return size;
-    }
-
-    @java.lang.Override
-    public boolean equals(final java.lang.Object obj) {
-      if (obj == this) {
-       return true;
-      }
-      if (!(obj instanceof com.google.cloud.imf.gzos.pb.GRecvProto.WriteRequest)) {
-        return super.equals(obj);
-      }
-      com.google.cloud.imf.gzos.pb.GRecvProto.WriteRequest other = (com.google.cloud.imf.gzos.pb.GRecvProto.WriteRequest) obj;
-
-      if (!getPayloadCase().equals(other.getPayloadCase())) return false;
-      switch (payloadCase_) {
-        case 1:
-          if (!getData()
-              .equals(other.getData())) return false;
-          break;
-        case 2:
-          if (!getRequest()
-              .equals(other.getRequest())) return false;
-          break;
-        case 0:
-        default:
-      }
-      if (!unknownFields.equals(other.unknownFields)) return false;
-      return true;
-    }
-
-    @java.lang.Override
-    public int hashCode() {
-      if (memoizedHashCode != 0) {
-        return memoizedHashCode;
-      }
-      int hash = 41;
-      hash = (19 * hash) + getDescriptor().hashCode();
-      switch (payloadCase_) {
-        case 1:
-          hash = (37 * hash) + DATA_FIELD_NUMBER;
-          hash = (53 * hash) + getData().hashCode();
-          break;
-        case 2:
-          hash = (37 * hash) + REQUEST_FIELD_NUMBER;
-          hash = (53 * hash) + getRequest().hashCode();
-          break;
-        case 0:
-        default:
-      }
-      hash = (29 * hash) + unknownFields.hashCode();
-      memoizedHashCode = hash;
-      return hash;
-    }
-
-    public static com.google.cloud.imf.gzos.pb.GRecvProto.WriteRequest parseFrom(
-        java.nio.ByteBuffer data)
-        throws com.google.protobuf.InvalidProtocolBufferException {
-      return PARSER.parseFrom(data);
-    }
-    public static com.google.cloud.imf.gzos.pb.GRecvProto.WriteRequest parseFrom(
-        java.nio.ByteBuffer data,
-        com.google.protobuf.ExtensionRegistryLite extensionRegistry)
-        throws com.google.protobuf.InvalidProtocolBufferException {
-      return PARSER.parseFrom(data, extensionRegistry);
-    }
-    public static com.google.cloud.imf.gzos.pb.GRecvProto.WriteRequest parseFrom(
-        com.google.protobuf.ByteString data)
-        throws com.google.protobuf.InvalidProtocolBufferException {
-      return PARSER.parseFrom(data);
-    }
-    public static com.google.cloud.imf.gzos.pb.GRecvProto.WriteRequest parseFrom(
-        com.google.protobuf.ByteString data,
-        com.google.protobuf.ExtensionRegistryLite extensionRegistry)
-        throws com.google.protobuf.InvalidProtocolBufferException {
-      return PARSER.parseFrom(data, extensionRegistry);
-    }
-    public static com.google.cloud.imf.gzos.pb.GRecvProto.WriteRequest parseFrom(byte[] data)
-        throws com.google.protobuf.InvalidProtocolBufferException {
-      return PARSER.parseFrom(data);
-    }
-    public static com.google.cloud.imf.gzos.pb.GRecvProto.WriteRequest parseFrom(
-        byte[] data,
-        com.google.protobuf.ExtensionRegistryLite extensionRegistry)
-        throws com.google.protobuf.InvalidProtocolBufferException {
-      return PARSER.parseFrom(data, extensionRegistry);
-    }
-    public static com.google.cloud.imf.gzos.pb.GRecvProto.WriteRequest parseFrom(java.io.InputStream input)
-        throws java.io.IOException {
-      return com.google.protobuf.GeneratedMessageV3
-          .parseWithIOException(PARSER, input);
-    }
-    public static com.google.cloud.imf.gzos.pb.GRecvProto.WriteRequest parseFrom(
-        java.io.InputStream input,
-        com.google.protobuf.ExtensionRegistryLite extensionRegistry)
-        throws java.io.IOException {
-      return com.google.protobuf.GeneratedMessageV3
-          .parseWithIOException(PARSER, input, extensionRegistry);
-    }
-    public static com.google.cloud.imf.gzos.pb.GRecvProto.WriteRequest parseDelimitedFrom(java.io.InputStream input)
-        throws java.io.IOException {
-      return com.google.protobuf.GeneratedMessageV3
-          .parseDelimitedWithIOException(PARSER, input);
-    }
-    public static com.google.cloud.imf.gzos.pb.GRecvProto.WriteRequest parseDelimitedFrom(
-        java.io.InputStream input,
-        com.google.protobuf.ExtensionRegistryLite extensionRegistry)
-        throws java.io.IOException {
-      return com.google.protobuf.GeneratedMessageV3
-          .parseDelimitedWithIOException(PARSER, input, extensionRegistry);
-    }
-    public static com.google.cloud.imf.gzos.pb.GRecvProto.WriteRequest parseFrom(
-        com.google.protobuf.CodedInputStream input)
-        throws java.io.IOException {
-      return com.google.protobuf.GeneratedMessageV3
-          .parseWithIOException(PARSER, input);
-    }
-    public static com.google.cloud.imf.gzos.pb.GRecvProto.WriteRequest parseFrom(
-        com.google.protobuf.CodedInputStream input,
-        com.google.protobuf.ExtensionRegistryLite extensionRegistry)
-        throws java.io.IOException {
-      return com.google.protobuf.GeneratedMessageV3
-          .parseWithIOException(PARSER, input, extensionRegistry);
-    }
-
-    @java.lang.Override
-    public Builder newBuilderForType() { return newBuilder(); }
-    public static Builder newBuilder() {
-      return DEFAULT_INSTANCE.toBuilder();
-    }
-    public static Builder newBuilder(com.google.cloud.imf.gzos.pb.GRecvProto.WriteRequest prototype) {
-      return DEFAULT_INSTANCE.toBuilder().mergeFrom(prototype);
-    }
-    @java.lang.Override
-    public Builder toBuilder() {
-      return this == DEFAULT_INSTANCE
-          ? new Builder() : new Builder().mergeFrom(this);
-    }
-
-    @java.lang.Override
-    protected Builder newBuilderForType(
-        com.google.protobuf.GeneratedMessageV3.BuilderParent parent) {
-      Builder builder = new Builder(parent);
-      return builder;
-    }
-    /**
-     * Protobuf type {@code com.google.cloud.imf.gzos.WriteRequest}
-     */
-    public static final class Builder extends
-        com.google.protobuf.GeneratedMessageV3.Builder<Builder> implements
-        // @@protoc_insertion_point(builder_implements:com.google.cloud.imf.gzos.WriteRequest)
-        com.google.cloud.imf.gzos.pb.GRecvProto.WriteRequestOrBuilder {
-      public static final com.google.protobuf.Descriptors.Descriptor
-          getDescriptor() {
-        return com.google.cloud.imf.gzos.pb.GRecvProto.internal_static_com_google_cloud_imf_gzos_WriteRequest_descriptor;
-      }
-
-      @java.lang.Override
-      protected com.google.protobuf.GeneratedMessageV3.FieldAccessorTable
-          internalGetFieldAccessorTable() {
-        return com.google.cloud.imf.gzos.pb.GRecvProto.internal_static_com_google_cloud_imf_gzos_WriteRequest_fieldAccessorTable
-            .ensureFieldAccessorsInitialized(
-                com.google.cloud.imf.gzos.pb.GRecvProto.WriteRequest.class, com.google.cloud.imf.gzos.pb.GRecvProto.WriteRequest.Builder.class);
-      }
-
-      // Construct using com.google.cloud.imf.gzos.pb.GRecvProto.WriteRequest.newBuilder()
-      private Builder() {
-        maybeForceBuilderInitialization();
-      }
-
-      private Builder(
-          com.google.protobuf.GeneratedMessageV3.BuilderParent parent) {
-        super(parent);
-        maybeForceBuilderInitialization();
-      }
-      private void maybeForceBuilderInitialization() {
-        if (com.google.protobuf.GeneratedMessageV3
-                .alwaysUseFieldBuilders) {
-        }
-      }
-      @java.lang.Override
-      public Builder clear() {
-        super.clear();
-        payloadCase_ = 0;
-        payload_ = null;
-        return this;
-      }
-
-      @java.lang.Override
-      public com.google.protobuf.Descriptors.Descriptor
-          getDescriptorForType() {
-        return com.google.cloud.imf.gzos.pb.GRecvProto.internal_static_com_google_cloud_imf_gzos_WriteRequest_descriptor;
-      }
-
-      @java.lang.Override
-      public com.google.cloud.imf.gzos.pb.GRecvProto.WriteRequest getDefaultInstanceForType() {
-        return com.google.cloud.imf.gzos.pb.GRecvProto.WriteRequest.getDefaultInstance();
-      }
-
-      @java.lang.Override
-      public com.google.cloud.imf.gzos.pb.GRecvProto.WriteRequest build() {
-        com.google.cloud.imf.gzos.pb.GRecvProto.WriteRequest result = buildPartial();
-        if (!result.isInitialized()) {
-          throw newUninitializedMessageException(result);
-        }
-        return result;
-      }
-
-      @java.lang.Override
-      public com.google.cloud.imf.gzos.pb.GRecvProto.WriteRequest buildPartial() {
-        com.google.cloud.imf.gzos.pb.GRecvProto.WriteRequest result = new com.google.cloud.imf.gzos.pb.GRecvProto.WriteRequest(this);
-        if (payloadCase_ == 1) {
-          result.payload_ = payload_;
-        }
-        if (payloadCase_ == 2) {
-          if (requestBuilder_ == null) {
-            result.payload_ = payload_;
-          } else {
-            result.payload_ = requestBuilder_.build();
-          }
-        }
-        result.payloadCase_ = payloadCase_;
-        onBuilt();
-        return result;
-      }
-
-      @java.lang.Override
-      public Builder clone() {
-        return super.clone();
-      }
-      @java.lang.Override
-      public Builder setField(
-          com.google.protobuf.Descriptors.FieldDescriptor field,
-          java.lang.Object value) {
-        return super.setField(field, value);
-      }
-      @java.lang.Override
-      public Builder clearField(
-          com.google.protobuf.Descriptors.FieldDescriptor field) {
-        return super.clearField(field);
-      }
-      @java.lang.Override
-      public Builder clearOneof(
-          com.google.protobuf.Descriptors.OneofDescriptor oneof) {
-        return super.clearOneof(oneof);
-      }
-      @java.lang.Override
-      public Builder setRepeatedField(
-          com.google.protobuf.Descriptors.FieldDescriptor field,
-          int index, java.lang.Object value) {
-        return super.setRepeatedField(field, index, value);
-      }
-      @java.lang.Override
-      public Builder addRepeatedField(
-          com.google.protobuf.Descriptors.FieldDescriptor field,
-          java.lang.Object value) {
-        return super.addRepeatedField(field, value);
-      }
-      @java.lang.Override
-      public Builder mergeFrom(com.google.protobuf.Message other) {
-        if (other instanceof com.google.cloud.imf.gzos.pb.GRecvProto.WriteRequest) {
-          return mergeFrom((com.google.cloud.imf.gzos.pb.GRecvProto.WriteRequest)other);
-        } else {
-          super.mergeFrom(other);
-          return this;
-        }
-      }
-
-      public Builder mergeFrom(com.google.cloud.imf.gzos.pb.GRecvProto.WriteRequest other) {
-        if (other == com.google.cloud.imf.gzos.pb.GRecvProto.WriteRequest.getDefaultInstance()) return this;
-        switch (other.getPayloadCase()) {
-          case DATA: {
-            setData(other.getData());
-            break;
-          }
-          case REQUEST: {
-            mergeRequest(other.getRequest());
-            break;
-          }
-          case PAYLOAD_NOT_SET: {
-            break;
-          }
-        }
-        this.mergeUnknownFields(other.unknownFields);
-        onChanged();
-        return this;
-      }
-
-      @java.lang.Override
-      public final boolean isInitialized() {
-        return true;
-      }
-
-      @java.lang.Override
-      public Builder mergeFrom(
-          com.google.protobuf.CodedInputStream input,
-          com.google.protobuf.ExtensionRegistryLite extensionRegistry)
-          throws java.io.IOException {
-        com.google.cloud.imf.gzos.pb.GRecvProto.WriteRequest parsedMessage = null;
-        try {
-          parsedMessage = PARSER.parsePartialFrom(input, extensionRegistry);
-        } catch (com.google.protobuf.InvalidProtocolBufferException e) {
-          parsedMessage = (com.google.cloud.imf.gzos.pb.GRecvProto.WriteRequest) e.getUnfinishedMessage();
-          throw e.unwrapIOException();
-        } finally {
-          if (parsedMessage != null) {
-            mergeFrom(parsedMessage);
-          }
-        }
-        return this;
-      }
-      private int payloadCase_ = 0;
-      private java.lang.Object payload_;
-      public PayloadCase
-          getPayloadCase() {
-        return PayloadCase.forNumber(
-            payloadCase_);
-      }
-
-      public Builder clearPayload() {
-        payloadCase_ = 0;
-        payload_ = null;
-        onChanged();
-        return this;
-      }
-
-
-      /**
-       * <code>bytes data = 1;</code>
-       * @return The data.
-       */
-      public com.google.protobuf.ByteString getData() {
-        if (payloadCase_ == 1) {
-          return (com.google.protobuf.ByteString) payload_;
-        }
-        return com.google.protobuf.ByteString.EMPTY;
-      }
-      /**
-       * <code>bytes data = 1;</code>
-       * @param value The data to set.
-       * @return This builder for chaining.
-       */
-      public Builder setData(com.google.protobuf.ByteString value) {
-        if (value == null) {
-    throw new NullPointerException();
-  }
-  payloadCase_ = 1;
-        payload_ = value;
-        onChanged();
-        return this;
-      }
-      /**
-       * <code>bytes data = 1;</code>
-       * @return This builder for chaining.
-       */
-      public Builder clearData() {
-        if (payloadCase_ == 1) {
-          payloadCase_ = 0;
-          payload_ = null;
-          onChanged();
-        }
-        return this;
-      }
-
-      private com.google.protobuf.SingleFieldBuilderV3<
-          com.google.cloud.imf.gzos.pb.GRecvProto.GRecvRequest, com.google.cloud.imf.gzos.pb.GRecvProto.GRecvRequest.Builder, com.google.cloud.imf.gzos.pb.GRecvProto.GRecvRequestOrBuilder> requestBuilder_;
-      /**
-       * <code>.com.google.cloud.imf.gzos.GRecvRequest request = 2;</code>
-       * @return Whether the request field is set.
-       */
-      public boolean hasRequest() {
-        return payloadCase_ == 2;
-      }
-      /**
-       * <code>.com.google.cloud.imf.gzos.GRecvRequest request = 2;</code>
-       * @return The request.
-       */
-      public com.google.cloud.imf.gzos.pb.GRecvProto.GRecvRequest getRequest() {
-        if (requestBuilder_ == null) {
-          if (payloadCase_ == 2) {
-            return (com.google.cloud.imf.gzos.pb.GRecvProto.GRecvRequest) payload_;
-          }
-          return com.google.cloud.imf.gzos.pb.GRecvProto.GRecvRequest.getDefaultInstance();
-        } else {
-          if (payloadCase_ == 2) {
-            return requestBuilder_.getMessage();
-          }
-          return com.google.cloud.imf.gzos.pb.GRecvProto.GRecvRequest.getDefaultInstance();
-        }
-      }
-      /**
-       * <code>.com.google.cloud.imf.gzos.GRecvRequest request = 2;</code>
-       */
-      public Builder setRequest(com.google.cloud.imf.gzos.pb.GRecvProto.GRecvRequest value) {
-        if (requestBuilder_ == null) {
-          if (value == null) {
-            throw new NullPointerException();
-          }
-          payload_ = value;
-          onChanged();
-        } else {
-          requestBuilder_.setMessage(value);
-        }
-        payloadCase_ = 2;
-        return this;
-      }
-      /**
-       * <code>.com.google.cloud.imf.gzos.GRecvRequest request = 2;</code>
-       */
-      public Builder setRequest(
-          com.google.cloud.imf.gzos.pb.GRecvProto.GRecvRequest.Builder builderForValue) {
-        if (requestBuilder_ == null) {
-          payload_ = builderForValue.build();
-          onChanged();
-        } else {
-          requestBuilder_.setMessage(builderForValue.build());
-        }
-        payloadCase_ = 2;
-        return this;
-      }
-      /**
-       * <code>.com.google.cloud.imf.gzos.GRecvRequest request = 2;</code>
-       */
-      public Builder mergeRequest(com.google.cloud.imf.gzos.pb.GRecvProto.GRecvRequest value) {
-        if (requestBuilder_ == null) {
-          if (payloadCase_ == 2 &&
-              payload_ != com.google.cloud.imf.gzos.pb.GRecvProto.GRecvRequest.getDefaultInstance()) {
-            payload_ = com.google.cloud.imf.gzos.pb.GRecvProto.GRecvRequest.newBuilder((com.google.cloud.imf.gzos.pb.GRecvProto.GRecvRequest) payload_)
-                .mergeFrom(value).buildPartial();
-          } else {
-            payload_ = value;
-          }
-          onChanged();
-        } else {
-          if (payloadCase_ == 2) {
-            requestBuilder_.mergeFrom(value);
-          }
-          requestBuilder_.setMessage(value);
-        }
-        payloadCase_ = 2;
-        return this;
-      }
-      /**
-       * <code>.com.google.cloud.imf.gzos.GRecvRequest request = 2;</code>
-       */
-      public Builder clearRequest() {
-        if (requestBuilder_ == null) {
-          if (payloadCase_ == 2) {
-            payloadCase_ = 0;
-            payload_ = null;
-            onChanged();
-          }
-        } else {
-          if (payloadCase_ == 2) {
-            payloadCase_ = 0;
-            payload_ = null;
-          }
-          requestBuilder_.clear();
-        }
-        return this;
-      }
-      /**
-       * <code>.com.google.cloud.imf.gzos.GRecvRequest request = 2;</code>
-       */
-      public com.google.cloud.imf.gzos.pb.GRecvProto.GRecvRequest.Builder getRequestBuilder() {
-        return getRequestFieldBuilder().getBuilder();
-      }
-      /**
-       * <code>.com.google.cloud.imf.gzos.GRecvRequest request = 2;</code>
-       */
-      public com.google.cloud.imf.gzos.pb.GRecvProto.GRecvRequestOrBuilder getRequestOrBuilder() {
-        if ((payloadCase_ == 2) && (requestBuilder_ != null)) {
-          return requestBuilder_.getMessageOrBuilder();
-        } else {
-          if (payloadCase_ == 2) {
-            return (com.google.cloud.imf.gzos.pb.GRecvProto.GRecvRequest) payload_;
-          }
-          return com.google.cloud.imf.gzos.pb.GRecvProto.GRecvRequest.getDefaultInstance();
-        }
-      }
-      /**
-       * <code>.com.google.cloud.imf.gzos.GRecvRequest request = 2;</code>
-       */
-      private com.google.protobuf.SingleFieldBuilderV3<
-          com.google.cloud.imf.gzos.pb.GRecvProto.GRecvRequest, com.google.cloud.imf.gzos.pb.GRecvProto.GRecvRequest.Builder, com.google.cloud.imf.gzos.pb.GRecvProto.GRecvRequestOrBuilder> 
-          getRequestFieldBuilder() {
-        if (requestBuilder_ == null) {
-          if (!(payloadCase_ == 2)) {
-            payload_ = com.google.cloud.imf.gzos.pb.GRecvProto.GRecvRequest.getDefaultInstance();
-          }
-          requestBuilder_ = new com.google.protobuf.SingleFieldBuilderV3<
-              com.google.cloud.imf.gzos.pb.GRecvProto.GRecvRequest, com.google.cloud.imf.gzos.pb.GRecvProto.GRecvRequest.Builder, com.google.cloud.imf.gzos.pb.GRecvProto.GRecvRequestOrBuilder>(
-                  (com.google.cloud.imf.gzos.pb.GRecvProto.GRecvRequest) payload_,
-                  getParentForChildren(),
-                  isClean());
-          payload_ = null;
-        }
-        payloadCase_ = 2;
-        onChanged();;
-        return requestBuilder_;
-      }
-      @java.lang.Override
-      public final Builder setUnknownFields(
-          final com.google.protobuf.UnknownFieldSet unknownFields) {
-        return super.setUnknownFields(unknownFields);
-      }
-
-      @java.lang.Override
-      public final Builder mergeUnknownFields(
-          final com.google.protobuf.UnknownFieldSet unknownFields) {
-        return super.mergeUnknownFields(unknownFields);
-      }
-
-
-      // @@protoc_insertion_point(builder_scope:com.google.cloud.imf.gzos.WriteRequest)
-    }
-
-    // @@protoc_insertion_point(class_scope:com.google.cloud.imf.gzos.WriteRequest)
-    private static final com.google.cloud.imf.gzos.pb.GRecvProto.WriteRequest DEFAULT_INSTANCE;
-    static {
-      DEFAULT_INSTANCE = new com.google.cloud.imf.gzos.pb.GRecvProto.WriteRequest();
-    }
-
-    public static com.google.cloud.imf.gzos.pb.GRecvProto.WriteRequest getDefaultInstance() {
-      return DEFAULT_INSTANCE;
-    }
-
-    private static final com.google.protobuf.Parser<WriteRequest>
-        PARSER = new com.google.protobuf.AbstractParser<WriteRequest>() {
-      @java.lang.Override
-      public WriteRequest parsePartialFrom(
-          com.google.protobuf.CodedInputStream input,
-          com.google.protobuf.ExtensionRegistryLite extensionRegistry)
-          throws com.google.protobuf.InvalidProtocolBufferException {
-        return new WriteRequest(input, extensionRegistry);
-      }
-    };
-
-    public static com.google.protobuf.Parser<WriteRequest> parser() {
-      return PARSER;
-    }
-
-    @java.lang.Override
-    public com.google.protobuf.Parser<WriteRequest> getParserForType() {
-      return PARSER;
-    }
-
-    @java.lang.Override
-    public com.google.cloud.imf.gzos.pb.GRecvProto.WriteRequest getDefaultInstanceForType() {
       return DEFAULT_INSTANCE;
     }
 
@@ -9503,11 +8853,6 @@ public final class GRecvProto {
     com.google.protobuf.GeneratedMessageV3.FieldAccessorTable
       internal_static_com_google_cloud_imf_gzos_GRecvRequest_fieldAccessorTable;
   private static final com.google.protobuf.Descriptors.Descriptor
-    internal_static_com_google_cloud_imf_gzos_WriteRequest_descriptor;
-  private static final 
-    com.google.protobuf.GeneratedMessageV3.FieldAccessorTable
-      internal_static_com_google_cloud_imf_gzos_WriteRequest_fieldAccessorTable;
-  private static final com.google.protobuf.Descriptors.Descriptor
     internal_static_com_google_cloud_imf_gzos_GRecvResponse_descriptor;
   private static final 
     com.google.protobuf.GeneratedMessageV3.FieldAccessorTable
@@ -9552,31 +8897,29 @@ public final class GRecvProto {
       "OOK\020\001\022\n\n\006LAYOUT\020\002\"\207\001\n\nZOSJobInfo\022\r\n\005jobi" +
       "d\030\001 \001(\t\022\017\n\007jobname\030\002 \001(\t\022\017\n\007jobdate\030\003 \001(" +
       "\t\022\017\n\007jobtime\030\004 \001(\t\022\021\n\tstep_name\030\005 \001(\t\022\026\n" +
-      "\016proc_step_name\030\006 \001(\t\022\014\n\004user\030\007 \001(\t\"\212\002\n\014" +
+      "\016proc_step_name\030\006 \001(\t\022\014\n\004user\030\007 \001(\t\"\234\002\n\014" +
       "GRecvRequest\0221\n\006schema\030\001 \001(\0132!.com.googl" +
       "e.cloud.imf.gzos.Record\022\r\n\005lrecl\030\002 \001(\005\022\r" +
       "\n\005blksz\030\003 \001(\005\022\020\n\010basepath\030\004 \001(\t\022\023\n\013max_e" +
-      "rr_pct\030\005 \001(\001\022\021\n\tpublicKey\030\006 \001(\014\022\021\n\tsigna" +
-      "ture\030\007 \001(\014\022\021\n\tprincipal\030\010 \001(\t\0226\n\007jobinfo" +
-      "\030\t \001(\0132%.com.google.cloud.imf.gzos.ZOSJo" +
-      "bInfo\022\021\n\ttimestamp\030\n \001(\003\"e\n\014WriteRequest" +
-      "\022\016\n\004data\030\001 \001(\014H\000\022:\n\007request\030\002 \001(\0132\'.com." +
-      "google.cloud.imf.gzos.GRecvRequestH\000B\t\n\007" +
-      "payload\"c\n\rGRecvResponse\022\016\n\006status\030\001 \001(\005" +
-      "\022\020\n\010rowCount\030\002 \001(\003\022\020\n\010msgCount\030\003 \001(\003\022\020\n\010" +
-      "errCount\030\004 \001(\003\022\014\n\004hash\030\005 \001(\t\"%\n\022HealthCh" +
-      "eckRequest\022\017\n\007service\030\001 \001(\t\"\237\001\n\023HealthCh" +
-      "eckResponse\022L\n\006status\030\001 \001(\0162<.com.google" +
-      ".cloud.imf.gzos.HealthCheckResponse.Serv" +
-      "ingStatus\":\n\rServingStatus\022\013\n\007UNKNOWN\020\000\022" +
-      "\013\n\007SERVING\020\001\022\017\n\013NOT_SERVING\020\0022\315\001\n\005GRecv\022" +
-      "\\\n\005Write\022\'.com.google.cloud.imf.gzos.Wri" +
-      "teRequest\032(.com.google.cloud.imf.gzos.GR" +
-      "ecvResponse(\001\022f\n\005Check\022-.com.google.clou" +
-      "d.imf.gzos.HealthCheckRequest\032..com.goog" +
-      "le.cloud.imf.gzos.HealthCheckResponseB,\n" +
-      "\034com.google.cloud.imf.gzos.pbB\nGRecvProt" +
-      "oP\000b\006proto3"
+      "rr_pct\030\005 \001(\001\022\022\n\npublic_key\030\006 \001(\014\022\021\n\tsign" +
+      "ature\030\007 \001(\014\022\021\n\tprincipal\030\010 \001(\t\0226\n\007jobinf" +
+      "o\030\t \001(\0132%.com.google.cloud.imf.gzos.ZOSJ" +
+      "obInfo\022\021\n\ttimestamp\030\n \001(\003\022\017\n\007src_uri\030\013 \001" +
+      "(\t\"c\n\rGRecvResponse\022\016\n\006status\030\001 \001(\005\022\020\n\010r" +
+      "owCount\030\002 \001(\003\022\020\n\010msgCount\030\003 \001(\003\022\020\n\010errCo" +
+      "unt\030\004 \001(\003\022\014\n\004hash\030\005 \001(\t\"%\n\022HealthCheckRe" +
+      "quest\022\017\n\007service\030\001 \001(\t\"\237\001\n\023HealthCheckRe" +
+      "sponse\022L\n\006status\030\001 \001(\0162<.com.google.clou" +
+      "d.imf.gzos.HealthCheckResponse.ServingSt" +
+      "atus\":\n\rServingStatus\022\013\n\007UNKNOWN\020\000\022\013\n\007SE" +
+      "RVING\020\001\022\017\n\013NOT_SERVING\020\0022\313\001\n\005GRecv\022Z\n\005Wr" +
+      "ite\022\'.com.google.cloud.imf.gzos.GRecvReq" +
+      "uest\032(.com.google.cloud.imf.gzos.GRecvRe" +
+      "sponse\022f\n\005Check\022-.com.google.cloud.imf.g" +
+      "zos.HealthCheckRequest\032..com.google.clou" +
+      "d.imf.gzos.HealthCheckResponseB,\n\034com.go" +
+      "ogle.cloud.imf.gzos.pbB\nGRecvProtoP\000b\006pr" +
+      "oto3"
     };
     descriptor = com.google.protobuf.Descriptors.FileDescriptor
       .internalBuildGeneratedFileFrom(descriptorData,
@@ -9611,27 +8954,21 @@ public final class GRecvProto {
     internal_static_com_google_cloud_imf_gzos_GRecvRequest_fieldAccessorTable = new
       com.google.protobuf.GeneratedMessageV3.FieldAccessorTable(
         internal_static_com_google_cloud_imf_gzos_GRecvRequest_descriptor,
-        new java.lang.String[] { "Schema", "Lrecl", "Blksz", "Basepath", "MaxErrPct", "PublicKey", "Signature", "Principal", "Jobinfo", "Timestamp", });
-    internal_static_com_google_cloud_imf_gzos_WriteRequest_descriptor =
-      getDescriptor().getMessageTypes().get(3);
-    internal_static_com_google_cloud_imf_gzos_WriteRequest_fieldAccessorTable = new
-      com.google.protobuf.GeneratedMessageV3.FieldAccessorTable(
-        internal_static_com_google_cloud_imf_gzos_WriteRequest_descriptor,
-        new java.lang.String[] { "Data", "Request", "Payload", });
+        new java.lang.String[] { "Schema", "Lrecl", "Blksz", "Basepath", "MaxErrPct", "PublicKey", "Signature", "Principal", "Jobinfo", "Timestamp", "SrcUri", });
     internal_static_com_google_cloud_imf_gzos_GRecvResponse_descriptor =
-      getDescriptor().getMessageTypes().get(4);
+      getDescriptor().getMessageTypes().get(3);
     internal_static_com_google_cloud_imf_gzos_GRecvResponse_fieldAccessorTable = new
       com.google.protobuf.GeneratedMessageV3.FieldAccessorTable(
         internal_static_com_google_cloud_imf_gzos_GRecvResponse_descriptor,
         new java.lang.String[] { "Status", "RowCount", "MsgCount", "ErrCount", "Hash", });
     internal_static_com_google_cloud_imf_gzos_HealthCheckRequest_descriptor =
-      getDescriptor().getMessageTypes().get(5);
+      getDescriptor().getMessageTypes().get(4);
     internal_static_com_google_cloud_imf_gzos_HealthCheckRequest_fieldAccessorTable = new
       com.google.protobuf.GeneratedMessageV3.FieldAccessorTable(
         internal_static_com_google_cloud_imf_gzos_HealthCheckRequest_descriptor,
         new java.lang.String[] { "Service", });
     internal_static_com_google_cloud_imf_gzos_HealthCheckResponse_descriptor =
-      getDescriptor().getMessageTypes().get(6);
+      getDescriptor().getMessageTypes().get(5);
     internal_static_com_google_cloud_imf_gzos_HealthCheckResponse_fieldAccessorTable = new
       com.google.protobuf.GeneratedMessageV3.FieldAccessorTable(
         internal_static_com_google_cloud_imf_gzos_HealthCheckResponse_descriptor,

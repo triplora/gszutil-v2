@@ -1,50 +1,86 @@
 package com.google.cloud.imf.grecv.client
 
+import java.io.OutputStream
+import java.net.URI
+import java.nio.ByteBuffer
+import java.nio.channels.Channels
 import java.util.concurrent.{Executor, TimeUnit}
+import java.util.zip.GZIPOutputStream
 
+import com.google.cloud.WriteChannel
 import com.google.cloud.imf.grecv.GRecvProtocol
 import com.google.cloud.imf.gzos.pb.GRecvGrpc
-import com.google.cloud.imf.gzos.pb.GRecvProto.{GRecvRequest, GRecvResponse, WriteRequest}
+import com.google.cloud.imf.gzos.pb.GRecvGrpc.{GRecvBlockingStub, GRecvFutureStub, GRecvStub}
+import com.google.cloud.imf.gzos.pb.GRecvProto.{GRecvRequest, GRecvResponse}
 import com.google.cloud.imf.util.Logging
+import com.google.cloud.storage.{Blob, BlobId, BlobInfo, Storage}
 import com.google.common.hash.Hashing
+import com.google.common.util.concurrent.ListenableFuture
 import com.google.protobuf.ByteString
 import com.google.protobuf.util.JsonFormat
-import io.grpc.ManagedChannelBuilder
+import io.grpc.{CallOptions, ManagedChannelBuilder}
 import io.grpc.stub.StreamObserver
+
+import scala.collection.mutable.ListBuffer
+import scala.util.{Random, Try}
 
 
 /** Sends bytes to server, maintaining a hash of all bytes sent */
-class GRecvClientListener(cb: ManagedChannelBuilder[_], request: GRecvRequest, ex: Executor)
-  extends StreamObserver[GRecvResponse] with Logging {
-  private val ch = cb.build()
-  private val stub = GRecvGrpc.newStub(ch)
-    .withExecutor(ex)
-    .withCompression("gzip")
-    .withDeadlineAfter(30, TimeUnit.SECONDS)
-    .withWaitForReady()
-  val observer = stub.write(this)
-  observer.onNext(WriteRequest.newBuilder.setRequest(request).build)
-  private val w = WriteRequest.newBuilder
-  private val hasher = Hashing.murmur3_128().newHasher()
+class GRecvClientListener(gcs: Storage,
+                          stub: GRecvFutureStub,
+                          request: GRecvRequest,
+                          basePath: String, bufSz: Int) extends Logging {
+  val bucket = new URI(basePath).getAuthority
+  val buf: ByteBuffer = ByteBuffer.allocate(bufSz)
+  val partLimit: Long = 1L*1024*1024*1024
+  // a hash and a future response
+  val futures: ListBuffer[(String,ListenableFuture[GRecvResponse])] = ListBuffer.empty
 
-  def send(buf: Array[Byte], off: Int, len: Int): Unit = {
-    logger.debug(s"onNext - ${buf.length} bytes")
-    observer.onNext(w.setData(ByteString.copyFrom(buf,0,len)).build)
-    hasher.putBytes(buf, 0, len)
+  def randId: String = Random.alphanumeric.take(32).mkString("")
+  def randBlob: BlobInfo = BlobInfo.newBuilder(BlobId.of(bucket,basePath+"/"+randId)).build()
+  def newObj(): Blob = gcs.create(randBlob)
+  var hasher = Hashing.murmur3_128().newHasher()
+  var obj: Blob = newObj()
+  var writer: OutputStream = new GZIPOutputStream(Channels.newOutputStream(obj.writer()), 32*1024, true)
+  var bytesWritten: Long = 0
+
+  def flush(): Unit = {
+    buf.flip()
+    hasher.putBytes(buf)
+    writer.write(buf.array(), 0, buf.limit())
+    bytesWritten += buf.limit()
+    if (bytesWritten > partLimit) {
+      close()
+      hasher = Hashing.murmur3_128().newHasher()
+      obj = newObj()
+      writer = Channels.newOutputStream(obj.writer())
+      bytesWritten = 0
+    }
   }
 
-  private var v: GRecvResponse = _
-  private var isComplete: Boolean = false
-  def complete: Boolean = isComplete
+  def close(): Unit = {
+    writer.close()
+    if (bytesWritten > 0){
+      val hash = hasher.hash().toString
+      // send a request with object URI
+      val futureResponse = stub.write(request.toBuilder.setSrcUri("gs://" + obj.getBucket + "/" + obj.getName).build())
+      futures.append((hash, futureResponse))
+    }
+  }
 
-  override def onNext(value: GRecvResponse): Unit = {
-    v = value
+  def collect(timeout: Int, timeUnit: TimeUnit): List[GRecvResponse] = {
+    close()
+    futures.map(x => (x._1, x._2.get(timeout, timeUnit)))
+      .map(x => checkResponse(x._1, x._2))
+      .toList
+  }
+
+  def checkResponse(hash: String, value: GRecvResponse): GRecvResponse = {
     val s = JsonFormat.printer()
       .includingDefaultValueFields()
       .omittingInsignificantWhitespace()
       .print(value)
     logger.info(s"Received GRecvResponse with status ${value.getStatus}\n$s")
-    val hash = hasher.hash().toString
     val hashMatched = value.getHash == hash
     if (!hashMatched){
       val msg = s"Hash mismatch ${value.getHash} != $hash"
@@ -54,15 +90,7 @@ class GRecvClientListener(cb: ManagedChannelBuilder[_], request: GRecvRequest, e
       val msg = s"Received status code ${value.getStatus}"
       logger.error(msg)
       throw new RuntimeException(msg)
-    }
+    } else value
   }
-  override def onError(t: Throwable): Unit = throw t
-  override def onCompleted(): Unit = {
-    logger.debug(s"onCompleted called")
-    isComplete = true
-    ch.shutdownNow()
-  }
-
-  def result: GRecvResponse = v
 }
 

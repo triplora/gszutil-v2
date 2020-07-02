@@ -27,27 +27,27 @@ public final class GRecvGrpc {
   public static final String SERVICE_NAME = "com.google.cloud.imf.gzos.GRecv";
 
   // Static method descriptors that strictly reflect the proto.
-  private static volatile io.grpc.MethodDescriptor<com.google.cloud.imf.gzos.pb.GRecvProto.WriteRequest,
+  private static volatile io.grpc.MethodDescriptor<com.google.cloud.imf.gzos.pb.GRecvProto.GRecvRequest,
       com.google.cloud.imf.gzos.pb.GRecvProto.GRecvResponse> getWriteMethod;
 
   @io.grpc.stub.annotations.RpcMethod(
       fullMethodName = SERVICE_NAME + '/' + "Write",
-      requestType = com.google.cloud.imf.gzos.pb.GRecvProto.WriteRequest.class,
+      requestType = com.google.cloud.imf.gzos.pb.GRecvProto.GRecvRequest.class,
       responseType = com.google.cloud.imf.gzos.pb.GRecvProto.GRecvResponse.class,
-      methodType = io.grpc.MethodDescriptor.MethodType.CLIENT_STREAMING)
-  public static io.grpc.MethodDescriptor<com.google.cloud.imf.gzos.pb.GRecvProto.WriteRequest,
+      methodType = io.grpc.MethodDescriptor.MethodType.UNARY)
+  public static io.grpc.MethodDescriptor<com.google.cloud.imf.gzos.pb.GRecvProto.GRecvRequest,
       com.google.cloud.imf.gzos.pb.GRecvProto.GRecvResponse> getWriteMethod() {
-    io.grpc.MethodDescriptor<com.google.cloud.imf.gzos.pb.GRecvProto.WriteRequest, com.google.cloud.imf.gzos.pb.GRecvProto.GRecvResponse> getWriteMethod;
+    io.grpc.MethodDescriptor<com.google.cloud.imf.gzos.pb.GRecvProto.GRecvRequest, com.google.cloud.imf.gzos.pb.GRecvProto.GRecvResponse> getWriteMethod;
     if ((getWriteMethod = GRecvGrpc.getWriteMethod) == null) {
       synchronized (GRecvGrpc.class) {
         if ((getWriteMethod = GRecvGrpc.getWriteMethod) == null) {
           GRecvGrpc.getWriteMethod = getWriteMethod =
-              io.grpc.MethodDescriptor.<com.google.cloud.imf.gzos.pb.GRecvProto.WriteRequest, com.google.cloud.imf.gzos.pb.GRecvProto.GRecvResponse>newBuilder()
-              .setType(io.grpc.MethodDescriptor.MethodType.CLIENT_STREAMING)
+              io.grpc.MethodDescriptor.<com.google.cloud.imf.gzos.pb.GRecvProto.GRecvRequest, com.google.cloud.imf.gzos.pb.GRecvProto.GRecvResponse>newBuilder()
+              .setType(io.grpc.MethodDescriptor.MethodType.UNARY)
               .setFullMethodName(generateFullMethodName(SERVICE_NAME, "Write"))
               .setSampledToLocalTracing(true)
               .setRequestMarshaller(io.grpc.protobuf.ProtoUtils.marshaller(
-                  com.google.cloud.imf.gzos.pb.GRecvProto.WriteRequest.getDefaultInstance()))
+                  com.google.cloud.imf.gzos.pb.GRecvProto.GRecvRequest.getDefaultInstance()))
               .setResponseMarshaller(io.grpc.protobuf.ProtoUtils.marshaller(
                   com.google.cloud.imf.gzos.pb.GRecvProto.GRecvResponse.getDefaultInstance()))
               .setSchemaDescriptor(new GRecvMethodDescriptorSupplier("Write"))
@@ -118,9 +118,9 @@ public final class GRecvGrpc {
 
     /**
      */
-    public io.grpc.stub.StreamObserver<com.google.cloud.imf.gzos.pb.GRecvProto.WriteRequest> write(
+    public void write(com.google.cloud.imf.gzos.pb.GRecvProto.GRecvRequest request,
         io.grpc.stub.StreamObserver<com.google.cloud.imf.gzos.pb.GRecvProto.GRecvResponse> responseObserver) {
-      return asyncUnimplementedStreamingCall(getWriteMethod(), responseObserver);
+      asyncUnimplementedUnaryCall(getWriteMethod(), responseObserver);
     }
 
     /**
@@ -134,9 +134,9 @@ public final class GRecvGrpc {
       return io.grpc.ServerServiceDefinition.builder(getServiceDescriptor())
           .addMethod(
             getWriteMethod(),
-            asyncClientStreamingCall(
+            asyncUnaryCall(
               new MethodHandlers<
-                com.google.cloud.imf.gzos.pb.GRecvProto.WriteRequest,
+                com.google.cloud.imf.gzos.pb.GRecvProto.GRecvRequest,
                 com.google.cloud.imf.gzos.pb.GRecvProto.GRecvResponse>(
                   this, METHODID_WRITE)))
           .addMethod(
@@ -170,10 +170,10 @@ public final class GRecvGrpc {
 
     /**
      */
-    public io.grpc.stub.StreamObserver<com.google.cloud.imf.gzos.pb.GRecvProto.WriteRequest> write(
+    public void write(com.google.cloud.imf.gzos.pb.GRecvProto.GRecvRequest request,
         io.grpc.stub.StreamObserver<com.google.cloud.imf.gzos.pb.GRecvProto.GRecvResponse> responseObserver) {
-      return asyncClientStreamingCall(
-          getChannel().newCall(getWriteMethod(), getCallOptions()), responseObserver);
+      asyncUnaryCall(
+          getChannel().newCall(getWriteMethod(), getCallOptions()), request, responseObserver);
     }
 
     /**
@@ -205,6 +205,13 @@ public final class GRecvGrpc {
 
     /**
      */
+    public com.google.cloud.imf.gzos.pb.GRecvProto.GRecvResponse write(com.google.cloud.imf.gzos.pb.GRecvProto.GRecvRequest request) {
+      return blockingUnaryCall(
+          getChannel(), getWriteMethod(), getCallOptions(), request);
+    }
+
+    /**
+     */
     public com.google.cloud.imf.gzos.pb.GRecvProto.HealthCheckResponse check(com.google.cloud.imf.gzos.pb.GRecvProto.HealthCheckRequest request) {
       return blockingUnaryCall(
           getChannel(), getCheckMethod(), getCallOptions(), request);
@@ -231,6 +238,14 @@ public final class GRecvGrpc {
 
     /**
      */
+    public com.google.common.util.concurrent.ListenableFuture<com.google.cloud.imf.gzos.pb.GRecvProto.GRecvResponse> write(
+        com.google.cloud.imf.gzos.pb.GRecvProto.GRecvRequest request) {
+      return futureUnaryCall(
+          getChannel().newCall(getWriteMethod(), getCallOptions()), request);
+    }
+
+    /**
+     */
     public com.google.common.util.concurrent.ListenableFuture<com.google.cloud.imf.gzos.pb.GRecvProto.HealthCheckResponse> check(
         com.google.cloud.imf.gzos.pb.GRecvProto.HealthCheckRequest request) {
       return futureUnaryCall(
@@ -238,8 +253,8 @@ public final class GRecvGrpc {
     }
   }
 
-  private static final int METHODID_CHECK = 0;
-  private static final int METHODID_WRITE = 1;
+  private static final int METHODID_WRITE = 0;
+  private static final int METHODID_CHECK = 1;
 
   private static final class MethodHandlers<Req, Resp> implements
       io.grpc.stub.ServerCalls.UnaryMethod<Req, Resp>,
@@ -258,6 +273,10 @@ public final class GRecvGrpc {
     @java.lang.SuppressWarnings("unchecked")
     public void invoke(Req request, io.grpc.stub.StreamObserver<Resp> responseObserver) {
       switch (methodId) {
+        case METHODID_WRITE:
+          serviceImpl.write((com.google.cloud.imf.gzos.pb.GRecvProto.GRecvRequest) request,
+              (io.grpc.stub.StreamObserver<com.google.cloud.imf.gzos.pb.GRecvProto.GRecvResponse>) responseObserver);
+          break;
         case METHODID_CHECK:
           serviceImpl.check((com.google.cloud.imf.gzos.pb.GRecvProto.HealthCheckRequest) request,
               (io.grpc.stub.StreamObserver<com.google.cloud.imf.gzos.pb.GRecvProto.HealthCheckResponse>) responseObserver);
@@ -272,9 +291,6 @@ public final class GRecvGrpc {
     public io.grpc.stub.StreamObserver<Req> invoke(
         io.grpc.stub.StreamObserver<Resp> responseObserver) {
       switch (methodId) {
-        case METHODID_WRITE:
-          return (io.grpc.stub.StreamObserver<Req>) serviceImpl.write(
-              (io.grpc.stub.StreamObserver<com.google.cloud.imf.gzos.pb.GRecvProto.GRecvResponse>) responseObserver);
         default:
           throw new AssertionError();
       }

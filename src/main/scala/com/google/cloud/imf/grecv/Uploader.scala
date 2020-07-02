@@ -2,6 +2,7 @@ package com.google.cloud.imf.grecv
 
 import com.google.cloud.bqsh.cmd.Result
 import com.google.cloud.gszutil.io.ZRecordReaderT
+import com.google.cloud.imf.gzos.MVS
 import com.google.cloud.imf.gzos.pb.GRecvProto.GRecvRequest
 
 trait Uploader {
@@ -9,5 +10,6 @@ trait Uploader {
              host: String,
              port: Int,
              nConnections: Int,
+             zos: MVS,
              in: ZRecordReaderT): Result
 }

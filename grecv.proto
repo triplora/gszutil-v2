@@ -71,23 +71,17 @@ message GRecvRequest {
   int32 blksz = 3;
   string basepath = 4;
   double max_err_pct = 5;
-  bytes publicKey = 6;
+  bytes public_key = 6;
   bytes signature = 7;
   string principal = 8;
   ZOSJobInfo jobinfo = 9;
   int64 timestamp = 10;
+  string src_uri = 11;
 }
 
 service GRecv {
-  rpc Write(stream WriteRequest) returns (GRecvResponse);
+  rpc Write(GRecvRequest) returns (GRecvResponse);
   rpc Check(HealthCheckRequest) returns (HealthCheckResponse);
-}
-
-message WriteRequest {
-  oneof payload {
-    bytes data = 1;
-    GRecvRequest request = 2;
-  }
 }
 
 message GRecvResponse {
