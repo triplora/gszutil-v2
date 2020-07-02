@@ -20,22 +20,31 @@ import io.grpc.stub.StreamObserver
 import org.apache.hadoop.fs.Path
 
 object GRecvServerListener extends Logging {
-  private val cloudLogger: CloudLogger = CloudLogging.getLogger(this.getClass)
-
   def write(req: GRecvRequest,
             gcs: Storage,
             id: String,
             responseObserver: StreamObserver[GRecvResponse]): Unit = {
+    val jobInfo: java.util.Map[String,Any] = Util.toMap(req.getJobinfo)
+    val msg1 = "received request\n" + JsonFormat.printer.print(req)
+    logger.info(msg1)
+
+    logger.debug(s"opening ${req.getSrcUri}")
     val gcsUri = new URI(req.getSrcUri)
     val blob = gcs.get(BlobId.of(gcsUri.getAuthority, gcsUri.getPath.stripPrefix("/")))
-    val input = Channels.newChannel(new GZIPInputStream(Channels.newInputStream(blob.reader()),32*1024))
 
-    if (blob.getSize == 0)
+    val blobSize = blob.getSize
+    logger.info(s"blob size = ${blob.getSize}")
+    if (blobSize == 0)
       responseObserver.onError(Status.ABORTED.withDescription(s"empty blob at ${req.getSrcUri}")
         .asRuntimeException())
 
+    logger.debug(s"opening GCS blob reader")
+    val input = Channels.newChannel(new GZIPInputStream(Channels.newInputStream(blob.reader()),32*1024))
+
     val hasher = Hashing.murmur3_128().newHasher()
     val buf: ByteBuffer = ByteBuffer.allocate(req.getLrecl*1024)
+
+    logger.debug(s"creating ORC writer $id")
     val orc: WriterCore = new WriterCore(schemaProvider = RecordSchema(req.getSchema),
       basePath = new Path(req.getBasepath),
       gcs = gcs,
@@ -46,10 +55,6 @@ object GRecvServerListener extends Logging {
     var rowCount: Long = 0
     var bytesRead: Long = 0
     var status: Int = GRecvProtocol.OK
-    val jobInfo: java.util.Map[String,Any] = Util.toMap(req.getJobinfo)
-    val msg1 = "received request\n" + JsonFormat.printer.print(req)
-    logger.info(msg1)
-    cloudLogger.log(msg1, jobInfo, CloudLogging.Info)
 
     var n = 0
     while (n >= 0) {
@@ -87,7 +92,6 @@ object GRecvServerListener extends Logging {
     val json = JsonFormat.printer().omittingInsignificantWhitespace().print(response)
     val msg = s"request completed $json"
     logger.info(msg)
-    cloudLogger.log(msg, jobInfo, CloudLogging.Info)
     orc.close()
     responseObserver.onNext(response)
     responseObserver.onCompleted()

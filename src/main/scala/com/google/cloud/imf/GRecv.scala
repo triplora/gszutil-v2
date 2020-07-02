@@ -28,14 +28,15 @@ object GRecv extends Logging {
 
   def main(args: Array[String]): Unit = {
     val buildInfo = "Build Info:\n" + Util.readS("build.txt")
+    System.out.println(buildInfo)
     GRecvConfigParser.parse(args) match {
       case Some(cfg) =>
         val zos = Util.zProvider
         zos.init()
         CloudLogging.configureLogging(debugOverride = false, sys.env,
           errorLogs = Seq("org.apache.orc","io.grpc","io.netty","org.apache.http"),
-          credentials = zos.getCredentialProvider().getCredentials.createScoped(LoggingScopes.LOGGING_WRITE))
-        logger.info(buildInfo)
+          credentials = Services.loggingCredentials())
+        logger.info(s"Starting GRecvServer\n$buildInfo")
         new GRecvServer(cfg, Services.storage()).start()
       case _ =>
         System.out.println(buildInfo)

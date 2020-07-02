@@ -43,7 +43,6 @@ class ZReader(private val schemaProvider: SchemaProvider,
   // only non-filler columns are added to the row batch
   // by excluding filler columns here, they will not be written
   private final val rowBatch: VectorizedRowBatch = {
-    logger.debug(s"decoders:\n$schemaProvider")
     val batch = new VectorizedRowBatch(decoders.count(!_.filler), batchSize)
     var j = 0
     for (i <- decoders.indices) {
