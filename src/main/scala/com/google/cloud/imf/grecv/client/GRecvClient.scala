@@ -96,7 +96,6 @@ object GRecvClient extends Uploader with Logging {
 
     val blksz = in.lRecl * 1024
     val lrecl = in.lRecl
-    var count = 0L
     var bytesRead = 0L
     var streamId = 0
     var n = 0
@@ -104,6 +103,7 @@ object GRecvClient extends Uploader with Logging {
     def stream(i: Int) = {
       var s = streams(i)
       if (s == null) {
+        logger.debug(s"opening new stream - $bytesRead bytes read")
         s = new GRecvClientListener(gcs, stub, request, request.getBasepath, blksz)
         streams.update(i, s)
       }
@@ -120,10 +120,11 @@ object GRecvClient extends Uploader with Logging {
         }
       }
       if (buf.position() > 0) {
-        count += 1
         stream(streamId).flush()
-        streamId += 1
-        if (streamId >= connections) streamId = 0
+        if (bytesRead >= 1024*1024) {
+          streamId += 1
+          if (streamId >= connections) streamId = 0
+        }
       }
     }
     logger.info(s"End of input - $bytesRead bytes")

@@ -15,6 +15,7 @@ import com.google.cloud.imf.util.{CloudLogging, Logging}
 import com.google.cloud.storage.{BlobId, Storage}
 import com.google.common.hash.Hashing
 import com.google.protobuf.util.JsonFormat
+import io.grpc.{Status, StatusRuntimeException}
 import io.grpc.stub.StreamObserver
 import org.apache.hadoop.fs.Path
 
@@ -24,7 +25,15 @@ object GRecvServerListener extends Logging {
   def write(req: GRecvRequest,
             gcs: Storage,
             id: String,
-            responseObserver: StreamObserver[GRecvResponse]) {
+            responseObserver: StreamObserver[GRecvResponse]): Unit = {
+    val gcsUri = new URI(req.getSrcUri)
+    val blob = gcs.get(BlobId.of(gcsUri.getAuthority, gcsUri.getPath.stripPrefix("/")))
+    val input = Channels.newChannel(new GZIPInputStream(Channels.newInputStream(blob.reader()),32*1024))
+
+    if (blob.getSize == 0)
+      responseObserver.onError(Status.ABORTED.withDescription(s"empty blob at ${req.getSrcUri}")
+        .asRuntimeException())
+
     val hasher = Hashing.murmur3_128().newHasher()
     val buf: ByteBuffer = ByteBuffer.allocate(req.getLrecl*1024)
     val orc: WriterCore = new WriterCore(schemaProvider = RecordSchema(req.getSchema),
@@ -35,20 +44,26 @@ object GRecvServerListener extends Logging {
       lrecl = req.getLrecl)
     var errCount: Long = 0
     var rowCount: Long = 0
+    var bytesRead: Long = 0
     var status: Int = GRecvProtocol.OK
     val jobInfo: java.util.Map[String,Any] = Util.toMap(req.getJobinfo)
-    cloudLogger.log("received request\n" + JsonFormat.printer.print(req), jobInfo, CloudLogging.Info)
-
-    val gcsUri = new URI(req.getSrcUri)
-    val blob = gcs.get(BlobId.of(gcsUri.getAuthority, gcsUri.getPath.stripPrefix("/")))
-    val input = Channels.newChannel(new GZIPInputStream(Channels.newInputStream(blob.reader()),32*1024))
+    val msg1 = "received request\n" + JsonFormat.printer.print(req)
+    logger.info(msg1)
+    cloudLogger.log(msg1, jobInfo, CloudLogging.Info)
 
     var n = 0
-    while (n > 0) {
+    while (n >= 0) {
       buf.clear()
-      n = input.read(buf)
-      hasher.putBytes(buf.array(),0,buf.position())
+      while (n >= 0 && buf.remaining() > req.getLrecl){
+        n = input.read(buf)
+        if (n > 0){
+          bytesRead += n
+        }
+      }
+
       buf.flip()
+      hasher.putBytes(buf)
+      buf.position(0)
       val result = orc.write(buf)
       logger.debug("wrote data to ORC")
       errCount += result.errCount
@@ -60,6 +75,8 @@ object GRecvServerListener extends Logging {
         status = GRecvProtocol.ERR
       }
     }
+    logger.info(s"Closing InputStream - $bytesRead bytes read")
+    input.close()
 
     val response = GRecvResponse.newBuilder
       .setStatus(status)

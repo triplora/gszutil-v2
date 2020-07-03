@@ -8,8 +8,8 @@ import com.google.cloud.imf.gzos.pb.GRecvProto.Record
 import com.google.cloud.imf.gzos.pb.GRecvProto.Record.Field.FieldType
 
 object DataGenUtil {
-  def generatorFor(sp: SchemaProvider): DataGenerator = {
-    new DataGenerator(sp, 100, Ebcdic.charset)
+  def generatorFor(sp: SchemaProvider, n: Int = 20000): DataGenerator = {
+    new DataGenerator(sp, n, Ebcdic.charset)
   }
 
   def getGenerator(f: Record.Field, charset: Charset): ValueGenerator = {

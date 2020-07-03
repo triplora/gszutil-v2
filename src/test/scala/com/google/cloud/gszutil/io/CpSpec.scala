@@ -91,7 +91,7 @@ class CpSpec extends AnyFlatSpec {
 
   it should "generate" in {
     val sp = mloadSchema
-    val generator = DataGenUtil.generatorFor(sp)
+    val generator = DataGenUtil.generatorFor(sp, 111)
     System.out.println(generator.generators.zip(sp.decoders).map(_.toString).mkString("\n"))
 
     val cfg = GsUtilConfig(schemaProvider = Option(sp),

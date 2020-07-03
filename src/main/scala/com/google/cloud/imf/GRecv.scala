@@ -36,7 +36,6 @@ object GRecv extends Logging {
           errorLogs = Seq("org.apache.orc","io.grpc","io.netty","org.apache.http"),
           credentials = zos.getCredentialProvider().getCredentials.createScoped(LoggingScopes.LOGGING_WRITE))
         logger.info(buildInfo)
-        SecurityUtils.useConscrypt()
         new GRecvServer(cfg, Services.storage()).start()
       case _ =>
         System.out.println(buildInfo)
