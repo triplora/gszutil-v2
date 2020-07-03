@@ -9,6 +9,8 @@ import com.google.cloud.imf.gzos.pb.GRecvProto.Record.Field
 case class RecordSchema(r: Record) extends SchemaProvider {
   import scala.jdk.CollectionConverters.ListHasAsScala
   private def fields: Array[Field] = r.getFieldList.asScala.toArray
+
+  def fieldTypes: Seq[Field.FieldType] = fields.toIndexedSeq.filterNot(_.getFiller).map(_.getTyp)
   override def fieldNames: Seq[String] = fields.toIndexedSeq.filterNot(_.getFiller).map(_.getName)
   override lazy val decoders: Array[Decoder] =
     if (r.getVartext)
