@@ -2,6 +2,7 @@ package com.google.cloud.gszutil.io
 
 import java.nio.ByteBuffer
 
+import com.google.auth.oauth2.OAuth2Credentials
 import com.google.cloud.gszutil.SchemaProvider
 import com.google.cloud.imf.io.Bytes
 import com.google.cloud.imf.util.Logging
@@ -11,10 +12,10 @@ import org.apache.hadoop.fs.Path
 class WriterCore(schemaProvider: SchemaProvider,
                  lrecl: Int,
                  basePath: Path,
-                 gcs: Storage,
+                 cred: OAuth2Credentials,
                  maxErrorPct: Double,
                  name: String) extends Logging {
-  val orc = new OrcContext(gcs, schemaProvider.ORCSchema, basePath, name)
+  val orc = new OrcContext(cred, schemaProvider.ORCSchema, basePath, name)
   val BatchSize = 1024
   private val reader = new ZReader(schemaProvider, BatchSize, lrecl)
   private val errBuf = ByteBuffer.allocate(lrecl * BatchSize)

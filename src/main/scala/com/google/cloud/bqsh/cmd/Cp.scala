@@ -19,6 +19,7 @@ import java.net.URI
 import java.nio.channels.Channels
 import java.nio.file.Paths
 
+import com.google.api.services.storage.StorageScopes
 import com.google.cloud.bigquery.StatsUtil
 import com.google.cloud.bqsh.{ArgParser, BQ, Command, GsUtilConfig, GsUtilOptionParser}
 import com.google.cloud.gszutil.io.ZRecordReaderT
@@ -78,7 +79,7 @@ object Cp extends Command[GsUtilConfig] with Logging {
       result = WriteORCFile.run(gcsUri = c.gcsUri,
                        in = in,
                        schemaProvider = schemaProvider,
-                       gcs = gcs,
+                       cred = creds,
                        parallelism = c.parallelism,
                        batchSize = batchSize,
                        partSizeMb = c.partSizeMB,

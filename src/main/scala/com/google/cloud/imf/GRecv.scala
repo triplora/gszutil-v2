@@ -17,10 +17,12 @@
 package com.google.cloud.imf
 
 import com.google.api.services.logging.v2.LoggingScopes
+import com.google.api.services.storage.StorageScopes
+import com.google.auth.oauth2.GoogleCredentials
 import com.google.cloud.imf.grecv.GRecvConfigParser
 import com.google.cloud.imf.grecv.server.GRecvServer
 import com.google.cloud.imf.gzos.Util
-import com.google.cloud.imf.util.{CloudLogging, Logging, SecurityUtils, Services}
+import com.google.cloud.imf.util.{CloudLogging, Logging}
 
 object GRecv extends Logging {
   val BatchSize = 1024
@@ -33,11 +35,12 @@ object GRecv extends Logging {
       case Some(cfg) =>
         val zos = Util.zProvider
         zos.init()
+        val creds = GoogleCredentials.getApplicationDefault
         CloudLogging.configureLogging(debugOverride = false, sys.env,
           errorLogs = Seq("org.apache.orc","io.grpc","io.netty","org.apache.http"),
-          credentials = Services.loggingCredentials())
+          credentials = creds.createScoped(LoggingScopes.LOGGING_WRITE))
         logger.info(s"Starting GRecvServer\n$buildInfo")
-        new GRecvServer(cfg, Services.storage()).start()
+        new GRecvServer(cfg, creds.createScoped(StorageScopes.DEVSTORAGE_READ_WRITE)).start()
       case _ =>
         System.out.println(buildInfo)
         System.err.println(s"Unabled to parse args '${args.mkString(" ")}'")

@@ -21,7 +21,7 @@ class CpSpec2 extends AnyFlatSpec {
   CloudLogging.configureLogging(debugOverride = true)
 
   def server(cfg: GRecvConfig): Future[GRecvServer] = Future{
-    val s = new GRecvServer(cfg, Services.storage())
+    val s = new GRecvServer(cfg, Services.storageCredentials())
     s.start(block = false)
     s
   }

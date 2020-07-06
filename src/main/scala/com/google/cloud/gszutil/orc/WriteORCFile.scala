@@ -19,6 +19,7 @@ package com.google.cloud.gszutil.orc
 import java.net.URI
 import java.nio.ByteBuffer
 
+import com.google.auth.oauth2.OAuth2Credentials
 import com.google.cloud.bqsh.cmd.Result
 import com.google.cloud.gszutil.SchemaProvider
 import com.google.cloud.gszutil.io.{WriterCore, ZRecordReaderT}
@@ -30,7 +31,7 @@ object WriteORCFile extends Logging {
   def run(gcsUri: String,
           in: ZRecordReaderT,
           schemaProvider: SchemaProvider,
-          gcs: Storage,
+          cred: OAuth2Credentials,
           parallelism: Int,
           batchSize: Int,
           partSizeMb: Long,
@@ -46,7 +47,7 @@ object WriteORCFile extends Logging {
     val writers: Array[WriterCore] = (0 until parallelism).toArray.map{i =>
       new WriterCore(schemaProvider = schemaProvider,
         basePath = basePath,
-        gcs = gcs,
+        cred = cred,
         maxErrorPct = maxErrorPct,
         name = s"$i",
         lrecl = in.lRecl)

@@ -2,19 +2,17 @@ package com.google.cloud.imf.grecv.server
 
 import java.time.ZoneId
 import java.time.format.DateTimeFormatter
-import java.util.Date
-import java.util.concurrent.atomic.AtomicInteger
 
+import com.google.auth.oauth2.OAuth2Credentials
 import com.google.cloud.imf.gzos.pb.GRecvGrpc.GRecvImplBase
 import com.google.cloud.imf.gzos.pb.GRecvProto.{GRecvRequest, GRecvResponse, HealthCheckRequest, HealthCheckResponse}
 import com.google.cloud.imf.util.Logging
-import com.google.cloud.storage.Storage
 import io.grpc.stub.StreamObserver
 
 import scala.util.Random
 
 
-class GRecvService(gcs: Storage) extends GRecvImplBase with Logging {
+class GRecvService(private val creds: OAuth2Credentials) extends GRecvImplBase with Logging {
   private val fmt = DateTimeFormatter.ofPattern("yyyyMMddhhMMss")
   private val rng = new Random()
 
@@ -23,11 +21,9 @@ class GRecvService(gcs: Storage) extends GRecvImplBase with Logging {
       rng.alphanumeric.take(6).mkString("")
     logger.debug("creating GRecvRequestStreamObserver")
     try {
-      GRecvServerListener.write(request, gcs, partId, responseObserver)
-    } catch {
-      case t: Throwable =>
-        logger.error(t.getMessage, t)
-    }
+      creds.refreshIfExpired()
+      GRecvServerListener.write(request, creds, partId, responseObserver)
+    } catch {case t: Throwable => logger.error(t.getMessage, t)}
   }
 
   private val OK: HealthCheckResponse =

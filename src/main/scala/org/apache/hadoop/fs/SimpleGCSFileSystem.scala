@@ -17,9 +17,9 @@
 package org.apache.hadoop.fs
 
 import java.net.URI
-import java.nio.channels.Channels
 
-import com.google.cloud.storage.{BlobId, BlobInfo, Storage}
+import com.google.auth.oauth2.OAuth2Credentials
+import com.google.cloud.imf.util.StorageObjectOutputStream
 import org.apache.hadoop.conf.Configuration
 import org.apache.hadoop.fs.permission.FsPermission
 import org.apache.hadoop.util.Progressable
@@ -33,22 +33,17 @@ object SimpleGCSFileSystem {
     c.set(FsImpl, ClassName)
     c
   }
-
-  def toBlobId(path: Path): BlobId = {
-    val uri = path.toUri
-    BlobId.of(uri.getAuthority, uri.getPath.stripPrefix("/"))
-  }
 }
 
 /** FileSystem implementation with user-provided Statistics instance
   *
-  * @param storage Cloud Storage Client
+  * @param cred OAuth2Credentials
   * @param stats FileSystem.Statistics used to count bytes written
   */
-class SimpleGCSFileSystem(private val storage: Storage,
+class SimpleGCSFileSystem(private val cred: OAuth2Credentials,
                           private var stats: FileSystem.Statistics)
   extends FileSystem {
-  import SimpleGCSFileSystem.{Scheme, toBlobId}
+  import SimpleGCSFileSystem.Scheme
 
   def resetStats(): Unit = stats.reset()
 
@@ -64,8 +59,10 @@ class SimpleGCSFileSystem(private val storage: Storage,
   override def create(f: Path, permission: FsPermission, overwrite: Boolean,
                       bufferSize: Int, replication: Short, blockSize: Long,
                       progress: Progressable): FSDataOutputStream = {
-    val w = storage.writer(BlobInfo.newBuilder(toBlobId(f)).build())
-    val os = Channels.newOutputStream(w)
+    val uri = f.toUri
+    val bucket = uri.getAuthority
+    val name = uri.getPath.stripPrefix("/")
+    val os = new StorageObjectOutputStream(cred.getAccessToken, bucket, name)
     new FSDataOutputStream(os, stats, 0)
   }
 

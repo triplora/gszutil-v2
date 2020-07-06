@@ -2,6 +2,7 @@ package com.google.cloud.gszutil.io
 
 import java.nio.ByteBuffer
 
+import com.google.auth.oauth2.OAuth2Credentials
 import com.google.cloud.imf.util.Logging
 import com.google.cloud.storage.Storage
 import org.apache.hadoop.conf.Configuration
@@ -12,12 +13,12 @@ import org.apache.orc.{CompressionKind, InMemoryKeystore, NoOpMemoryManager, Orc
 
 /**
   *
-  * @param gcs GCS client
+  * @param cred OAuth2Credentials
   * @param schema ORC TypeDescription
   * @param basePath GCS URI where parts will be written
   * @param prefix the id of this writer which will be appended to output paths
   */
-final class OrcContext(private val gcs: Storage, schema: TypeDescription,
+final class OrcContext(private val cred: OAuth2Credentials, schema: TypeDescription,
                        basePath: Path, prefix: String)
   extends AutoCloseable with Logging {
 
@@ -25,7 +26,7 @@ final class OrcContext(private val gcs: Storage, schema: TypeDescription,
   private final val OptimalGZipBuffer = 32*1024
   private final val PartSize = 128L*1024*1024
 
-  private val fs = new SimpleGCSFileSystem(gcs,
+  private val fs = new SimpleGCSFileSystem(cred,
     new FileSystem.Statistics(SimpleGCSFileSystem.Scheme))
 
   private var partId: Long = -1

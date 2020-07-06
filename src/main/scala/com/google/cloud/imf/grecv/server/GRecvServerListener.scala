@@ -2,26 +2,23 @@ package com.google.cloud.imf.grecv.server
 
 import java.net.URI
 import java.nio.ByteBuffer
-import java.nio.channels.Channels
 import java.util.zip.GZIPInputStream
 
+import com.google.auth.oauth2.OAuth2Credentials
 import com.google.cloud.gszutil.RecordSchema
 import com.google.cloud.gszutil.io.WriterCore
 import com.google.cloud.imf.grecv.GRecvProtocol
 import com.google.cloud.imf.gzos.Util
 import com.google.cloud.imf.gzos.pb.GRecvProto.{GRecvRequest, GRecvResponse}
-import com.google.cloud.imf.util.CloudLogging.CloudLogger
-import com.google.cloud.imf.util.{CloudLogging, Logging}
-import com.google.cloud.storage.{BlobId, Storage}
+import com.google.cloud.imf.util.{Logging, StorageObjectInputStream}
 import com.google.common.hash.Hashing
 import com.google.protobuf.util.JsonFormat
-import io.grpc.{Status, StatusRuntimeException}
 import io.grpc.stub.StreamObserver
 import org.apache.hadoop.fs.Path
 
 object GRecvServerListener extends Logging {
   def write(req: GRecvRequest,
-            gcs: Storage,
+            creds: OAuth2Credentials,
             id: String,
             responseObserver: StreamObserver[GRecvResponse]): Unit = {
     val jobInfo: java.util.Map[String,Any] = Util.toMap(req.getJobinfo)
@@ -30,16 +27,12 @@ object GRecvServerListener extends Logging {
 
     logger.debug(s"opening ${req.getSrcUri}")
     val gcsUri = new URI(req.getSrcUri)
-    val blob = gcs.get(BlobId.of(gcsUri.getAuthority, gcsUri.getPath.stripPrefix("/")))
-
-    val blobSize = blob.getSize
-    logger.info(s"blob size = ${blob.getSize}")
-    if (blobSize == 0)
-      responseObserver.onError(Status.ABORTED.withDescription(s"empty blob at ${req.getSrcUri}")
-        .asRuntimeException())
+    val bucket = gcsUri.getAuthority
+    val name = gcsUri.getPath.stripPrefix("/")
+    val is = new StorageObjectInputStream(creds.getAccessToken, bucket, name)
 
     logger.debug(s"opening GCS blob reader")
-    val input = Channels.newChannel(new GZIPInputStream(Channels.newInputStream(blob.reader()),32*1024))
+    val input = new GZIPInputStream(is,32*1024)
 
     val hasher = Hashing.murmur3_128().newHasher()
     val buf: ByteBuffer = ByteBuffer.allocate(req.getLrecl*1024)
@@ -47,7 +40,7 @@ object GRecvServerListener extends Logging {
     logger.debug(s"creating ORC writer $id")
     val orc: WriterCore = new WriterCore(schemaProvider = RecordSchema(req.getSchema),
       basePath = new Path(req.getBasepath),
-      gcs = gcs,
+      cred = creds,
       maxErrorPct = req.getMaxErrPct,
       name = s"$id",
       lrecl = req.getLrecl)
@@ -60,8 +53,10 @@ object GRecvServerListener extends Logging {
     while (n >= 0) {
       buf.clear()
       while (n >= 0 && buf.remaining() > req.getLrecl){
-        n = input.read(buf)
+        n = input.read(buf.array(), buf.position(), buf.remaining())
         if (n > 0){
+          val pos = buf.position()
+          buf.position(pos + n)
           bytesRead += n
         }
       }
