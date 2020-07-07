@@ -6,7 +6,7 @@ import com.google.cloud.imf.gzos.Ebcdic
 import com.google.cloud.imf.gzos.pb.GRecvProto.Record
 import com.google.cloud.imf.gzos.pb.GRecvProto.Record.Field
 
-case class RecordSchema(r: Record) extends SchemaProvider {
+case class RecordSchema(r: Record) extends SchemaProvider with BinaryEncoding {
   import scala.jdk.CollectionConverters.ListHasAsScala
   private def fields: Array[Field] = r.getFieldList.asScala.toArray
 
@@ -38,5 +38,13 @@ case class RecordSchema(r: Record) extends SchemaProvider {
   override def vartext: Boolean = r.getVartext
   override def delimiter: Array[Byte] = r.getDelimiter.toByteArray
   override def srcCharset: Charset = transcoder.charset
+
+  override def encoders: Array[BinaryEncoder] = {
+    if (vartext) {
+      throw new RuntimeException("Vartext export not supported.")
+    } else {
+      fields.map(Encoding.getEncoder(_, transcoder))
+    }
+  }
 }
 
