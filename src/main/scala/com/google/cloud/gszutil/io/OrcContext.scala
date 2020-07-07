@@ -84,7 +84,6 @@ final class OrcContext(private val cred: OAuth2Credentials, schema: TypeDescript
   }
 
   def closeWriter(): Unit = {
-    logger.debug(s"Closing ORCWriter $currentPath")
     writer.close()
     bytesWritten += fs.getBytesWritten()
     logger.info(s"Closed ORCWriter $currentPath")

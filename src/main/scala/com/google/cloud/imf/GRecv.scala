@@ -36,7 +36,7 @@ object GRecv extends Logging {
         val zos = Util.zProvider
         zos.init()
         val creds = GoogleCredentials.getApplicationDefault
-        CloudLogging.configureLogging(debugOverride = false, sys.env,
+        CloudLogging.configureLogging(debugOverride = cfg.debug, sys.env,
           errorLogs = Seq("org.apache.orc","io.grpc","io.netty","org.apache.http"),
           credentials = creds.createScoped(LoggingScopes.LOGGING_WRITE))
         logger.info(s"Starting GRecvServer\n$buildInfo")

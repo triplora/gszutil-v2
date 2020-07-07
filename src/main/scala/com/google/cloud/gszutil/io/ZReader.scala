@@ -91,31 +91,20 @@ object ZReader extends Logging {
     * @param decoders Array[Decoder] to read from input
     * @param cols Array[ColumnVector] to receive Decoder output
     * @param rowId index within the batch
+    * @return 0 if successful, -1 if failed
     */
   private def readRecord(rBuf: ByteBuffer,
                          decoders: Array[Decoder],
                          cols: Array[ColumnVector],
-                         rowId: Int): Unit = {
-    var i = 0
+                         rowId: Int): Int = {
     try {
+      var i = 0
       while (i < decoders.length){
-        val decoder = decoders(i)
-        val col = cols(i)
-        decoder.get(rBuf, col, rowId)
+        decoders(i).get(rBuf, cols(i), rowId)
         i += 1
       }
-    } catch {
-      case e: Exception =>
-        System.err.println(s"failed on column $i pos:${rBuf.position()} limit:${rBuf.limit()} " +
-          s"decoder: ${decoders(i)}")
-        val i0 = rBuf.position() - decoders(i).size
-        val i1 = i0 + decoders(i).size
-        rBuf.position(i0)
-        rBuf.limit(i1)
-        System.err.println(Ebcdic.charset.decode(rBuf).toString)
-        System.err.println(Bytes.hexValue(rBuf.array().slice(i0,i1)))
-        throw e
-    }
+      0
+    } catch {case _: Throwable => -1}
   }
 
   /**
@@ -139,26 +128,17 @@ object ZReader extends Logging {
     err.clear
     var errors: Int = 0
     var rowId = 0
-    var print: Int = 0
     while (rowId < batchSize && buf.remaining >= rBuf.capacity()){
       System.arraycopy(buf.array,buf.position(),rBuf.array,0,rBuf.capacity())
       val newPos = buf.position() + lRecl
       buf.position(newPos)
       rBuf.clear // prepare record for reading
-      try {
-        readRecord(rBuf, decoders, cols, rowId)
-      } catch {
-        case e: Exception =>
-          if (print < 10){
-            logger.error(s"failed on row $rowId", e)
-            print += 1
-          }
-          errors += 1
-          if (err.remaining >= rBuf.capacity())
-            err.put(rBuf.array)
-      } finally {
-        rowId += 1
+      if (readRecord(rBuf, decoders, cols, rowId) != 0){
+        errors += 1
+        if (err.remaining() >= lRecl)
+          err.put(rBuf.array)
       }
+      rowId += 1
     }
     (rowId, errors)
   }

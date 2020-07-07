@@ -91,15 +91,14 @@ class CpSpec extends AnyFlatSpec {
 
   it should "generate" in {
     val sp = mloadSchema
-    val generator = DataGenUtil.generatorFor(sp, 111)
+    val generator = DataGenUtil.generatorFor(sp, 100000)
     System.out.println(generator.generators.zip(sp.decoders).map(_.toString).mkString("\n"))
 
     val cfg = GsUtilConfig(schemaProvider = Option(sp),
                            gcsUri = "gs://gszutil-test/mload1.gen",
-                           projectId = "pso-wmt-dl",
-                           datasetId = "dataset",
                            testInput = Option(generator),
                            parallelism = 1,
+                           nConnections = 2,
                            replace = true,
                            remote = true,
                            remoteHost = "127.0.0.1",

@@ -13,7 +13,6 @@ class WriterCore(schemaProvider: SchemaProvider,
                  lrecl: Int,
                  basePath: Path,
                  cred: OAuth2Credentials,
-                 maxErrorPct: Double,
                  name: String) extends Logging {
   val orc = new OrcContext(cred, schemaProvider.ORCSchema, basePath, name)
   val BatchSize = 1024
@@ -28,13 +27,6 @@ class WriterCore(schemaProvider: SchemaProvider,
     bytesIn += buf.limit()
     val res = orc.write(reader, buf, errBuf)
     errorCount += res.errCount
-    if (errBuf.position() > 0){
-      errBuf.flip()
-      val a = new Array[Byte](schemaProvider.LRECL)
-      errBuf.get(a)
-      System.err.println(s"Failed to read row")
-      System.err.println(Bytes.hexValue(a))
-    }
     res
   }
 

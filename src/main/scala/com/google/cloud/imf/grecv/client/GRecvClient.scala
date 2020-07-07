@@ -1,8 +1,10 @@
 package com.google.cloud.imf.grecv.client
 
-import java.util.concurrent.{Executor, TimeUnit}
+import java.net.URI
+import java.util.concurrent.TimeUnit
 
 import com.google.api.services.storage.StorageScopes
+import com.google.auth.oauth2.{GoogleCredentials, OAuth2Credentials}
 import com.google.cloud.bqsh.GsUtilConfig
 import com.google.cloud.bqsh.cmd.Result
 import com.google.cloud.gszutil.SchemaProvider
@@ -10,8 +12,8 @@ import com.google.cloud.gszutil.io.ZRecordReaderT
 import com.google.cloud.imf.grecv.{GzipCodec, Uploader}
 import com.google.cloud.imf.gzos.MVS
 import com.google.cloud.imf.gzos.pb.GRecvGrpc.{GRecvBlockingStub, GRecvFutureStub}
-import com.google.cloud.imf.gzos.pb.{GRecvGrpc, GRecvProto}
 import com.google.cloud.imf.gzos.pb.GRecvProto.{GRecvRequest, GRecvResponse}
+import com.google.cloud.imf.gzos.pb.{GRecvGrpc, GRecvProto}
 import com.google.cloud.imf.util.{Logging, SecurityUtils, Services}
 import com.google.cloud.storage.Storage
 import com.google.common.util.concurrent.MoreExecutors
@@ -59,23 +61,17 @@ object GRecvClient extends Uploader with Logging {
                       nConnections: Int,
                       zos: MVS,
                       in: ZRecordReaderT): Result = {
-    val executor = MoreExecutors.directExecutor()
-
     val cb = OkHttpChannelBuilder.forAddress(host, port)
       .compressorRegistry(GzipCodec.compressorRegistry)
-      .executor(executor)
       .usePlaintext()
+      .keepAliveTime(240, TimeUnit.SECONDS)
+      .keepAliveWithoutCalls(true)
 
-    val ch = cb.build()
-    val stub = GRecvGrpc.newFutureStub(ch)
-      .withExecutor(executor)
-      .withCompression("gzip")
-      .withDeadlineAfter(60, TimeUnit.SECONDS)
-      .withWaitForReady()
+    val creds: GoogleCredentials = zos.getCredentialProvider().getCredentials
+      .createScoped(StorageScopes.DEVSTORAGE_READ_WRITE)
+    creds.refreshIfExpired()
 
-    val gcs = Services.storage(zos.getCredentialProvider().getCredentials.createScoped(StorageScopes.DEVSTORAGE_READ_WRITE))
-
-    val sendResult = Try{send(req, in, nConnections, stub, gcs)}
+    val sendResult = Try{send(req, in, nConnections, cb, creds)}
     sendResult match {
       case Failure(e) =>
         logger.error(e.getMessage, e)
@@ -88,50 +84,40 @@ object GRecvClient extends Uploader with Logging {
   def send(request: GRecvRequest,
            in: ZRecordReaderT,
            connections: Int = 1,
-           stub: GRecvFutureStub,
-           gcs: Storage): Seq[GRecvResponse] = {
+           cb: OkHttpChannelBuilder,
+           creds: OAuth2Credentials): Unit = {
     logger.debug(s"sending ${in.getDsn}")
 
-    val streams: Array[GRecvClientListener] = new Array(connections)
-
     val blksz = in.lRecl * 1024
-    val lrecl = in.lRecl
+    val partLimit = 64*1024*1024
     var bytesRead = 0L
     var streamId = 0
     var n = 0
+    val baseUri = new URI(request.getBasepath)
 
-    def stream(i: Int) = {
-      var s = streams(i)
-      if (s == null) {
-        logger.debug(s"opening new stream - $bytesRead bytes read")
-        s = new GRecvClientListener(gcs, stub, request, request.getBasepath, blksz)
-        streams.update(i, s)
-      }
-      s
-    }
+    val streams: Array[GRecvClientListener] = (0 until connections).toArray
+      .map(_ => new GRecvClientListener(creds, cb, request, baseUri, blksz, partLimit))
 
     while (n > -1){
-      val buf = stream(streamId).buf
+      val buf = streams(streamId).buf
       buf.clear()
-      while (n > -1 && buf.remaining >= lrecl){
+      while (n > -1 && buf.hasRemaining){
         n = in.read(buf)
         if (n > 0) {
           bytesRead += n
         }
       }
       if (buf.position() > 0) {
-        stream(streamId).flush()
+        streams(streamId).flush()
         if (bytesRead >= 1024*1024) {
           streamId += 1
           if (streamId >= connections) streamId = 0
         }
       }
     }
-    logger.info(s"End of input - $bytesRead bytes")
-
     val streams1 = streams.filterNot(_ == null)
 
-    logger.debug("Waiting for responses")
-    streams1.flatMap(_.collect(90, TimeUnit.SECONDS))
+    logger.info(s"Finished reading $bytesRead bytes from ${in.getDsn}")
+    streams1.foreach(_.close())
   }
 }

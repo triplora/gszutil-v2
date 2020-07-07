@@ -1,5 +1,6 @@
 package com.google.cloud.imf.grecv.server
 
+import java.io.InputStream
 import java.net.URI
 import java.nio.ByteBuffer
 import java.util.zip.GZIPInputStream
@@ -20,28 +21,27 @@ object GRecvServerListener extends Logging {
   def write(req: GRecvRequest,
             creds: OAuth2Credentials,
             id: String,
-            responseObserver: StreamObserver[GRecvResponse]): Unit = {
+            responseObserver: StreamObserver[GRecvResponse],
+            compress: Boolean): Unit = {
     val jobInfo: java.util.Map[String,Any] = Util.toMap(req.getJobinfo)
     val msg1 = "received request\n" + JsonFormat.printer.print(req)
     logger.info(msg1)
 
-    logger.debug(s"opening ${req.getSrcUri}")
     val gcsUri = new URI(req.getSrcUri)
     val bucket = gcsUri.getAuthority
     val name = gcsUri.getPath.stripPrefix("/")
     val is = new StorageObjectInputStream(creds.getAccessToken, bucket, name)
-
-    logger.debug(s"opening GCS blob reader")
-    val input = new GZIPInputStream(is,32*1024)
+    val input: InputStream =
+      if (compress) new GZIPInputStream(is,32*1024)
+      else is
+    logger.debug(s"Opened ${req.getSrcUri}")
 
     val hasher = Hashing.murmur3_128().newHasher()
     val buf: ByteBuffer = ByteBuffer.allocate(req.getLrecl*1024)
 
-    logger.debug(s"creating ORC writer $id")
     val orc: WriterCore = new WriterCore(schemaProvider = RecordSchema(req.getSchema),
       basePath = new Path(req.getBasepath),
       cred = creds,
-      maxErrorPct = req.getMaxErrPct,
       name = s"$id",
       lrecl = req.getLrecl)
     var errCount: Long = 0
@@ -49,6 +49,7 @@ object GRecvServerListener extends Logging {
     var bytesRead: Long = 0
     var status: Int = GRecvProtocol.OK
 
+    logger.debug(s"starting to write")
     var n = 0
     while (n >= 0) {
       buf.clear()
@@ -65,7 +66,6 @@ object GRecvServerListener extends Logging {
       hasher.putBytes(buf)
       buf.position(0)
       val result = orc.write(buf)
-      logger.debug("wrote data to ORC")
       errCount += result.errCount
       rowCount += result.rowCount
 
@@ -75,7 +75,7 @@ object GRecvServerListener extends Logging {
         status = GRecvProtocol.ERR
       }
     }
-    logger.info(s"Closing InputStream - $bytesRead bytes read")
+    logger.info(s"Finished reading $bytesRead bytes from ${req.getSrcUri}; wrote $rowCount rows")
     input.close()
 
     val response = GRecvResponse.newBuilder

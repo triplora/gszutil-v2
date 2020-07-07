@@ -48,7 +48,6 @@ object WriteORCFile extends Logging {
       new WriterCore(schemaProvider = schemaProvider,
         basePath = basePath,
         cred = cred,
-        maxErrorPct = maxErrorPct,
         name = s"$i",
         lrecl = in.lRecl)
     }

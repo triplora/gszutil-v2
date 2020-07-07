@@ -10,14 +10,14 @@ import com.google.cloud.imf.util.Logging
 
 import scala.jdk.CollectionConverters.ListHasAsScala
 
-class DataGenerator(sp: SchemaProvider, nRecords: Int, charset: Charset)
+class DataGenerator(sp: SchemaProvider, nRecords: Long, charset: Charset)
   extends ZRecordReaderT with Logging {
   override val lRecl: Int = sp.LRECL
-  override val blkSize: Int = lRecl * 100
+  override val blkSize: Int = lRecl * 1024
   private val fields: Seq[Record.Field] = sp.toRecordBuilder.getFieldList.asScala.toIndexedSeq
   private val record: Array[Byte] = new Array[Byte](lRecl)
-  private val n: Int = nRecords
-  private var i: Int = 0
+  private val n: Long = nRecords
+  private var i: Long = 0
   private var isClosed = false
   val generators: Seq[ValueGenerator] = fields.map(DataGenUtil.getGenerator(_, charset))
 

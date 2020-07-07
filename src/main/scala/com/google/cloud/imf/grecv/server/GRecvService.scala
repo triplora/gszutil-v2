@@ -22,7 +22,7 @@ class GRecvService(private val creds: OAuth2Credentials) extends GRecvImplBase w
     logger.debug("creating GRecvRequestStreamObserver")
     try {
       creds.refreshIfExpired()
-      GRecvServerListener.write(request, creds, partId, responseObserver)
+      GRecvServerListener.write(request, creds, partId, responseObserver, compress = true)
     } catch {case t: Throwable => logger.error(t.getMessage, t)}
   }
 
