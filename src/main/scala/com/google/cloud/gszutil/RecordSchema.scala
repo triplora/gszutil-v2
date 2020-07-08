@@ -7,6 +7,7 @@ import com.google.cloud.imf.gzos.pb.GRecvProto.Record
 import com.google.cloud.imf.gzos.pb.GRecvProto.Record.Field
 
 case class RecordSchema(r: Record) extends SchemaProvider with BinaryEncoding {
+  require(r.getFieldCount > 0, "record must have at least 1 field")
   import scala.jdk.CollectionConverters.ListHasAsScala
   private def fields: Array[Field] = r.getFieldList.asScala.toArray
 

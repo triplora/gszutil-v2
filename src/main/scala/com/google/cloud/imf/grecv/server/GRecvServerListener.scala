@@ -27,6 +27,8 @@ object GRecvServerListener extends Logging {
     val msg1 = "received request\n" + JsonFormat.printer.print(req)
     logger.info(msg1)
 
+    if (req.getSchema.getFieldCount == 0) throw new RuntimeException("empty schema")
+
     val gcsUri = new URI(req.getSrcUri)
     val bucket = gcsUri.getAuthority
     val name = gcsUri.getPath.stripPrefix("/")

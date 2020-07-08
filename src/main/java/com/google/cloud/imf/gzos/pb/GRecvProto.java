@@ -578,13 +578,29 @@ public final class GRecvProto {
          */
         DATE(4),
         /**
-         * <code>UNSIGNED_INTEGER = 5;</code>
+         * <code>TIMESTAMP = 5;</code>
          */
-        UNSIGNED_INTEGER(5),
+        TIMESTAMP(5),
         /**
-         * <code>LATIN_STRING = 6;</code>
+         * <code>TIME = 6;</code>
          */
-        LATIN_STRING(6),
+        TIME(6),
+        /**
+         * <code>DATETIME = 7;</code>
+         */
+        DATETIME(7),
+        /**
+         * <code>FLOAT = 8;</code>
+         */
+        FLOAT(8),
+        /**
+         * <code>UNSIGNED_INTEGER = 9;</code>
+         */
+        UNSIGNED_INTEGER(9),
+        /**
+         * <code>LATIN_STRING = 10;</code>
+         */
+        LATIN_STRING(10),
         UNRECOGNIZED(-1),
         ;
 
@@ -609,13 +625,29 @@ public final class GRecvProto {
          */
         public static final int DATE_VALUE = 4;
         /**
-         * <code>UNSIGNED_INTEGER = 5;</code>
+         * <code>TIMESTAMP = 5;</code>
          */
-        public static final int UNSIGNED_INTEGER_VALUE = 5;
+        public static final int TIMESTAMP_VALUE = 5;
         /**
-         * <code>LATIN_STRING = 6;</code>
+         * <code>TIME = 6;</code>
          */
-        public static final int LATIN_STRING_VALUE = 6;
+        public static final int TIME_VALUE = 6;
+        /**
+         * <code>DATETIME = 7;</code>
+         */
+        public static final int DATETIME_VALUE = 7;
+        /**
+         * <code>FLOAT = 8;</code>
+         */
+        public static final int FLOAT_VALUE = 8;
+        /**
+         * <code>UNSIGNED_INTEGER = 9;</code>
+         */
+        public static final int UNSIGNED_INTEGER_VALUE = 9;
+        /**
+         * <code>LATIN_STRING = 10;</code>
+         */
+        public static final int LATIN_STRING_VALUE = 10;
 
 
         public final int getNumber() {
@@ -647,8 +679,12 @@ public final class GRecvProto {
             case 2: return INTEGER;
             case 3: return DECIMAL;
             case 4: return DATE;
-            case 5: return UNSIGNED_INTEGER;
-            case 6: return LATIN_STRING;
+            case 5: return TIMESTAMP;
+            case 6: return TIME;
+            case 7: return DATETIME;
+            case 8: return FLOAT;
+            case 9: return UNSIGNED_INTEGER;
+            case 10: return LATIN_STRING;
             default: return null;
           }
         }
@@ -8877,11 +8913,11 @@ public final class GRecvProto {
   static {
     java.lang.String[] descriptorData = {
       "\n\013grecv.proto\022\031com.google.cloud.imf.gzos" +
-      "\"\266\005\n\006Record\0228\n\006source\030\001 \001(\0162(.com.google" +
+      "\"\351\005\n\006Record\0228\n\006source\030\001 \001(\0162(.com.google" +
       ".cloud.imf.gzos.Record.Source\022\020\n\010origina" +
       "l\030\002 \001(\t\0226\n\005field\030\003 \003(\0132\'.com.google.clou" +
       "d.imf.gzos.Record.Field\022\020\n\010encoding\030\004 \001(" +
-      "\t\022\017\n\007vartext\030\005 \001(\010\022\021\n\tdelimiter\030\006 \001(\014\032\300\003" +
+      "\t\022\017\n\007vartext\030\005 \001(\010\022\021\n\tdelimiter\030\006 \001(\014\032\363\003" +
       "\n\005Field\022\014\n\004name\030\001 \001(\t\022>\n\003typ\030\002 \001(\01621.com" +
       ".google.cloud.imf.gzos.Record.Field.Fiel" +
       "dType\022\014\n\004size\030\003 \001(\005\022\021\n\tprecision\030\004 \001(\005\022\r" +
@@ -8890,36 +8926,37 @@ public final class GRecvProto {
       ".Field.NullIf\022?\n\004cast\030\010 \001(\01621.com.google" +
       ".cloud.imf.gzos.Record.Field.FieldType\022\016" +
       "\n\006format\030\t \001(\t\032&\n\006NullIf\022\r\n\005field\030\001 \001(\t\022" +
-      "\r\n\005value\030\002 \001(\014\"p\n\tFieldType\022\013\n\007UNKNOWN\020\000" +
-      "\022\n\n\006STRING\020\001\022\013\n\007INTEGER\020\002\022\013\n\007DECIMAL\020\003\022\010" +
-      "\n\004DATE\020\004\022\024\n\020UNSIGNED_INTEGER\020\005\022\020\n\014LATIN_" +
-      "STRING\020\006\"/\n\006Source\022\013\n\007UNKNOWN\020\000\022\014\n\010COPYB" +
-      "OOK\020\001\022\n\n\006LAYOUT\020\002\"\207\001\n\nZOSJobInfo\022\r\n\005jobi" +
-      "d\030\001 \001(\t\022\017\n\007jobname\030\002 \001(\t\022\017\n\007jobdate\030\003 \001(" +
-      "\t\022\017\n\007jobtime\030\004 \001(\t\022\021\n\tstep_name\030\005 \001(\t\022\026\n" +
-      "\016proc_step_name\030\006 \001(\t\022\014\n\004user\030\007 \001(\t\"\234\002\n\014" +
-      "GRecvRequest\0221\n\006schema\030\001 \001(\0132!.com.googl" +
-      "e.cloud.imf.gzos.Record\022\r\n\005lrecl\030\002 \001(\005\022\r" +
-      "\n\005blksz\030\003 \001(\005\022\020\n\010basepath\030\004 \001(\t\022\023\n\013max_e" +
-      "rr_pct\030\005 \001(\001\022\022\n\npublic_key\030\006 \001(\014\022\021\n\tsign" +
-      "ature\030\007 \001(\014\022\021\n\tprincipal\030\010 \001(\t\0226\n\007jobinf" +
-      "o\030\t \001(\0132%.com.google.cloud.imf.gzos.ZOSJ" +
-      "obInfo\022\021\n\ttimestamp\030\n \001(\003\022\017\n\007src_uri\030\013 \001" +
-      "(\t\"c\n\rGRecvResponse\022\016\n\006status\030\001 \001(\005\022\020\n\010r" +
-      "owCount\030\002 \001(\003\022\020\n\010msgCount\030\003 \001(\003\022\020\n\010errCo" +
-      "unt\030\004 \001(\003\022\014\n\004hash\030\005 \001(\t\"%\n\022HealthCheckRe" +
-      "quest\022\017\n\007service\030\001 \001(\t\"\237\001\n\023HealthCheckRe" +
-      "sponse\022L\n\006status\030\001 \001(\0162<.com.google.clou" +
-      "d.imf.gzos.HealthCheckResponse.ServingSt" +
-      "atus\":\n\rServingStatus\022\013\n\007UNKNOWN\020\000\022\013\n\007SE" +
-      "RVING\020\001\022\017\n\013NOT_SERVING\020\0022\313\001\n\005GRecv\022Z\n\005Wr" +
-      "ite\022\'.com.google.cloud.imf.gzos.GRecvReq" +
-      "uest\032(.com.google.cloud.imf.gzos.GRecvRe" +
-      "sponse\022f\n\005Check\022-.com.google.cloud.imf.g" +
-      "zos.HealthCheckRequest\032..com.google.clou" +
-      "d.imf.gzos.HealthCheckResponseB,\n\034com.go" +
-      "ogle.cloud.imf.gzos.pbB\nGRecvProtoP\000b\006pr" +
-      "oto3"
+      "\r\n\005value\030\002 \001(\014\"\242\001\n\tFieldType\022\013\n\007UNKNOWN\020" +
+      "\000\022\n\n\006STRING\020\001\022\013\n\007INTEGER\020\002\022\013\n\007DECIMAL\020\003\022" +
+      "\010\n\004DATE\020\004\022\r\n\tTIMESTAMP\020\005\022\010\n\004TIME\020\006\022\014\n\010DA" +
+      "TETIME\020\007\022\t\n\005FLOAT\020\010\022\024\n\020UNSIGNED_INTEGER\020" +
+      "\t\022\020\n\014LATIN_STRING\020\n\"/\n\006Source\022\013\n\007UNKNOWN" +
+      "\020\000\022\014\n\010COPYBOOK\020\001\022\n\n\006LAYOUT\020\002\"\207\001\n\nZOSJobI" +
+      "nfo\022\r\n\005jobid\030\001 \001(\t\022\017\n\007jobname\030\002 \001(\t\022\017\n\007j" +
+      "obdate\030\003 \001(\t\022\017\n\007jobtime\030\004 \001(\t\022\021\n\tstep_na" +
+      "me\030\005 \001(\t\022\026\n\016proc_step_name\030\006 \001(\t\022\014\n\004user" +
+      "\030\007 \001(\t\"\234\002\n\014GRecvRequest\0221\n\006schema\030\001 \001(\0132" +
+      "!.com.google.cloud.imf.gzos.Record\022\r\n\005lr" +
+      "ecl\030\002 \001(\005\022\r\n\005blksz\030\003 \001(\005\022\020\n\010basepath\030\004 \001" +
+      "(\t\022\023\n\013max_err_pct\030\005 \001(\001\022\022\n\npublic_key\030\006 " +
+      "\001(\014\022\021\n\tsignature\030\007 \001(\014\022\021\n\tprincipal\030\010 \001(" +
+      "\t\0226\n\007jobinfo\030\t \001(\0132%.com.google.cloud.im" +
+      "f.gzos.ZOSJobInfo\022\021\n\ttimestamp\030\n \001(\003\022\017\n\007" +
+      "src_uri\030\013 \001(\t\"c\n\rGRecvResponse\022\016\n\006status" +
+      "\030\001 \001(\005\022\020\n\010rowCount\030\002 \001(\003\022\020\n\010msgCount\030\003 \001" +
+      "(\003\022\020\n\010errCount\030\004 \001(\003\022\014\n\004hash\030\005 \001(\t\"%\n\022He" +
+      "althCheckRequest\022\017\n\007service\030\001 \001(\t\"\237\001\n\023He" +
+      "althCheckResponse\022L\n\006status\030\001 \001(\0162<.com." +
+      "google.cloud.imf.gzos.HealthCheckRespons" +
+      "e.ServingStatus\":\n\rServingStatus\022\013\n\007UNKN" +
+      "OWN\020\000\022\013\n\007SERVING\020\001\022\017\n\013NOT_SERVING\020\0022\313\001\n\005" +
+      "GRecv\022Z\n\005Write\022\'.com.google.cloud.imf.gz" +
+      "os.GRecvRequest\032(.com.google.cloud.imf.g" +
+      "zos.GRecvResponse\022f\n\005Check\022-.com.google." +
+      "cloud.imf.gzos.HealthCheckRequest\032..com." +
+      "google.cloud.imf.gzos.HealthCheckRespons" +
+      "eB,\n\034com.google.cloud.imf.gzos.pbB\nGRecv" +
+      "ProtoP\000b\006proto3"
     };
     descriptor = com.google.protobuf.Descriptors.FileDescriptor
       .internalBuildGeneratedFileFrom(descriptorData,

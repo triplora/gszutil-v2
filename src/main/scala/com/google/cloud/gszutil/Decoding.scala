@@ -22,7 +22,7 @@ import com.google.cloud.imf.gzos.pb.GRecvProto.Record.Field
 import com.google.cloud.imf.gzos.pb.GRecvProto.Record.Field.NullIf
 import com.google.cloud.imf.util.Logging
 import com.google.protobuf.ByteString
-import org.apache.hadoop.hive.ql.exec.vector.{BytesColumnVector, ColumnVector, DateColumnVector, Decimal64ColumnVector, LongColumnVector}
+import org.apache.hadoop.hive.ql.exec.vector.{BytesColumnVector, ColumnVector, DateColumnVector, Decimal64ColumnVector, LongColumnVector, TimestampColumnVector}
 import org.apache.orc.TypeDescription
 
 
@@ -170,6 +170,39 @@ object Decoding extends Logging {
         .setSize(size)
         .setFiller(filler)
         .setTyp(Field.FieldType.DATE)
+  }
+
+  class StringAsTimestampDecoder(transcoder: Transcoder,
+                                 override val size: Int,
+                                 override val filler: Boolean = false) extends Decoder {
+    override def get(buf: ByteBuffer, col: ColumnVector, i: Int): Unit = {
+      val dcv = col.asInstanceOf[TimestampColumnVector]
+      val s = transcoder.getString(buf,size)
+      if (s == "0000-00-00 00:00:00.000000") {
+        val i1 = buf.position() + size
+        buf.position(i1)
+        dcv.isNull.update(i, true)
+        dcv.noNulls = false
+      } else {
+        val ts = java.sql.Timestamp.valueOf(s)
+        dcv.time.update(i, ts.getTime)
+        dcv.nanos.update(i, ts.getNanos)
+      }
+    }
+
+    override def columnVector(maxSize: Int): ColumnVector =
+      new TimestampColumnVector(maxSize)
+
+    override def typeDescription: TypeDescription =
+      TypeDescription.createTimestamp()
+
+    override def toString: String = s"$size byte STRING (TIMESTAMP)"
+
+    override def toFieldBuilder: Field.Builder =
+      Field.newBuilder()
+        .setSize(size)
+        .setFiller(filler)
+        .setTyp(Field.FieldType.TIMESTAMP)
   }
 
   class IntegerAsDateDecoder(override val size: Int,
@@ -358,6 +391,8 @@ object Decoding extends Logging {
         new StringAsIntDecoder(transcoder, f.getSize, filler)
       else if (f.getCast == DATE)
         new StringAsDateDecoder(transcoder, f.getSize, f.getFormat, filler)
+      else if (f.getCast == TIMESTAMP)
+        new StringAsTimestampDecoder(transcoder, f.getSize, filler)
       else if (f.getCast == DECIMAL)
         new StringAsDecimalDecoder(transcoder, f.getSize, f.getPrecision, f.getScale, filler)
       else if (f.getCast == LATIN_STRING) {

@@ -27,27 +27,18 @@ val exGrpc = ExclusionRule(organization = "io.grpc")
 val exAvro = ExclusionRule(organization = "org.apache.avro")
 
 libraryDependencies ++= Seq(
-  "com.google.cloud.imf" %% "mainframe-util" % "1.0.2",
+  "com.google.cloud.imf" %% "mainframe-util" % "1.0.3",
   "com.github.scopt" %% "scopt" % "3.7.1",
   "org.scalatest" %% "scalatest" % "3.1.1" % Test
-).map(_ excludeAll(exGrpc))
+)
 
 // orc and related dependencies
 libraryDependencies ++= Seq(
   "org.apache.hadoop" % "hadoop-common" % "2.9.2",
   "org.apache.hadoop" % "hadoop-hdfs-client" % "2.9.2",
   "org.apache.hive" % "hive-storage-api" % "2.7.1",
-  "org.apache.orc" % "orc-core" % "1.6.2",
-  "org.slf4j" % "slf4j-log4j12" % "1.7.30" // allow orc to use log4j-1.2
+  "org.apache.orc" % "orc-core" % "1.6.2"
 ).map(_ excludeAll(exGuava,exJetty,exZk,exNs,exGrpc,exAvro))
-
-libraryDependencies ++= Seq(
-  "io.grpc" % "grpc-core" % "1.28.1",
-  "io.grpc" % "grpc-netty" % "1.28.1",
-  "io.grpc" % "grpc-okhttp" % "1.28.1",
-  "io.grpc" % "grpc-protobuf" % "1.28.1",
-  "io.grpc" % "grpc-stub" % "1.28.1"
-)
 
 // Don't run tests during assembly
 test in assembly := Seq()

@@ -14,6 +14,8 @@ class WriterCore(schemaProvider: SchemaProvider,
                  basePath: Path,
                  cred: OAuth2Credentials,
                  name: String) extends Logging {
+  require(schemaProvider.LRECL > 0, "LRECL must be a positive number")
+  require(schemaProvider.fieldNames.nonEmpty, "schema must not be empty")
   val orc = new OrcContext(cred, schemaProvider.ORCSchema, basePath, name)
   val BatchSize = 1024
   private val reader = new ZReader(schemaProvider, BatchSize, lrecl)

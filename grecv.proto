@@ -25,8 +25,12 @@ message Record {
       INTEGER = 2;
       DECIMAL = 3;
       DATE = 4;
-      UNSIGNED_INTEGER = 5;
-      LATIN_STRING = 6;
+      TIMESTAMP = 5;
+      TIME = 6;
+      DATETIME = 7;
+      FLOAT = 8;
+      UNSIGNED_INTEGER = 9;
+      LATIN_STRING = 10;
     }
     string name = 1;
     FieldType typ = 2;
