@@ -1,9 +1,12 @@
 package com.google.cloud.gszutil
 
-import com.google.cloud.gszutil.Decoding.{Decimal64Decoder, LongDecoder}
+import java.nio.ByteBuffer
+import java.time.LocalDate
+
+import com.google.cloud.gszutil.Decoding.{Decimal64Decoder, IntAsDateDecoder, LongDecoder}
 import com.google.cloud.gszutil.Encoding.{DateStringToBinaryEncoder, DecimalToBinaryEncoder, LongToBinaryEncoder, StringToBinaryEncoder}
 import com.google.cloud.imf.gzos.Ebcdic
-import org.apache.hadoop.hive.ql.exec.vector.{Decimal64ColumnVector, LongColumnVector}
+import org.apache.hadoop.hive.ql.exec.vector.{DateColumnVector, Decimal64ColumnVector, LongColumnVector}
 import org.scalatest.flatspec.AnyFlatSpec
 
 class EncodingSpec extends AnyFlatSpec {
@@ -13,7 +16,7 @@ class EncodingSpec extends AnyFlatSpec {
     val encoder = StringToBinaryEncoder(Ebcdic, example.length)
 
     val buf = encoder.encode(example)
-    val decoded = new String(buf.array(), Ebcdic.charset)
+    val decoded = new String(buf, Ebcdic.charset)
     assert(example.equals(decoded))
   }
 
@@ -21,13 +24,10 @@ class EncodingSpec extends AnyFlatSpec {
     val example = 1234L
     val encoder = LongToBinaryEncoder(4)
 
-    val buf = encoder.encode(example)
-    buf.array().foreach(System.out.println(_))
-
+    val buf: Array[Byte] = encoder.encode(example)
     val decoder = LongDecoder(4)
     val col = decoder.columnVector(1)
-    buf.flip()
-    decoder.get(buf, col, 0)
+    decoder.get(ByteBuffer.wrap(buf), col, 0)
 
     val decoded = col.asInstanceOf[LongColumnVector].vector(0)
     assert(example == decoded)
@@ -42,17 +42,29 @@ class EncodingSpec extends AnyFlatSpec {
 
     val decoder = Decimal64Decoder(precision, scale)
     val col = decoder.columnVector(1)
-    buf.flip()
-    decoder.get(buf, col, 0)
+    decoder.get(ByteBuffer.wrap(buf), col, 0)
 
     val decoded = col.asInstanceOf[Decimal64ColumnVector].vector(0)
     assert(example == decoded)
   }
 
   "DateToBinaryEncoder" should "encode date" in {
-    val date = "2020-07-15"
+    val date = "2020-07-08"
     val encoder = DateStringToBinaryEncoder()
-    encoder.encode(date)
+    val encoded: Array[Byte] = encoder.encode(date)
+    assert(encoded.exists(_ != 0))
+
+    // decode encoded value
+    val decoder = IntAsDateDecoder()
+    val col = decoder.columnVector(1)
+    decoder.get(ByteBuffer.wrap(encoded), col, 0)
+
+    val l = col.asInstanceOf[DateColumnVector].vector(0)
+    val d = LocalDate.ofEpochDay(l)
+
+    assert(2020 == d.getYear)
+    assert(7 == d.getMonthValue)
+    assert(8 == d.getDayOfMonth)
   }
 
 }

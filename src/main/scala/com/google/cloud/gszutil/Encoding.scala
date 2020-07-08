@@ -1,6 +1,5 @@
 package com.google.cloud.gszutil
 
-import java.nio.ByteBuffer
 import java.time.LocalDate
 
 import com.google.cloud.imf.gzos.pb.GRecvProto.Record.Field
@@ -21,30 +20,35 @@ object Encoding {
   }
 
   case class StringToBinaryEncoder(transcoder: Transcoder, size: Int) extends BinaryEncoder {
-    def encode(x: String): ByteBuffer = {
-      transcoder.charset.encode(x)
+    def encode(x: String): Array[Byte] = {
+      val array = new Array[Byte](size)
+      transcoder.charset.encode(x).get(array)
+      array
     }
   }
 
   case class LongToBinaryEncoder(size: Int) extends BinaryEncoder {
-    def encode(x: Long): ByteBuffer = {
-      ByteBuffer.allocate(size).put(Binary.encode(x, size))
+    def encode(x: Long): Array[Byte] = {
+      Binary.encode(x, size)
     }
   }
 
   case class DecimalToBinaryEncoder(p: Int, s: Int) extends BinaryEncoder {
-    def encode(x: Long): ByteBuffer = {
-      val size = PackedDecimal.sizeOf(p,s)
-      ByteBuffer.allocate(size).put(PackedDecimal.pack(x, size))
+    def encode(x: Long): Array[Byte] = {
+      PackedDecimal.pack(x, PackedDecimal.sizeOf(p,s))
     }
   }
 
   case class DateStringToBinaryEncoder() extends BinaryEncoder {
     val size = 4
 
-    def encode(x: String): ByteBuffer = {
+    def encode(x: String): Array[Byte] = {
       val date = LocalDate.parse(x)
-      ByteBuffer.allocate(size)
+      val int = ((((date.getYear - 1900) * 100) +
+        date.getMonthValue) * 100) +
+        date.getDayOfMonth
+
+      Binary.encode(int, size)
     }
   }
 
