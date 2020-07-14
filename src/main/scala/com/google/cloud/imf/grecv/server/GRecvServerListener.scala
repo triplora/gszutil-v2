@@ -1,6 +1,6 @@
 package com.google.cloud.imf.grecv.server
 
-import java.io.InputStream
+import java.io.{BufferedInputStream, InputStream}
 import java.net.URI
 import java.nio.ByteBuffer
 import java.util.zip.GZIPInputStream
@@ -24,7 +24,8 @@ object GRecvServerListener extends Logging {
             responseObserver: StreamObserver[GRecvResponse],
             compress: Boolean): Unit = {
     val jobInfo: java.util.Map[String,Any] = Util.toMap(req.getJobinfo)
-    val msg1 = "received request\n" + JsonFormat.printer.print(req)
+    val msg1 = "Received request for" + req.getSrcUri + " " +
+      JsonFormat.printer.omittingInsignificantWhitespace().print(req.getJobinfo)
     logger.info(msg1)
 
     if (req.getSchema.getFieldCount == 0) throw new RuntimeException("empty schema")
@@ -34,8 +35,8 @@ object GRecvServerListener extends Logging {
     val name = gcsUri.getPath.stripPrefix("/")
     val is = new StorageObjectInputStream(creds.getAccessToken, bucket, name)
     val input: InputStream =
-      if (compress) new GZIPInputStream(is,32*1024)
-      else is
+      if (compress) new BufferedInputStream(new GZIPInputStream(is,32*1024), 2*1024*1024)
+      else new BufferedInputStream(is, 2*1024*1024)
     logger.debug(s"Opened ${req.getSrcUri}")
 
     val hasher = Hashing.murmur3_128().newHasher()
@@ -53,9 +54,9 @@ object GRecvServerListener extends Logging {
 
     logger.debug(s"starting to write")
     var n = 0
-    while (n >= 0) {
+    while (n > -1) {
       buf.clear()
-      while (n >= 0 && buf.remaining() > req.getLrecl){
+      while (n > -1 && buf.hasRemaining){
         n = input.read(buf.array(), buf.position(), buf.remaining())
         if (n > 0){
           val pos = buf.position()

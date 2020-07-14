@@ -11,12 +11,9 @@ import com.google.cloud.gszutil.SchemaProvider
 import com.google.cloud.gszutil.io.ZRecordReaderT
 import com.google.cloud.imf.grecv.{GzipCodec, Uploader}
 import com.google.cloud.imf.gzos.MVS
-import com.google.cloud.imf.gzos.pb.GRecvGrpc.{GRecvBlockingStub, GRecvFutureStub}
-import com.google.cloud.imf.gzos.pb.GRecvProto.{GRecvRequest, GRecvResponse}
-import com.google.cloud.imf.gzos.pb.{GRecvGrpc, GRecvProto}
-import com.google.cloud.imf.util.{Logging, SecurityUtils, Services}
-import com.google.cloud.storage.Storage
-import com.google.common.util.concurrent.MoreExecutors
+import com.google.cloud.imf.gzos.pb.GRecvProto
+import com.google.cloud.imf.gzos.pb.GRecvProto.GRecvRequest
+import com.google.cloud.imf.util.{Logging, SecurityUtils}
 import com.google.protobuf.ByteString
 import io.grpc.okhttp.OkHttpChannelBuilder
 

@@ -2,18 +2,13 @@ package com.google.cloud.imf.grecv.client
 
 import java.net.URI
 import java.nio.ByteBuffer
-import java.util.concurrent.TimeUnit
 
 import com.google.auth.oauth2.OAuth2Credentials
 import com.google.cloud.imf.grecv.GRecvProtocol
-import com.google.cloud.imf.gzos.pb.GRecvGrpc.{GRecvBlockingStub, GRecvFutureStub}
 import com.google.cloud.imf.gzos.pb.GRecvProto.{GRecvRequest, GRecvResponse}
 import com.google.cloud.imf.util.Logging
-import com.google.common.util.concurrent.ListenableFuture
 import com.google.protobuf.util.JsonFormat
 import io.grpc.okhttp.OkHttpChannelBuilder
-
-import scala.collection.mutable.ListBuffer
 
 
 /** Sends bytes to server, maintaining a hash of all bytes sent */

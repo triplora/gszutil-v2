@@ -23,6 +23,8 @@ object Encoding {
     def encode(x: String): Array[Byte] = {
       val array = new Array[Byte](size)
       transcoder.charset.encode(x).get(array)
+      if (array.length != size)
+        throw new RuntimeException(s"encoded length ${array.length} not equal to field size $size")
       array
     }
   }
