@@ -391,7 +391,7 @@ object Decoding extends Logging {
         new StringAsIntDecoder(transcoder, f.getSize, filler)
       else if (f.getCast == DATE)
         new StringAsDateDecoder(transcoder, f.getSize, f.getFormat, filler)
-      else if (f.getCast == TIMESTAMP)
+      else if (f.getCast == TIMESTAMP || f.getCast == DATETIME)
         new StringAsTimestampDecoder(transcoder, f.getSize, filler)
       else if (f.getCast == DECIMAL)
         new StringAsDecimalDecoder(transcoder, f.getSize, f.getPrecision, f.getScale, filler)
