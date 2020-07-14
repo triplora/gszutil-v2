@@ -285,7 +285,7 @@ object Decoding extends Logging {
         val dt = (long + 19000000).toInt
         val year = dt / 10000
         val y = year * 10000
-        val month = dt - y
+        val month = (dt - y)/100
         val day = dt - (y + month*100)
         val localDate = LocalDate.of(year,Month.of(month),day)
         dcv.vector.update(i, localDate.toEpochDay)
