@@ -23,7 +23,11 @@ class GRecvService(private val creds: OAuth2Credentials) extends GRecvImplBase w
     try {
       creds.refreshIfExpired()
       GRecvServerListener.write(request, creds, partId, responseObserver, compress = true)
-    } catch {case t: Throwable => logger.error(t.getMessage, t)}
+    } catch {
+      case t: Throwable =>
+        logger.error(t.getMessage, t)
+        responseObserver.onError(t)
+    }
   }
 
   private val OK: HealthCheckResponse =
