@@ -598,9 +598,13 @@ public final class GRecvProto {
          */
         UNSIGNED_INTEGER(9),
         /**
-         * <code>LATIN_STRING = 10;</code>
+         * <code>BYTES = 10;</code>
          */
-        LATIN_STRING(10),
+        BYTES(10),
+        /**
+         * <code>LATIN_STRING = 11;</code>
+         */
+        LATIN_STRING(11),
         UNRECOGNIZED(-1),
         ;
 
@@ -645,9 +649,13 @@ public final class GRecvProto {
          */
         public static final int UNSIGNED_INTEGER_VALUE = 9;
         /**
-         * <code>LATIN_STRING = 10;</code>
+         * <code>BYTES = 10;</code>
          */
-        public static final int LATIN_STRING_VALUE = 10;
+        public static final int BYTES_VALUE = 10;
+        /**
+         * <code>LATIN_STRING = 11;</code>
+         */
+        public static final int LATIN_STRING_VALUE = 11;
 
 
         public final int getNumber() {
@@ -684,7 +692,8 @@ public final class GRecvProto {
             case 7: return DATETIME;
             case 8: return FLOAT;
             case 9: return UNSIGNED_INTEGER;
-            case 10: return LATIN_STRING;
+            case 10: return BYTES;
+            case 11: return LATIN_STRING;
             default: return null;
           }
         }
@@ -8913,11 +8922,11 @@ public final class GRecvProto {
   static {
     java.lang.String[] descriptorData = {
       "\n\013grecv.proto\022\031com.google.cloud.imf.gzos" +
-      "\"\351\005\n\006Record\0228\n\006source\030\001 \001(\0162(.com.google" +
+      "\"\364\005\n\006Record\0228\n\006source\030\001 \001(\0162(.com.google" +
       ".cloud.imf.gzos.Record.Source\022\020\n\010origina" +
       "l\030\002 \001(\t\0226\n\005field\030\003 \003(\0132\'.com.google.clou" +
       "d.imf.gzos.Record.Field\022\020\n\010encoding\030\004 \001(" +
-      "\t\022\017\n\007vartext\030\005 \001(\010\022\021\n\tdelimiter\030\006 \001(\014\032\363\003" +
+      "\t\022\017\n\007vartext\030\005 \001(\010\022\021\n\tdelimiter\030\006 \001(\014\032\376\003" +
       "\n\005Field\022\014\n\004name\030\001 \001(\t\022>\n\003typ\030\002 \001(\01621.com" +
       ".google.cloud.imf.gzos.Record.Field.Fiel" +
       "dType\022\014\n\004size\030\003 \001(\005\022\021\n\tprecision\030\004 \001(\005\022\r" +
@@ -8926,37 +8935,37 @@ public final class GRecvProto {
       ".Field.NullIf\022?\n\004cast\030\010 \001(\01621.com.google" +
       ".cloud.imf.gzos.Record.Field.FieldType\022\016" +
       "\n\006format\030\t \001(\t\032&\n\006NullIf\022\r\n\005field\030\001 \001(\t\022" +
-      "\r\n\005value\030\002 \001(\014\"\242\001\n\tFieldType\022\013\n\007UNKNOWN\020" +
+      "\r\n\005value\030\002 \001(\014\"\255\001\n\tFieldType\022\013\n\007UNKNOWN\020" +
       "\000\022\n\n\006STRING\020\001\022\013\n\007INTEGER\020\002\022\013\n\007DECIMAL\020\003\022" +
       "\010\n\004DATE\020\004\022\r\n\tTIMESTAMP\020\005\022\010\n\004TIME\020\006\022\014\n\010DA" +
       "TETIME\020\007\022\t\n\005FLOAT\020\010\022\024\n\020UNSIGNED_INTEGER\020" +
-      "\t\022\020\n\014LATIN_STRING\020\n\"/\n\006Source\022\013\n\007UNKNOWN" +
-      "\020\000\022\014\n\010COPYBOOK\020\001\022\n\n\006LAYOUT\020\002\"\207\001\n\nZOSJobI" +
-      "nfo\022\r\n\005jobid\030\001 \001(\t\022\017\n\007jobname\030\002 \001(\t\022\017\n\007j" +
-      "obdate\030\003 \001(\t\022\017\n\007jobtime\030\004 \001(\t\022\021\n\tstep_na" +
-      "me\030\005 \001(\t\022\026\n\016proc_step_name\030\006 \001(\t\022\014\n\004user" +
-      "\030\007 \001(\t\"\234\002\n\014GRecvRequest\0221\n\006schema\030\001 \001(\0132" +
-      "!.com.google.cloud.imf.gzos.Record\022\r\n\005lr" +
-      "ecl\030\002 \001(\005\022\r\n\005blksz\030\003 \001(\005\022\020\n\010basepath\030\004 \001" +
-      "(\t\022\023\n\013max_err_pct\030\005 \001(\001\022\022\n\npublic_key\030\006 " +
-      "\001(\014\022\021\n\tsignature\030\007 \001(\014\022\021\n\tprincipal\030\010 \001(" +
-      "\t\0226\n\007jobinfo\030\t \001(\0132%.com.google.cloud.im" +
-      "f.gzos.ZOSJobInfo\022\021\n\ttimestamp\030\n \001(\003\022\017\n\007" +
-      "src_uri\030\013 \001(\t\"c\n\rGRecvResponse\022\016\n\006status" +
-      "\030\001 \001(\005\022\020\n\010rowCount\030\002 \001(\003\022\020\n\010msgCount\030\003 \001" +
-      "(\003\022\020\n\010errCount\030\004 \001(\003\022\014\n\004hash\030\005 \001(\t\"%\n\022He" +
-      "althCheckRequest\022\017\n\007service\030\001 \001(\t\"\237\001\n\023He" +
-      "althCheckResponse\022L\n\006status\030\001 \001(\0162<.com." +
-      "google.cloud.imf.gzos.HealthCheckRespons" +
-      "e.ServingStatus\":\n\rServingStatus\022\013\n\007UNKN" +
-      "OWN\020\000\022\013\n\007SERVING\020\001\022\017\n\013NOT_SERVING\020\0022\313\001\n\005" +
-      "GRecv\022Z\n\005Write\022\'.com.google.cloud.imf.gz" +
-      "os.GRecvRequest\032(.com.google.cloud.imf.g" +
-      "zos.GRecvResponse\022f\n\005Check\022-.com.google." +
-      "cloud.imf.gzos.HealthCheckRequest\032..com." +
-      "google.cloud.imf.gzos.HealthCheckRespons" +
-      "eB,\n\034com.google.cloud.imf.gzos.pbB\nGRecv" +
-      "ProtoP\000b\006proto3"
+      "\t\022\t\n\005BYTES\020\n\022\020\n\014LATIN_STRING\020\013\"/\n\006Source" +
+      "\022\013\n\007UNKNOWN\020\000\022\014\n\010COPYBOOK\020\001\022\n\n\006LAYOUT\020\002\"" +
+      "\207\001\n\nZOSJobInfo\022\r\n\005jobid\030\001 \001(\t\022\017\n\007jobname" +
+      "\030\002 \001(\t\022\017\n\007jobdate\030\003 \001(\t\022\017\n\007jobtime\030\004 \001(\t" +
+      "\022\021\n\tstep_name\030\005 \001(\t\022\026\n\016proc_step_name\030\006 " +
+      "\001(\t\022\014\n\004user\030\007 \001(\t\"\234\002\n\014GRecvRequest\0221\n\006sc" +
+      "hema\030\001 \001(\0132!.com.google.cloud.imf.gzos.R" +
+      "ecord\022\r\n\005lrecl\030\002 \001(\005\022\r\n\005blksz\030\003 \001(\005\022\020\n\010b" +
+      "asepath\030\004 \001(\t\022\023\n\013max_err_pct\030\005 \001(\001\022\022\n\npu" +
+      "blic_key\030\006 \001(\014\022\021\n\tsignature\030\007 \001(\014\022\021\n\tpri" +
+      "ncipal\030\010 \001(\t\0226\n\007jobinfo\030\t \001(\0132%.com.goog" +
+      "le.cloud.imf.gzos.ZOSJobInfo\022\021\n\ttimestam" +
+      "p\030\n \001(\003\022\017\n\007src_uri\030\013 \001(\t\"c\n\rGRecvRespons" +
+      "e\022\016\n\006status\030\001 \001(\005\022\020\n\010rowCount\030\002 \001(\003\022\020\n\010m" +
+      "sgCount\030\003 \001(\003\022\020\n\010errCount\030\004 \001(\003\022\014\n\004hash\030" +
+      "\005 \001(\t\"%\n\022HealthCheckRequest\022\017\n\007service\030\001" +
+      " \001(\t\"\237\001\n\023HealthCheckResponse\022L\n\006status\030\001" +
+      " \001(\0162<.com.google.cloud.imf.gzos.HealthC" +
+      "heckResponse.ServingStatus\":\n\rServingSta" +
+      "tus\022\013\n\007UNKNOWN\020\000\022\013\n\007SERVING\020\001\022\017\n\013NOT_SER" +
+      "VING\020\0022\313\001\n\005GRecv\022Z\n\005Write\022\'.com.google.c" +
+      "loud.imf.gzos.GRecvRequest\032(.com.google." +
+      "cloud.imf.gzos.GRecvResponse\022f\n\005Check\022-." +
+      "com.google.cloud.imf.gzos.HealthCheckReq" +
+      "uest\032..com.google.cloud.imf.gzos.HealthC" +
+      "heckResponseB,\n\034com.google.cloud.imf.gzo" +
+      "s.pbB\nGRecvProtoP\000b\006proto3"
     };
     descriptor = com.google.protobuf.Descriptors.FileDescriptor
       .internalBuildGeneratedFileFrom(descriptorData,

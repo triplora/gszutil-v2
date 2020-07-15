@@ -30,7 +30,8 @@ message Record {
       DATETIME = 7;
       FLOAT = 8;
       UNSIGNED_INTEGER = 9;
-      LATIN_STRING = 10;
+      BYTES = 10;
+      LATIN_STRING = 11;
     }
     string name = 1;
     FieldType typ = 2;

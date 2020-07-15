@@ -52,12 +52,12 @@ object Decoding extends Logging {
 
     override def columnVector(maxSize: Int): ColumnVector = {
       val cv = new BytesColumnVector(maxSize)
-      cv.initBuffer(size)
+      cv.initBuffer(size*2)
       cv
     }
 
     override def typeDescription: TypeDescription =
-      TypeDescription.createChar.withMaxLength(size)
+      TypeDescription.createString().withMaxLength(size)
 
     override def toString: String = s"$size byte STRING"
 
@@ -91,7 +91,7 @@ object Decoding extends Logging {
     }
 
     override def typeDescription: TypeDescription =
-      TypeDescription.createChar.withMaxLength(size)
+      TypeDescription.createString().withMaxLength(size)
 
     override def toString: String = s"$size byte STRING NOT NULL"
 
@@ -383,6 +383,38 @@ object Decoding extends Logging {
         .setTyp(Field.FieldType.DECIMAL)
   }
 
+  /** Simply copies bytes from input directly to column vector */
+  class BytesDecoder(override val size: Int,
+                     override val filler: Boolean = false) extends Decoder {
+    override def get(buf: ByteBuffer, col: ColumnVector, i: Int): Unit = {
+      val bcv = col.asInstanceOf[BytesColumnVector]
+      bcv.ensureValPreallocated(size)
+      val startPos = buf.position()
+      val newPos = startPos + size
+      System.arraycopy(buf.array(), startPos, bcv.getValPreallocatedBytes,
+        bcv.getValPreallocatedStart, size)
+      buf.position(newPos)
+      bcv.setValPreallocated(i, size)
+    }
+
+    override def columnVector(maxSize: Int): ColumnVector = {
+      val cv = new BytesColumnVector(maxSize)
+      cv.initBuffer(size)
+      cv
+    }
+
+    override def typeDescription: TypeDescription =
+      TypeDescription.createBinary()
+
+    override def toString: String = s"$size BYTES"
+
+    override def toFieldBuilder: Field.Builder =
+      Field.newBuilder
+        .setSize(size)
+        .setFiller(filler)
+        .setTyp(Field.FieldType.BYTES)
+  }
+
   def getDecoder(f: Field, transcoder: Transcoder): Decoder = {
     import Field.FieldType._
     val filler: Boolean = f.getFiller || f.getName.toUpperCase.startsWith("FILLER")
@@ -395,6 +427,8 @@ object Decoding extends Logging {
         new StringAsTimestampDecoder(transcoder, f.getSize, filler)
       else if (f.getCast == DECIMAL)
         new StringAsDecimalDecoder(transcoder, f.getSize, f.getPrecision, f.getScale, filler)
+      else if (f.getCast == BYTES)
+        new BytesDecoder(f.getSize, filler)
       else if (f.getCast == LATIN_STRING) {
         val nullIf = Option(f.getNullif)
           .map(_.getValue.toByteArray)
