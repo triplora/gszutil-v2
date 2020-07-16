@@ -105,12 +105,15 @@ object StatsUtil extends Logging {
           val plan = stats.getQueryPlan
           if (plan != null && plan.size > 0){
             val stages = plan.asScala
-            val in = stages.last.getRecordsRead
-            val out = stages.last.getRecordsWritten
-            if (in != null)
-              row.put("records_in", in)
-            if (out != null)
-              row.put("records_out", out)
+            if (stages.nonEmpty){
+              val last = stages.last
+              val in = last.getRecordsRead
+              val out = last.getRecordsWritten
+              if (in != null)
+                row.put("records_in", in)
+              if (out != null)
+                row.put("records_out", out)
+            }
           }
         }
       } else if (jobType == "load" && jobData != null) {
