@@ -22,8 +22,6 @@ import com.google.cloud.imf.io.Bytes;
 import java.nio.ByteBuffer;
 
 public class PackedDecimal {
-    public static final boolean relaxedParsing = !System.getProperty("java.vm.vendor").contains("IBM");
-
     public static int sizeOf(int p, int s) {
         return ((p + s) / 2) + 1;
     }
@@ -48,14 +46,12 @@ public class PackedDecimal {
         else if (sign == 0xC) { /*positive*/ }
         else if (sign == 0xF) { /*unsigned*/ }
         else {
-            if (!relaxedParsing) {
-                byte[] a = new byte[len];
-                int startPos = buf.position() - len;
-                buf.position(startPos);
-                buf.get(a);
-                String hex = Bytes.hexValue(a);
-                throw new IllegalArgumentException("unexpected sign bits " + sign + "\n" + hex);
-            }
+            byte[] a = new byte[len];
+            int startPos = buf.position() - len;
+            buf.position(startPos);
+            buf.get(a);
+            String hex = Bytes.hexValue(a);
+            throw new IllegalArgumentException("unexpected sign bits " + sign + "\n" + hex);
         }
         return x;
     }

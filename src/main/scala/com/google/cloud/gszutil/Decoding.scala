@@ -353,14 +353,20 @@ object Decoding extends Logging {
     override val size: Int = PackedDecimal.sizeOf(p,s)
 
     override def get(buf: ByteBuffer, col: ColumnVector, i: Int): Unit = {
-      val x = PackedDecimal.unpack(buf, size)
-      val vec: Array[Long] = col.asInstanceOf[Decimal64ColumnVector].vector
-      if (x > TypeDescription.MAX_DECIMAL64 && PackedDecimal.relaxedParsing) {
-        vec.update(i, TypeDescription.MAX_DECIMAL64)
-      } else if (x < TypeDescription.MIN_DECIMAL64 && PackedDecimal.relaxedParsing) {
-        vec.update(i, TypeDescription.MIN_DECIMAL64)
+      var i = buf.position()
+      var isNull = true
+      val a = buf.array()
+      val dcv = col.asInstanceOf[Decimal64ColumnVector]
+      while (i < buf.position() + size){
+        if (a(i) != 0x00) isNull = false
+        i += 1
+      }
+      if (isNull){
+        dcv.noNulls = false
+        dcv.isNull.update(i, true)
       } else {
-        vec.update(i, x)
+        val x = PackedDecimal.unpack(buf, size)
+        dcv.vector.update(i, x)
       }
     }
 
