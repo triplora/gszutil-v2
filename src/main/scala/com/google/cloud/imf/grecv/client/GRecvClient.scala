@@ -9,9 +9,9 @@ import com.google.cloud.bqsh.GsUtilConfig
 import com.google.cloud.bqsh.cmd.Result
 import com.google.cloud.gszutil.SchemaProvider
 import com.google.cloud.gszutil.io.ZRecordReaderT
-import com.google.cloud.imf.grecv.{GzipCodec, Uploader}
+import com.google.cloud.imf.grecv.{GRecvProtocol, GzipCodec, Uploader}
 import com.google.cloud.imf.gzos.MVS
-import com.google.cloud.imf.gzos.pb.GRecvProto
+import com.google.cloud.imf.gzos.pb.{GRecvGrpc, GRecvProto}
 import com.google.cloud.imf.gzos.pb.GRecvProto.GRecvRequest
 import com.google.cloud.imf.util.{Logging, SecurityUtils}
 import com.google.protobuf.ByteString
@@ -90,7 +90,7 @@ object GRecvClient extends Uploader with Logging {
     var bytesRead = 0L
     var streamId = 0
     var n = 0
-    val baseUri = new URI(request.getBasepath)
+    val baseUri = new URI(request.getBasepath.stripSuffix("/"))
 
     val streams: Array[GRecvClientListener] = (0 until connections).toArray
       .map(_ => new GRecvClientListener(creds, cb, request, baseUri, blksz, partLimit))
@@ -116,5 +116,15 @@ object GRecvClient extends Uploader with Logging {
 
     logger.info(s"Finished reading $bytesRead bytes from ${in.getDsn}")
     streams1.foreach(_.close())
+    if (bytesRead == 0){
+      val ch = cb.build()
+      val stub = GRecvGrpc.newBlockingStub(ch)
+        .withDeadlineAfter(30, TimeUnit.SECONDS)
+        .withWaitForReady()
+      val res = stub.write(request.toBuilder.setNoData(true).build())
+      if (res.getStatus != GRecvProtocol.OK)
+        throw new RuntimeException("non-success status code")
+      ch.shutdownNow()
+    }
   }
 }

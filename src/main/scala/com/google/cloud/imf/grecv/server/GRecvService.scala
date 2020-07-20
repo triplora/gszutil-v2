@@ -26,7 +26,11 @@ class GRecvService(private val creds: OAuth2Credentials) extends GRecvImplBase w
     } catch {
       case t: Throwable =>
         logger.error(t.getMessage, t)
-        responseObserver.onError(t)
+        val t1 = io.grpc.Status.INTERNAL
+          .withDescription(t.getMessage)
+          .withCause(t)
+          .asRuntimeException()
+        responseObserver.onError(t1)
     }
   }
 

@@ -1,6 +1,6 @@
 package com.google.cloud.imf.grecv.server
 
-import java.io.{BufferedInputStream, InputStream}
+import java.io.{BufferedInputStream, ByteArrayInputStream, InputStream}
 import java.net.URI
 import java.nio.ByteBuffer
 import java.util.zip.GZIPInputStream
@@ -30,13 +30,19 @@ object GRecvServerListener extends Logging {
 
     if (req.getSchema.getFieldCount == 0) throw new RuntimeException("empty schema")
 
-    val gcsUri = new URI(req.getSrcUri)
-    val bucket = gcsUri.getAuthority
-    val name = gcsUri.getPath.stripPrefix("/")
-    val is = new StorageObjectInputStream(creds.getAccessToken, bucket, name)
-    val input: InputStream =
-      if (compress) new BufferedInputStream(new GZIPInputStream(is,32*1024), 2*1024*1024)
-      else new BufferedInputStream(is, 2*1024*1024)
+    val input: InputStream = {
+      if (req.getNoData){
+        // write an empty ORC file which can be registered as an external table
+        new ByteArrayInputStream(Array.emptyByteArray)
+      } else {
+        val gcsUri = new URI(req.getSrcUri)
+        val bucket = gcsUri.getAuthority
+        val name = gcsUri.getPath.stripPrefix("/")
+        val is = new StorageObjectInputStream(creds.getAccessToken, bucket, name)
+        if (compress) new BufferedInputStream(new GZIPInputStream(is, 32 * 1024), 2 * 1024 * 1024)
+        else new BufferedInputStream(is, 2 * 1024 * 1024)
+      }
+    }
     logger.debug(s"Opened ${req.getSrcUri}")
 
     val hasher = Hashing.murmur3_128().newHasher()

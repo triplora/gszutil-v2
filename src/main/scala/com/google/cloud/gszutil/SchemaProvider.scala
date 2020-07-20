@@ -4,6 +4,7 @@ import java.nio.charset.Charset
 
 import com.google.cloud.imf.gzos.Ebcdic
 import com.google.cloud.imf.gzos.pb.GRecvProto.Record
+import com.google.protobuf.util.JsonFormat
 import org.apache.orc.TypeDescription
 import org.apache.orc.TypeDescription.Category
 
@@ -30,6 +31,7 @@ trait SchemaProvider {
 
   def LRECL: Int = decoders.foldLeft(0){_ + _.size}
 
-  override def toString: String =
-    decoders.map{x => s"${x.toString} (${x.filler})"}.mkString("\n")
+  override def toString: String = JsonFormat.printer()
+    .includingDefaultValueFields()
+    .print(toRecordBuilder)
 }

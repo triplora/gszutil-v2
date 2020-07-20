@@ -5245,6 +5245,12 @@ public final class GRecvProto {
      */
     com.google.protobuf.ByteString
         getSrcUriBytes();
+
+    /**
+     * <code>bool no_data = 12;</code>
+     * @return The noData.
+     */
+    boolean getNoData();
   }
   /**
    * Protobuf type {@code com.google.cloud.imf.gzos.GRecvRequest}
@@ -5368,6 +5374,11 @@ public final class GRecvProto {
               java.lang.String s = input.readStringRequireUtf8();
 
               srcUri_ = s;
+              break;
+            }
+            case 96: {
+
+              noData_ = input.readBool();
               break;
             }
             default: {
@@ -5616,6 +5627,16 @@ public final class GRecvProto {
       }
     }
 
+    public static final int NO_DATA_FIELD_NUMBER = 12;
+    private boolean noData_;
+    /**
+     * <code>bool no_data = 12;</code>
+     * @return The noData.
+     */
+    public boolean getNoData() {
+      return noData_;
+    }
+
     private byte memoizedIsInitialized = -1;
     @java.lang.Override
     public final boolean isInitialized() {
@@ -5662,6 +5683,9 @@ public final class GRecvProto {
       }
       if (!getSrcUriBytes().isEmpty()) {
         com.google.protobuf.GeneratedMessageV3.writeString(output, 11, srcUri_);
+      }
+      if (noData_ != false) {
+        output.writeBool(12, noData_);
       }
       unknownFields.writeTo(output);
     }
@@ -5713,6 +5737,10 @@ public final class GRecvProto {
       if (!getSrcUriBytes().isEmpty()) {
         size += com.google.protobuf.GeneratedMessageV3.computeStringSize(11, srcUri_);
       }
+      if (noData_ != false) {
+        size += com.google.protobuf.CodedOutputStream
+          .computeBoolSize(12, noData_);
+      }
       size += unknownFields.getSerializedSize();
       memoizedSize = size;
       return size;
@@ -5757,6 +5785,8 @@ public final class GRecvProto {
           != other.getTimestamp()) return false;
       if (!getSrcUri()
           .equals(other.getSrcUri())) return false;
+      if (getNoData()
+          != other.getNoData()) return false;
       if (!unknownFields.equals(other.unknownFields)) return false;
       return true;
     }
@@ -5796,6 +5826,9 @@ public final class GRecvProto {
           getTimestamp());
       hash = (37 * hash) + SRC_URI_FIELD_NUMBER;
       hash = (53 * hash) + getSrcUri().hashCode();
+      hash = (37 * hash) + NO_DATA_FIELD_NUMBER;
+      hash = (53 * hash) + com.google.protobuf.Internal.hashBoolean(
+          getNoData());
       hash = (29 * hash) + unknownFields.hashCode();
       memoizedHashCode = hash;
       return hash;
@@ -5959,6 +5992,8 @@ public final class GRecvProto {
 
         srcUri_ = "";
 
+        noData_ = false;
+
         return this;
       }
 
@@ -6004,6 +6039,7 @@ public final class GRecvProto {
         }
         result.timestamp_ = timestamp_;
         result.srcUri_ = srcUri_;
+        result.noData_ = noData_;
         onBuilt();
         return result;
       }
@@ -6087,6 +6123,9 @@ public final class GRecvProto {
         if (!other.getSrcUri().isEmpty()) {
           srcUri_ = other.srcUri_;
           onChanged();
+        }
+        if (other.getNoData() != false) {
+          setNoData(other.getNoData());
         }
         this.mergeUnknownFields(other.unknownFields);
         onChanged();
@@ -6765,6 +6804,36 @@ public final class GRecvProto {
   checkByteStringIsUtf8(value);
         
         srcUri_ = value;
+        onChanged();
+        return this;
+      }
+
+      private boolean noData_ ;
+      /**
+       * <code>bool no_data = 12;</code>
+       * @return The noData.
+       */
+      public boolean getNoData() {
+        return noData_;
+      }
+      /**
+       * <code>bool no_data = 12;</code>
+       * @param value The noData to set.
+       * @return This builder for chaining.
+       */
+      public Builder setNoData(boolean value) {
+        
+        noData_ = value;
+        onChanged();
+        return this;
+      }
+      /**
+       * <code>bool no_data = 12;</code>
+       * @return This builder for chaining.
+       */
+      public Builder clearNoData() {
+        
+        noData_ = false;
         onChanged();
         return this;
       }
@@ -8944,28 +9013,29 @@ public final class GRecvProto {
       "\207\001\n\nZOSJobInfo\022\r\n\005jobid\030\001 \001(\t\022\017\n\007jobname" +
       "\030\002 \001(\t\022\017\n\007jobdate\030\003 \001(\t\022\017\n\007jobtime\030\004 \001(\t" +
       "\022\021\n\tstep_name\030\005 \001(\t\022\026\n\016proc_step_name\030\006 " +
-      "\001(\t\022\014\n\004user\030\007 \001(\t\"\234\002\n\014GRecvRequest\0221\n\006sc" +
+      "\001(\t\022\014\n\004user\030\007 \001(\t\"\255\002\n\014GRecvRequest\0221\n\006sc" +
       "hema\030\001 \001(\0132!.com.google.cloud.imf.gzos.R" +
       "ecord\022\r\n\005lrecl\030\002 \001(\005\022\r\n\005blksz\030\003 \001(\005\022\020\n\010b" +
       "asepath\030\004 \001(\t\022\023\n\013max_err_pct\030\005 \001(\001\022\022\n\npu" +
       "blic_key\030\006 \001(\014\022\021\n\tsignature\030\007 \001(\014\022\021\n\tpri" +
       "ncipal\030\010 \001(\t\0226\n\007jobinfo\030\t \001(\0132%.com.goog" +
       "le.cloud.imf.gzos.ZOSJobInfo\022\021\n\ttimestam" +
-      "p\030\n \001(\003\022\017\n\007src_uri\030\013 \001(\t\"c\n\rGRecvRespons" +
-      "e\022\016\n\006status\030\001 \001(\005\022\020\n\010rowCount\030\002 \001(\003\022\020\n\010m" +
-      "sgCount\030\003 \001(\003\022\020\n\010errCount\030\004 \001(\003\022\014\n\004hash\030" +
-      "\005 \001(\t\"%\n\022HealthCheckRequest\022\017\n\007service\030\001" +
-      " \001(\t\"\237\001\n\023HealthCheckResponse\022L\n\006status\030\001" +
-      " \001(\0162<.com.google.cloud.imf.gzos.HealthC" +
-      "heckResponse.ServingStatus\":\n\rServingSta" +
-      "tus\022\013\n\007UNKNOWN\020\000\022\013\n\007SERVING\020\001\022\017\n\013NOT_SER" +
-      "VING\020\0022\313\001\n\005GRecv\022Z\n\005Write\022\'.com.google.c" +
-      "loud.imf.gzos.GRecvRequest\032(.com.google." +
-      "cloud.imf.gzos.GRecvResponse\022f\n\005Check\022-." +
-      "com.google.cloud.imf.gzos.HealthCheckReq" +
-      "uest\032..com.google.cloud.imf.gzos.HealthC" +
-      "heckResponseB,\n\034com.google.cloud.imf.gzo" +
-      "s.pbB\nGRecvProtoP\000b\006proto3"
+      "p\030\n \001(\003\022\017\n\007src_uri\030\013 \001(\t\022\017\n\007no_data\030\014 \001(" +
+      "\010\"c\n\rGRecvResponse\022\016\n\006status\030\001 \001(\005\022\020\n\010ro" +
+      "wCount\030\002 \001(\003\022\020\n\010msgCount\030\003 \001(\003\022\020\n\010errCou" +
+      "nt\030\004 \001(\003\022\014\n\004hash\030\005 \001(\t\"%\n\022HealthCheckReq" +
+      "uest\022\017\n\007service\030\001 \001(\t\"\237\001\n\023HealthCheckRes" +
+      "ponse\022L\n\006status\030\001 \001(\0162<.com.google.cloud" +
+      ".imf.gzos.HealthCheckResponse.ServingSta" +
+      "tus\":\n\rServingStatus\022\013\n\007UNKNOWN\020\000\022\013\n\007SER" +
+      "VING\020\001\022\017\n\013NOT_SERVING\020\0022\313\001\n\005GRecv\022Z\n\005Wri" +
+      "te\022\'.com.google.cloud.imf.gzos.GRecvRequ" +
+      "est\032(.com.google.cloud.imf.gzos.GRecvRes" +
+      "ponse\022f\n\005Check\022-.com.google.cloud.imf.gz" +
+      "os.HealthCheckRequest\032..com.google.cloud" +
+      ".imf.gzos.HealthCheckResponseB,\n\034com.goo" +
+      "gle.cloud.imf.gzos.pbB\nGRecvProtoP\000b\006pro" +
+      "to3"
     };
     descriptor = com.google.protobuf.Descriptors.FileDescriptor
       .internalBuildGeneratedFileFrom(descriptorData,
@@ -9000,7 +9070,7 @@ public final class GRecvProto {
     internal_static_com_google_cloud_imf_gzos_GRecvRequest_fieldAccessorTable = new
       com.google.protobuf.GeneratedMessageV3.FieldAccessorTable(
         internal_static_com_google_cloud_imf_gzos_GRecvRequest_descriptor,
-        new java.lang.String[] { "Schema", "Lrecl", "Blksz", "Basepath", "MaxErrPct", "PublicKey", "Signature", "Principal", "Jobinfo", "Timestamp", "SrcUri", });
+        new java.lang.String[] { "Schema", "Lrecl", "Blksz", "Basepath", "MaxErrPct", "PublicKey", "Signature", "Principal", "Jobinfo", "Timestamp", "SrcUri", "NoData", });
     internal_static_com_google_cloud_imf_gzos_GRecvResponse_descriptor =
       getDescriptor().getMessageTypes().get(3);
     internal_static_com_google_cloud_imf_gzos_GRecvResponse_fieldAccessorTable = new

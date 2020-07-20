@@ -45,23 +45,5 @@ class GRecvClientListener(cred: OAuth2Credentials,
       obj = null
     }
   }
-
-  def checkResponse(hash: String, value: GRecvResponse): GRecvResponse = {
-    val s = JsonFormat.printer()
-      .includingDefaultValueFields()
-      .omittingInsignificantWhitespace()
-      .print(value)
-    logger.info(s"Received GRecvResponse with status ${value.getStatus}\n$s")
-    val hashMatched = value.getHash == hash
-    if (!hashMatched){
-      val msg = s"Hash mismatch ${value.getHash} != $hash"
-      logger.error(msg)
-      throw new RuntimeException(msg)
-    } else if (value.getStatus != GRecvProtocol.OK) {
-      val msg = s"Received status code ${value.getStatus}"
-      logger.error(msg)
-      throw new RuntimeException(msg)
-    } else value
-  }
 }
 
