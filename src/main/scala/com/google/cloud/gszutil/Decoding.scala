@@ -57,7 +57,7 @@ object Decoding extends Logging {
     }
 
     override def typeDescription: TypeDescription =
-      TypeDescription.createString().withMaxLength(size)
+      TypeDescription.createString()
 
     override def toString: String = s"$size byte STRING"
 
@@ -91,7 +91,7 @@ object Decoding extends Logging {
     }
 
     override def typeDescription: TypeDescription =
-      TypeDescription.createString().withMaxLength(size)
+      TypeDescription.createString()
 
     override def toString: String = s"$size byte STRING NOT NULL"
 
@@ -352,16 +352,20 @@ object Decoding extends Logging {
     require(precision <= 18 && precision > 0, s"precision $precision not in range [1,18]")
     override val size: Int = PackedDecimal.sizeOf(p,s)
 
-    override def get(buf: ByteBuffer, col: ColumnVector, i: Int): Unit = {
-      var i = buf.position()
+    def isNull(buf: Array[Byte], pos: Int): Boolean = {
+      var j = pos
       var isNull = true
-      val a = buf.array()
-      val dcv = col.asInstanceOf[Decimal64ColumnVector]
-      while (i < buf.position() + size){
-        if (a(i) != 0x00) isNull = false
-        i += 1
+      val limit = pos + size
+      while (j < limit){
+        if (buf(j) != 0x00) isNull = false
+        j += 1
       }
-      if (isNull){
+      isNull
+    }
+
+    override def get(buf: ByteBuffer, col: ColumnVector, i: Int): Unit = {
+      val dcv = col.asInstanceOf[Decimal64ColumnVector]
+      if (isNull(buf.array(), buf.position())){
         dcv.noNulls = false
         dcv.isNull.update(i, true)
       } else {

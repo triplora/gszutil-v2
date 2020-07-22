@@ -206,6 +206,37 @@ class DecodingSpec extends AnyFlatSpec {
     assert(fromHiveDecimal == expected)
   }
 
+  it should "null packed decimal" in {
+    val len = PackedDecimal.sizeOf(16,2)
+    val exampleData = Array.fill[Byte](len)(0x00.toByte)
+    val buf = ByteBuffer.wrap(exampleData)
+    assertThrows[IllegalArgumentException](PackedDecimal.unpack(ByteBuffer.wrap(exampleData), exampleData.length))
+    val decoder = Decimal64Decoder(16,2)
+    val col = decoder.columnVector(1)
+    decoder.get(buf, col, 0)
+    val dcv = col.asInstanceOf[Decimal64ColumnVector]
+    assert(!dcv.noNulls)
+    assert(dcv.isNull(0))
+  }
+
+  it should "invalid packed decimal sign" in {
+    val len = PackedDecimal.sizeOf(16,2)
+    val exampleData = Array.fill[Byte](len)(0x00.toByte)
+    exampleData.update(len-2, 0x12)
+    exampleData.update(len-1, 0x10)
+    val buf = ByteBuffer.wrap(exampleData)
+    assertThrows[IllegalArgumentException](PackedDecimal.unpack(buf, len))
+  }
+
+  it should "invalid packed decimal digit" in {
+    val len = PackedDecimal.sizeOf(16,2)
+    val exampleData = Array.fill[Byte](len)(0x00.toByte)
+    exampleData.update(len-2, 0xFF.toByte)
+    exampleData.update(len-1, 0xFC.toByte)
+    val buf = ByteBuffer.wrap(exampleData)
+    assertThrows[IllegalArgumentException](PackedDecimal.unpack(buf, len))
+  }
+
   it should "transcode EBCDIC" in {
     val test = Util.randString(10000)
     val in = test.getBytes(Ebcdic.charset)

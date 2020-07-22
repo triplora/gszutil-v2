@@ -131,7 +131,6 @@ final class OrcContext(private val cred: OAuth2Credentials, schema: TypeDescript
   }
 
   def flush(): Unit = {
-    logger.debug(s"flushing writer $prefix $partId")
     writer match {
       case w: WriterImpl =>
         w.checkMemory(0)

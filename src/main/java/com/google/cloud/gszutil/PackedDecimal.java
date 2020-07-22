@@ -16,9 +16,6 @@
 
 package com.google.cloud.gszutil;
 
-import com.google.cloud.imf.util.Bits;
-import com.google.cloud.imf.io.Bytes;
-
 import java.nio.ByteBuffer;
 
 public class PackedDecimal {
@@ -31,73 +28,57 @@ public class PackedDecimal {
     }
 
     public static long unpack(ByteBuffer buf, int len) {
-        long x = 0;
-        for (int i = 0; i < len - 1; i++) {
-            byte b = buf.get();
-            x += Bits.uint(b) >>> 4;
-            x *= 10L;
-            x += Bits.uint(b) & 0xF;
-            x *= 10L;
-        }
-        byte b = buf.get();
-        x += Bits.uint(b) >>> 4;
-        int sign = Bits.uint(b) & 0xF ;
-        if (sign == 0xD) { x *= -1L; }
-        else if (sign == 0xC) { /*positive*/ }
-        else if (sign == 0xF) { /*unsigned*/ }
-        else {
-            byte[] a = new byte[len];
-            int startPos = buf.position() - len;
-            buf.position(startPos);
-            buf.get(a);
-            String hex = Bytes.hexValue(a);
-            throw new IllegalArgumentException("unexpected sign bits " + sign + "\n" + hex);
-        }
-        return x;
+        int startPos = buf.position();
+        buf.position(startPos + len);
+        return unpack(buf.array(), startPos, len);
     }
 
-    public static long[] pows = new long[]{
-        1L,
-        10L,
-        100L,
-        1000L,
-        10000L,
-        100000L,
-        1000000L,
-        10000000L,
-        100000000L,
-        1000000000L,
-        10000000000L,
-        100000000000L,
-        1000000000000L,
-        10000000000000L,
-        100000000000000L,
-        1000000000000000L,
-        10000000000000000L,
-        100000000000000000L,
-        1000000000000000000L
-    };
+    public static long unpack(byte[] buf, int pos, int len) {
+        long x = 0;
+        int k;
+        int a; // first half-byte nibble
+        int b; // second half-byte nibble
+        int i = pos;
+        int limit = pos + len - 1;
+        while (i < limit) {
+            // get byte as unsigned integer
+            k = buf[i];
+            if (k < 0) k += 256;
 
-    public static int pow(long x){
-        if      (x >= 100000000000000000L) return 18;
-        else if (x >= 10000000000000000L ) return 17;
-        else if (x >= 1000000000000000L  ) return 15;
-        else if (x >= 100000000000000L   ) return 14;
-        else if (x >= 10000000000000L    ) return 13;
-        else if (x >= 1000000000000L     ) return 12;
-        else if (x >= 100000000000L      ) return 11;
-        else if (x >= 10000000000L       ) return 10;
-        else if (x >= 1000000000L        ) return 9;
-        else if (x >= 100000000L         ) return 8;
-        else if (x >= 10000000L          ) return 7;
-        else if (x >= 1000000L           ) return 6;
-        else if (x >= 100000L            ) return 5;
-        else if (x >= 10000L             ) return 4;
-        else if (x >= 1000L              ) return 3;
-        else if (x >= 100L               ) return 2;
-        else if (x >= 10L                ) return 1;
-        else if (x >= 1L                 ) return 0;
-        else return -1;
+            // get hex digit values
+            a = k >>> 4;
+            b = k & 0x0F;
+
+            // validate hex digit values
+            if (a > 9 || b > 9)
+                throw new IllegalArgumentException("Invalid hex digit value");
+
+            // add to result
+            x += a;
+            x *= 10L;
+            x += b;
+            x *= 10L;
+            i += 1;
+        }
+
+        // get last byte as unsigned integer
+        k = buf[i];
+        if (k < 0) k += 256;
+
+        // get hex digit values
+        a = k >>> 4;
+        b = k & 0x0F;
+
+        // add digit from first nibble
+        x += a;
+
+        // get sign from second nibble
+        if (b == 0x0D) x *= -1L;
+        else if (b != 0x0C && b != 0x0F) {
+            // valid sign values are positive (0x0C) and unsigned (0x0F)
+            throw new IllegalArgumentException("invalid sign bits");
+        }
+        return x;
     }
 
     public static byte[] pack(long x, int len){

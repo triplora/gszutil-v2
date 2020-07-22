@@ -25,10 +25,9 @@ object GRecvClient extends Uploader with Logging {
           in: ZRecordReaderT,
           schemaProvider: SchemaProvider,
           receiver: Uploader): Result = {
-    logger.info("Starting Dataset Upload")
+    System.out.println(s"GRecvClient Starting Dataset Upload to ${cfg.gcsUri}")
 
     try {
-      logger.info("Starting Send...")
       val keypair = zos.getKeyPair()
       val req = GRecvRequest.newBuilder
         .setSchema(schemaProvider.toRecordBuilder.build)
@@ -38,11 +37,7 @@ object GRecvClient extends Uploader with Logging {
         .setMaxErrPct(cfg.maxErrorPct)
         .setJobinfo(zos.getInfo)
         .setPrincipal(zos.getPrincipal())
-        .setPublicKey(ByteString.copyFrom(keypair.getPublic.getEncoded))
         .setTimestamp(System.currentTimeMillis())
-
-      req.setSignature(ByteString.copyFrom(SecurityUtils.sign(keypair.getPrivate,
-        req.clearSignature.build.toByteArray)))
 
       receiver.upload(req.build, cfg.remoteHost, cfg.remotePort, cfg.nConnections, zos, in)
     } catch {
@@ -60,7 +55,7 @@ object GRecvClient extends Uploader with Logging {
                       in: ZRecordReaderT): Result = {
     val cb = OkHttpChannelBuilder.forAddress(host, port)
       .compressorRegistry(GzipCodec.compressorRegistry)
-      .usePlaintext()
+      .usePlaintext() // TLS is provided by AT-TLS
       .keepAliveTime(240, TimeUnit.SECONDS)
       .keepAliveWithoutCalls(true)
 
@@ -68,8 +63,7 @@ object GRecvClient extends Uploader with Logging {
       .createScoped(StorageScopes.DEVSTORAGE_READ_WRITE)
     creds.refreshIfExpired()
 
-    val sendResult = Try{send(req, in, nConnections, cb, creds)}
-    sendResult match {
+    Try{send(req, in, nConnections, cb, creds)} match {
       case Failure(e) =>
         logger.error(e.getMessage, e)
         Result.Failure(e.getMessage)
@@ -83,7 +77,7 @@ object GRecvClient extends Uploader with Logging {
            connections: Int = 1,
            cb: OkHttpChannelBuilder,
            creds: OAuth2Credentials): Unit = {
-    logger.debug(s"sending ${in.getDsn}")
+    System.out.println(s"Sending ${in.getDsn}")
 
     val blksz = in.lRecl * 1024
     val partLimit = 64*1024*1024
@@ -112,19 +106,21 @@ object GRecvClient extends Uploader with Logging {
         }
       }
     }
-    val streams1 = streams.filterNot(_ == null)
 
-    logger.info(s"Finished reading $bytesRead bytes from ${in.getDsn}")
-    streams1.foreach(_.close())
-    if (bytesRead == 0){
+    if (bytesRead < 1){
+      logger.info(s"Read $bytesRead bytes from ${in.getDsn} - requesting empty file be written")
       val ch = cb.build()
       val stub = GRecvGrpc.newBlockingStub(ch)
         .withDeadlineAfter(30, TimeUnit.SECONDS)
-        .withWaitForReady()
       val res = stub.write(request.toBuilder.setNoData(true).build())
-      if (res.getStatus != GRecvProtocol.OK)
+      if (res.getStatus == GRecvProtocol.OK)
+        logger.info(s"Server wrote ${res.getRowCount} rows")
+      else
         throw new RuntimeException("non-success status code")
       ch.shutdownNow()
+    } else {
+      logger.info(s"Finished reading $bytesRead bytes from ${in.getDsn}")
     }
+    streams.foreach(_.close())
   }
 }

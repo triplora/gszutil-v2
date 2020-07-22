@@ -4,10 +4,8 @@ import java.net.URI
 import java.nio.ByteBuffer
 
 import com.google.auth.oauth2.OAuth2Credentials
-import com.google.cloud.imf.grecv.GRecvProtocol
-import com.google.cloud.imf.gzos.pb.GRecvProto.{GRecvRequest, GRecvResponse}
+import com.google.cloud.imf.gzos.pb.GRecvProto.GRecvRequest
 import com.google.cloud.imf.util.Logging
-import com.google.protobuf.util.JsonFormat
 import io.grpc.okhttp.OkHttpChannelBuilder
 
 
@@ -20,17 +18,17 @@ class GRecvClientListener(cred: OAuth2Credentials,
                           partLimit: Long) extends Logging {
   val buf: ByteBuffer = ByteBuffer.allocate(bufSz)
 
-  def newObj(): Unit = obj = {
+  def newObj(): TmpObj = {
     cred.refreshIfExpired()
     new TmpObj(
       baseUri.getAuthority,
-      baseUri.getPath.stripPrefix("/") + "/tmp/",
+      baseUri.getPath.stripPrefix("/").stripSuffix("/") + "/tmp/",
       cred.getAccessToken, cb, request, partLimit, compress = true)
   }
   private var obj: TmpObj = _
 
   def getWriter(): TmpObj = {
-    if (obj == null || obj.isClosed) newObj()
+    if (obj == null || obj.isClosed) obj = newObj()
     obj
   }
 

@@ -30,11 +30,9 @@ class TmpObj(bucket: String,
   private val writer: OutputStream =
     if (compress) new GZIPOutputStream(os, 32*1024, true)
     else os
-  //private val writer = os
   private var closed: Boolean = false
 
   def isClosed: Boolean = closed
-  def getCount: Long = os.getCount
 
   def write(buf: ByteBuffer): Unit = {
     val n = buf.limit()
@@ -61,10 +59,19 @@ class TmpObj(bucket: String,
       val stub = GRecvGrpc.newBlockingStub(ch)
         .withCompression("gzip")
         .withDeadlineAfter(240, TimeUnit.SECONDS)
-        .withWaitForReady()
+      // send the request to the gRPC server, causing it to transcode to ORC
       val res = stub.write(request.toBuilder.setSrcUri(srcUri).build())
       ch.shutdownNow()
       require(res.getHash == hash, "hash mismatch")
+      require(res.getStatus == GRecvProtocol.OK, "non-success status code")
+    } else {
+      logger.info(s"Requesting write empty ORC file at $srcUri")
+      val ch = cb.build()
+      val stub = GRecvGrpc.newBlockingStub(ch)
+        .withDeadlineAfter(60, TimeUnit.SECONDS)
+      // send the request to the gRPC server, causing it to write an empty file
+      val res = stub.write(request.toBuilder.setNoData(true).build())
+      ch.shutdownNow()
       require(res.getStatus == GRecvProtocol.OK, "non-success status code")
     }
   }

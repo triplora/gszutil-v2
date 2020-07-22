@@ -26,7 +26,7 @@ object Result {
   }
 
   def Success: Result = Result()
-  def Failure(msg: String, exitCode: Int = 1): Result = Result(exitCode = 1, message = msg)
+  def Failure(msg: String, exitCode: Int = 1): Result = Result(exitCode = exitCode, message = msg)
 }
 
 // https://docs.teradata.com/reader/1fdhoBglKXYl~W_OyMEtGQ/92K64CKQxrkuO4Hm7P8IEA

@@ -24,6 +24,9 @@ import com.google.cloud.imf.grecv.server.GRecvServer
 import com.google.cloud.imf.gzos.Util
 import com.google.cloud.imf.util.{CloudLogging, Logging}
 
+/** The server side of the mainframe connector
+  * Receives requests to transcode to ORC
+  */
 object GRecv extends Logging {
   val BatchSize = 1024
   val PartitionBytes: Long = 128L * 1024 * 1024
