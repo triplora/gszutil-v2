@@ -4,7 +4,7 @@ import java.nio.ByteBuffer
 import java.time.LocalDate
 
 import com.google.cloud.gszutil.Decoding.{Decimal64Decoder, IntAsDateDecoder, LongDecoder}
-import com.google.cloud.gszutil.Encoding.{DateStringToBinaryEncoder, DecimalToBinaryEncoder, LongToBinaryEncoder, StringToBinaryEncoder}
+import com.google.cloud.gszutil.Encoding.{BytesToBinaryEncoder, DateStringToBinaryEncoder, DecimalToBinaryEncoder, LongToBinaryEncoder, StringToBinaryEncoder}
 import com.google.cloud.imf.gzos.Ebcdic
 import org.apache.hadoop.hive.ql.exec.vector.{DateColumnVector, Decimal64ColumnVector, LongColumnVector}
 import org.scalatest.flatspec.AnyFlatSpec
@@ -67,4 +67,15 @@ class EncodingSpec extends AnyFlatSpec {
     assert(8 == d.getDayOfMonth)
   }
 
+  "BytesToBinaryEncoder" should "encode" in {
+    val example = Array[Byte](0x01, 0x02, 0x03, 0x04)
+    assert(example == BytesToBinaryEncoder(4).encode(example))
+  }
+
+  it should "encode nulls" in {
+    assert(StringToBinaryEncoder(Ebcdic, 10).encode(null).filter(_ != 0x00).isEmpty)
+    assert(DateStringToBinaryEncoder().encode(null).filter(_ != 0x00).isEmpty)
+    assert(LongToBinaryEncoder(4).encode(null).filter(_ != 0x00).isEmpty)
+    assert(DecimalToBinaryEncoder(7, 2).encode(null).filter(_ != 0x00).isEmpty)
+  }
 }
