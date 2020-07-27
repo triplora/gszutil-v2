@@ -72,12 +72,9 @@ public class PackedDecimal {
         // add digit from first nibble
         x += a;
 
-        // get sign from second nibble
-        if (b == 0x0D) x *= -1L;
-        else if (b != 0x0C && b != 0x0F) {
-            // valid sign values are positive (0x0C) and unsigned (0x0F)
-            throw new IllegalArgumentException("invalid sign bits");
-        }
+        // get sign from second nibble - See PackedDecimal.sign and CommonData.getSign
+        int sign = (b != 0x0D && b != 0x0B) ? 1 : -1;
+        x *= sign;
         return x;
     }
 
