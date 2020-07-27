@@ -4,7 +4,6 @@ import java.nio.ByteBuffer
 
 import com.google.auth.oauth2.OAuth2Credentials
 import com.google.cloud.imf.util.Logging
-import com.google.cloud.storage.Storage
 import org.apache.hadoop.conf.Configuration
 import org.apache.hadoop.fs.{FileSystem, Path, SimpleGCSFileSystem}
 import org.apache.orc.OrcFile.WriterOptions

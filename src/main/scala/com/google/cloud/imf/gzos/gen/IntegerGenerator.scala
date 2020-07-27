@@ -1,6 +1,6 @@
 package com.google.cloud.imf.gzos.gen
 
-import com.google.cloud.gszutil.Binary
+import com.google.cloud.imf.gzos.Binary
 import com.google.cloud.imf.gzos.pb.GRecvProto.Record
 
 class IntegerGenerator(f: Record.Field) extends ValueGenerator {

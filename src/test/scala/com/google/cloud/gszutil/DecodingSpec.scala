@@ -25,7 +25,7 @@ import com.google.cloud.gszutil.Decoding.{Decimal64Decoder, IntegerAsDateDecoder
 import com.google.cloud.gszutil.io.ZReader
 import com.google.cloud.imf.gzos.pb.GRecvProto.Record.Field
 import com.google.cloud.imf.gzos.pb.GRecvProto.Record.Field.FieldType
-import com.google.cloud.imf.gzos.{Ebcdic, Util}
+import com.google.cloud.imf.gzos.{Ebcdic, PackedDecimal, Util}
 import com.google.common.base.Charsets
 import com.ibm.jzos.fields.daa
 import org.apache.hadoop.hive.ql.exec.vector.{BytesColumnVector, DateColumnVector, Decimal64ColumnVector, LongColumnVector}

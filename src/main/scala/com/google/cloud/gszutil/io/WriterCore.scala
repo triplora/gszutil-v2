@@ -4,9 +4,7 @@ import java.nio.ByteBuffer
 
 import com.google.auth.oauth2.OAuth2Credentials
 import com.google.cloud.gszutil.SchemaProvider
-import com.google.cloud.imf.io.Bytes
 import com.google.cloud.imf.util.Logging
-import com.google.cloud.storage.Storage
 import org.apache.hadoop.fs.Path
 
 class WriterCore(schemaProvider: SchemaProvider,

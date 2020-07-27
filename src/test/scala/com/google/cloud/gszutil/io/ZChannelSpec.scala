@@ -18,7 +18,6 @@ package com.google.cloud.gszutil.io
 
 import com.google.cloud.gszutil.CopyBook
 import com.google.cloud.imf.grecv.GRecvConfig
-import com.google.cloud.imf.grecv.client.GRecvClient
 import com.google.cloud.imf.gzos.pb.GRecvProto.GRecvRequest
 import com.google.cloud.imf.util.{CloudLogging, Logging}
 import org.scalatest.flatspec.AnyFlatSpec

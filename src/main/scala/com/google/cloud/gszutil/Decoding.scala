@@ -18,6 +18,7 @@ package com.google.cloud.gszutil
 import java.nio.ByteBuffer
 import java.time.{LocalDate, Month}
 
+import com.google.cloud.imf.gzos.{Binary, PackedDecimal}
 import com.google.cloud.imf.gzos.pb.GRecvProto.Record.Field
 import com.google.cloud.imf.gzos.pb.GRecvProto.Record.Field.NullIf
 import com.google.cloud.imf.util.Logging

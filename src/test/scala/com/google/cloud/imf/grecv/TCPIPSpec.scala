@@ -1,6 +1,5 @@
 package com.google.cloud.imf.grecv
 
-import com.google.api.services.logging.v2.LoggingScopes
 import com.google.cloud.imf.gzos.Util
 import com.google.cloud.imf.gzos.pb.GRecvProto.Record.Field
 import com.google.cloud.imf.gzos.pb.GRecvProto.{GRecvRequest, Record}

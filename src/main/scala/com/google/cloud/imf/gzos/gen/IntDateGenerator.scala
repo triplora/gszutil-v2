@@ -2,7 +2,7 @@ package com.google.cloud.imf.gzos.gen
 
 import java.time.{LocalDate, ZoneId}
 
-import com.google.cloud.gszutil.Binary
+import com.google.cloud.imf.gzos.Binary
 import com.google.cloud.imf.gzos.pb.GRecvProto.Record
 
 /** generates integer dates

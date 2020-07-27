@@ -1,4 +1,4 @@
-CREATE TABLE IF NOT EXISTS `project.dataset.bqmld_job_log` (
+CREATE TABLE IF NOT EXISTS `[PROJECT_ID].[DATASET_NAME].[TABLE_NAME]` (
   jobid string,
   jobdate string,
   jobtime string,

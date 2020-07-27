@@ -16,7 +16,7 @@
 
 package com.google.cloud.bqsh
 
-import com.google.cloud.bigquery.{BigQuery, BigQueryError, BigQueryException, BigQueryOptions, DatasetId, Field, FieldList, Job, JobId, JobInfo, JobStatus, QueryJobConfiguration, Schema, StandardSQLTypeName, TableId}
+import com.google.cloud.bigquery.{BigQuery, BigQueryError, BigQueryException, DatasetId, Field, FieldList, Job, JobId, JobInfo, JobStatus, QueryJobConfiguration, Schema, StandardSQLTypeName, TableId}
 import com.google.cloud.imf.gzos.{MVS, Util}
 import com.google.cloud.imf.util.Logging
 import com.google.common.collect.ImmutableList
@@ -28,8 +28,11 @@ import scala.util.{Failure, Success, Try}
 object BQ extends Logging {
   def genJobId(zos: MVS, jobType: String): JobId = {
     val t = System.currentTimeMillis
-    val rand = Util.randString(5)
-    JobId.of(s"${zos.jobId}_${jobType}_${t}_$rand")
+    val job = zos.getInfo
+    val jobId = Seq(
+      job.getJobname,job.getStepName,job.getJobdate,job.getJobtime,job.getJobid,jobType,t.toString
+    ).mkString("_")
+    JobId.of(jobId)
   }
 
   def runJob(bq: BigQuery,

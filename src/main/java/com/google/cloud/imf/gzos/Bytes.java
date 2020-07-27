@@ -1,4 +1,4 @@
-package com.google.cloud.imf.io;
+package com.google.cloud.imf.gzos;
 
 public class Bytes {
 

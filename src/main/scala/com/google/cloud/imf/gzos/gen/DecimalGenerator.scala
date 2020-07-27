@@ -1,6 +1,6 @@
 package com.google.cloud.imf.gzos.gen
 
-import com.google.cloud.gszutil.PackedDecimal
+import com.google.cloud.imf.gzos.PackedDecimal
 import com.google.cloud.imf.gzos.pb.GRecvProto.Record
 
 class DecimalGenerator(f: Record.Field) extends ValueGenerator {

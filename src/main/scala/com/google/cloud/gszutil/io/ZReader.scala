@@ -20,8 +20,6 @@ import java.nio.ByteBuffer
 import java.nio.charset.Charset
 
 import com.google.cloud.gszutil.{Decoder, SchemaProvider, VartextDecoder}
-import com.google.cloud.imf.gzos.Ebcdic
-import com.google.cloud.imf.io.Bytes
 import com.google.cloud.imf.util.Logging
 import org.apache.hadoop.hive.ql.exec.vector.{ColumnVector, VectorizedRowBatch}
 import org.apache.orc.Writer

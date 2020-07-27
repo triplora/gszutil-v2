@@ -3,7 +3,7 @@ package com.google.cloud.imf.util
 import java.net.{InetAddress, ServerSocket}
 import java.security.cert.X509Certificate
 import java.security.spec.RSAKeyGenParameterSpec
-import java.security.{KeyPair, KeyPairGenerator, PrivateKey, SecureRandom}
+import java.security.{KeyPair, KeyPairGenerator, SecureRandom}
 
 import javax.net.ssl.{KeyManager, SSLContext, SSLServerSocket, SSLSocketFactory, TrustManager, X509KeyManager}
 

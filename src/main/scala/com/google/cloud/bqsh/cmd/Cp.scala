@@ -19,14 +19,12 @@ import java.net.URI
 import java.nio.channels.Channels
 import java.nio.file.Paths
 
-import com.google.api.services.storage.StorageScopes
-import com.google.cloud.bigquery.StatsUtil
 import com.google.cloud.bqsh.{ArgParser, BQ, Command, GsUtilConfig, GsUtilOptionParser}
 import com.google.cloud.gszutil.io.ZRecordReaderT
 import com.google.cloud.gszutil.orc.WriteORCFile
 import com.google.cloud.imf.grecv.client.GRecvClient
 import com.google.cloud.imf.gzos.{MVS, MVSStorage}
-import com.google.cloud.imf.util.{Logging, Services}
+import com.google.cloud.imf.util.{Logging, Services, StatsUtil}
 import com.google.cloud.storage.{BlobId, Storage}
 
 
@@ -69,25 +67,16 @@ object Cp extends Command[GsUtilConfig] with Logging {
     }
     val sourceDSN = in.getDsn
 
-    var result = Result.Failure("")
-    if (c.remote){
-      logger.debug(s"running with remote")
-      result = GRecvClient.run(c, zos, in, schemaProvider, GRecvClient)
-      logger.debug(s"remote complete")
-    } else {
-      logger.debug("Starting ORC Upload")
-      result = WriteORCFile.run(gcsUri = c.gcsUri,
-                       in = in,
-                       schemaProvider = schemaProvider,
-                       cred = creds,
-                       parallelism = c.parallelism,
-                       batchSize = batchSize,
-                       partSizeMb = c.partSizeMB,
-                       timeoutMinutes = c.timeOutMinutes,
-                       compressBuffer = c.compressBuffer,
-                       maxErrorPct = c.maxErrorPct)
-      logger.debug("ORC Upload Complete")
-    }
+    val result =
+      if (c.remote) GRecvClient.run(c, zos, in, schemaProvider, GRecvClient)
+      else WriteORCFile.run(
+        gcsUri = c.gcsUri,
+        in = in,
+        schemaProvider = schemaProvider,
+        cred = creds,
+        parallelism = c.parallelism,
+        batchSize = batchSize,
+        maxErrorPct = c.maxErrorPct)
     in.close()
     val nRead = in.count()
 
@@ -96,13 +85,17 @@ object Cp extends Command[GsUtilConfig] with Logging {
       logger.debug(s"writing stats to ${statsTable.getProject}:${statsTable
         .getDataset}:${statsTable.getTable}")
       val jobId = BQ.genJobId(zos,"cp")
-      StatsUtil.insertJobStats(zos,jobId,job=None,
+      StatsUtil.insertJobStats(
+        zos = zos,
+        jobId = jobId,
+        job = None,
         bq = Services.bigQuery(c.projectId, c.location, creds),
         tableId = statsTable,
         jobType = "cp",
         source = sourceDSN,
         dest = c.gcsUri,
-        recordsIn = nRead)
+        recordsIn = nRead,
+        recordsOut = result.activityCount)
     }
 
     result

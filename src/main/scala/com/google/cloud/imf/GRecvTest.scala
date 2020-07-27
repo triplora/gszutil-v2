@@ -3,12 +3,11 @@ package com.google.cloud.imf
 import com.google.cloud.bqsh.GsUtilConfig
 import com.google.cloud.bqsh.cmd.Cp
 import com.google.cloud.gszutil.RecordSchema
-import com.google.cloud.imf.gzos.{Ebcdic, Linux}
+import com.google.cloud.imf.gzos.Linux
 import com.google.cloud.imf.gzos.gen.DataGenUtil
 import com.google.cloud.imf.gzos.pb.GRecvProto.Record
 import com.google.cloud.imf.gzos.pb.GRecvProto.Record.Field
 import com.google.cloud.imf.util.CloudLogging
-import com.google.protobuf.ByteString
 
 object GRecvTest {
   def main(args: Array[String]): Unit = {

@@ -21,14 +21,13 @@ import java.nio.file.{Files, Paths, StandardOpenOption}
 import java.security.{KeyPair, KeyPairGenerator}
 import java.util.Date
 
-import com.google.cloud.bigquery.StatsUtil
 import com.google.cloud.gszutil
 import com.google.cloud.gszutil.io.{ChannelRecordReader, ZRecordReaderT, ZRecordWriterT}
 import com.google.cloud.gszutil.{CopyBook, Utf8}
 import com.google.cloud.imf.gzos.MVSStorage.DSN
 import com.google.cloud.imf.gzos.Util.DefaultCredentialProvider
 import com.google.cloud.imf.gzos.pb.GRecvProto.ZOSJobInfo
-import com.google.cloud.imf.util.Logging
+import com.google.cloud.imf.util.{Logging, StatsUtil}
 import com.google.common.base.Charsets
 import com.google.common.io.ByteStreams
 

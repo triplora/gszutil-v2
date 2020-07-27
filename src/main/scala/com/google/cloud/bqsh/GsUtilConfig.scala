@@ -16,7 +16,7 @@
 package com.google.cloud.bqsh
 
 import com.google.cloud.gszutil.SchemaProvider
-import com.google.cloud.gszutil.io.{ZDataSet, ZRecordReaderT}
+import com.google.cloud.gszutil.io.ZRecordReaderT
 import com.google.cloud.imf.gzos.gen.DataGenUtil
 import com.google.cloud.imf.util.StaticMap
 

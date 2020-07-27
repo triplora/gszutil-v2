@@ -14,10 +14,7 @@
  * limitations under the License.
  */
 
-package com.google.cloud.gszutil;
-
-import com.google.cloud.imf.util.Bits;
-import io.netty.buffer.ByteBuf;
+package com.google.cloud.imf.gzos;
 
 import java.nio.ByteBuffer;
 

@@ -24,7 +24,6 @@ import com.google.cloud.bqsh.cmd.Result
 import com.google.cloud.gszutil.SchemaProvider
 import com.google.cloud.gszutil.io.{WriterCore, ZRecordReaderT}
 import com.google.cloud.imf.util.Logging
-import com.google.cloud.storage.Storage
 import org.apache.hadoop.fs.Path
 
 object WriteORCFile extends Logging {
@@ -34,9 +33,6 @@ object WriteORCFile extends Logging {
           cred: OAuth2Credentials,
           parallelism: Int,
           batchSize: Int,
-          partSizeMb: Long,
-          timeoutMinutes: Int,
-          compressBuffer: Int,
           maxErrorPct: Double): Result = {
     val bufSize = in.lRecl * batchSize
     val buf = ByteBuffer.allocate(bufSize)
@@ -53,37 +49,41 @@ object WriteORCFile extends Logging {
     }
 
     var i = 0
-    var records = 0L
     var blocks = 0L
     var n = 1
     var bytesRead = 0L
+    var errCount = 0L
 
-    logger.info(s"Starting to read from ${in.getDsn}")
+    logger.info(s"Reading from DSN:${in.getDsn}")
     while (n >= 0){
       buf.clear()
       // read until buffer is full
       while (n >= 0 && buf.remaining >= in.lRecl) {
         // on z/OS this will read a single record
         n = in.read(buf)
-        if (n > 0) {
-          bytesRead += n
-          records += 1
-          if (records % 100000 == 0)
-            logger.info(s"$records records read")
-        }
+        bytesRead += n
       }
+      if (n < 0) bytesRead -= n
       if (buf.position() > 0) {
         buf.flip
         val result = writers(i).write(buf)
+        errCount += result.errCount
         blocks += 1
         i += 1
         if (i >= writers.length) i = 0
       }
     }
+    val records = bytesRead / in.lRecl
 
     logger.debug(s"Closing writers")
     writers.foreach(_.close())
     logger.info(s"Finished writing ORC: $records records $blocks blocks $bytesRead bytes")
-    Result.Success
+
+    val errPct = errCount.toDouble / records.toDouble
+    if (errPct > maxErrorPct)
+      Result(message = s"error percent $errPct > $maxErrorPct",
+        activityCount = records - errCount, exitCode = 1)
+    else
+      Result(activityCount = records)
   }
 }

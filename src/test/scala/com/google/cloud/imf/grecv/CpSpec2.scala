@@ -2,14 +2,12 @@ package com.google.cloud.imf.grecv
 
 import java.nio.charset.StandardCharsets
 
-import com.google.api.services.logging.v2.LoggingScopes
-import com.google.auth.oauth2.GoogleCredentials
-import com.google.cloud.bqsh.cmd.Cp
 import com.google.cloud.bqsh.GsUtilConfig
+import com.google.cloud.bqsh.cmd.Cp
 import com.google.cloud.gszutil.io.ZDataSet
 import com.google.cloud.gszutil.{CopyBook, RecordSchema, TestUtil}
 import com.google.cloud.imf.grecv.server.GRecvServer
-import com.google.cloud.imf.gzos.{Linux, Util}
+import com.google.cloud.imf.gzos.Linux
 import com.google.cloud.imf.util.{CloudLogging, Services}
 import com.google.protobuf.util.JsonFormat
 import org.scalatest.flatspec.AnyFlatSpec

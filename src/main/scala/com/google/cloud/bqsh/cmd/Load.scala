@@ -19,7 +19,7 @@ package com.google.cloud.bqsh.cmd
 import com.google.cloud.bigquery._
 import com.google.cloud.bqsh._
 import com.google.cloud.imf.gzos.MVS
-import com.google.cloud.imf.util.{Logging, Services}
+import com.google.cloud.imf.util.{Logging, Services, StatsUtil}
 
 object Load extends Command[LoadConfig] with Logging {
   override val name: String = "bq load"

@@ -18,13 +18,21 @@ package com.google.cloud.bqsh
 
 import com.google.cloud.imf.gzos.MVSStorage.{DSN, MVSDataset, MVSPDSMember}
 import com.google.cloud.imf.util.StaticMap
-import com.google.common.collect.ImmutableSortedMap
 
 object QueryConfig {
   def create(sql: String, datasetId: String, location: String, projectId: String,
              statsTable: String, replace: Boolean, destinationTable: String): QueryConfig = {
     QueryConfig(sql, datasetId = datasetId, location = location, projectId = projectId,
       statsTable = statsTable, replace = replace, destinationTable = destinationTable)
+  }
+
+  /** QueryJobConfiguration with DML may not set WriteDisposition
+    * therefore replace option is not allowed for DML queries
+    */
+  def dml(dml: String, datasetId: String, location: String, projectId: String,
+             statsTable: String, destinationTable: String): QueryConfig = {
+    QueryConfig(dml, datasetId = datasetId, location = location, projectId = projectId,
+      statsTable = statsTable, destinationTable = destinationTable)
   }
 }
 

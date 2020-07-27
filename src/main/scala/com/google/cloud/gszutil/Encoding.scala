@@ -2,6 +2,7 @@ package com.google.cloud.gszutil
 
 import java.time.LocalDate
 
+import com.google.cloud.imf.gzos.{Binary, PackedDecimal}
 import com.google.cloud.imf.gzos.pb.GRecvProto.Record.Field
 import com.google.cloud.imf.gzos.pb.GRecvProto.Record.Field.FieldType
 

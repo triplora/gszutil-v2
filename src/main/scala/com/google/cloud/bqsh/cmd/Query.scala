@@ -17,11 +17,11 @@
 package com.google.cloud.bqsh.cmd
 
 import com.google.cloud.bigquery.JobStatistics.QueryStatistics
-import com.google.cloud.bigquery.{BigQueryException, Clustering, JobInfo, QueryJobConfiguration, QueryParameterValue, StandardSQLTypeName, StatsUtil, TimePartitioning}
+import com.google.cloud.bigquery.{BigQueryException, Clustering, JobInfo, QueryJobConfiguration, QueryParameterValue, StandardSQLTypeName, TimePartitioning}
 import com.google.cloud.bqsh.BQ.resolveDataset
 import com.google.cloud.bqsh.{ArgParser, BQ, Bqsh, Command, QueryConfig, QueryOptionParser}
 import com.google.cloud.imf.gzos.MVS
-import com.google.cloud.imf.util.{Logging, Services}
+import com.google.cloud.imf.util.{Logging, Services, StatsUtil}
 
 object Query extends Command[QueryConfig] with Logging {
   override val name: String = "bq query"
