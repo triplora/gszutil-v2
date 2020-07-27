@@ -5,7 +5,7 @@ import java.time.LocalDate
 
 import com.google.cloud.gszutil.Decoding.{Decimal64Decoder, IntAsDateDecoder, LongDecoder}
 import com.google.cloud.gszutil.Encoding.{BytesToBinaryEncoder, DateStringToBinaryEncoder, DecimalToBinaryEncoder, LongToBinaryEncoder, StringToBinaryEncoder}
-import com.google.cloud.imf.gzos.Ebcdic
+import com.google.cloud.imf.gzos.{Ebcdic, PackedDecimal}
 import org.apache.hadoop.hive.ql.exec.vector.{DateColumnVector, Decimal64ColumnVector, LongColumnVector}
 import org.scalatest.flatspec.AnyFlatSpec
 
@@ -76,6 +76,13 @@ class EncodingSpec extends AnyFlatSpec {
     assert(StringToBinaryEncoder(Ebcdic, 10).encode(null).filter(_ != 0x00).isEmpty)
     assert(DateStringToBinaryEncoder().encode(null).filter(_ != 0x00).isEmpty)
     assert(LongToBinaryEncoder(4).encode(null).filter(_ != 0x00).isEmpty)
-    assert(DecimalToBinaryEncoder(7, 2).encode(null).filter(_ != 0x00).isEmpty)
+
+    val decimalEncoder = DecimalToBinaryEncoder(7, 2)
+    val encoded = decimalEncoder.encode(null)
+    val size = PackedDecimal.sizeOf(7, 2)
+    System.out.println(size)
+    assert(encoded.size == size)
+    assert(decimalEncoder.encode(null).filter(_ != 0x00).isEmpty)
   }
+
 }

@@ -2,9 +2,9 @@ package com.google.cloud.gszutil
 
 import java.time.LocalDate
 
-import com.google.cloud.imf.gzos.{Binary, PackedDecimal}
 import com.google.cloud.imf.gzos.pb.GRecvProto.Record.Field
 import com.google.cloud.imf.gzos.pb.GRecvProto.Record.Field.FieldType
+import com.google.cloud.imf.gzos.{Binary, PackedDecimal}
 
 object Encoding {
 
@@ -14,7 +14,7 @@ object Encoding {
     else if (f.getTyp == FieldType.INTEGER)
       LongToBinaryEncoder(f.getSize)
     else if (f.getTyp == FieldType.DECIMAL)
-      DecimalToBinaryEncoder(f.getPrecision, f.getScale)
+      DecimalToBinaryEncoder(f.getPrecision - f.getScale, f.getScale)
     else if (f.getTyp == FieldType.DATE)
       DateStringToBinaryEncoder()
     else if (f.getTyp == FieldType.BYTES)
@@ -43,12 +43,13 @@ object Encoding {
 
   case class DecimalToBinaryEncoder(p: Int, s: Int) extends BinaryEncoder {
     def encode(x: java.lang.Long): Array[Byte] = {
-      val size = PackedDecimal.sizeOf(p, s)
       if (x == null)
         Array.fill(size)(0x00)
       else
         PackedDecimal.pack(x, size)
     }
+
+    override def size: Int = PackedDecimal.sizeOf(p, s)
   }
 
   case class DateStringToBinaryEncoder() extends BinaryEncoder {

@@ -465,6 +465,8 @@ object Decoding extends Logging {
       IntAsDateDecoder(filler)
     else if (f.getTyp == UNSIGNED_INTEGER)
       UnsignedLongDecoder(f.getSize, filler)
+    else if (f.getTyp == BYTES)
+      new BytesDecoder(f.getSize, filler)
     else
       throw new IllegalArgumentException("unrecognized field type")
   }

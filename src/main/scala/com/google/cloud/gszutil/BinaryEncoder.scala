@@ -1,3 +1,5 @@
 package com.google.cloud.gszutil
 
-trait BinaryEncoder
+trait BinaryEncoder extends {
+  def size: Int
+}
