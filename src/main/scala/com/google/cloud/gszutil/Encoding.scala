@@ -2,6 +2,7 @@ package com.google.cloud.gszutil
 
 import java.time.LocalDate
 
+import com.google.cloud.bigquery.StandardSQLTypeName
 import com.google.cloud.imf.gzos.pb.GRecvProto.Record.Field
 import com.google.cloud.imf.gzos.pb.GRecvProto.Record.Field.FieldType
 import com.google.cloud.imf.gzos.{Binary, PackedDecimal}
@@ -23,6 +24,7 @@ object Encoding {
   }
 
   case class StringToBinaryEncoder(transcoder: Transcoder, size: Int) extends BinaryEncoder {
+    val bqSupportedType: StandardSQLTypeName = StandardSQLTypeName.STRING
     def encode(x: String): Array[Byte] = {
       if (x == null)
         return Array.fill(size)(0x00)
@@ -35,6 +37,7 @@ object Encoding {
   }
 
   case class LongToBinaryEncoder(size: Int) extends BinaryEncoder {
+    val bqSupportedType: StandardSQLTypeName = StandardSQLTypeName.INT64
     def encode(x: java.lang.Long): Array[Byte] = {
       if (x == null) Array.fill(size)(0x00)
       else Binary.encode(x, size)
@@ -42,17 +45,18 @@ object Encoding {
   }
 
   case class DecimalToBinaryEncoder(p: Int, s: Int) extends BinaryEncoder {
+    val bqSupportedType: StandardSQLTypeName = StandardSQLTypeName.FLOAT64
+    val size: Int = PackedDecimal.sizeOf(p, s)
     def encode(x: java.lang.Long): Array[Byte] = {
       if (x == null)
         Array.fill(size)(0x00)
       else
         PackedDecimal.pack(x, size)
     }
-
-    override def size: Int = PackedDecimal.sizeOf(p, s)
   }
 
   case class DateStringToBinaryEncoder() extends BinaryEncoder {
+    val bqSupportedType: StandardSQLTypeName = StandardSQLTypeName.DATE
     val size = 4
     def encode(x: String): Array[Byte] = {
       if (x == null)
@@ -65,9 +69,12 @@ object Encoding {
         Binary.encode(int, size)
       }
     }
+
   }
 
   case class BytesToBinaryEncoder(size: Int) extends BinaryEncoder {
+    val bqSupportedType: StandardSQLTypeName = StandardSQLTypeName.BYTES
+
     def encode(bytes: Array[Byte]): Array[Byte] = {
       if (bytes == null || bytes.isEmpty)
         Array.fill(size)(0x00)
