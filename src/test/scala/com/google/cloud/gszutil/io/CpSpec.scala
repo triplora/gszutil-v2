@@ -3,7 +3,6 @@ package com.google.cloud.gszutil.io
 import com.google.cloud.bqsh.GsUtilConfig
 import com.google.cloud.bqsh.cmd.Cp
 import com.google.cloud.gszutil.{RecordSchema, TestUtil}
-import com.google.cloud.imf.gzos.gen.DataGenUtil
 import com.google.cloud.imf.gzos.pb.GRecvProto.Record
 import com.google.cloud.imf.gzos.pb.GRecvProto.Record.Field
 import com.google.cloud.imf.gzos.{Ebcdic, Linux}
@@ -11,10 +10,7 @@ import com.google.cloud.imf.util.CloudLogging
 import com.google.protobuf.ByteString
 import org.scalatest.flatspec.AnyFlatSpec
 
-class CpSpec extends AnyFlatSpec {
-  CloudLogging.configureLogging(debugOverride = true,
-    errorLogs = "org.apache.http"::"io.grpc"::"io.netty"::Nil)
-
+object CpSpec {
   val mload1Schema: RecordSchema = {
     val b = Record.newBuilder
       .setVartext(true)
@@ -68,16 +64,14 @@ class CpSpec extends AnyFlatSpec {
 
     RecordSchema(b.build)
   }
+}
 
-  val mloadSchema: RecordSchema =
-    RecordSchema(mload1Schema.toRecordBuilder
-      .setVartext(false)
-      .clearDelimiter()
-      .build)
+class CpSpec extends AnyFlatSpec {
+  CloudLogging.configureLogging(debugOverride = true, errorLogs = "org.apache"::"io.grpc"::"io.netty"::Nil)
 
-  "Cp" should "copy" in {
+  "Cp" should "copy vartext" in {
     val input = new ZDataSet(TestUtil.resource("mload1.dat"),111, 1110)
-    val sp = mloadSchema
+    val sp = CpSpec.mload1Schema
     val cfg = GsUtilConfig(schemaProvider = Option(sp),
                            gcsUri = "gs://gszutil-test/mload1.dat",
                            projectId = "pso-wmt-dl",
@@ -85,24 +79,6 @@ class CpSpec extends AnyFlatSpec {
                            testInput = Option(input),
                            parallelism = 1,
                            replace = true)
-    val res = Cp.run(cfg, Linux)
-    assert(res.exitCode == 0)
-  }
-
-  it should "generate" in {
-    val sp = mloadSchema
-    val generator = DataGenUtil.generatorFor(sp, 100000)
-    System.out.println(generator.generators.zip(sp.decoders).map(_.toString).mkString("\n"))
-
-    val cfg = GsUtilConfig(schemaProvider = Option(sp),
-                           gcsUri = "gs://gszutil-test/mload1.gen",
-                           testInput = Option(generator),
-                           parallelism = 1,
-                           nConnections = 2,
-                           replace = true,
-                           remote = true,
-                           remoteHost = "127.0.0.1",
-                           remotePort = 51771)
     val res = Cp.run(cfg, Linux)
     assert(res.exitCode == 0)
   }

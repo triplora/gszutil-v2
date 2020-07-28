@@ -101,7 +101,7 @@ case class MkConfig (
       m.put("view", view)
 
     if (expiration > 0)
-      m.put("expiration", expiration)
+      m.put("expiration", expiration.toString)
     if (statsTable.nonEmpty)
       m.put("statsTable",statsTable)
 

@@ -29,4 +29,8 @@ class GRecvServer(cfg: GRecvConfig, creds: OAuth2Credentials) extends Logging {
       logger.info("server terminated")
     }
   }
+
+  def shutdown(): Unit = {
+    server.shutdownNow()
+  }
 }

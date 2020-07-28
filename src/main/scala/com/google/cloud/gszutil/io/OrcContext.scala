@@ -42,7 +42,7 @@ final class OrcContext(private val cred: OAuth2Credentials, schema: TypeDescript
 
   next() // Initialize Writer and Path
 
-  private val orcConfig: Configuration = {
+  private def orcConfig: Configuration = {
     val c = new Configuration(false)
     OrcConf.COMPRESS.setString(c, "ZLIB")
     OrcConf.COMPRESSION_STRATEGY.setString(c, "SPEED")
@@ -51,6 +51,7 @@ final class OrcContext(private val cred: OAuth2Credentials, schema: TypeDescript
     OrcConf.MEMORY_POOL.setDouble(c, 0.5d)
     OrcConf.BUFFER_SIZE.setLong(c, OptimalGZipBuffer)
     OrcConf.ROW_INDEX_STRIDE.setLong(c, 0)
+    OrcConf.DICTIONARY_KEY_SIZE_THRESHOLD.setDouble(c, 0)
     OrcConf.DIRECT_ENCODING_COLUMNS.setString(c, String.join(",",schema.getFieldNames))
     OrcConf.ROWS_BETWEEN_CHECKS.setLong(c, 0)
     c

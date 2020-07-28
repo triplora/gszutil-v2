@@ -139,15 +139,15 @@ case class GsUtilConfig(source: String = "INFILE",
     m.put("type","GsUtilConfig")
     m.put("gcsUri",gcsUri)
     m.put("replace",replace)
-    m.put("maxErrorPct",maxErrorPct)
+    m.put("maxErrorPct",maxErrorPct.toString)
     schemaProvider.map(_.toString).foreach(m.put("schemaProvider",_))
     if (statsTable.nonEmpty)
       m.put("statsTable",statsTable)
     m.put("remote",remote)
     if (remote && remoteHost.nonEmpty) {
       m.put("remoteHost", remoteHost)
-      m.put("remoteHost", remotePort)
-      m.put("nConnections",nConnections)
+      m.put("remotePort", remotePort.toString)
+      m.put("nConnections",nConnections.toString)
     }
     m.build()
   }

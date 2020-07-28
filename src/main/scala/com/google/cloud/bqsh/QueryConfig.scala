@@ -96,6 +96,8 @@ case class QueryConfig(
     m.put("location",location)
     m.put("projectId",projectId)
     m.put("datasetId",datasetId)
+    m.put("replace",if (replace) "true" else "false")
+    m.put("destinationTable",destinationTable)
     if (jobId.nonEmpty)
       m.put("jobId",jobId)
     if (statsTable.nonEmpty)

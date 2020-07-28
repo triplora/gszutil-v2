@@ -16,6 +16,7 @@
 
 package com.google.cloud.bqsh
 
+import com.google.cloud.imf.util.StaticMap
 import com.google.common.collect.ImmutableSortedMap
 
 case class RmConfig (
@@ -35,11 +36,13 @@ case class RmConfig (
   synchronousMode: Boolean = true,
   sync: Boolean = true
 ) {
-  def toMap: java.util.Map[String,Any] = ImmutableSortedMap.of(
-    "type", "RmConfig",
-    "tablespec", tablespec,
-    "projectId", projectId,
-    "location", location,
-    "recursive", recursive
-  )
+  def toMap: java.util.Map[String,Any] = {
+    val m = StaticMap.builder
+    m.put("type", "RmConfig")
+    m.put("tablespec", tablespec)
+    m.put("projectId", projectId)
+    m.put("location", location)
+    m.put("recursive", if (recursive) "true" else "false")
+    m.build()
+  }
 }

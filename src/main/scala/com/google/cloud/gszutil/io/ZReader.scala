@@ -31,7 +31,7 @@ import org.apache.orc.Writer
 class ZReader(private val schemaProvider: SchemaProvider,
               private val batchSize: Int,
               private val lrecl: Int) extends Logging {
-  private final val rBuf: ByteBuffer = ByteBuffer.allocate(schemaProvider.LRECL)
+  private final val rBuf: ByteBuffer = ByteBuffer.allocate(lrecl)
   private final val decoders: Array[Decoder] = schemaProvider.decoders
 
   // we keep all columns including fillers to simplify decoding
@@ -62,14 +62,12 @@ class ZReader(private val schemaProvider: SchemaProvider,
   def readOrc(buf: ByteBuffer, writer: Writer, err: ByteBuffer): (Long,Long) = {
     var errors: Long = 0
     var rows: Long = 0
-    val lrecl = rBuf.capacity()
     while (buf.remaining >= lrecl) {
       rowBatch.reset()
       val (rowId,errCt) =
         if (schemaProvider.vartext)
           ZReader.readVartextBatch(buf, schemaProvider.vartextDecoders, cols,
-            schemaProvider.delimiter, schemaProvider.srcCharset, batchSize, schemaProvider.LRECL,
-            err)
+            schemaProvider.delimiter, schemaProvider.srcCharset, batchSize, lrecl, err)
         else
           ZReader.readBatch(buf,decoders,cols,batchSize,lrecl,rBuf,err)
       if (rowId == 0)

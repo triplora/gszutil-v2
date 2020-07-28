@@ -22,7 +22,7 @@ class ZDataSet(srcBytes: Array[Byte],
                override val lRecl: Int,
                override val blkSize: Int,
                limit: Int = -1,
-position: Int = 0) extends ZRecordReaderT {
+               position: Int = 0) extends ZRecordReaderT {
   private val buf = ByteBuffer.wrap(srcBytes)
   private var open = true
   private var bytesRead: Long = 0
