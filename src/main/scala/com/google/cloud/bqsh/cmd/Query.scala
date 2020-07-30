@@ -52,7 +52,7 @@ object Query extends Command[QueryConfig] with Logging {
 
     var result: Result = null
     for (query <- queries) {
-      val jobConfiguration = configureQueryJob(query, cfg, zos)
+      val jobConfiguration = configureQueryJob(query, cfg)
       val jobId = BQ.genJobId(zos, "query")
       logger.debug(s"generated job id ${jobId.getJob}")
 
@@ -152,7 +152,7 @@ object Query extends Command[QueryConfig] with Logging {
     (positionalValues, namedValues)
   }
 
-  def configureQueryJob(query: String, cfg: QueryConfig, zos: MVS): QueryJobConfiguration = {
+  def configureQueryJob(query: String, cfg: QueryConfig): QueryJobConfiguration = {
     import scala.jdk.CollectionConverters.{MapHasAsJava, SeqHasAsJava}
 
     val b = QueryJobConfiguration.newBuilder(query)
