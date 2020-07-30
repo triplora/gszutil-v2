@@ -35,11 +35,9 @@ object Encoding {
       }
 
       val diff = size - x.length
-      val toEncode = if (diff > 0) {
-        val y = String.format(s"%${size}s", x)
-        System.out.println(y)
-        y
-      } else x
+      val toEncode = if (diff > 0)
+        String.format(s"%${size}s", x)
+      else x
 
       val buf = transcoder.charset.encode(toEncode)
       val array = new Array[Byte](size)
