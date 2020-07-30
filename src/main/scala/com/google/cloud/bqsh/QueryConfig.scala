@@ -26,13 +26,14 @@ object QueryConfig {
       statsTable = statsTable, replace = replace, destinationTable = destinationTable)
   }
 
-  /** QueryJobConfiguration with DML may not set WriteDisposition
-    * therefore replace option is not allowed for DML queries
+  /** QueryJobConfiguration with DML
+    * Cannot set destination table in jobs with DML
+    * Cannot set WriteDisposition in jobs with DML
     */
   def dml(dml: String, datasetId: String, location: String, projectId: String,
-             statsTable: String, destinationTable: String): QueryConfig = {
+          statsTable: String): QueryConfig = {
     QueryConfig(dml, datasetId = datasetId, location = location, projectId = projectId,
-      statsTable = statsTable, destinationTable = destinationTable)
+      statsTable = statsTable)
   }
 }
 
