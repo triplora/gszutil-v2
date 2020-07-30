@@ -38,7 +38,7 @@ object IBM extends MVS with Logging {
   override def init(): Unit = {
     ZOS.addCCAProvider()
     System.setProperty("java.net.preferIPv4Stack" , "true")
-    System.out.println("Build Info:\n" + Util.readS("build.txt"))
+    System.out.println("Mainframe Connector Build Info: " + Util.readS("build.txt"))
   }
 
   override def exists(dsn: DSN): Boolean = ZOS.exists(dsn)
@@ -47,6 +47,7 @@ object IBM extends MVS with Logging {
   override def listPDS(dsn: DSN): Iterator[PDSMemberInfo] = new PDSIterator(dsn)
   override def readDSN(dsn: DSN): ZRecordReaderT = ZOS.readDSN(dsn)
   override def writeDSN(dsn: DSN): ZRecordWriterT = ZOS.writeDSN(dsn)
+  override def writeDD(dd: String): ZRecordWriterT = ZOS.writeDD(dd)
   override def readDD(dd: String): ZRecordReaderT = ZOS.readDD(dd)
 
   override def readDSNLines(dsn: DSN): Iterator[String] =

@@ -354,14 +354,13 @@ object Decoding extends Logging {
     override val size: Int = PackedDecimal.sizeOf(p,s)
 
     def isNull(buf: Array[Byte], pos: Int): Boolean = {
-      var j = pos
-      var isNull = true
+      var i = pos
       val limit = pos + size
-      while (j < limit){
-        if (buf(j) != 0x00) isNull = false
-        j += 1
+      while (i < limit){
+        if (buf(i) != 0x00) return false
+        i += 1
       }
-      isNull
+      true
     }
 
     override def get(buf: ByteBuffer, col: ColumnVector, i: Int): Unit = {

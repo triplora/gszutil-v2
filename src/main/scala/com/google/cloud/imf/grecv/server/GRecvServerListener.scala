@@ -24,7 +24,7 @@ object GRecvServerListener extends Logging {
             responseObserver: StreamObserver[GRecvResponse],
             compress: Boolean): Unit = {
     val jobInfo: java.util.Map[String,Any] = Util.toMap(req.getJobinfo)
-    val msg1 = "Received request for" + req.getSrcUri + " " +
+    val msg1 = "Received request for " + req.getSrcUri + " " +
       JsonFormat.printer.omittingInsignificantWhitespace().print(req.getJobinfo)
     logger.info(msg1)
 

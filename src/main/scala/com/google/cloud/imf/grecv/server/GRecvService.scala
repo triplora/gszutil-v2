@@ -7,6 +7,7 @@ import com.google.auth.oauth2.OAuth2Credentials
 import com.google.cloud.imf.gzos.pb.GRecvGrpc.GRecvImplBase
 import com.google.cloud.imf.gzos.pb.GRecvProto.{GRecvRequest, GRecvResponse, HealthCheckRequest, HealthCheckResponse}
 import com.google.cloud.imf.util.Logging
+import com.google.protobuf.util.JsonFormat
 import io.grpc.stub.StreamObserver
 
 import scala.util.Random
@@ -19,7 +20,8 @@ class GRecvService(private val creds: OAuth2Credentials) extends GRecvImplBase w
   override def write(request: GRecvRequest, responseObserver: StreamObserver[GRecvResponse]): Unit = {
     val partId = fmt.format(java.time.LocalDateTime.now(ZoneId.of("UTC"))) + "-" +
       rng.alphanumeric.take(6).mkString("")
-    logger.debug("creating GRecvRequestStreamObserver")
+    val requestJson = JsonFormat.printer().omittingInsignificantWhitespace().print(request)
+    logger.debug(s"Received GRecvRequest\n```\n$requestJson\n```")
     try {
       creds.refreshIfExpired()
       GRecvServerListener.write(request, creds, partId, responseObserver, compress = true)

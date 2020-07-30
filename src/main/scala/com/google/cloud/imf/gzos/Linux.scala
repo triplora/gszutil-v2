@@ -114,6 +114,7 @@ object Linux extends MVS with Logging {
   override def readDSN(dsn: DSN): ZRecordReaderT = throw new NotImplementedError()
   override def readDSNLines(dsn: DSN): Iterator[String] = throw new NotImplementedError()
   override def writeDSN(dsn: DSN): ZRecordWriterT = throw new NotImplementedError()
+  override def writeDD(ddName: String): ZRecordWriterT = throw new NotImplementedError()
   override def listPDS(dsn: DSN): Iterator[PDSMemberInfo] = throw new NotImplementedError()
 
   override def submitJCL(jcl: Seq[String]): Option[ZMVSJob] = throw new NotImplementedError()

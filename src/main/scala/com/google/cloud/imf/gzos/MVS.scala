@@ -32,6 +32,7 @@ trait MVS {
   def readDSN(dsn: DSN): ZRecordReaderT
   def readDSNLines(dsn: DSN): Iterator[String]
   def writeDSN(dsn: DSN): ZRecordWriterT
+  def writeDD(ddName: String): ZRecordWriterT
   def readDD(dd: String): ZRecordReaderT
   def readStdin(): String
   def readDDString(dd: String, recordSeparator: String): String

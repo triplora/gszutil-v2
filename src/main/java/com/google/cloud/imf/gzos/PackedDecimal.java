@@ -50,8 +50,8 @@ public class PackedDecimal {
             b = k & 0x0F;
 
             // validate hex digit values
-            if (a > 9 || b > 9)
-                throw new IllegalArgumentException("Invalid hex digit value");
+            //if (a > 9 || b > 9)
+            //    throw new IllegalArgumentException("Invalid hex digit value " + a + " " + b);
 
             // add to result
             x += a;
@@ -68,6 +68,8 @@ public class PackedDecimal {
         // get hex digit values
         a = k >>> 4;
         b = k & 0x0F;
+        //if (a > 9)
+        //    throw new IllegalArgumentException("Invalid hex digit value " + a);
 
         // add digit from first nibble
         x += a;

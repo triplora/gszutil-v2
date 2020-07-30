@@ -92,15 +92,22 @@ object ZReader extends Logging {
   private def readRecord(rBuf: ByteBuffer,
                          decoders: Array[Decoder],
                          cols: Array[ColumnVector],
-                         rowId: Int): Int = {
+                         rowId: Int,
+                         errors: Int): Int = {
+    var i = 0
     try {
-      var i = 0
       while (i < decoders.length){
         decoders(i).get(rBuf, cols(i), rowId)
         i += 1
       }
       0
-    } catch {case _: Throwable => -1}
+    } catch {
+      case t: Throwable =>
+        val cls = decoders.lift(i).map(_.getClass.getSimpleName.stripSuffix("$")).getOrElse("?")
+        if (errors < 3)
+          logger.error(s"Error reading column $i $cls", t)
+        1
+    }
   }
 
   /**
@@ -129,7 +136,7 @@ object ZReader extends Logging {
       val newPos = buf.position() + lRecl
       buf.position(newPos)
       rBuf.clear // prepare record for reading
-      if (readRecord(rBuf, decoders, cols, rowId) != 0){
+      if (readRecord(rBuf, decoders, cols, rowId, errors) != 0){
         errors += 1
         if (err.remaining() >= lRecl)
           err.put(rBuf.array)

@@ -232,6 +232,9 @@ protected object ZOS {
   def writeDSN(dsn: DSN): ZRecordWriterT =
     new WrappedRecordWriter(RecordWriter.newWriter(dsn.fqdsn, ZFileConstants.FLAG_DISP_SHR))
 
+  def writeDD(ddName: String): ZRecordWriterT =
+    new WrappedRecordWriter(RecordWriter.newWriterForDD(ddName))
+
   def readDD(ddName: String): ZRecordReaderT = {
     System.out.println(s"reading DD $ddName")
     if (!ZFile.ddExists(ddName))
@@ -253,11 +256,8 @@ protected object ZOS {
     }
   }
 
-  def addCCAProvider(): Unit = {
+  def addCCAProvider(): Unit =
     Security.insertProviderAt(new com.ibm.crypto.hdwrCCA.provider.IBMJCECCA(), 1)
-    System.out.println(s"added IBMJCECCA Security Provider")
-    SecurityUtils.printProviders()
-  }
 
   def getJobId: String = ZUtil.getCurrentJobId
   def getJobName: String = ZUtil.getCurrentJobname
