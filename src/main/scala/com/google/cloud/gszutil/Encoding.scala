@@ -28,10 +28,25 @@ object Encoding {
     def encode(x: String): Array[Byte] = {
       if (x == null)
         return Array.fill(size)(0x00)
+
+      if (x.length > size) {
+        val msg = s"Length of string is higher than field size. String len=${x.length}, field size: $size."
+        throw new RuntimeException(msg)
+      }
+
+      val diff = size - x.length
+      val toEncode = if (diff > 0) {
+        val y = String.format(s"%${size}s", x)
+        System.out.println(y)
+        y
+      } else x
+
+      val buf = transcoder.charset.encode(toEncode)
       val array = new Array[Byte](size)
-      transcoder.charset.encode(x).get(array)
+      buf.get(array)
+
       if (array.length != size)
-        throw new RuntimeException(s"encoded length ${array.length} not equal to field size $size")
+        throw new RuntimeException(s"Encoded length ${array.length} not equal to field size $size.")
       array
     }
   }

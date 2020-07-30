@@ -4,7 +4,7 @@ import java.nio.ByteBuffer
 import java.time.LocalDate
 
 import com.google.cloud.gszutil.Decoding.{Decimal64Decoder, IntAsDateDecoder, LongDecoder}
-import com.google.cloud.gszutil.Encoding.{BytesToBinaryEncoder, DateStringToBinaryEncoder, DecimalToBinaryEncoder, LongToBinaryEncoder, StringToBinaryEncoder}
+import com.google.cloud.gszutil.Encoding._
 import com.google.cloud.imf.gzos.{Ebcdic, PackedDecimal}
 import org.apache.hadoop.hive.ql.exec.vector.{DateColumnVector, Decimal64ColumnVector, LongColumnVector}
 import org.scalatest.flatspec.AnyFlatSpec
@@ -14,17 +14,31 @@ class EncodingSpec extends AnyFlatSpec {
   "StringToBinaryEncoder" should "encode ASCII string" in {
     val example = "abcd"
     val encoder = StringToBinaryEncoder(Ebcdic, example.length)
-
     val buf = encoder.encode(example)
     val decoded = new String(buf, Ebcdic.charset)
+    System.out.println(decoded)
     assert(example.equals(decoded))
+  }
+
+  "StringToBinaryEncoder" should "throw an error when size higher than expected" in {
+    assertThrows[RuntimeException]{
+      StringToBinaryEncoder(Ebcdic, 2).encode("abcd")
+    }
+  }
+
+  "StringToBinaryEncoder" should "encode string with length less than expected" in {
+    val example = "abc"
+    val res = StringToBinaryEncoder(Ebcdic, 4).encode(example)
+    assert(res.length == 4)
+    assert("abc".trim.equals(new String(res, Ebcdic.charset).trim))
   }
 
   "LongToBinaryEncoder" should "encode integer" in {
     val example = 1234L
     val encoder = LongToBinaryEncoder(4)
-
     val buf: Array[Byte] = encoder.encode(example)
+    assert(buf.length == 4)
+
     val decoder = LongDecoder(4)
     val col = decoder.columnVector(1)
     decoder.get(ByteBuffer.wrap(buf), col, 0)
@@ -52,6 +66,7 @@ class EncodingSpec extends AnyFlatSpec {
     val date = "2020-07-08"
     val encoder = DateStringToBinaryEncoder()
     val encoded: Array[Byte] = encoder.encode(date)
+    assert(encoded.length == 4)
     assert(encoded.exists(_ != 0))
 
     // decode encoded value
@@ -81,7 +96,7 @@ class EncodingSpec extends AnyFlatSpec {
     val encoded = decimalEncoder.encode(null)
     val size = PackedDecimal.sizeOf(7, 2)
     System.out.println(size)
-    assert(encoded.size == size)
+    assert(encoded.length == size)
     assert(decimalEncoder.encode(null).filter(_ != 0x00).isEmpty)
   }
 
