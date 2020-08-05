@@ -32,22 +32,44 @@ object Decoding extends Logging {
                               override val size: Int,
                               override val nullIf: Array[Byte],
                               override val filler: Boolean = false) extends NullableDecoder {
+    def hasNonNullChar(bytes: Array[Byte], i: Int): Boolean = {
+      var j = i
+      val limit = i + size
+      while (j < limit){
+        // character other than null byte or EBCDIC space
+        if (bytes(j) != 0x00 && bytes(j) != 0x40)
+          return true
+        j += 1
+      }
+      false
+    }
+
     override def get(buf: ByteBuffer, col: ColumnVector, i: Int): Unit = {
       val bcv = col.asInstanceOf[BytesColumnVector]
 
-      // decode into output buffer
-      bcv.ensureValPreallocated(size)
-      val destPos = bcv.getValPreallocatedStart
-      val dest = bcv.getValPreallocatedBytes
-      transcoder.arraycopy(buf, dest, destPos, size)
-
-      // set output
-      if (isNull(dest, destPos, nullIf)){
+      if (!hasNonNullChar(buf.array(), buf.position())){
+        // null value due to all null bytes or spaces
+        val newPos = buf.position() + size
+        buf.position(newPos)
         bcv.isNull(i) = true
         bcv.noNulls = false
         bcv.setValPreallocated(i, 0)
       } else {
-        bcv.setValPreallocated(i, size)
+        // decode into output buffer
+        bcv.ensureValPreallocated(size)
+        val destPos = bcv.getValPreallocatedStart
+        val dest = bcv.getValPreallocatedBytes
+        transcoder.arraycopy(buf, dest, destPos, size)
+
+        // set output
+        if (isNull(dest, destPos, nullIf)){
+          // null value due to nullIf byte comparison
+          bcv.isNull(i) = true
+          bcv.noNulls = false
+          bcv.setValPreallocated(i, 0)
+        } else {
+          bcv.setValPreallocated(i, size)
+        }
       }
     }
 
@@ -482,7 +504,8 @@ object Decoding extends Logging {
   def typeMap(typ: String, transcoder: Transcoder, filler: Boolean): Decoder = {
     typ.stripSuffix(".") match {
       case charRegex(size) =>
-        new StringDecoder(transcoder, size.toInt, filler = filler)
+        new NullableStringDecoder(transcoder, size.toInt, filler = filler,
+          nullIf = Array.emptyByteArray)
       case "PIC X" =>
         new StringDecoder(transcoder, 1, filler = filler)
       case numStrRegex(size) =>
