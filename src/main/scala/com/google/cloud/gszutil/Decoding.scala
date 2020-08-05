@@ -366,6 +366,8 @@ object Decoding extends Logging {
     override def get(buf: ByteBuffer, col: ColumnVector, i: Int): Unit = {
       val dcv = col.asInstanceOf[Decimal64ColumnVector]
       if (isNull(buf.array(), buf.position())){
+        val newPos = buf.position() + size
+        buf.position(newPos)
         dcv.noNulls = false
         dcv.isNull.update(i, true)
       } else {
