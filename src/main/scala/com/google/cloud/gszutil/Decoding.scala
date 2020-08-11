@@ -501,11 +501,17 @@ object Decoding extends Logging {
   private val decRegex = """PIC S9\((\d{1,3})\) COMP-3""".r
   private val decRegex2 = """PIC S9\((\d{1,3})\)V9\((\d{1,3})\) COMP-3""".r
   private val decRegex3 = """PIC S9\((\d{1,3})\)V(9{1,6}) COMP-3""".r
-  def typeMap(typ: String, transcoder: Transcoder, filler: Boolean): Decoder = {
+
+  val EBCDIC0: Byte = 0xF0.toByte
+
+  def typeMap(typ: String, transcoder: Transcoder, filler: Boolean, isDate: Boolean): Decoder = {
     typ.stripSuffix(".") match {
-      case charRegex(size) =>
-        new NullableStringDecoder(transcoder, size.toInt, filler = filler,
-          nullIf = Array.emptyByteArray)
+      case charRegex(s) =>
+        val size = s.toInt
+        val nullIfBytes =
+          if (isDate && size == 10) Array.fill(size)(EBCDIC0)
+          else Array.emptyByteArray
+        new NullableStringDecoder(transcoder, size, filler = filler, nullIf = nullIfBytes)
       case "PIC X" =>
         new StringDecoder(transcoder, 1, filler = filler)
       case numStrRegex(size) =>
@@ -569,8 +575,10 @@ object Decoding extends Logging {
         val typ1 = typ
           .replaceFirst("""\s+COMP""", " COMP")
           .replaceFirst("""\(0""", """\(""")
-        val filler = name.toUpperCase.startsWith("FILLER")
-        val decoder = typeMap(typ1, transcoder, filler)
+        val name1 = name.toUpperCase
+        val filler = name1.startsWith("FILLER")
+        val isDate = name1.endsWith("DT") || name1.endsWith("DATE")
+        val decoder = typeMap(typ1, transcoder, filler, isDate)
 
         Option(CopyBookField(name.replace('-','_').trim, decoder))
       case titleRegex(name) =>

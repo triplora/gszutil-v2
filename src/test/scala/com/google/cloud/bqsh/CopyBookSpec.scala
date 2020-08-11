@@ -126,7 +126,8 @@ class CopyBookSpec extends AnyFlatSpec with Logging {
     ).foreach{x =>
       val picString = x._1
       val expectedDecoder = x._2
-      assert(Decoding.typeMap(picString, transcoder, filler = false) == expectedDecoder)
+      val decoder = Decoding.typeMap(picString, transcoder, filler = false, isDate = false)
+      assert(decoder == expectedDecoder)
     }
   }
 
