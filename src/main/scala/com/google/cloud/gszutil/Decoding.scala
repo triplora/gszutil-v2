@@ -513,7 +513,7 @@ object Decoding extends Logging {
           else Array.emptyByteArray
         new NullableStringDecoder(transcoder, size, filler = filler, nullIf = nullIfBytes)
       case "PIC X" =>
-        new StringDecoder(transcoder, 1, filler = filler)
+        new NullableStringDecoder(transcoder, 1, filler = filler, nullIf = Array.emptyByteArray)
       case numStrRegex(size) =>
         new StringDecoder(transcoder, size.toInt, filler = filler)
       case decRegex(p) if p.toInt >= 1 =>

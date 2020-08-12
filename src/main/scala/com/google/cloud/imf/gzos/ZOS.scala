@@ -81,13 +81,14 @@ protected object ZOS {
   }
 
   class WrappedVBRecordReader(private val r: RecordReader) extends ZRecordReaderT with Logging {
-    require(r.getRecfm == "VB", s"${r.getDDName} record format must be FB - ${r.getRecfm} is not " +
-      s"supported")
+    require(r.getRecfm == "VB",
+      s"${r.getDDName} ${r.getDsn} record format=${r.getRecfm} but expected VB")
+    require(r.getClass.getSimpleName.stripSuffix("$") == "BsamVRecordReader")
 
-    override val lRecl: Int = r.getLrecl
+    // record length without
+    override val lRecl: Int = r.getLrecl - 4
     override val blkSize: Int = r.getBlksize
 
-    private val buf: Array[Byte] = new Array[Byte](lRecl)
     private var open = true
     private var nRecordsRead: Long = 0
 
@@ -97,13 +98,17 @@ protected object ZOS {
 
     @scala.inline
     override final def read(buf: Array[Byte]): Int = {
-      nRecordsRead += 1
-      r.read(buf)
+      val n = r.read(buf, 0 , buf.length)
+      if (n > 0) nRecordsRead += 1
+      n
     }
 
     @scala.inline
-    override final def read(buf: Array[Byte], off: Int, len: Int): Int =
-      read(buf)
+    override final def read(buf: Array[Byte], off: Int, len: Int): Int = {
+      val n = r.read(buf, 0 , buf.length)
+      if (n > 0) nRecordsRead += 1
+      n
+    }
 
     override def close(): Unit = {
       if (open) {
@@ -115,9 +120,11 @@ protected object ZOS {
 
     @scala.inline
     override def read(dst: ByteBuffer): Int = {
-      val n = read(buf)
-      val k = math.max(0,n)
-      dst.put(buf, 0, k)
+      val n = read(dst.array())
+      if (n > 0) {
+        val startPos = dst.position()
+        dst.position(startPos + n)
+      }
       n
     }
   }
