@@ -111,8 +111,8 @@ protected object ZOS {
           buf(i) = Decoding.EBCDICSP
           i += 1
         }
-      }
-      lRecl
+        lRecl
+      } else n
     }
 
     override def close(): Unit = {
