@@ -21,6 +21,7 @@ import java.nio.charset.Charset
 import java.security.Security
 import java.util.Date
 
+import com.google.cloud.gszutil.Decoding
 import com.google.cloud.gszutil.io.{ZRecordReaderT, ZRecordWriterT}
 import com.google.cloud.imf.gzos.MVSStorage.DSN
 import com.google.cloud.imf.gzos.pb.GRecvProto.ZOSJobInfo
@@ -97,17 +98,21 @@ protected object ZOS {
     override def getDsn: String = r.getDsn
 
     @scala.inline
-    override final def read(buf: Array[Byte]): Int = {
-      val n = r.read(buf, 0 , buf.length)
-      if (n > 0) nRecordsRead += 1
-      n
-    }
+    override final def read(buf: Array[Byte]): Int = read(buf, 0, buf.length)
 
     @scala.inline
     override final def read(buf: Array[Byte], off: Int, len: Int): Int = {
-      val n = r.read(buf, 0 , buf.length)
-      if (n > 0) nRecordsRead += 1
-      n
+      val n = r.read(buf, off, len)
+      if (n > 0) {
+        nRecordsRead += 1
+        var i = off + n
+        val limit = off + lRecl
+        while (i < limit) {
+          buf(i) = Decoding.EBCDICSP
+          i += 1
+        }
+      }
+      lRecl
     }
 
     override def close(): Unit = {
@@ -120,7 +125,7 @@ protected object ZOS {
 
     @scala.inline
     override def read(dst: ByteBuffer): Int = {
-      val n = read(dst.array())
+      val n = read(dst.array(), dst.position(), dst.remaining())
       if (n > 0) {
         val startPos = dst.position()
         dst.position(startPos + n)

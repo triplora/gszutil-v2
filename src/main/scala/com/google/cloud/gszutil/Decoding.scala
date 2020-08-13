@@ -32,22 +32,13 @@ object Decoding extends Logging {
                               override val size: Int,
                               override val nullIf: Array[Byte],
                               override val filler: Boolean = false) extends NullableDecoder {
-    def hasNonNullChar(bytes: Array[Byte], i: Int): Boolean = {
-      var j = i
-      val limit = i + size
-      while (j < limit){
-        // character other than null byte or EBCDIC space
-        if (bytes(j) != 0x00 && bytes(j) != 0x40)
-          return true
-        j += 1
-      }
-      false
-    }
+    def isNull(buf: Array[Byte], off: Int, len: Int): Boolean =
+      allSpaces(buf, off, len) || allNull(buf, off, len)
 
     override def get(buf: ByteBuffer, col: ColumnVector, i: Int): Unit = {
       val bcv = col.asInstanceOf[BytesColumnVector]
 
-      if (!hasNonNullChar(buf.array(), buf.position())){
+      if (isNull(buf.array(), buf.position(), size)){
         // null value due to all null bytes or spaces
         val newPos = buf.position() + size
         buf.position(newPos)
@@ -326,6 +317,39 @@ object Decoding extends Logging {
         .setTyp(Field.FieldType.DATE)
   }
 
+  case class NullableLongDecoder(override val size: Int,
+                         filler: Boolean = false) extends Decoder {
+
+    def isNull(buf: Array[Byte], off: Int, len: Int): Boolean =
+      allSpaces(buf, off, len)
+
+    override def get(buf: ByteBuffer, col: ColumnVector, i: Int): Unit = {
+      val lcv = col.asInstanceOf[LongColumnVector]
+      if (isNull(buf.array(), buf.position(), size)){
+        val newPos = buf.position() + size
+        buf.position(newPos)
+        lcv.noNulls = false
+        lcv.isNull.update(i, true)
+      } else {
+        lcv.vector.update(i, Binary.decode(buf, size))
+      }
+    }
+
+    override def columnVector(maxSize: Int): ColumnVector =
+      new LongColumnVector(maxSize)
+
+    override def typeDescription: TypeDescription =
+      TypeDescription.createLong
+
+    override def toString: String = s"$size byte INT64"
+
+    override def toFieldBuilder: Field.Builder =
+      Field.newBuilder()
+        .setSize(size)
+        .setFiller(filler)
+        .setTyp(Field.FieldType.INTEGER)
+  }
+
   case class LongDecoder(override val size: Int,
                          filler: Boolean = false) extends Decoder {
     override def get(buf: ByteBuffer, col: ColumnVector, i: Int): Unit = {
@@ -375,19 +399,12 @@ object Decoding extends Logging {
     require(precision <= 18 && precision > 0, s"precision $precision not in range [1,18]")
     override val size: Int = PackedDecimal.sizeOf(p,s)
 
-    def isNull(buf: Array[Byte], pos: Int): Boolean = {
-      var i = pos
-      val limit = pos + size
-      while (i < limit){
-        if (buf(i) != 0x00) return false
-        i += 1
-      }
-      true
-    }
+    def isNull(buf: Array[Byte], off: Int, len: Int): Boolean =
+      allSpaces(buf, off, len) || allNull(buf, off, len)
 
     override def get(buf: ByteBuffer, col: ColumnVector, i: Int): Unit = {
       val dcv = col.asInstanceOf[Decimal64ColumnVector]
-      if (isNull(buf.array(), buf.position())){
+      if (isNull(buf.array(), buf.position(), size)){
         val newPos = buf.position() + size
         buf.position(newPos)
         dcv.noNulls = false
@@ -503,6 +520,28 @@ object Decoding extends Logging {
   private val decRegex3 = """PIC S9\((\d{1,3})\)V(9{1,6}) COMP-3""".r
 
   val EBCDIC0: Byte = 0xF0.toByte
+  val EBCDICNUL: Byte = 0x00.toByte
+  val EBCDICSP: Byte = 0x40.toByte
+
+  def allSpaces(buf: Array[Byte], off: Int, len: Int): Boolean = {
+    var i = 0
+    val limit = off + len
+    while (i < limit) {
+      if (buf(i) != EBCDICSP) return false
+      i += 1
+    }
+    true
+  }
+
+  def allNull(buf: Array[Byte], off: Int, len: Int): Boolean = {
+    var i = 0
+    val limit = off + len
+    while (i < limit) {
+      if (buf(i) != EBCDICNUL) return false
+      i += 1
+    }
+    true
+  }
 
   def typeMap(typ: String, transcoder: Transcoder, filler: Boolean, isDate: Boolean): Decoder = {
     typ.stripSuffix(".") match {
@@ -523,17 +562,17 @@ object Decoding extends Logging {
       case decRegex3(p,s) if p.toInt >= 1 =>
         Decimal64Decoder(p.toInt, s.length, filler = filler)
       case "PIC S9 COMP" =>
-        LongDecoder(2, filler = filler)
+        NullableLongDecoder(2, filler = filler)
       case "PIC 9 COMP" =>
         UnsignedLongDecoder(2, filler = filler)
       case intRegex(p) if p.toInt <= 18 && p.toInt >= 1 =>
         val x = p.toInt
         if (x <= 4)
-          LongDecoder(2, filler = filler)
+          NullableLongDecoder(2, filler = filler)
         else if (x <= 9)
-          LongDecoder(4, filler = filler)
+          NullableLongDecoder(4, filler = filler)
         else
-          LongDecoder(8, filler = filler)
+          NullableLongDecoder(8, filler = filler)
 
       case uintRegex(p) if p.toInt <= 18 && p.toInt >= 1 =>
         val x = p.toInt
