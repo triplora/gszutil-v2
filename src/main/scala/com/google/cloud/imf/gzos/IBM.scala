@@ -95,10 +95,10 @@ object IBM extends MVS with Logging {
 
   override def loadCopyBook(dd: String): CopyBook = {
     val raw = readDDString(dd, "\n")
-    logger.debug(s"Parsing copy book:\n$raw")
+    logger.info(s"Parsing copy book:\n$raw")
     try {
       val copyBook = CopyBook(raw, Ebcdic)
-      logger.info(s"Loaded copy book:\n$copyBook")
+      logger.info(s"Loaded copy book with LRECL=${copyBook.LRECL}")
       copyBook
     } catch {
       case e: Exception =>
