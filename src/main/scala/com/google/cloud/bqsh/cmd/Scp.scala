@@ -63,10 +63,10 @@ object Scp extends Command[ScpConfig] with Logging {
       val blob = gcs.update(BlobInfo.newBuilder(BlobId.of(bucket, objName))
         .setMetadata(ImmutableMap.of(
           "content-encoding", "gzip",
-          "DSN", in.getDsn,
-          "records", s"$nRecordsRead",
-          "LRECL", s"$lrecl",
-          "BLKSIZE", s"${in.blkSize}"))
+          "x-goog-meta-dsn", in.getDsn,
+          "x-goog-meta-records", s"$nRecordsRead",
+          "x-goog-meta-lrecl", s"$lrecl",
+          "x-goog-meta-blksize", s"${in.blkSize}"))
         .build())
       System.out.println(s"Uploaded $blob ")
       Result(activityCount = nRecordsRead)
