@@ -562,17 +562,17 @@ object Decoding extends Logging {
       case decRegex3(p,s) if p.toInt >= 1 =>
         Decimal64Decoder(p.toInt, s.length, filler = filler)
       case "PIC S9 COMP" =>
-        NullableLongDecoder(2, filler = filler)
+        LongDecoder(2, filler = filler)
       case "PIC 9 COMP" =>
         UnsignedLongDecoder(2, filler = filler)
       case intRegex(p) if p.toInt <= 18 && p.toInt >= 1 =>
         val x = p.toInt
         if (x <= 4)
-          NullableLongDecoder(2, filler = filler)
+          LongDecoder(2, filler = filler)
         else if (x <= 9)
-          NullableLongDecoder(4, filler = filler)
+          LongDecoder(4, filler = filler)
         else
-          NullableLongDecoder(8, filler = filler)
+          LongDecoder(8, filler = filler)
 
       case uintRegex(p) if p.toInt <= 18 && p.toInt >= 1 =>
         val x = p.toInt
