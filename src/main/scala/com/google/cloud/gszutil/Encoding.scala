@@ -20,7 +20,8 @@ object Encoding {
       DateStringToBinaryEncoder()
     else if (f.getTyp == FieldType.BYTES)
       BytesToBinaryEncoder(f.getSize)
-    else throw new UnsupportedOperationException(s"No encoder found for ${f.getTyp}.")
+    else
+      UnknownTypeEncoder
   }
 
   case class StringToBinaryEncoder(transcoder: Transcoder, size: Int) extends BinaryEncoder {
@@ -94,5 +95,10 @@ object Encoding {
       else
         bytes
     }
+  }
+
+  case object UnknownTypeEncoder extends BinaryEncoder {
+    def size = 0
+    val bqSupportedType: StandardSQLTypeName = null
   }
 }
