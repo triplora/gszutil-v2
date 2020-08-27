@@ -40,7 +40,7 @@ object Bqsh extends Logging {
     cloudLogger.setData(jobInfoMap)
     jobInfoMap.put("script", script)
     cloudLogger.log("Started BQSH", jobInfoMap, CloudLogging.Info)
-    CloudLogging.cloudLoggingRedirect(cloudLogger)
+    CloudLogging.cloudLoggingRedirect(cloudLogger, zos.transcoder.charset)
 
     val interpreter = new Interpreter(zos, sys.env,true, true)
     val result = interpreter.runScript(script)
