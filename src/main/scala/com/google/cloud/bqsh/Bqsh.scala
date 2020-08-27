@@ -25,7 +25,7 @@ import scala.collection.mutable
 import scala.collection.mutable.ListBuffer
 
 object Bqsh extends Logging {
-  val UserAgent = "google-pso-tool/gszutil/2.0"
+  val UserAgent = "google-pso-tool/gszutil/4.0"
 
   def main(args: Array[String]): Unit = {
     val zos = Util.zProvider
@@ -34,6 +34,14 @@ object Bqsh extends Logging {
     CloudLogging.configureLogging(debugOverride = false, sys.env,
       errorLogs = Seq("org.apache.orc","io.grpc","io.netty","org.apache.http"),
       credentials = zos.getCredentialProvider().getCredentials.createScoped(LoggingScopes.LOGGING_WRITE))
+
+    val jobInfoMap = Util.toMap(zos.getInfo)
+    val cloudLogger = CloudLogging.getLogger("bqsh")
+    cloudLogger.setData(jobInfoMap)
+    jobInfoMap.put("script", script)
+    cloudLogger.log("Started BQSH", jobInfoMap, CloudLogging.Info)
+    CloudLogging.cloudLoggingRedirect(cloudLogger)
+
     val interpreter = new Interpreter(zos, sys.env,true, true)
     val result = interpreter.runScript(script)
     if (result.exitCode != 0)
@@ -104,6 +112,8 @@ object Bqsh extends Logging {
           }
         } else if (cmd.name == "jclutil") {
           runCommand(JCLUtil, cmd.args, zos)
+        } else if (cmd.name == "sdsfutil") {
+          runCommand(SdsfUtil, cmd.args, zos)
         } else {
           Bqsh.eval(cmd)
         }
