@@ -39,20 +39,18 @@ object Scp extends Command[ScpConfig] with Logging {
       val gcsUri = new URI(config.destGsUri)
       val bucket = gcsUri.getAuthority
       val objName = gcsUri.getPath.stripPrefix("/")
+      val creds = zos.getCredentialProvider().getCredentials
+        .createScoped(StorageScopes.DEVSTORAGE_READ_WRITE)
+      val gcs = Services.storage(creds)
+      val os: OutputStream =
+        new BufferedOutputStream(new GZIPOutputStream(new StorageObjectOutputStream(
+          creds.refreshAccessToken(), bucket, objName), 32*1024, true), 1024*1024)
 
       val in: ZRecordReaderT = zos.readDD(config.sourceDD)
+      val lrecl = in.lRecl
+      var nRecordsRead: Long = 0
       try {
-        val lrecl = in.lRecl
-
-        val creds = zos.getCredentialProvider().getCredentials
-          .createScoped(StorageScopes.DEVSTORAGE_READ_WRITE)
-
-        val os: OutputStream =
-          new BufferedOutputStream(new GZIPOutputStream(new StorageObjectOutputStream(
-            creds.refreshAccessToken(), bucket, objName), 32*1024, true), 1024*1024)
-
         val buf = new Array[Byte](lrecl)
-        var nRecordsRead: Long = 0
         while (in.read(buf) > -1 && nRecordsRead < config.limit){
           os.write(buf, 0, lrecl)
           nRecordsRead += 1
@@ -65,7 +63,6 @@ object Scp extends Command[ScpConfig] with Logging {
           throw t
       }
 
-      val gcs = Services.storage(creds)
       val blob = gcs.update(BlobInfo.newBuilder(BlobId.of(bucket, objName))
         .setMetadata(ImmutableMap.of(
           "content-encoding", "gzip",
