@@ -41,23 +41,29 @@ object Scp extends Command[ScpConfig] with Logging {
       val objName = gcsUri.getPath.stripPrefix("/")
 
       val in: ZRecordReaderT = zos.readDD(config.sourceDD)
-      val lrecl = in.lRecl
+      try {
+        val lrecl = in.lRecl
 
-      val creds = zos.getCredentialProvider().getCredentials
-        .createScoped(StorageScopes.DEVSTORAGE_READ_WRITE)
+        val creds = zos.getCredentialProvider().getCredentials
+          .createScoped(StorageScopes.DEVSTORAGE_READ_WRITE)
 
-      val os: OutputStream =
-        new BufferedOutputStream(new GZIPOutputStream(new StorageObjectOutputStream(
-          creds.refreshAccessToken(), bucket, objName), 32*1024, true), 1024*1024)
+        val os: OutputStream =
+          new BufferedOutputStream(new GZIPOutputStream(new StorageObjectOutputStream(
+            creds.refreshAccessToken(), bucket, objName), 32*1024, true), 1024*1024)
 
-      val buf = new Array[Byte](lrecl)
-      var nRecordsRead: Long = 0
-      while (in.read(buf) > -1 && nRecordsRead < config.limit){
-        os.write(buf, 0, lrecl)
-        nRecordsRead += 1
+        val buf = new Array[Byte](lrecl)
+        var nRecordsRead: Long = 0
+        while (in.read(buf) > -1 && nRecordsRead < config.limit){
+          os.write(buf, 0, lrecl)
+          nRecordsRead += 1
+        }
+        os.close()
+        in.close()
+      } catch {
+        case t: Throwable =>
+          in.close()
+          throw t
       }
-      os.close()
-      in.close()
 
       val gcs = Services.storage(creds)
       val blob = gcs.update(BlobInfo.newBuilder(BlobId.of(bucket, objName))
@@ -71,7 +77,10 @@ object Scp extends Command[ScpConfig] with Logging {
       System.out.println(s"Uploaded $blob ")
       Result(activityCount = nRecordsRead)
     } catch {
-      case e: Throwable => Result.Failure(e.getMessage)
+      case e: Throwable =>
+        System.out.println(s"failed to sample data: ${e.getMessage}")
+        e.printStackTrace(System.err)
+        Result.Failure(e.getMessage)
     }
   }
 }
