@@ -44,6 +44,7 @@ object Bqsh extends Logging {
 
     val interpreter = new Interpreter(zos, sys.env,true, true)
     val result = interpreter.runScript(script)
+    CloudLogging.flush()
     if (result.exitCode != 0)
       System.exit(result.exitCode)
   }
