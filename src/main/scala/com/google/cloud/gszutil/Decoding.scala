@@ -165,9 +165,16 @@ object Decoding extends Logging {
         buf.position(i1)
         dcv.vector.update(i, -1)
         dcv.isNull.update(i, true)
+        dcv.noNulls = false
       } else {
-        val dt = transcoder.getEpochDay(buf,size,fmt)
-        dcv.vector.update(i, dt)
+        val maybeDt = transcoder.getEpochDay(buf,size,fmt)
+        if (maybeDt.isDefined)
+          dcv.vector.update(i, maybeDt.get)
+        else {
+          dcv.vector.update(i, -1)
+          dcv.isNull.update(i, true)
+          dcv.noNulls = false
+        }
       }
     }
 
