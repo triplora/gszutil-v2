@@ -531,7 +531,7 @@ object Decoding extends Logging {
   val EBCDICSP: Byte = 0x40.toByte
 
   def allSpaces(buf: Array[Byte], off: Int, len: Int): Boolean = {
-    var i = 0
+    var i = off
     val limit = off + len
     while (i < limit) {
       if (buf(i) != EBCDICSP) return false
@@ -541,7 +541,7 @@ object Decoding extends Logging {
   }
 
   def allNull(buf: Array[Byte], off: Int, len: Int): Boolean = {
-    var i = 0
+    var i = off
     val limit = off + len
     while (i < limit) {
       if (buf(i) != EBCDICNUL) return false
