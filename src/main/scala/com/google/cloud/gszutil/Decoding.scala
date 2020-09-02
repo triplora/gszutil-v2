@@ -155,7 +155,7 @@ object Decoding extends Logging {
         if (a(j) == Zero) zeros += 1
         j += 1
       }
-      zeros == 8 || allSpaces(a, buf.position(), size) || allNull(a, buf.position(), size)
+      zeros >= 8 || allSpaces(a, buf.position(), size) || allNull(a, buf.position(), size)
     }
 
     override def get(buf: ByteBuffer, col: ColumnVector, i: Int): Unit = {
