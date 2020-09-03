@@ -25,6 +25,8 @@ object Encoding {
   }
 
   case class StringToBinaryEncoder(transcoder: Transcoder, size: Int) extends BinaryEncoder {
+    override type T = String
+
     val bqSupportedType: StandardSQLTypeName = StandardSQLTypeName.STRING
     def encode(x: String): Array[Byte] = {
       if (x == null)
@@ -51,17 +53,21 @@ object Encoding {
   }
 
   case class LongToBinaryEncoder(size: Int) extends BinaryEncoder {
+    override type T = java.lang.Long
+
     val bqSupportedType: StandardSQLTypeName = StandardSQLTypeName.INT64
-    def encode(x: java.lang.Long): Array[Byte] = {
+    def encode(x: T): Array[Byte] = {
       if (x == null) Array.fill(size)(0x00)
       else Binary.encode(x, size)
     }
   }
 
   case class DecimalToBinaryEncoder(p: Int, s: Int) extends BinaryEncoder {
+    override type T = java.lang.Long
+
     val bqSupportedType: StandardSQLTypeName = StandardSQLTypeName.FLOAT64
     val size: Int = PackedDecimal.sizeOf(p, s)
-    def encode(x: java.lang.Long): Array[Byte] = {
+    def encode(x: T): Array[Byte] = {
       if (x == null)
         Array.fill(size)(0x00)
       else
@@ -70,6 +76,7 @@ object Encoding {
   }
 
   case class DateStringToBinaryEncoder() extends BinaryEncoder {
+    override type T = String
     val bqSupportedType: StandardSQLTypeName = StandardSQLTypeName.DATE
     val size = 4
     def encode(x: String): Array[Byte] = {
@@ -87,6 +94,7 @@ object Encoding {
   }
 
   case class BytesToBinaryEncoder(size: Int) extends BinaryEncoder {
+    override type T = Array[Byte]
     val bqSupportedType: StandardSQLTypeName = StandardSQLTypeName.BYTES
 
     def encode(bytes: Array[Byte]): Array[Byte] = {
@@ -98,7 +106,9 @@ object Encoding {
   }
 
   case object UnknownTypeEncoder extends BinaryEncoder {
+    override type T = Object
     def size = 0
     val bqSupportedType: StandardSQLTypeName = null
+    override def encode(elem: Object): Array[Byte] = throw new UnsupportedOperationException()
   }
 }

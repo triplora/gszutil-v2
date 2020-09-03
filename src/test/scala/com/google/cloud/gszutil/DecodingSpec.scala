@@ -21,11 +21,12 @@ import java.nio.charset.StandardCharsets
 import java.time.LocalDate
 import java.time.format.DateTimeFormatter
 
-import com.google.cloud.gszutil.Decoding.{Decimal64Decoder, IntegerAsDateDecoder, LongDecoder, NullableStringDecoder, StringAsDateDecoder, StringAsDecimalDecoder, StringAsIntDecoder, StringDecoder}
+import com.google.cloud.gszutil.Decoding.{Decimal64Decoder, DecimalAsStringDecoder, IntegerAsDateDecoder, LongAsStringDecoder, LongDecoder, NullableStringDecoder, StringAsDateDecoder, StringAsDecimalDecoder, StringAsIntDecoder, StringDecoder}
+import com.google.cloud.gszutil.Encoding.DecimalToBinaryEncoder
 import com.google.cloud.gszutil.io.ZReader
 import com.google.cloud.imf.gzos.pb.GRecvProto.Record.Field
 import com.google.cloud.imf.gzos.pb.GRecvProto.Record.Field.FieldType
-import com.google.cloud.imf.gzos.{Ebcdic, PackedDecimal, Util}
+import com.google.cloud.imf.gzos.{Binary, Ebcdic, PackedDecimal, Util}
 import com.google.common.base.Charsets
 import com.ibm.jzos.fields.daa
 import org.apache.hadoop.hive.ql.exec.vector.{BytesColumnVector, DateColumnVector, Decimal64ColumnVector, LongColumnVector}
@@ -280,7 +281,7 @@ class DecodingSpec extends AnyFlatSpec {
     }
   }
 
-  it should "decode string as date" in {
+  it should "decode string as date 1" in {
     val exampleDate = "02/01/2020"
     val fmt = DateTimeFormatter.ofPattern("MM/dd/yyyy")
     val ld = LocalDate.from(fmt.parse(exampleDate))
@@ -289,6 +290,25 @@ class DecodingSpec extends AnyFlatSpec {
       ("00/00/0000", -1L, true)
     )
     val decoder = new StringAsDateDecoder(Ebcdic,10, "MM/DD/YYYY")
+    val col = decoder.columnVector(examples.length)
+    val vec: Array[Long] = col.asInstanceOf[DateColumnVector].vector
+    val isNull: Array[Boolean] = col.asInstanceOf[DateColumnVector].isNull
+    for (i <- examples.indices){
+      val (a,b,c) = examples(i)
+      decoder.get(Ebcdic.charset.encode(a), col, i)
+      assert(vec(i) == b)
+      assert(isNull(i) == c)
+    }
+  }
+
+  it should "decode string as date 2" in {
+    val exampleDate = "20/02/01"
+    val fmt = DateTimeFormatter.ofPattern("yy/MM/dd")
+    val ld = LocalDate.from(fmt.parse(exampleDate))
+    val examples = Seq(
+      (exampleDate, ld.toEpochDay, false),
+    )
+    val decoder = new StringAsDateDecoder(Ebcdic, 8, "yy/MM/dd")
     val col = decoder.columnVector(examples.length)
     val vec: Array[Long] = col.asInstanceOf[DateColumnVector].vector
     val isNull: Array[Boolean] = col.asInstanceOf[DateColumnVector].isNull
@@ -477,4 +497,45 @@ class DecodingSpec extends AnyFlatSpec {
       assert(bcv.isNull(0) == expected, "should be null")
     }
   }
+
+  it should "cast decimal(5, 2) to string" in {
+    // prepare input
+    val example = 3L
+    val precision = 5
+    val scale = 2
+    val encoder = DecimalToBinaryEncoder(precision - scale, scale)
+    val decimalInputBuf = ByteBuffer.wrap(encoder.encode(example))
+
+    // decode as String
+    val decoder = DecimalAsStringDecoder(precision - scale, scale, (precision - scale) * 2, Ebcdic, filler = false)
+    val col = decoder.columnVector(decoder.size).asInstanceOf[BytesColumnVector]
+    decoder.get(decimalInputBuf, col, 0)
+
+    val a = col.vector(0)
+    val start = col.start(0)
+    val len = col.length(0)
+    System.out.println(a)
+    System.out.println(start)
+    System.out.println(len)
+    val s = new String(a,start,len, Utf8.charset)
+    assert(s == "0.03")
+  }
+
+  it should "cast integer to string" in {
+    val example = 1234567
+    val binary = Binary.encode(example, 4)
+    val decoder = LongAsStringDecoder(Ebcdic, 4, 8, filler = false)
+    val col = decoder.columnVector(decoder.size).asInstanceOf[BytesColumnVector]
+    decoder.get(ByteBuffer.wrap(binary), col, 0)
+
+    val a = col.vector(0)
+    val start = col.start(0)
+    val len = col.length(0)
+    System.out.println(a)
+    System.out.println(start)
+    System.out.println(len)
+    val s = new String(a,start,len, Utf8.charset)
+    assert(s == "1234567")
+  }
+
 }

@@ -15,6 +15,7 @@
  */
 package com.google.cloud.gszutil
 
+import java.math.BigInteger
 import java.nio.ByteBuffer
 import java.time.{LocalDate, Month}
 
@@ -139,6 +140,46 @@ object Decoding extends Logging {
         .setTyp(Field.FieldType.INTEGER)
   }
 
+  case class DecimalAsStringDecoder(p: Int, s: Int,
+                                    strSize: Int,
+                                    transcoder: Transcoder,
+                                    override val filler: Boolean = false)
+    extends StringDecoder(transcoder, strSize, filler) {
+
+    private val decimalSize = PackedDecimal.sizeOf(p, s)
+
+    override def get(buf: ByteBuffer, col: ColumnVector, i: Int): Unit = {
+      val x = PackedDecimal.unpack(buf, decimalSize)
+      val bytes = new java.math.BigDecimal(
+        new BigInteger(String.valueOf(x)), s).toString.getBytes(transcoder.charset)
+      val bSize = bytes.size
+      val bcv = col.asInstanceOf[BytesColumnVector]
+      bcv.ensureValPreallocated(bSize)
+      transcoder.arraycopy(ByteBuffer.wrap(bytes), bcv.getValPreallocatedBytes, bcv.getValPreallocatedStart, bSize)
+      bcv.setValPreallocated(i, bSize)
+    }
+
+    override def toString: String = s"$decimalSize byte INTEGER (STRING)"
+  }
+
+  case class LongAsStringDecoder(transcoder: Transcoder,
+                                 longSize: Int,
+                                 strSize: Int,
+                                 override val filler: Boolean = false)
+    extends StringDecoder(transcoder, strSize, filler) {
+
+    override def get(buf: ByteBuffer, col: ColumnVector, i: Int): Unit = {
+      val bytes = String.valueOf(Binary.decode(buf, longSize)).getBytes(transcoder.charset)
+      val bSize = bytes.size
+      val bcv = col.asInstanceOf[BytesColumnVector]
+      bcv.ensureValPreallocated(bSize)
+      transcoder.arraycopy(ByteBuffer.wrap(bytes), bcv.getValPreallocatedBytes, bcv.getValPreallocatedStart, bSize)
+      bcv.setValPreallocated(i, bSize)
+    }
+
+    override def toString: String = s"$longSize byte LONG (STRING)"
+  }
+
   class StringAsDateDecoder(transcoder: Transcoder,
                             override val size: Int,
                             override val format: String,
@@ -261,6 +302,7 @@ object Decoding extends Logging {
         .setFiller(filler)
         .setTyp(Field.FieldType.DATE)
   }
+
 
   class StringAsDecimalDecoder(transcoder: Transcoder,
                                override val size: Int,
@@ -505,10 +547,17 @@ object Decoding extends Logging {
     else if (f.getTyp == INTEGER) {
       if (f.getCast == DATE){
         new IntegerAsDateDecoder(f.getSize, filler = filler)
-      } else LongDecoder(f.getSize, filler)
-    } else if (f.getTyp == DECIMAL)
-      Decimal64Decoder(f.getPrecision - f.getScale, f.getScale, filler)
-    else if (f.getTyp == DATE)
+      } else if (f.getCast == STRING) {
+          LongAsStringDecoder(transcoder, f.getSize, f.getSize * 2, filler = filler)
+      } else {
+        LongDecoder(f.getSize, filler)
+      }
+    } else if (f.getTyp == DECIMAL) {
+      if (f.getCast == STRING)
+        DecimalAsStringDecoder(f.getPrecision - f.getScale, f.getScale, (f.getPrecision - f.getScale) * 2,  transcoder, filler = filler)
+      else
+        Decimal64Decoder(f.getPrecision - f.getScale, f.getScale, filler)
+    } else if (f.getTyp == DATE)
       IntAsDateDecoder(filler)
     else if (f.getTyp == UNSIGNED_INTEGER)
       UnsignedLongDecoder(f.getSize, filler)
