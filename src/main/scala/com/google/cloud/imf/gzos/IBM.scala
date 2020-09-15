@@ -24,7 +24,8 @@ import com.google.api.client.json.jackson2.JacksonFactory
 import com.google.api.client.json.{GenericJson, JsonObjectParser}
 import com.google.cloud.gszutil
 import com.google.cloud.gszutil.CopyBook
-import com.google.cloud.gszutil.io.{ZRecordReaderT, ZRecordWriterT}
+import com.google.cloud.gszutil.io.{CloudRecordReader, ZRecordReaderT, ZRecordWriterT}
+import com.google.cloud.imf.gzos.JCLParser.DDStatement
 import com.google.cloud.imf.gzos.MVSStorage.DSN
 import com.google.cloud.imf.gzos.Util.GoogleCredentialsProvider
 import com.google.cloud.imf.gzos.ZOS.{PDSIterator, RecordIterator}
@@ -48,7 +49,23 @@ object IBM extends MVS with Logging {
   override def readDSN(dsn: DSN): ZRecordReaderT = ZOS.readDSN(dsn)
   override def writeDSN(dsn: DSN): ZRecordWriterT = ZOS.writeDSN(dsn)
   override def writeDD(dd: String): ZRecordWriterT = ZOS.writeDD(dd)
-  override def readDD(dd: String): ZRecordReaderT = ZOS.readDD(dd)
+  override def readDD(dd: String): ZRecordReaderT = {
+    if (ZOS.ddExists(dd)) ZOS.readDD(dd)
+    else {
+      val gcsDD = sys.env.getOrElse("GCSDD","GCSLOC")
+      if (ZOS.ddExists(gcsDD)) {
+        val gcsParm = readDDString(gcsDD,"\n")
+        val gcsDDs = JCLParser.splitStatements(gcsParm)
+        System.out.println(s"GCS DSNs:\n${gcsDDs.mkString("\n")}")
+        gcsDDs.find(_.name == dd) match {
+          case Some(DDStatement(_, lrecl, dsn)) =>
+            CloudRecordReader(dsn, lrecl)
+          case None =>
+            throw new RuntimeException(s"DD not found: $dd")
+        }
+      } else throw new RuntimeException(s"DD not found: $dd")
+    }
+  }
 
   override def readDSNLines(dsn: DSN): Iterator[String] =
     new RecordIterator(readDSN(dsn)).takeWhile(_ != null)
@@ -59,7 +76,7 @@ object IBM extends MVS with Logging {
   }
 
   override def readDDString(dd: String, recordSeparator: String): String = {
-    val in = readDD(dd)
+    val in = ZOS.readDD(dd)
     val bytes = Util.readAllBytes(in)
     val decoded = Ebcdic.decodeBytes(bytes)
     Util.records2string(decoded, in.lRecl, Charsets.UTF_8, recordSeparator)

@@ -92,7 +92,8 @@ class CpSpec2 extends AnyFlatSpec with BeforeAndAfterAll {
       .setBasepath("gs://gszutil-test/prefix")
       .build
 
-    val sendResult = GRecvClient.upload(request, serverCfg.host, serverCfg.port, 1, Util.zProvider, in)
+    val sendResult = GRecvClient.upload(request, serverCfg.host, serverCfg.port, 1, Util
+      .zProvider, in, "gs://gszutil-test/dsn")
     assert(sendResult.exitCode == 0)
   }
 

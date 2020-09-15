@@ -41,36 +41,6 @@ object GsUtilConfig {
                    else None)
   }
 
-  def createRemote(sourceDD: String,
-                   sp: SchemaProvider,
-             destinationUri: String,
-             projectId: String,
-             datasetId: String,
-             location: String,
-             pkgUri: String,
-             zone: String,
-             subnet: String,
-             remotePort: Int,
-             serviceAccount: String,
-             genData: Boolean): GsUtilConfig = {
-    GsUtilConfig(source = sourceDD,
-      schemaProvider = Option(sp),
-      gcsUri = destinationUri,
-      projectId = projectId,
-      datasetId = datasetId,
-      location = location,
-      pkgUri = pkgUri,
-      zone = zone,
-      subnet = subnet,
-      remotePort = remotePort,
-      serviceAccount = serviceAccount,
-      remote = true,
-      replace = true,
-      testInput =
-        if (genData) Option(DataGenUtil.generatorFor(sp))
-        else None)
-  }
-
   def createRemote2(sourceDD: String,
                     sp: SchemaProvider,
                     destinationUri: String,
@@ -79,7 +49,8 @@ object GsUtilConfig {
                     location: String,
                     remoteHostname: String,
                     remotePort: Int,
-                    genData: Boolean): GsUtilConfig = {
+                    genData: Boolean,
+                    gcsDSNPrefix: String): GsUtilConfig = {
     GsUtilConfig(source = sourceDD,
       schemaProvider = Option(sp),
       gcsUri = destinationUri,
@@ -90,9 +61,9 @@ object GsUtilConfig {
       remotePort = remotePort,
       remote = true,
       replace = true,
-      testInput =
-        if (genData) Option(DataGenUtil.generatorFor(sp))
-        else None)
+      testInput = if (genData) Option(DataGenUtil.generatorFor(sp)) else None,
+      gcsDSNPrefix = gcsDSNPrefix
+    )
   }
 }
 
@@ -132,7 +103,8 @@ case class GsUtilConfig(source: String = "INFILE",
                         subnet: String = "",
                         serviceAccount: String = "",
                         machineType: String = "n1-standard-4",
-                        testInput: Option[ZRecordReaderT] = None
+                        testInput: Option[ZRecordReaderT] = None,
+                        gcsDSNPrefix: String = ""
 ) {
   def toMap: java.util.Map[String,Any] = {
     val m = StaticMap.builder

@@ -8,11 +8,11 @@ import com.google.auth.oauth2.{GoogleCredentials, OAuth2Credentials}
 import com.google.cloud.bqsh.GsUtilConfig
 import com.google.cloud.bqsh.cmd.Result
 import com.google.cloud.gszutil.SchemaProvider
-import com.google.cloud.gszutil.io.ZRecordReaderT
+import com.google.cloud.gszutil.io.{CloudRecordReader, ZRecordReaderT}
 import com.google.cloud.imf.grecv.{GRecvProtocol, GzipCodec, Uploader}
 import com.google.cloud.imf.gzos.MVS
 import com.google.cloud.imf.gzos.pb.GRecvProto.GRecvRequest
-import com.google.cloud.imf.gzos.pb.{GRecvGrpc, GRecvProto}
+import com.google.cloud.imf.gzos.pb.GRecvGrpc
 import com.google.cloud.imf.util.Logging
 import io.grpc.okhttp.OkHttpChannelBuilder
 
@@ -37,7 +37,8 @@ object GRecvClient extends Uploader with Logging {
         .setPrincipal(zos.getPrincipal())
         .setTimestamp(System.currentTimeMillis())
 
-      receiver.upload(req.build, cfg.remoteHost, cfg.remotePort, cfg.nConnections, zos, in)
+      receiver.upload(req.build, cfg.remoteHost, cfg.remotePort, cfg.nConnections, zos, in,
+        cfg.gcsDSNPrefix)
     } catch {
       case e: Throwable =>
         logger.error("Dataset Upload Failed", e)
@@ -45,12 +46,13 @@ object GRecvClient extends Uploader with Logging {
     }
   }
 
-  override def upload(req: GRecvProto.GRecvRequest,
+  override def upload(req: GRecvRequest,
                       host: String,
                       port: Int,
                       nConnections: Int,
                       zos: MVS,
-                      in: ZRecordReaderT): Result = {
+                      in: ZRecordReaderT,
+                      gcsDSNPrefix: String): Result = {
     val cb = OkHttpChannelBuilder.forAddress(host, port)
       .compressorRegistry(GzipCodec.compressorRegistry)
       .usePlaintext() // TLS is provided by AT-TLS
@@ -61,7 +63,14 @@ object GRecvClient extends Uploader with Logging {
       .createScoped(StorageScopes.DEVSTORAGE_READ_WRITE)
     creds.refreshIfExpired()
 
-    Try{send(req, in, nConnections, cb, creds)} match {
+    Try{
+      in match {
+        case x: CloudRecordReader =>
+          gcsSend(req, x, cb, creds, gcsDSNPrefix)
+        case _ =>
+          send(req, in, nConnections, cb, creds)
+      }
+    } match {
       case Failure(e) =>
         logger.error(e.getMessage, e)
         Result.Failure(e.getMessage)
@@ -119,5 +128,39 @@ object GRecvClient extends Uploader with Logging {
       logger.info(msg)
       Result(activityCount = bytesRead / in.lRecl, message = msg)
     }
+  }
+
+  /** Request transcoding of a dataset already uploaded
+    * to Cloud Storage
+    *
+    * @param request GRecvRequest template
+    * @param in CloudRecordReader with reference to DSN
+    * @param cb OkHttpChannelBuilder used to create a gRPC client
+    * @param creds OAuth2Credentials used to generate OAuth2 AccessToken
+    * @param gcsDSNPrefix base URI prepended to DSN to locate cloud datsets
+    * @return
+    */
+  def gcsSend(request: GRecvRequest,
+              in: CloudRecordReader,
+              cb: OkHttpChannelBuilder,
+              creds: OAuth2Credentials,
+              gcsDSNPrefix: String): Result = {
+    for (dsn <- in.dsn){
+      val srcUri: String =
+        if (dsn.startsWith("gs://")) dsn
+        else {
+          if (!gcsDSNPrefix.startsWith("gs://"))
+            throw new IllegalArgumentException("invalid gcsPrefix")
+          val gcsPrefix1 = gcsDSNPrefix.stripSuffix("/")
+          s"$gcsPrefix1/$dsn"
+        }
+      val ch = cb.build()
+      val stub = GRecvGrpc.newBlockingStub(ch).withDeadlineAfter(600, TimeUnit.SECONDS)
+      val res = stub.write(request.toBuilder.setSrcUri(srcUri).build())
+      ch.shutdownNow()
+      if (res.getStatus != GRecvProtocol.OK)
+        return Result.Failure("non-success status code")
+    }
+    Result.Success
   }
 }

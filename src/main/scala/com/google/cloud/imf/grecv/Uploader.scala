@@ -11,5 +11,6 @@ trait Uploader {
              port: Int,
              nConnections: Int,
              zos: MVS,
-             in: ZRecordReaderT): Result
+             in: ZRecordReaderT,
+             gcsPrefix: String): Result
 }
