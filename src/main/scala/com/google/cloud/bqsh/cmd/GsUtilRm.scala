@@ -40,19 +40,17 @@ object GsUtilRm extends Command[GsUtilConfig] with Logging {
           if (uri.getPath.length > 0 && uri.getPath.last == '/') ""
           else "/"
         )
-      var ls = gcs.list(bucket,
-        Storage.BlobListOption.prefix(withTrailingSlash),
-        Storage.BlobListOption.currentDirectory())
+      var ls = gcs.list(bucket, Storage.BlobListOption.prefix(withTrailingSlash))
       import scala.jdk.CollectionConverters.IterableHasAsScala
       var deleted: Long = 0
       var notDeleted: Long = 0
+      import scala.jdk.CollectionConverters.IterableHasAsJava
       while (ls != null) {
-        val blobIds = ls.getValues.asScala.toArray.map(_.getBlobId)
-        logger.debug(s"deleting ${blobIds.map(_.getName).mkString(",")}")
+        val blobIds = ls.getValues.asScala.map(_.getBlobId)
         if (blobIds.nonEmpty){
-          val deleteResults = gcs.delete(blobIds: _*)
-          deleted += deleteResults.asScala.count(_ == true)
-          notDeleted += deleteResults.asScala.count(_ == false)
+          val deleteResults = gcs.delete(blobIds.asJava).asScala
+          deleted += deleteResults.count(_ == true)
+          notDeleted += deleteResults.count(_ == false)
         }
         ls = ls.getNextPage
       }
