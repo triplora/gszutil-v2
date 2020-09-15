@@ -47,6 +47,7 @@ object Cp extends Command[GsUtilConfig] with Logging {
     val in: ZRecordReaderT = c.testInput.getOrElse(zos.readDD(c.source))
     logger.info(s"gsutil cp ${in.getDsn} ${c.gcsUri}")
     val batchSize = (c.blocksPerBatch * in.blkSize) / in.lRecl
+
     if (c.replace) {
       GsUtilRm.run(c.copy(recursive = true), zos)
     } else {
@@ -75,7 +76,6 @@ object Cp extends Command[GsUtilConfig] with Logging {
         cred = creds,
         parallelism = c.parallelism,
         batchSize = batchSize,
-        zos,
         maxErrorPct = c.maxErrorPct)
     in.close()
     val nRead = in.count()
