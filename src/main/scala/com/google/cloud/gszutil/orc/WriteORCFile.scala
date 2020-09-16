@@ -23,7 +23,8 @@ import com.google.auth.oauth2.OAuth2Credentials
 import com.google.cloud.bqsh.cmd.Result
 import com.google.cloud.gszutil.SchemaProvider
 import com.google.cloud.gszutil.io.{WriterCore, ZRecordReaderT}
-import com.google.cloud.imf.util.Logging
+import com.google.cloud.imf.gzos.MVS
+import com.google.cloud.imf.util.{Logging, Services}
 import org.apache.hadoop.fs.Path
 
 object WriteORCFile extends Logging {
@@ -33,12 +34,16 @@ object WriteORCFile extends Logging {
           cred: OAuth2Credentials,
           parallelism: Int,
           batchSize: Int,
+          zos: MVS,
           maxErrorPct: Double): Result = {
     val bufSize = in.lRecl * batchSize
     val buf = ByteBuffer.allocate(bufSize)
+    val blocksFor1GB = (1000000000/bufSize).toInt
+    val around1GBBytes = blocksFor1GB * bufSize
     val uri = new URI(gcsUri)
     val basePath = new Path(s"gs://${uri.getAuthority}/${uri.getPath.stripPrefix("/")}")
 
+    var fileCounter = parallelism
     logger.info(s"Opening $parallelism ORC Writers for $basePath")
     val writers: Array[WriterCore] = (0 until parallelism).toArray.map{i =>
       new WriterCore(schemaProvider = schemaProvider,
@@ -67,6 +72,23 @@ object WriteORCFile extends Logging {
       if (buf.position() > 0) {
         buf.flip
         val result = writers(i).write(buf)
+
+        if ((bytesRead % around1GBBytes) == 0) { //For avery 1 GB(around), Close the Writer and reopen
+          val creds = zos
+            .getCredentialProvider()
+            .getCredentials
+          for (index <- 0 until writers.length) {
+            System.out.println(s"Closing the Writer Writer($index) :Total Bytes Read: $bytesRead")
+            writers(index).close()
+            System.out.println(s"Creating New Writer Writer($fileCounter) and assigned to Writer($index)")
+            writers(index) = new WriterCore(schemaProvider = schemaProvider,
+              basePath = basePath,
+              cred = creds,
+              name = s"$fileCounter",
+              lrecl = in.lRecl)
+            fileCounter += 1
+          }
+        }
         errCount += result.errCount
         blocks += 1
         i += 1
