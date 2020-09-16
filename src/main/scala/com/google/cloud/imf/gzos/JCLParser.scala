@@ -140,9 +140,9 @@ object JCLParser {
       if (isQuotedParameter)
         record.substring(15,72).trim
       else if (isStatement) {
-        if (i4 == -1)
-          throw new IllegalArgumentException("JCL Parameter field not found")
-        var j = i4
+        val j0 = if (i4 != -1) i4
+          else record.indices.find(i => isUpperChar(record.charAt(i))).getOrElse(72)
+        var j = j0
         var q = false
         var sp = false
         var c: Char = 0
@@ -156,14 +156,15 @@ object JCLParser {
           }
           if (!sp) j += 1
         }
-        record.substring(i4,j)
+        record.substring(j0,j)
       } else ""
   }
 
   def preprocess(jcl: String): Array[Statement] = {
     val buf = ArrayBuffer.empty[Statement]
     for (line <- jcl.linesIterator){
-      buf.append(Statement(line.padTo(80, ' ')))
+      val l1 = line.replaceFirst("""^\\\\""","//").padTo(80, ' ')
+      buf.append(Statement(l1))
     }
     buf.toArray
   }
@@ -187,7 +188,7 @@ object JCLParser {
         }
 
         builder.setName(stmt.name)
-      } else if (builder.isContinued && stmt.isQuotedParameter) {
+      } else if (builder.isContinued) {
         builder.addParams(param)
         builder.setContinue(stmt.isContinued)
       } else if (!builder.isContinued) {

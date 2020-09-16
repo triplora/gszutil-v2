@@ -34,6 +34,8 @@ import com.google.cloud.imf.util.{Logging, SecurityUtils}
 import com.google.common.base.Charsets
 import com.google.common.io.ByteStreams
 
+import scala.util.Try
+
 object IBM extends MVS with Logging {
   override def isIBM: Boolean = true
   override def init(): Unit = {
@@ -50,20 +52,26 @@ object IBM extends MVS with Logging {
   override def writeDSN(dsn: DSN): ZRecordWriterT = ZOS.writeDSN(dsn)
   override def writeDD(dd: String): ZRecordWriterT = ZOS.writeDD(dd)
   override def readDD(dd: String): ZRecordReaderT = {
-    if (ZOS.ddExists(dd)) ZOS.readDD(dd)
-    else {
-      val gcsDD = sys.env.getOrElse("GCSDD","GCSLOC")
-      if (ZOS.ddExists(gcsDD)) {
-        val gcsParm = readDDString(gcsDD,"\n")
-        val gcsDDs = JCLParser.splitStatements(gcsParm)
-        System.out.println(s"GCS DSNs:\n${gcsDDs.mkString("\n")}")
-        gcsDDs.find(_.name == dd) match {
-          case Some(DDStatement(_, lrecl, dsn)) =>
-            CloudRecordReader(dsn, lrecl)
-          case None =>
-            throw new RuntimeException(s"DD not found: $dd")
+    try {
+      ZOS.readDD(dd)
+    } catch {
+      case _: Throwable =>
+        val gcsDD = sys.env.getOrElse("GCSDD","GCSLOC")
+        try {
+          val gcsParm = readDDString(gcsDD,"\n")
+          System.out.println(s"GCS PARM:\n$gcsParm")
+          val gcsDDs = JCLParser.splitStatements(gcsParm)
+          System.out.println(s"GCS DSNs:\n${gcsDDs.mkString("\n")}")
+          gcsDDs.find(_.name == dd) match {
+            case Some(DDStatement(_, lrecl, dsn)) =>
+              CloudRecordReader(dsn, lrecl)
+            case None =>
+              throw new RuntimeException(s"DD not found: $dd")
+          }
+        } catch {
+          case t: Throwable =>
+            throw new RuntimeException(s"DD not found: $dd", t)
         }
-      } else throw new RuntimeException(s"DD not found: $dd")
     }
   }
 

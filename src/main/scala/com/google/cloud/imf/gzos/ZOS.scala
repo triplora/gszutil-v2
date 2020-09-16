@@ -247,14 +247,16 @@ protected object ZOS {
   def writeDD(ddName: String): ZRecordWriterT =
     new WrappedRecordWriter(RecordWriter.newWriterForDD(ddName))
 
+  class DDException(msg: String) extends IOException(msg)
+
   def readDD(ddName: String): ZRecordReaderT = {
     System.out.println(s"reading DD $ddName")
-    if (!ZFile.ddExists(ddName))
-      throw new RuntimeException(s"DD $ddName does not exist")
-
     try {
       val reader: RecordReader = RecordReader.newReaderForDD(ddName)
       System.out.println(s"Reading DD $ddName with ${reader.getClass.getSimpleName}\nDSN=${reader.getDsn}\nRECFM=${reader.getRecfm}\nBLKSIZE=${reader.getBlksize}\nLRECL=${reader.getLrecl}")
+
+      if (reader.getDsn == "NULLFILE")
+        throw new DDException(s"DD $ddName does not exist")
 
       if (reader.getRecfm.startsWith("F"))
         new WrappedRecordReader(reader)

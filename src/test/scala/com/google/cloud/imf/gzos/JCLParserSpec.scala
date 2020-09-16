@@ -21,7 +21,7 @@ import org.scalatest.flatspec.AnyFlatSpec
 
 class JCLParserSpec extends AnyFlatSpec {
   "JCL" should "parse" in {
-    val example = "//INFILE DD DSN=HLQ.LOAD1,DISP=SHR,LRECL=123"
+    val example = """\\INFILE DD DSN=HLQ.LOAD1,DISP=SHR,LRECL=123"""
     val stmts = JCLParser.splitStatements(example)
     val expected = List(DDStatement("INFILE",123,List("HLQ.LOAD1")))
     assert(stmts == expected)
@@ -29,15 +29,15 @@ class JCLParserSpec extends AnyFlatSpec {
 
   it should "multi" in {
     val example =
-      """//INFILE DD DSN=HLQ.LOAD1,DISP=SHR,LRECL=123
-        |//       DD DSN=HLQ.LOAD2,DISP=SHR""".stripMargin
+      """\\INFILE DD DSN=HLQ.LOAD1,DISP=SHR,LRECL=123
+        |\\       DD DSN=HLQ.LOAD2,DISP=SHR""".stripMargin
     val actual = JCLParser.splitStatements(example)
     val expected = List(DDStatement("INFILE",123,List("HLQ.LOAD1","HLQ.LOAD2")))
     assert(actual == expected)
   }
 
   it should "quoted" in {
-    val example = "//INFILE DD DSN='gs://bucket/prefix/HLQ.LOAD1',LRECL=123"
+    val example = """\\INFILE DD DSN='gs://bucket/prefix/HLQ.LOAD1',LRECL=123"""
     val actual = JCLParser.splitStatements(example)
     val expected = List(DDStatement("INFILE",123,List("gs://bucket/prefix/HLQ.LOAD1")))
     assert(actual == expected)
@@ -45,10 +45,19 @@ class JCLParserSpec extends AnyFlatSpec {
 
   it should "continued" in {
     val example =
-      """//INFILE DD DSN='gs://long-bucket-name/long_object_name_prefix/HLQ.LONG.
-        |//             DSN.LOAD1',LRECL=123""".stripMargin
+      """\\INFILE DD DSN='gs://long-bucket-name/long_object_name_prefix/HLQ.LONG.
+        |\\             DSN.LOAD1',LRECL=123""".stripMargin
     val actual = JCLParser.splitStatements(example)
     val expected = List(DDStatement("INFILE",123,List("gs://long-bucket-name/long_object_name_prefix/HLQ.LONG.DSN.LOAD1")))
+    assert(actual == expected)
+  }
+
+  it should "continued 2" in {
+    val example =
+      """\\INFILE DD DSN=HLQ.DSN.LOAD1,
+        |\\          LRECL=41""".stripMargin
+    val actual = JCLParser.splitStatements(example)
+    val expected = List(DDStatement("INFILE",41,List("HLQ.DSN.LOAD1")))
     assert(actual == expected)
   }
 }
