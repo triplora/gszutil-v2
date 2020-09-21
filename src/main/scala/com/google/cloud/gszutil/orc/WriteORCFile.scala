@@ -78,9 +78,7 @@ object WriteORCFile extends Logging {
             .getCredentialProvider()
             .getCredentials
           for (index <- 0 until writers.length) {
-            System.out.println(s"Closing the Writer Writer($index) :Total Bytes Read: $bytesRead")
             writers(index).close()
-            System.out.println(s"Creating New Writer Writer($fileCounter) and assigned to Writer($index)")
             writers(index) = new WriterCore(schemaProvider = schemaProvider,
               basePath = basePath,
               cred = creds,
