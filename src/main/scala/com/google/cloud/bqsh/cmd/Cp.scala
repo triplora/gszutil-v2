@@ -66,14 +66,8 @@ object Cp extends Command[GsUtilConfig] with Logging {
     }
     val sourceDSN = in.getDsn
 
-    val remote = c.remote || sys.env.get("SRVREMOTE").exists(_.equalsIgnoreCase("true"))
-    val c1 = sys.env.get("SRVHOSTNAME") match {
-      case Some(hostname) => c.copy(remoteHost = hostname)
-      case None => c
-    }
-
     val result =
-      if (remote) GRecvClient.run(c1, zos, in, schemaProvider, GRecvClient)
+      if (c.remote) GRecvClient.run(c, zos, in, schemaProvider, GRecvClient)
       else WriteORCFile.run(
         gcsUri = c.gcsUri,
         in = in,
