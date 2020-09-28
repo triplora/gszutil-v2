@@ -145,15 +145,16 @@ object GRecvClient extends Uploader with Logging {
               cb: OkHttpChannelBuilder,
               creds: OAuth2Credentials,
               gcsDSNPrefix: String): Result = {
+    System.out.println(s"Sending transcode requests for DSNs:\n${in.dsn.mkString("\n")}")
+    System.out.println(s"gcsDSNPrefix = $gcsDSNPrefix")
     for (dsn <- in.dsn){
       val srcUri: String =
         if (dsn.startsWith("gs://")) dsn
         else {
-          if (!gcsDSNPrefix.startsWith("gs://"))
-            throw new IllegalArgumentException("invalid gcsPrefix")
           val gcsPrefix1 = gcsDSNPrefix.stripSuffix("/")
           s"$gcsPrefix1/$dsn"
         }
+      System.out.println(s"Sending transcode request for $srcUri")
       val ch = cb.build()
       val stub = GRecvGrpc.newBlockingStub(ch).withDeadlineAfter(600, TimeUnit.SECONDS)
       val res = stub.write(request.toBuilder.setSrcUri(srcUri).build())

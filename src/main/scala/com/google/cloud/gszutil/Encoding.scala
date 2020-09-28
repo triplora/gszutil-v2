@@ -103,12 +103,15 @@ object Encoding {
               throw new RuntimeException(s"Invalid decimal: $value")
             val s2 = if (s1.length == 1) {
               s0.padTo(s1(0).length + s, '0')
-            } else {
+            } else if (s1.length == 2) {
               (s1(0) + s1(1).padTo(s, '0')).take(s)
+            } else {
+              ""
             }
             if (s2.length > p+s)
               throw new RuntimeException(s"Overflow of decimal($p,$s): $value")
-            encode(s2.toLong)
+            else if (s2.length == 0) Array.fill(size)(0x00)
+            else encode(s2.toLong)
           case _ =>
             throw new RuntimeException(s"Invalid decimal: $s")
         }

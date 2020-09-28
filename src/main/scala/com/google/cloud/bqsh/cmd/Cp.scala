@@ -67,7 +67,13 @@ object Cp extends Command[GsUtilConfig] with Logging {
     val sourceDSN = in.getDsn
 
     val result =
-      if (c.remote) GRecvClient.run(c, zos, in, schemaProvider, GRecvClient)
+      if (c.remote) {
+        val c1 =
+          if (c.gcsDSNPrefix.isEmpty)
+            c.copy(gcsDSNPrefix = sys.env.getOrElse("GCSDSNPREFIX", sys.env("GCSPREFIX")))
+          else c
+        GRecvClient.run(c1, zos, in, schemaProvider, GRecvClient)
+      }
       else WriteORCFile.run(
         gcsUri = c.gcsUri,
         in = in,

@@ -255,8 +255,11 @@ protected object ZOS {
       val reader: RecordReader = RecordReader.newReaderForDD(ddName)
       System.out.println(s"Reading DD $ddName with ${reader.getClass.getSimpleName}\nDSN=${reader.getDsn}\nRECFM=${reader.getRecfm}\nBLKSIZE=${reader.getBlksize}\nLRECL=${reader.getLrecl}")
 
-      if (reader.getDsn == "NULLFILE")
+      if (reader.getDsn == "NULLFILE") {
+        // Close the dataset to avoid SC03 Abend
+        reader.close()
         throw new DDException(s"DD $ddName does not exist")
+      }
 
       if (reader.getRecfm.startsWith("F"))
         new WrappedRecordReader(reader)
