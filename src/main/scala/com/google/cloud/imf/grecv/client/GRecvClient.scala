@@ -14,6 +14,7 @@ import com.google.cloud.imf.gzos.MVS
 import com.google.cloud.imf.gzos.pb.GRecvProto.GRecvRequest
 import com.google.cloud.imf.gzos.pb.GRecvGrpc
 import com.google.cloud.imf.util.Logging
+import com.google.protobuf.util.JsonFormat
 import io.grpc.okhttp.OkHttpChannelBuilder
 
 import scala.util.{Failure, Success, Try}
@@ -122,8 +123,16 @@ object GRecvClient extends Uploader with Logging {
       ch.shutdownNow()
       if (res.getStatus != GRecvProtocol.OK)
         Result.Failure("non-success status code")
-      else Result.Success
+      else {
+        val resStr = JsonFormat.printer()
+          .includingDefaultValueFields()
+          .omittingInsignificantWhitespace()
+          .print(res)
+        Result(activityCount = res.getRowCount, message = s"Request completed. DSN=${in.getDsn} " +
+          s" rowCount=${res.getRowCount} errorCount=${res.getErrCount} $resStr")
+      }
     } else {
+      // Each TmpObj instance sends its own request in close() method
       val msg = s"Read $bytesRead bytes from DSN:${in.getDsn}"
       logger.info(msg)
       Result(activityCount = bytesRead / in.lRecl, message = msg)
@@ -147,6 +156,8 @@ object GRecvClient extends Uploader with Logging {
               gcsDSNPrefix: String): Result = {
     System.out.println(s"Sending transcode requests for DSNs:\n${in.dsn.mkString("\n")}")
     System.out.println(s"gcsDSNPrefix = $gcsDSNPrefix")
+    var rowCount: Long = 0
+    var errCount: Long = 0
     for (dsn <- in.dsn){
       val srcUri: String =
         if (dsn.startsWith("gs://")) dsn
@@ -159,9 +170,22 @@ object GRecvClient extends Uploader with Logging {
       val stub = GRecvGrpc.newBlockingStub(ch).withDeadlineAfter(600, TimeUnit.SECONDS)
       val res = stub.write(request.toBuilder.setSrcUri(srcUri).build())
       ch.shutdownNow()
+      if (res.getRowCount > 0)
+        rowCount += res.getRowCount
+      if (res.getErrCount > 0)
+        errCount += res.getErrCount
       if (res.getStatus != GRecvProtocol.OK)
         return Result.Failure("non-success status code")
+      else {
+        val resStr = JsonFormat.printer()
+          .includingDefaultValueFields()
+          .omittingInsignificantWhitespace()
+          .print(res)
+        System.out.println(s"Request complete. DSN=$dsn rowCount=${res.getRowCount} " +
+          s"errorCount=${res.getErrCount} $resStr")
+      }
     }
-    Result.Success
+    Result(activityCount = rowCount, message = s"Completed ${in.dsn.length} requests with " +
+      s"$errCount errors")
   }
 }

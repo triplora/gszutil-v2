@@ -62,6 +62,8 @@ class TmpObj(bucket: String,
       // send the request to the gRPC server, causing it to transcode to ORC
       val res = stub.write(request.toBuilder.setSrcUri(srcUri).build())
       ch.shutdownNow()
+      logger.info(s"Request complete. uri=$srcUri rowCount=${res.getRowCount} " +
+        s"errors=${res.getErrCount}")
       require(res.getHash == hash, "hash mismatch")
       require(res.getStatus == GRecvProtocol.OK, "non-success status code")
     } else {
@@ -72,6 +74,8 @@ class TmpObj(bucket: String,
       // send the request to the gRPC server, causing it to write an empty file
       val res = stub.write(request.toBuilder.setNoData(true).build())
       ch.shutdownNow()
+      logger.info(s"Request complete. uri=$srcUri rowCount=${res.getRowCount} " +
+        s"errors=${res.getErrCount}")
       require(res.getStatus == GRecvProtocol.OK, "non-success status code")
     }
   }
