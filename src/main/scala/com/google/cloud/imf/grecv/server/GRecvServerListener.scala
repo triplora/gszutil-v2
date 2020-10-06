@@ -11,7 +11,8 @@ import com.google.cloud.gszutil.io.WriterCore
 import com.google.cloud.imf.grecv.GRecvProtocol
 import com.google.cloud.imf.gzos.Util
 import com.google.cloud.imf.gzos.pb.GRecvProto.{GRecvRequest, GRecvResponse}
-import com.google.cloud.imf.util.{Logging, StorageObjectInputStream}
+import com.google.cloud.imf.util.{Logging, Services, StorageObjectInputStream}
+import com.google.cloud.storage.BlobId
 import com.google.common.hash.Hashing
 import com.google.protobuf.util.JsonFormat
 import io.grpc.stub.StreamObserver
@@ -30,6 +31,29 @@ object GRecvServerListener extends Logging {
 
     if (req.getSchema.getFieldCount == 0) throw new RuntimeException("empty schema")
 
+    // Determine record length of input data set
+    // LRECL sent with request takes precedence
+    // otherwise check object metadata for lrecl
+    val lrecl: Int =
+      if (req.getLrecl >= 1) req.getLrecl
+      else if (req.getNoData) 0
+      else {
+        val gcsUri = new URI(req.getSrcUri)
+        val bucket = gcsUri.getAuthority
+        val name = gcsUri.getPath.stripPrefix("/")
+        val blob = Services.storage(creds).get(BlobId.of(bucket, name))
+        if (blob == null)
+          throw new RuntimeException(s"GCS object not found. uri=$gcsUri")
+        val lreclMetaValue = blob.getMetadata.get("lrecl")
+        if (lreclMetaValue == null)
+          throw new RuntimeException("lrecl not set")
+        else if (lreclMetaValue.length < 1 || lreclMetaValue.length > 5)
+          throw new RuntimeException(s"invalid lrecl length ${lreclMetaValue.length}")
+        else if (lreclMetaValue.forall(_.isDigit))
+          throw new RuntimeException(s"invalid lrecl $lreclMetaValue")
+        lreclMetaValue.toInt
+      }
+
     val input: InputStream = {
       if (req.getNoData){
         // write an empty ORC file which can be registered as an external table
@@ -46,13 +70,13 @@ object GRecvServerListener extends Logging {
     logger.debug(s"Opened ${req.getSrcUri}")
 
     val hasher = Hashing.murmur3_128().newHasher()
-    val buf: ByteBuffer = ByteBuffer.allocate(req.getLrecl*1024)
+    val buf: ByteBuffer = ByteBuffer.allocate(lrecl*1024)
 
     val orc: WriterCore = new WriterCore(schemaProvider = RecordSchema(req.getSchema),
       basePath = new Path(req.getBasepath),
       cred = creds,
       name = s"$id",
-      lrecl = req.getLrecl)
+      lrecl = lrecl)
     var errCount: Long = 0
     var rowCount: Long = 0
     var bytesRead: Long = 0
