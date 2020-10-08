@@ -21,7 +21,7 @@ import java.nio.charset.StandardCharsets
 import java.time.LocalDate
 import java.time.format.DateTimeFormatter
 
-import com.google.cloud.gszutil.Decoding.{Decimal64Decoder, DecimalAsStringDecoder, IntegerAsDateDecoder, LongAsStringDecoder, LongDecoder, NullableStringDecoder, StringAsDateDecoder, StringAsDecimalDecoder, StringAsIntDecoder, StringDecoder}
+import com.google.cloud.gszutil.Decoding.{Decimal64Decoder, DecimalAsStringDecoder, DecimalScale0AsLongDecoder, IntegerAsDateDecoder, LongAsStringDecoder, LongDecoder, NullableStringDecoder, StringAsDateDecoder, StringAsDecimalDecoder, StringAsIntDecoder, StringDecoder}
 import com.google.cloud.gszutil.Encoding.DecimalToBinaryEncoder
 import com.google.cloud.gszutil.io.ZReader
 import com.google.cloud.imf.gzos.pb.GRecvProto.Record.Field
@@ -38,7 +38,7 @@ class DecodingSpec extends AnyFlatSpec {
     val field = new daa.BinarySignedIntL2Field(0)
     val exampleData = Array[Byte](20.toByte, 140.toByte)
     val buf = ByteBuffer.wrap(exampleData)
-    val decoder = LongDecoder(2)
+    val decoder = new LongDecoder(2)
     val col = decoder.columnVector(1)
     val minTwoByteInt = -32768
     val maxTwoByteInt = 32767
@@ -55,7 +55,7 @@ class DecodingSpec extends AnyFlatSpec {
     val field = new daa.BinarySignedIntL4Field(0)
     val exampleData = new Array[Byte](4)
     val buf = ByteBuffer.wrap(exampleData)
-    val decoder = LongDecoder(4)
+    val decoder = new LongDecoder(4)
     val col = decoder.columnVector(1)
 
     val minFourByteInt = Int.MinValue
@@ -74,7 +74,7 @@ class DecodingSpec extends AnyFlatSpec {
     val field = new daa.BinarySignedLongL8Field(0)
     val exampleData = new Array[Byte](8)
     val buf = ByteBuffer.wrap(exampleData)
-    val decoder = LongDecoder(8)
+    val decoder = new LongDecoder(8)
     val col = decoder.columnVector(1)
     val minEightByteInteger = Long.MinValue
     val maxEightByteInteger = Long.MaxValue
@@ -91,7 +91,7 @@ class DecodingSpec extends AnyFlatSpec {
     val field = new daa.BinaryUnsignedIntL4Field(0)
     val exampleData = new Array[Byte](4)
     val buf = ByteBuffer.wrap(exampleData)
-    val decoder = LongDecoder(4)
+    val decoder = new LongDecoder(4)
     val col = decoder.columnVector(1)
     val testValues = Seq(0, 1, Int.MaxValue)
     for (testValue <- testValues) {
@@ -106,7 +106,7 @@ class DecodingSpec extends AnyFlatSpec {
     val field = new daa.BinaryUnsignedLongL8Field(0)
     val exampleData = new Array[Byte](8)
     val buf = ByteBuffer.wrap(exampleData)
-    val decoder = LongDecoder(8)
+    val decoder = new LongDecoder(8)
     val col = decoder.columnVector(1)
     val testValues = Seq(0, 1, Long.MaxValue)
     for (testValue <- testValues) {
@@ -536,6 +536,29 @@ class DecodingSpec extends AnyFlatSpec {
     System.out.println(len)
     val s = new String(a,start,len, Utf8.charset)
     assert(s == "1234567")
+  }
+
+  it should "cast decimal(3,0) to integer " in {
+    val buf = PackedDecimal.pack(12L, PackedDecimal.sizeOf(3, 0))
+    val decoder = Decimal64Decoder(3, 0)
+    val vec = decoder.columnVector(1).asInstanceOf[LongColumnVector]
+    decoder.get(ByteBuffer.wrap(buf), vec, 0)
+    assert(vec.vector(0) == 12L)
+  }
+
+  it should "return DecimalScale0ToLongDecoder" in {
+    val f = Field.newBuilder
+      .setTyp(FieldType.DECIMAL)
+      .setPrecision(3)
+      .setCast(FieldType.INTEGER)
+      .setFormat("YYMMDD")
+      .build
+
+    Decoding.getDecoder(f, Ebcdic) match {
+      case d: DecimalScale0AsLongDecoder =>
+        System.out.println(d)
+      case _ => fail("DecimalScale0AsLongDecoder expected")
+    }
   }
 
 }

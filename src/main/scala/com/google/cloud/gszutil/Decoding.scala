@@ -159,7 +159,12 @@ object Decoding extends Logging {
       bcv.setValPreallocated(i, bSize)
     }
 
-    override def toString: String = s"$decimalSize byte INTEGER (STRING)"
+    override def toString: String = s"$decimalSize byte DECIMAL (STRING)"
+  }
+
+  // Conversion available for DECIMAL with scale = 0, DECIMAL(X, 0)
+  case class DecimalScale0AsLongDecoder(p: Int) extends LongDecoder(PackedDecimal.sizeOf(p, 0)) {
+    override def toString: String = s"${PackedDecimal.sizeOf(p, 0)} byte DECIMAL (INTEGER)"
   }
 
   case class LongAsStringDecoder(transcoder: Transcoder,
@@ -399,8 +404,8 @@ object Decoding extends Logging {
         .setTyp(Field.FieldType.INTEGER)
   }
 
-  case class LongDecoder(override val size: Int,
-                         filler: Boolean = false) extends Decoder {
+  class LongDecoder(override val size: Int,
+                    override val filler: Boolean = false) extends Decoder {
     override def get(buf: ByteBuffer, col: ColumnVector, i: Int): Unit = {
       col.asInstanceOf[LongColumnVector]
         .vector.update(i, Binary.decode(buf, size))
@@ -550,12 +555,14 @@ object Decoding extends Logging {
       } else if (f.getCast == STRING) {
           LongAsStringDecoder(transcoder, f.getSize, f.getSize * 2, filler = filler)
       } else {
-        LongDecoder(f.getSize, filler)
+        new LongDecoder(f.getSize, filler)
       }
     } else if (f.getTyp == DECIMAL) {
       if (f.getCast == STRING)
         DecimalAsStringDecoder(f.getPrecision - f.getScale, f.getScale, (f.getPrecision - f.getScale) * 2,  transcoder, filler = filler)
-      else
+      else if (f.getCast == INTEGER && f.getScale == 0) {
+        DecimalScale0AsLongDecoder(f.getPrecision)
+      } else
         Decimal64Decoder(f.getPrecision - f.getScale, f.getScale, filler)
     } else if (f.getTyp == DATE)
       IntAsDateDecoder(filler)
@@ -618,17 +625,17 @@ object Decoding extends Logging {
       case decRegex3(p,s) if p.toInt >= 1 =>
         Decimal64Decoder(p.toInt, s.length, filler = filler)
       case "PIC S9 COMP" =>
-        LongDecoder(2, filler = filler)
+        new LongDecoder(2, filler = filler)
       case "PIC 9 COMP" =>
         UnsignedLongDecoder(2, filler = filler)
       case intRegex(p) if p.toInt <= 18 && p.toInt >= 1 =>
         val x = p.toInt
         if (x <= 4)
-          LongDecoder(2, filler = filler)
+          new LongDecoder(2, filler = filler)
         else if (x <= 9)
-          LongDecoder(4, filler = filler)
+          new LongDecoder(4, filler = filler)
         else
-          LongDecoder(8, filler = filler)
+          new LongDecoder(8, filler = filler)
 
       case uintRegex(p) if p.toInt <= 18 && p.toInt >= 1 =>
         val x = p.toInt

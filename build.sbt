@@ -15,7 +15,7 @@
  */
 organization := "com.google.cloud.imf"
 name := "mainframe-connector"
-version := "5.0.0-SNAPSHOT"
+version := "5.0.1-SNAPSHOT"
 
 scalaVersion := "2.13.1"
 

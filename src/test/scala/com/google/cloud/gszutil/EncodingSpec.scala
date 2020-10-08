@@ -39,7 +39,7 @@ class EncodingSpec extends AnyFlatSpec {
     val buf: Array[Byte] = encoder.encode(example)
     assert(buf.length == 4)
 
-    val decoder = LongDecoder(4)
+    val decoder = new LongDecoder(4)
     val col = decoder.columnVector(1)
     decoder.get(ByteBuffer.wrap(buf), col, 0)
 

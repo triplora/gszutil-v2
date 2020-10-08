@@ -91,12 +91,12 @@ class CopyBookSpec extends AnyFlatSpec with Logging {
   it should "map types" in {
     val transcoder = Ebcdic
     Seq(
-      "PIC S9 COMP." -> LongDecoder(2),
-      "PIC S9(4) COMP." -> LongDecoder(2),
-      "PIC S9(5) COMP." -> LongDecoder(4),
-      "PIC S9(9) COMP." -> LongDecoder(4),
-      "PIC S9(10) COMP." -> LongDecoder(8),
-      "PIC S9(18) COMP." -> LongDecoder(8),
+      "PIC S9 COMP." -> new LongDecoder(2),
+      "PIC S9(4) COMP." -> new LongDecoder(2),
+      "PIC S9(5) COMP." -> new LongDecoder(4),
+      "PIC S9(9) COMP." -> new LongDecoder(4),
+      "PIC S9(10) COMP." -> new LongDecoder(8),
+      "PIC S9(18) COMP." -> new LongDecoder(8),
       "PIC 9 COMP." -> UnsignedLongDecoder(2),
       "PIC 9(4) COMP." -> UnsignedLongDecoder(2),
       "PIC 9(5) COMP." -> UnsignedLongDecoder(4),
