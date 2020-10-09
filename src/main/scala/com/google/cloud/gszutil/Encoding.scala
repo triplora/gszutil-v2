@@ -98,22 +98,15 @@ object Encoding {
       else {
         value.getValue match {
           case s0: String =>
-            val s1 = s0.split('.')
-            if (s1.length > 2)
-              throw new RuntimeException(s"Invalid decimal: $value")
-            val s2 = if (s1.length == 1) {
-              s0.padTo(s1(0).length + s, '0')
-            } else if (s1.length == 2) {
-              (s1(0) + s1(1).padTo(s, '0')).take(s)
-            } else {
-              ""
+            var v1 = s0.toDouble
+            var scale = 0
+            while (scale < s) {
+              v1 *= 10d
+              scale += 1
             }
-            if (s2.length > p+s)
-              throw new RuntimeException(s"Overflow of decimal($p,$s): $value")
-            else if (s2.length == 0) Array.fill(size)(0x00)
-            else encode(s2.toLong)
-          case _ =>
-            throw new RuntimeException(s"Invalid decimal: $s")
+            encode(v1.toLong)
+          case x =>
+            throw new RuntimeException(s"Invalid decimal: $x")
         }
       }
     }

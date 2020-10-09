@@ -100,4 +100,16 @@ class EncodingSpec extends AnyFlatSpec {
     assert(decimalEncoder.encode(null).filter(_ != 0x00).isEmpty)
   }
 
+  "packed decimal" should "encode" in {
+    val s = 2
+    val value = "153.99"
+    var v1 = value.toDouble
+    var scale = 0
+    while (scale < s) {
+      v1 *= 10d
+      scale += 1
+    }
+    val l = v1.toLong
+    assert(l == 15399L)
+  }
 }
