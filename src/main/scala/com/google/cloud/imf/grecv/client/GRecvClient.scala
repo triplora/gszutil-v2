@@ -118,7 +118,7 @@ object GRecvClient extends Uploader with Logging {
     if (bytesRead < 1){
       logger.info(s"Read $bytesRead bytes from ${in.getDsn} - requesting empty file be written")
       val ch = cb.build()
-      val stub = GRecvGrpc.newBlockingStub(ch).withDeadlineAfter(30, TimeUnit.SECONDS)
+      val stub = GRecvGrpc.newBlockingStub(ch).withDeadlineAfter(600, TimeUnit.SECONDS)
       val res = stub.write(request.toBuilder.setNoData(true).build())
       ch.shutdownNow()
       if (res.getStatus != GRecvProtocol.OK)

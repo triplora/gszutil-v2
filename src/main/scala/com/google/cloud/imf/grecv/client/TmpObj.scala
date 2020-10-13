@@ -58,7 +58,7 @@ class TmpObj(bucket: String,
       val ch = cb.build()
       val stub = GRecvGrpc.newBlockingStub(ch)
         .withCompression("gzip")
-        .withDeadlineAfter(240, TimeUnit.SECONDS)
+        .withDeadlineAfter(600, TimeUnit.SECONDS)
       // send the request to the gRPC server, causing it to transcode to ORC
       val res = stub.write(request.toBuilder.setSrcUri(srcUri).build())
       ch.shutdownNow()
@@ -70,7 +70,7 @@ class TmpObj(bucket: String,
       logger.info(s"Requesting write empty ORC file at $srcUri")
       val ch = cb.build()
       val stub = GRecvGrpc.newBlockingStub(ch)
-        .withDeadlineAfter(60, TimeUnit.SECONDS)
+        .withDeadlineAfter(600, TimeUnit.SECONDS)
       // send the request to the gRPC server, causing it to write an empty file
       val res = stub.write(request.toBuilder.setNoData(true).build())
       ch.shutdownNow()
