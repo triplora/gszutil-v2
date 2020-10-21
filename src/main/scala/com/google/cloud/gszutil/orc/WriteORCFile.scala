@@ -19,19 +19,19 @@ package com.google.cloud.gszutil.orc
 import java.net.URI
 import java.nio.ByteBuffer
 
-import com.google.auth.oauth2.OAuth2Credentials
 import com.google.cloud.bqsh.cmd.Result
 import com.google.cloud.gszutil.SchemaProvider
 import com.google.cloud.gszutil.io.{WriterCore, ZRecordReaderT}
 import com.google.cloud.imf.gzos.MVS
-import com.google.cloud.imf.util.{Logging, Services}
+import com.google.cloud.imf.util.Logging
+import com.google.cloud.storage.Storage
 import org.apache.hadoop.fs.Path
 
 object WriteORCFile extends Logging {
   def run(gcsUri: String,
           in: ZRecordReaderT,
           schemaProvider: SchemaProvider,
-          cred: OAuth2Credentials,
+          gcs: Storage,
           parallelism: Int,
           batchSize: Int,
           zos: MVS,
@@ -48,7 +48,7 @@ object WriteORCFile extends Logging {
     val writers: Array[WriterCore] = (0 until parallelism).toArray.map{i =>
       new WriterCore(schemaProvider = schemaProvider,
         basePath = basePath,
-        cred = cred,
+        gcs = gcs,
         name = s"$i",
         lrecl = in.lRecl)
     }
@@ -74,14 +74,11 @@ object WriteORCFile extends Logging {
         val result = writers(i).write(buf)
 
         if ((bytesRead % around1GBBytes) == 0) { //For avery 1 GB(around), Close the Writer and reopen
-          val creds = zos
-            .getCredentialProvider()
-            .getCredentials
-          for (index <- 0 until writers.length) {
+          for (index <- writers.indices) {
             writers(index).close()
             writers(index) = new WriterCore(schemaProvider = schemaProvider,
               basePath = basePath,
-              cred = creds,
+              gcs = gcs,
               name = s"$fileCounter",
               lrecl = in.lRecl)
             fileCounter += 1

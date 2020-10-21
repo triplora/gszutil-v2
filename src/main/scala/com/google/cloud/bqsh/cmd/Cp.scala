@@ -78,7 +78,7 @@ object Cp extends Command[GsUtilConfig] with Logging {
         gcsUri = c.gcsUri,
         in = in,
         schemaProvider = schemaProvider,
-        cred = creds,
+        gcs = gcs,
         parallelism = c.parallelism,
         batchSize = batchSize,
         zos,

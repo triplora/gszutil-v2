@@ -22,7 +22,7 @@ import com.google.auth.oauth2.GoogleCredentials
 import com.google.cloud.imf.grecv.GRecvConfigParser
 import com.google.cloud.imf.grecv.server.GRecvServer
 import com.google.cloud.imf.gzos.Util
-import com.google.cloud.imf.util.{CloudLogging, Logging}
+import com.google.cloud.imf.util.{CloudLogging, Logging, Services}
 
 /** The server side of the mainframe connector
   * Receives requests to transcode to ORC
@@ -43,7 +43,8 @@ object GRecv extends Logging {
           errorLogs = Seq("org.apache.orc","io.grpc","io.netty","org.apache.http"),
           credentials = creds.createScoped(LoggingScopes.LOGGING_WRITE))
         logger.info(s"Starting GRecvServer\n$buildInfo")
-        new GRecvServer(cfg, creds.createScoped(StorageScopes.DEVSTORAGE_READ_WRITE)).start()
+        val gcs = Services.storage(creds.createScoped(StorageScopes.DEVSTORAGE_READ_WRITE))
+        new GRecvServer(cfg, gcs).start()
       case _ =>
         System.out.println(buildInfo)
         System.err.println(s"Unabled to parse args '${args.mkString(" ")}'")

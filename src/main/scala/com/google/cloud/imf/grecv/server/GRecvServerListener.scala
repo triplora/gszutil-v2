@@ -3,16 +3,16 @@ package com.google.cloud.imf.grecv.server
 import java.io.{BufferedInputStream, ByteArrayInputStream, InputStream}
 import java.net.URI
 import java.nio.ByteBuffer
+import java.nio.channels.Channels
 import java.util.zip.GZIPInputStream
 
-import com.google.auth.oauth2.OAuth2Credentials
 import com.google.cloud.gszutil.RecordSchema
 import com.google.cloud.gszutil.io.WriterCore
 import com.google.cloud.imf.grecv.GRecvProtocol
 import com.google.cloud.imf.gzos.Util
 import com.google.cloud.imf.gzos.pb.GRecvProto.{GRecvRequest, GRecvResponse}
-import com.google.cloud.imf.util.{Logging, Services, StorageObjectInputStream}
-import com.google.cloud.storage.BlobId
+import com.google.cloud.imf.util.Logging
+import com.google.cloud.storage.{BlobId, Storage}
 import com.google.common.hash.Hashing
 import com.google.protobuf.util.JsonFormat
 import io.grpc.stub.StreamObserver
@@ -20,7 +20,7 @@ import org.apache.hadoop.fs.Path
 
 object GRecvServerListener extends Logging {
   def write(req: GRecvRequest,
-            creds: OAuth2Credentials,
+            gcs: Storage,
             id: String,
             responseObserver: StreamObserver[GRecvResponse],
             compress: Boolean): Unit = {
@@ -41,7 +41,7 @@ object GRecvServerListener extends Logging {
         val gcsUri = new URI(req.getSrcUri)
         val bucket = gcsUri.getAuthority
         val name = gcsUri.getPath.stripPrefix("/")
-        val blob = Services.storage(creds).get(BlobId.of(bucket, name))
+        val blob = gcs.get(BlobId.of(bucket, name))
         if (blob == null)
           throw new RuntimeException(s"GCS object not found. uri=$gcsUri")
         val lreclMetaValue = blob.getMetadata.get("lrecl")
@@ -62,7 +62,7 @@ object GRecvServerListener extends Logging {
         val gcsUri = new URI(req.getSrcUri)
         val bucket = gcsUri.getAuthority
         val name = gcsUri.getPath.stripPrefix("/")
-        val is = new StorageObjectInputStream(creds.getAccessToken, bucket, name)
+        val is: InputStream = Channels.newInputStream(gcs.reader(bucket,name))
         if (compress) new BufferedInputStream(new GZIPInputStream(is, 32 * 1024), 2 * 1024 * 1024)
         else new BufferedInputStream(is, 2 * 1024 * 1024)
       }
@@ -74,7 +74,7 @@ object GRecvServerListener extends Logging {
 
     val orc: WriterCore = new WriterCore(schemaProvider = RecordSchema(req.getSchema),
       basePath = new Path(req.getBasepath),
-      cred = creds,
+      gcs = gcs,
       name = s"$id",
       lrecl = lrecl)
     var errCount: Long = 0

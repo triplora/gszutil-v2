@@ -3,14 +3,14 @@ package com.google.cloud.imf.grecv.client
 import java.net.URI
 import java.nio.ByteBuffer
 
-import com.google.auth.oauth2.OAuth2Credentials
 import com.google.cloud.imf.gzos.pb.GRecvProto.GRecvRequest
 import com.google.cloud.imf.util.Logging
+import com.google.cloud.storage.Storage
 import io.grpc.okhttp.OkHttpChannelBuilder
 
 
 /** Sends bytes to server, maintaining a hash of all bytes sent */
-class GRecvClientListener(cred: OAuth2Credentials,
+class GRecvClientListener(gcs: Storage,
                           cb: OkHttpChannelBuilder,
                           request: GRecvRequest,
                           baseUri: URI,
@@ -19,11 +19,10 @@ class GRecvClientListener(cred: OAuth2Credentials,
   val buf: ByteBuffer = ByteBuffer.allocate(bufSz)
 
   def newObj(): TmpObj = {
-    cred.refreshIfExpired()
-    new TmpObj(
+    TmpObj(
       baseUri.getAuthority,
       baseUri.getPath.stripPrefix("/").stripSuffix("/") + "/tmp/",
-      cred.getAccessToken, cb, request, partLimit, compress = true)
+      gcs, cb, request, partLimit, compress = true)
   }
   private var obj: TmpObj = _
 

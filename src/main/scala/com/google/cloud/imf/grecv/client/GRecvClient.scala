@@ -11,9 +11,9 @@ import com.google.cloud.gszutil.SchemaProvider
 import com.google.cloud.gszutil.io.{CloudRecordReader, ZRecordReaderT}
 import com.google.cloud.imf.grecv.{GRecvProtocol, GzipCodec, Uploader}
 import com.google.cloud.imf.gzos.MVS
-import com.google.cloud.imf.gzos.pb.GRecvProto.GRecvRequest
 import com.google.cloud.imf.gzos.pb.GRecvGrpc
-import com.google.cloud.imf.util.Logging
+import com.google.cloud.imf.gzos.pb.GRecvProto.GRecvRequest
+import com.google.cloud.imf.util.{Logging, Services}
 import com.google.protobuf.util.JsonFormat
 import io.grpc.okhttp.OkHttpChannelBuilder
 
@@ -93,8 +93,9 @@ object GRecvClient extends Uploader with Logging {
     var streamId = 0
     val baseUri = new URI(request.getBasepath.stripSuffix("/"))
 
+    val gcs = Services.storage(creds)
     val streams: Array[GRecvClientListener] = (0 until connections).toArray
-      .map(_ => new GRecvClientListener(creds, cb, request, baseUri, blksz, PartLimit))
+      .map(_ => new GRecvClientListener(gcs, cb, request, baseUri, blksz, PartLimit))
 
     var n = 0
     while (n > -1){

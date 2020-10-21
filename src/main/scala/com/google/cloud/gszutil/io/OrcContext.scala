@@ -2,8 +2,8 @@ package com.google.cloud.gszutil.io
 
 import java.nio.ByteBuffer
 
-import com.google.auth.oauth2.OAuth2Credentials
 import com.google.cloud.imf.util.Logging
+import com.google.cloud.storage.Storage
 import org.apache.hadoop.fs.{FileSystem, Path, SimpleGCSFileSystem}
 import org.apache.orc.OrcFile.WriterOptions
 import org.apache.orc.impl.WriterImpl
@@ -11,19 +11,19 @@ import org.apache.orc.{OrcFile, TypeDescription, Writer}
 
 /**
   *
-  * @param cred OAuth2Credentials
+  * @param gcs Cloud Storage client
   * @param schema ORC TypeDescription
   * @param basePath GCS URI where parts will be written
   * @param prefix the id of this writer which will be appended to output paths
   */
-final class OrcContext(private val cred: OAuth2Credentials, schema: TypeDescription,
+final class OrcContext(private val gcs: Storage, schema: TypeDescription,
                        basePath: Path, prefix: String)
   extends AutoCloseable with Logging {
 
   private final val BytesBetweenFlush: Long = 32*1024*1024
   private final val PartSize = 128L*1024*1024
 
-  private val fs = new SimpleGCSFileSystem(cred,
+  private val fs = new SimpleGCSFileSystem(gcs,
     new FileSystem.Statistics(SimpleGCSFileSystem.Scheme))
   val writerOptions: WriterOptions = OrcConfig.buildWriterOptions(schema, fs)
   newWriter() // Initialize Writer and Path

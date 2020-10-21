@@ -2,31 +2,40 @@ package com.google.cloud.imf.grecv.client
 
 import java.io.OutputStream
 import java.nio.ByteBuffer
+import java.nio.channels.Channels
 import java.util.concurrent.TimeUnit
 import java.util.zip.GZIPOutputStream
 
-import com.google.auth.oauth2.AccessToken
 import com.google.cloud.imf.grecv.GRecvProtocol
 import com.google.cloud.imf.gzos.pb.GRecvGrpc
 import com.google.cloud.imf.gzos.pb.GRecvProto.GRecvRequest
-import com.google.cloud.imf.util.{Logging, StorageObjectOutputStream}
+import com.google.cloud.imf.util.Logging
+import com.google.cloud.storage.Storage.BlobWriteOption
+import com.google.cloud.storage.{BlobInfo, Storage}
 import com.google.common.hash.{Hasher, Hashing}
+import com.google.common.io.CountingOutputStream
 import io.grpc.okhttp.OkHttpChannelBuilder
 
 import scala.util.Random
 
-class TmpObj(bucket: String,
+case class TmpObj(bucket: String,
              tmpPath: String,
-             token: AccessToken,
+             gcs: Storage,
              cb: OkHttpChannelBuilder,
              request: GRecvRequest,
              limit: Long,
              compress: Boolean) extends Logging {
-  private val name = tmpPath + Random.alphanumeric.take(32).mkString("")
+  private val name = s"${tmpPath}_${System.currentTimeMillis()}_${Random.alphanumeric.take(8)}"
   private val srcUri = s"gs://$bucket/$name"
   logger.debug(s"Opening $srcUri for writing")
   private val hasher: Hasher = Hashing.murmur3_128().newHasher()
-  private val os: StorageObjectOutputStream = new StorageObjectOutputStream(token, bucket, name)
+
+  // Use a CountingOutputStream to count compressed bytes
+  private val os: CountingOutputStream = new CountingOutputStream(
+    Channels.newOutputStream(gcs.writer(
+      BlobInfo.newBuilder(bucket,name).build(),
+      BlobWriteOption.doesNotExist())))
+
   private val writer: OutputStream =
     if (compress) new GZIPOutputStream(os, 32*1024, true)
     else os

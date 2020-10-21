@@ -24,7 +24,7 @@ class CpSpec2 extends AnyFlatSpec with BeforeAndAfterAll {
   CloudLogging.configureLogging(debugOverride = true, errorLogs = Seq("io.netty","org.apache","io.grpc"))
 
   def server(cfg: GRecvConfig): Future[GRecvServer] = Future{
-    val s = new GRecvServer(cfg, Services.storageCredentials())
+    val s = new GRecvServer(cfg, Services.storage())
     s.start(block = false)
     s
   }

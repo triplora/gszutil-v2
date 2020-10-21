@@ -3,17 +3,17 @@ package com.google.cloud.imf.grecv.server
 import java.time.ZoneId
 import java.time.format.DateTimeFormatter
 
-import com.google.auth.oauth2.OAuth2Credentials
 import com.google.cloud.imf.gzos.pb.GRecvGrpc.GRecvImplBase
 import com.google.cloud.imf.gzos.pb.GRecvProto.{GRecvRequest, GRecvResponse, HealthCheckRequest, HealthCheckResponse}
 import com.google.cloud.imf.util.Logging
+import com.google.cloud.storage.Storage
 import com.google.protobuf.util.JsonFormat
 import io.grpc.stub.StreamObserver
 
 import scala.util.Random
 
 
-class GRecvService(private val creds: OAuth2Credentials) extends GRecvImplBase with Logging {
+class GRecvService(private val gcs: Storage) extends GRecvImplBase with Logging {
   private val fmt = DateTimeFormatter.ofPattern("yyyyMMddhhMMss")
   private val rng = new Random()
 
@@ -23,8 +23,7 @@ class GRecvService(private val creds: OAuth2Credentials) extends GRecvImplBase w
     val requestJson = JsonFormat.printer().omittingInsignificantWhitespace().print(request)
     logger.debug(s"Received GRecvRequest\n```\n$requestJson\n```")
     try {
-      creds.refreshIfExpired()
-      GRecvServerListener.write(request, creds, partId, responseObserver, compress = true)
+      GRecvServerListener.write(request, gcs, partId, responseObserver, compress = true)
     } catch {
       case t: Throwable =>
         logger.error(t.getMessage, t)
