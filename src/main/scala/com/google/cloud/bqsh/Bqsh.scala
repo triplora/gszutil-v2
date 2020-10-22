@@ -17,7 +17,7 @@
 package com.google.cloud.bqsh
 
 import com.google.api.services.logging.v2.LoggingScopes
-import com.google.cloud.bqsh.cmd._
+import com.google.cloud.bqsh.cmd.{Cp,GsUtilRm,JCLUtil,Load,Mk,Query,Result,Rm,SdsfUtil}
 import com.google.cloud.imf.gzos.{MVS, Util}
 import com.google.cloud.imf.util.{CloudLogging, Logging}
 
@@ -40,7 +40,6 @@ object Bqsh extends Logging {
     cloudLogger.setData(jobInfoMap)
     jobInfoMap.put("script", script)
     cloudLogger.log("Started BQSH", jobInfoMap, CloudLogging.Info)
-    CloudLogging.cloudLoggingRedirect(cloudLogger, zos.transcoder.charset)
 
     val interpreter = new Interpreter(zos, sys.env,true, true)
     val result = interpreter.runScript(script)
@@ -51,7 +50,7 @@ object Bqsh extends Logging {
   class Interpreter(zos: MVS, sysEnv: Map[String,String], var exitOnError: Boolean = true, var printCommands: Boolean = true){
     val env: mutable.Map[String,String] = mutable.Map.empty ++ sysEnv
     def runWithArgs(args: Seq[String]): Result = {
-      System.out.println(s"+ ${args.mkString(" ")}")
+      CloudLogging.stdout(s"+ ${args.mkString(" ")}")
       val result = exec(args, env.toMap, zos)
       if (result.exitCode != 0) {
         val msg = s"${args.mkString(" ")} returned exit code ${result.exitCode}"
@@ -387,7 +386,7 @@ object Bqsh extends Logging {
 
   def eval(cmd: ShCmd): Result = {
     if (cmd.name == "echo") {
-      System.out.println(cmd.args.mkString(" "))
+      CloudLogging.stdout(cmd.args.mkString(" "))
       Result.Success
     } else {
       val i = cmd.name.indexOf('=')

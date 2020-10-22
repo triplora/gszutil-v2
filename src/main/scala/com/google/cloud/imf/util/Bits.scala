@@ -9,11 +9,8 @@ object Bits {
     val buf = new Array[Byte](4)
     val n = is.read(buf)
     if (n != 4)
-      System.err.println(s"$n != 4")
-    //System.out.println(s"big endian: ${decodeIntB(buf)} little endian: ${decodeIntL(buf)}")
+      CloudLogging.stderr(s"Expected 4 bytes from input but read $n")
     decodeIntL(buf)
-    //if (littleEndian) decodeIntL(buf)
-    //else decodeIntB(buf)
   }
 
   def putInt(os: OutputStream, x: Int): Unit = {

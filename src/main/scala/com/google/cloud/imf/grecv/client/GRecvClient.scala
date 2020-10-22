@@ -13,7 +13,7 @@ import com.google.cloud.imf.grecv.{GRecvProtocol, GzipCodec, Uploader}
 import com.google.cloud.imf.gzos.MVS
 import com.google.cloud.imf.gzos.pb.GRecvGrpc
 import com.google.cloud.imf.gzos.pb.GRecvProto.GRecvRequest
-import com.google.cloud.imf.util.{Logging, Services}
+import com.google.cloud.imf.util.{CloudLogging, Logging, Services}
 import com.google.protobuf.util.JsonFormat
 import io.grpc.okhttp.OkHttpChannelBuilder
 
@@ -25,7 +25,7 @@ object GRecvClient extends Uploader with Logging {
           in: ZRecordReaderT,
           schemaProvider: SchemaProvider,
           receiver: Uploader): Result = {
-    System.out.println(s"GRecvClient Starting Dataset Upload to ${cfg.gcsUri}")
+    CloudLogging.stdout(s"GRecvClient Starting Dataset Upload to ${cfg.gcsUri}")
 
     try {
       val req = GRecvRequest.newBuilder
@@ -155,8 +155,8 @@ object GRecvClient extends Uploader with Logging {
               cb: OkHttpChannelBuilder,
               creds: OAuth2Credentials,
               gcsDSNPrefix: String): Result = {
-    System.out.println(s"Sending transcode requests for DSNs:\n${in.dsn.mkString("\n")}")
-    System.out.println(s"gcsDSNPrefix = $gcsDSNPrefix")
+    CloudLogging.stdout(s"Sending transcode requests for DSNs:\n${in.dsn.mkString("\n")}")
+    CloudLogging.stdout(s"gcsDSNPrefix = $gcsDSNPrefix")
     var rowCount: Long = 0
     var errCount: Long = 0
     for (dsn <- in.dsn){
@@ -166,7 +166,7 @@ object GRecvClient extends Uploader with Logging {
           val gcsPrefix1 = gcsDSNPrefix.stripSuffix("/")
           s"$gcsPrefix1/$dsn"
         }
-      System.out.println(s"Sending transcode request for $srcUri")
+      CloudLogging.stdout(s"Sending transcode request for $srcUri")
       val ch = cb.build()
       val stub = GRecvGrpc.newBlockingStub(ch).withDeadlineAfter(3000, TimeUnit.SECONDS)
       val res = stub.write(request.toBuilder.setSrcUri(srcUri).build())
@@ -182,7 +182,7 @@ object GRecvClient extends Uploader with Logging {
           .includingDefaultValueFields()
           .omittingInsignificantWhitespace()
           .print(res)
-        System.out.println(s"Request complete. DSN=$dsn rowCount=${res.getRowCount} " +
+        CloudLogging.stdout(s"Request complete. DSN=$dsn rowCount=${res.getRowCount} " +
           s"errorCount=${res.getErrCount} $resStr")
       }
     }

@@ -46,7 +46,6 @@ object GRecv extends Logging {
         val gcs = Services.storage(creds.createScoped(StorageScopes.DEVSTORAGE_READ_WRITE))
         new GRecvServer(cfg, gcs).start()
       case _ =>
-        System.out.println(buildInfo)
         System.err.println(s"Unabled to parse args '${args.mkString(" ")}'")
         System.exit(1)
     }

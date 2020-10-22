@@ -23,7 +23,7 @@ import com.google.api.services.storage.StorageScopes
 import com.google.cloud.bqsh.{ArgParser, Command, ScpConfig, ScpOptionParser}
 import com.google.cloud.gszutil.io.ZRecordReaderT
 import com.google.cloud.imf.gzos.MVS
-import com.google.cloud.imf.util.{Logging, Services, StorageObjectOutputStream}
+import com.google.cloud.imf.util.{CloudLogging, Logging, Services, StorageObjectOutputStream}
 import com.google.cloud.storage.{BlobId, BlobInfo}
 import com.google.common.collect.ImmutableMap
 
@@ -71,11 +71,11 @@ object Scp extends Command[ScpConfig] with Logging {
           "x-goog-meta-lrecl", s"$lrecl",
           "x-goog-meta-blksize", s"${in.blkSize}"))
         .build())
-      System.out.println(s"Uploaded $blob ")
+      CloudLogging.stdout(s"Uploaded $blob ")
       Result(activityCount = nRecordsRead)
     } catch {
       case e: Throwable =>
-        System.out.println(s"failed to sample data: ${e.getMessage}")
+        CloudLogging.stdout(s"failed to sample data: ${e.getMessage}")
         e.printStackTrace(System.err)
         Result.Failure(e.getMessage)
     }

@@ -15,7 +15,7 @@
  */
 organization := "com.google.cloud.imf"
 name := "mainframe-connector"
-version := "5.0.2-SNAPSHOT"
+version := "5.1.0-SNAPSHOT"
 
 scalaVersion := "2.13.1"
 
@@ -27,7 +27,7 @@ val exGrpc = ExclusionRule(organization = "io.grpc")
 val exAvro = ExclusionRule(organization = "org.apache.avro")
 
 libraryDependencies ++= Seq(
-  "com.google.cloud.imf" %% "mainframe-util" % "1.0.6-SNAPSHOT",
+  "com.google.cloud.imf" %% "mainframe-util" % "1.1.0-SNAPSHOT",
   "com.github.scopt" %% "scopt" % "3.7.1",
   "org.scalatest" %% "scalatest" % "3.1.1" % Test
 )

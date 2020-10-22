@@ -30,7 +30,7 @@ import com.google.cloud.imf.gzos.MVSStorage.DSN
 import com.google.cloud.imf.gzos.Util.GoogleCredentialsProvider
 import com.google.cloud.imf.gzos.ZOS.{PDSIterator, RecordIterator}
 import com.google.cloud.imf.gzos.pb.GRecvProto.ZOSJobInfo
-import com.google.cloud.imf.util.{Logging, SecurityUtils}
+import com.google.cloud.imf.util.{CloudLogging, Logging, SecurityUtils}
 import com.google.common.base.Charsets
 import com.google.common.io.ByteStreams
 
@@ -41,7 +41,7 @@ object IBM extends MVS with Logging {
   override def init(): Unit = {
     ZOS.addCCAProvider()
     System.setProperty("java.net.preferIPv4Stack" , "true")
-    System.out.println("Mainframe Connector Build Info: " + Util.readS("build.txt"))
+    CloudLogging.stdout("Mainframe Connector Build Info: " + Util.readS("build.txt"))
   }
 
   override def exists(dsn: DSN): Boolean = ZOS.exists(dsn)
@@ -59,9 +59,9 @@ object IBM extends MVS with Logging {
         val gcsDD = sys.env.getOrElse("GCSDD","GCSLOC")
         try {
           val gcsParm = readDDString(gcsDD,"\n")
-          System.out.println(s"GCS PARM:\n$gcsParm")
+          CloudLogging.stdout(s"GCS PARM:\n$gcsParm")
           val gcsDDs = JCLParser.splitStatements(gcsParm)
-          System.out.println(s"GCS DSNs:\n${gcsDDs.mkString("\n")}")
+          CloudLogging.stdout(s"GCS DSNs:\n${gcsDDs.mkString("\n")}")
           gcsDDs.find(_.name == dd) match {
             case Some(DDStatement(_, lrecl, dsn)) =>
               CloudRecordReader(dsn, lrecl)

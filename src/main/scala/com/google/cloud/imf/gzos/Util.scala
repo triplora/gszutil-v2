@@ -23,6 +23,7 @@ import java.nio.charset.Charset
 import com.google.auth.oauth2.GoogleCredentials
 import com.google.cloud.gszutil.io.{ZDataSet, ZRecordReaderT}
 import com.google.cloud.imf.gzos.pb.GRecvProto.ZOSJobInfo
+import com.google.cloud.imf.util.CloudLogging
 import com.google.cloud.storage.BlobInfo
 import com.google.common.base.Charsets
 import com.google.common.collect.ImmutableSet
@@ -35,13 +36,13 @@ object Util {
   def zProvider: MVS = if (isIbm) IBM else Linux
   def sleepOrYield(ms: Long): Unit = {
     if (isIbm) {
-      System.out.println(s"Yielding for $ms ms...")
+      CloudLogging.stdout(s"Yielding for $ms ms...")
       val t1 = System.currentTimeMillis + ms
       while (System.currentTimeMillis < t1){
         Thread.`yield`()
       }
     } else {
-      System.out.println(s"Waiting for $ms ms...")
+      CloudLogging.stdout(s"Waiting for $ms ms...")
       Thread.sleep(ms)
     }
   }

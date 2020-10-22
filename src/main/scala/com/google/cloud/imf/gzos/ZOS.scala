@@ -25,7 +25,7 @@ import com.google.cloud.gszutil.Decoding
 import com.google.cloud.gszutil.io.{ZRecordReaderT, ZRecordWriterT}
 import com.google.cloud.imf.gzos.MVSStorage.DSN
 import com.google.cloud.imf.gzos.pb.GRecvProto.ZOSJobInfo
-import com.google.cloud.imf.util.{Logging, SecurityUtils}
+import com.google.cloud.imf.util.{CloudLogging, Logging, SecurityUtils}
 import com.ibm.jzos.{DSCB, Exec, Format1DSCB, Format3DSCB, JesSymbols, MvsJobSubmitter, PdsDirectory, RcException, RecordReader, RecordWriter, ZFile, ZFileConstants, ZFileException, ZUtil}
 
 import scala.util.Try
@@ -57,7 +57,7 @@ protected object ZOS {
     override def close(): Unit = {
       if (open) {
         open = false
-        System.out.println("Closing " + r.getDDName + " " + r.getDsn)
+        CloudLogging.stdout("Closing " + r.getDDName + " " + r.getDsn)
         Try(r.close()).failed.foreach(t => logger.error(t.getMessage))
       }
     }
@@ -118,7 +118,7 @@ protected object ZOS {
     override def close(): Unit = {
       if (open) {
         open = false
-        System.out.println("Closing " + r.getDDName + " " + r.getDsn)
+        CloudLogging.stdout("Closing " + r.getDDName + " " + r.getDsn)
         Try(r.close()).failed.foreach(t => logger.error(t.getMessage))
       }
     }
@@ -161,10 +161,12 @@ protected object ZOS {
     override def close(): Unit = {
       if (open) {
         open = false
-        System.out.println("Closing " + w.getDDName + " " + w.getDsn)
+        CloudLogging.stdout("WrappedRecordWriter Closing " + w.getDDName + " " + w.getDsn)
         w.flush()
         Try(w.close()).failed.foreach{t =>
-          System.err.println(t.getMessage)
+          val msg = "WrappedRecordWriter ERROR " + t.getMessage
+          CloudLogging.stdout(msg)
+          CloudLogging.stderr(msg)
           t.printStackTrace(System.err)
         }
       }
@@ -198,8 +200,11 @@ protected object ZOS {
           throw new IOException(s"RecordReader read $n bytes but expected ${r.lRecl}")
         }
       } else {
-        if (count >= limit)
-          System.err.println(s"${r.getDsn} exceeded $limit record limit")
+        if (count >= limit) {
+          val msg = s"RecordIterator ERROR ${r.getDsn} exceeded $limit record limit"
+          CloudLogging.stdout(msg)
+          CloudLogging.stderr(msg)
+        }
         close()
         null
       }
@@ -216,13 +221,11 @@ protected object ZOS {
   def ddExists(ddName: String): Boolean = ZFile.ddExists(ddName)
 
   def readDSN(dsn: DSN): ZRecordReaderT = {
-    System.out.println(s"reading DSN $dsn")
-    //if (!ZFile.dsExists(dsn))
-    //  throw new RuntimeException(s"DSN $dsn does not exist")
+    CloudLogging.stdout(s"reading DSN $dsn")
 
     try {
       val reader = RecordReader.newReader(dsn.fqdsn, ZFileConstants.FLAG_DISP_SHR)
-      System.out.println(
+      CloudLogging.stdout(
         s"""Reading DSN $dsn with ${reader.getClass.getSimpleName}
            |DSN=${reader.getDsn}
            |RECFM=${reader.getRecfm}
@@ -250,10 +253,10 @@ protected object ZOS {
   class DDException(msg: String) extends IOException(msg)
 
   def readDD(ddName: String): ZRecordReaderT = {
-    System.out.println(s"reading DD $ddName")
+    CloudLogging.stdout(s"reading DD $ddName")
     try {
       val reader: RecordReader = RecordReader.newReaderForDD(ddName)
-      System.out.println(s"Reading DD $ddName with ${reader.getClass.getSimpleName}\nDSN=${reader.getDsn}\nRECFM=${reader.getRecfm}\nBLKSIZE=${reader.getBlksize}\nLRECL=${reader.getLrecl}")
+      CloudLogging.stdout(s"Reading DD $ddName with ${reader.getClass.getSimpleName}\nDSN=${reader.getDsn}\nRECFM=${reader.getRecfm}\nBLKSIZE=${reader.getBlksize}\nLRECL=${reader.getLrecl}")
 
       if (reader.getDsn == "NULLFILE") {
         // Close the dataset to avoid SC03 Abend
