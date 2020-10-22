@@ -25,9 +25,15 @@ case class TmpObj(bucket: String,
              request: GRecvRequest,
              limit: Long,
              compress: Boolean) extends Logging {
-  private val name = s"${tmpPath}_${System.currentTimeMillis()}_${Random.alphanumeric.take(8)}"
+  // GCS Object name without bucket name
+  private val name = s"${tmpPath}${request.getJobinfo.getJobid}_" +
+    s"${System.currentTimeMillis()}_" +
+    s"${Random.alphanumeric.take(8).mkString("")}.tmp"
+
+  // Full GCS Object URI
   private val srcUri = s"gs://$bucket/$name"
   logger.debug(s"Opening $srcUri for writing")
+
   private val hasher: Hasher = Hashing.murmur3_128().newHasher()
 
   // Use a CountingOutputStream to count compressed bytes
