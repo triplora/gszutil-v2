@@ -15,8 +15,9 @@
  */
 package com.google.cloud.imf.gzos
 
-import java.io.IOException
+import java.io.{IOException, PrintWriter, StringWriter}
 import java.nio.ByteBuffer
+import java.nio.channels.ReadableByteChannel
 import java.nio.charset.Charset
 import java.security.Security
 import java.util.Date
@@ -241,6 +242,73 @@ protected object ZOS {
     } catch {
       case e: ZFileException =>
         throw new RuntimeException(s"Failed to open DD:'$dsn'", e)
+    }
+  }
+
+  def writeDSN(dsn: DSN, lrecl: Int, space1: Int, space2: Int, in: ReadableByteChannel): Unit = {
+    val ddname = ZFile.allocDummyDDName()
+    val cmd =
+      s"alloc fi($ddname) da(${dsn.fqdsn}) reuse new catalog msg(2)" +
+      s" recfm(f,b) space($space1,$space2) cyl lrecl($lrecl)"
+    try {
+      ZFile.bpxwdyn(cmd)
+    } catch {
+      case e: RcException =>
+        val msg = s"Failed to allocate DD for $dsn\n$cmd"
+        throw new RuntimeException(msg, e)
+    }
+
+    var writer: RecordWriter = null
+    try {
+      writer = RecordWriter.newWriterForDD(ddname)
+      assert(writer.getLrecl == lrecl, s"writer lrecl = ${writer.getLrecl} but expected $lrecl")
+      val buf = ByteBuffer.allocate(lrecl*1024)
+      var n = 0
+      while (n > -1) {
+        // fill buffer
+        while (buf.remaining > lrecl && n > -1){
+          n = in.read(buf)
+        }
+
+        // prepare buffer for reads
+        buf.flip()
+
+        while (buf.remaining() >= lrecl) {
+          val pos0 = buf.position()
+          val pos1 = pos0 + lrecl
+          // write record
+          writer.write(buf.array(), pos0, lrecl)
+          buf.position(pos1)
+        }
+
+        // prepare buffer for writes
+        buf.compact()
+      }
+    } finally {
+      if (writer != null) {
+        try {
+          writer.close()
+        } catch {
+          case e: ZFileException =>
+            val sw = new StringWriter()
+            val pw = new PrintWriter(sw)
+            e.printStackTrace(pw)
+            val msg = s"Failed to close writer for $ddname\n" + e.getMessage +"\n" + sw.toString
+            CloudLogging.stdout(msg)
+            CloudLogging.stderr(msg)
+        }
+      }
+      try {
+        ZFile.bpxwdyn(s"free fi($ddname) msg(2)")
+      } catch {
+        case e: RcException =>
+          val sw = new StringWriter()
+          val pw = new PrintWriter(sw)
+          e.printStackTrace(pw)
+          val msg = s"Failed to free DD $ddname\n" + e.getMessage +"\n" + sw.toString
+          CloudLogging.stdout(msg)
+          CloudLogging.stderr(msg)
+      }
     }
   }
 
