@@ -243,18 +243,25 @@ object Decoding extends Logging {
                                  override val size: Int,
                                  override val filler: Boolean = false) extends Decoder {
     override def get(buf: ByteBuffer, col: ColumnVector, i: Int): Unit = {
-      val dcv = col.asInstanceOf[TimestampColumnVector]
-      val s = transcoder.getString(buf,size)
-      if (s == "0000-00-00 00:00:00.000000") {
-        val i1 = buf.position() + size
-        buf.position(i1)
-        dcv.isNull.update(i, true)
-        dcv.noNulls = false
-      } else {
-        val ts = java.sql.Timestamp.valueOf(s)
-        dcv.time.update(i, ts.getTime)
-        dcv.nanos.update(i, ts.getNanos)
-      }
+        val dcv = col.asInstanceOf[TimestampColumnVector]
+        val s = transcoder.getString(buf,size)
+        if (s == "0000-00-00 00:00:00.000000") {
+          val i1 = buf.position() + size
+          buf.position(i1)
+          dcv.isNull.update(i, true)
+          dcv.noNulls = false
+        } else {
+          val sb = new StringBuilder(s)
+          if(sb(10) == '-'){
+            sb(10) = ' '
+            sb(13) = ':'
+            sb(16) = ':'
+          }
+
+          val ts = java.sql.Timestamp.valueOf(sb.toString)
+          dcv.time.update(i, ts.getTime)
+          dcv.nanos.update(i, ts.getNanos)
+        }
     }
 
     override def columnVector(maxSize: Int): ColumnVector =
