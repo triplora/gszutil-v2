@@ -34,6 +34,7 @@ object Load extends Command[LoadConfig] with Logging {
 
     val jobId = BQ.genJobId(zos, "load")
     bq.create(JobInfo.of(jobId, jobConfig))
+    logger.info(s"Waiting for Load Job jobid=${jobId.getJob}")
     val completed = BQ.waitForJob(bq, jobId, timeoutMillis = 60L * 60L * 1000L)
 
     if (cfg.statsTable.nonEmpty){

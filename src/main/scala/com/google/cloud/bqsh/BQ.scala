@@ -16,6 +16,8 @@
 
 package com.google.cloud.bqsh
 
+import java.io.{PrintWriter, StringWriter}
+
 import com.google.cloud.bigquery.{BigQuery, BigQueryError, BigQueryException, DatasetId, Field, FieldList, Job, JobId, JobInfo, JobStatus, QueryJobConfiguration, Schema, StandardSQLTypeName, TableId}
 import com.google.cloud.imf.gzos.{MVS, Util}
 import com.google.cloud.imf.util.Logging
@@ -45,11 +47,15 @@ object BQ extends Logging {
     require(jobId != null, "JobId must not be null")
     try {
       val job = bq.create(JobInfo.of(jobId, cfg))
-      if (sync) waitForJob(bq, jobId, timeoutMillis = timeoutSeconds * 1000L)
+      if (sync) {
+        logger.info(s"Waiting for Job jobid=${jobId.getJob}")
+        waitForJob(bq, jobId, timeoutMillis = timeoutSeconds * 1000L)
+      }
       else job
     } catch {
       case e: BigQueryException =>
         if (e.getReason == "duplicate" && e.getMessage.startsWith("Already Exists: Job")) {
+          logger.debug(s"Waiting for job jobid=${jobId.getJob}")
           waitForJob(bq, jobId, timeoutMillis = timeoutSeconds * 1000L)
         } else {
           throw new RuntimeException(e)
@@ -61,21 +67,24 @@ object BQ extends Logging {
   def waitForJob(bq: BigQuery,
                  jobId: JobId,
                  waitMillis: Long = 2000,
-                 maxWaitMillis: Long = 30000,
+                 maxWaitMillis: Long = 60000,
                  timeoutMillis: Long = 300000,
-                 retries: Int = 30): Job = {
+                 retries: Int = 120): Job = {
     if (timeoutMillis <= 0){
       throw new RuntimeException(s"Timed out waiting for ${jobId.getJob}")
     } else if (retries <= 0){
-      throw new RuntimeException(s"Retry limit reached waiting for ${jobId.getJob}")
+      throw new RuntimeException(s"Timed out waiting for ${jobId.getJob} - retry limit reached")
     }
-    logger.debug(s"waiting for ${jobId.getJob}")
     Try{Option(bq.getJob(jobId))} match {
       case Success(Some(job)) if isDone(job) =>
         logger.info(s"${jobId.getJob} Status = DONE")
         job
       case Failure(e) =>
-        logger.error(e.getMessage, e)
+        val sw = new StringWriter()
+        val pw = new PrintWriter(sw)
+        e.printStackTrace(pw)
+        val stackTrace = sw.toString
+        logger.error(s"BigQuery Job failed jobid=${jobId.getJob}\n${e.getMessage}\n$stackTrace", e)
         throw e
       case Success(_) =>
         Util.sleepOrYield(waitMillis)
