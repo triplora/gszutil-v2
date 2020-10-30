@@ -51,6 +51,8 @@ object Decoding extends Logging {
         bcv.ensureValPreallocated(size)
         val destPos = bcv.getValPreallocatedStart
         val dest = bcv.getValPreallocatedBytes
+        val spaces = transcoder.countTrailingSpaces(buf.array(),buf.position(),size)
+        val sizeWithoutSpaces = size - spaces
         transcoder.arraycopy(buf, dest, destPos, size)
 
         // set output
@@ -60,7 +62,7 @@ object Decoding extends Logging {
           bcv.noNulls = false
           bcv.setValPreallocated(i, 0)
         } else {
-          bcv.setValPreallocated(i, size)
+          bcv.setValPreallocated(i, sizeWithoutSpaces)
         }
       }
     }
@@ -95,8 +97,10 @@ object Decoding extends Logging {
     override def get(buf: ByteBuffer, col: ColumnVector, i: Int): Unit = {
       val bcv = col.asInstanceOf[BytesColumnVector]
       bcv.ensureValPreallocated(size)
+      val spaces = transcoder.countTrailingSpaces(buf.array(),buf.position(),size)
+      val sizeWithoutSpaces = size - spaces
       transcoder.arraycopy(buf, bcv.getValPreallocatedBytes, bcv.getValPreallocatedStart, size)
-      bcv.setValPreallocated(i, size)
+      bcv.setValPreallocated(i, sizeWithoutSpaces)
     }
 
     override def columnVector(maxSize: Int): ColumnVector = {

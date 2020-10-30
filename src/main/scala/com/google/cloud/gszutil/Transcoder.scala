@@ -7,6 +7,7 @@ import java.time.format.DateTimeFormatter
 
 trait Transcoder {
   val charset: Charset
+  val SP: Byte
 
   @inline
   protected final def uint(b: Byte): Int = if (b < 0) 256 + b else b
@@ -40,6 +41,18 @@ trait Transcoder {
       i += 1
     }
     dest
+  }
+
+  def countTrailingSpaces(src: Array[Byte], off: Int, len: Int): Int = {
+    var i = off + len - 1
+    var n = 0
+    while (i >= off) {
+      if (src(i) == SP)
+        n += 1
+      else return n
+      i -= 1
+    }
+    n
   }
 
   /** Read Long from EBCDIC in ByteBuffer */
