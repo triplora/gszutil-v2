@@ -17,7 +17,7 @@
 package com.google.cloud.bqsh
 
 import com.google.api.services.logging.v2.LoggingScopes
-import com.google.cloud.bqsh.cmd.{Cp,GsUtilRm,JCLUtil,Load,Mk,Query,Result,Rm,SdsfUtil}
+import com.google.cloud.bqsh.cmd.{Cp,Export,GsUtilRm,JCLUtil,Load,Mk,Query,Result,Rm,SdsfUtil}
 import com.google.cloud.imf.gzos.{MVS, Util}
 import com.google.cloud.imf.util.{CloudLogging, Logging}
 
@@ -93,6 +93,8 @@ object Bqsh extends Logging {
               runCommand(Mk, subArgs, zos)
             case "query" =>
               runCommand(Query, subArgs, zos)
+            case "export" =>
+              runCommand(Export, subArgs, zos)
             case "load" =>
               runCommand(Load, subArgs, zos)
             case "rm" =>
