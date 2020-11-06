@@ -91,7 +91,15 @@ object VartextDecoding {
                                   override val filler: Boolean = false)
     extends StringAsIntDecoder(transcoder, size, filler) with VartextDecoder {
     override def get(s: String, row: ColumnVector, i: Int): Unit = {
-      row.asInstanceOf[LongColumnVector].vector.update(i, s.toLong)
+
+      val s1 = { // remove all trailing zeros from number so long can be converted !
+        val arr = s.split("\\.")
+        if (arr.length == 2 && arr(1).matches("^0+$"))
+          arr(0)
+        else
+          s
+      }
+      row.asInstanceOf[LongColumnVector].vector.update(i, s1.toLong)
     }
   }
 
