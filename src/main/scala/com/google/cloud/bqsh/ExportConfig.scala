@@ -24,6 +24,7 @@ case class ExportConfig(
   // Custom Options
   sql: String = "",
   queryDSN: String = "",
+  outDD: String = "OUTFILE",
   timeoutMinutes: Int = 60,
 
   // Standard Options

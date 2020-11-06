@@ -35,6 +35,11 @@ object ExportOptionParser
     .text("(optional) DSN to read query from in format HLQ.MEMBER or HLQ.PDS(MEMBER)")
     .action((x,c) => c.copy(queryDSN = x))
 
+  opt[String]("outDD")
+    .optional
+    .text("(optional) DD to write output records to (default: OUTFILE)")
+    .action((x,c) => c.copy(outDD = x))
+
   // Standard Options
 
   opt[Unit]("allow_large_results")

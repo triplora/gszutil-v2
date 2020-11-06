@@ -19,10 +19,13 @@ package com.google.cloud.bqsh.cmd
 import java.io.{PrintWriter, StringWriter}
 
 import com.google.cloud.bigquery.storage.v1.ReadSession.TableReadOptions
-import com.google.cloud.bigquery.{BigQueryException, JobInfo, QueryJobConfiguration, QueryParameterValue, StandardSQLTypeName}
-import com.google.cloud.bigquery.storage.v1.{BigQueryReadClient, CreateReadSessionRequest, DataFormat, ReadRowsRequest, ReadSession}
+import com.google.cloud.bigquery.{BigQueryException, JobInfo, QueryJobConfiguration,
+  QueryParameterValue, StandardSQLTypeName}
+import com.google.cloud.bigquery.storage.v1.{BigQueryReadClient, CreateReadSessionRequest,
+  DataFormat, ReadRowsRequest, ReadSession}
 import com.google.cloud.bqsh.BQ.resolveDataset
 import com.google.cloud.bqsh.{ArgParser, BQ, Command, ExportConfig, ExportOptionParser}
+import com.google.cloud.gszutil.io.BQExporter
 import com.google.cloud.imf.gzos.{Ebcdic, MVS}
 import com.google.cloud.imf.util.{CloudLogging, Logging, Services, StatsUtil}
 import org.apache.avro.Schema
@@ -81,7 +84,7 @@ object Export extends Command[ExportConfig] with Logging {
           throw new RuntimeException(msg)
       }
       val destTable = Option(bq.getTable(conf.getDestinationTable)) match {
-        case Some(t) => t
+        case Some(t) =>
           t
         case None =>
           val msg = s"Destination table ${conf.getDestinationTable.getProject}." +
@@ -114,8 +117,8 @@ object Export extends Command[ExportConfig] with Logging {
         .build
 
       var rowCount: Long = 0
-      val recordWriter = zos.writeDD("OUTFILE")
-      val exporter = new com.google.cloud.gszutil.io.BQExporter(schema, 0, recordWriter, Ebcdic)
+      val recordWriter = zos.writeDD(cfg.outDD)
+      val exporter = new BQExporter(schema, 0, recordWriter, Ebcdic)
 
       bqStorage.readRowsCallable.call(readRowsRequest).forEach{res =>
         if (res.hasAvroRows)

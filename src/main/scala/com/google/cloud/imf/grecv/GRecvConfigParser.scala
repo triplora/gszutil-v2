@@ -18,7 +18,7 @@ object GRecvConfigParser extends OptionParser[GRecvConfig]("grecv") {
   opt[Int]('p', "port")
     .optional
     .action{(x,c) => c.copy(port = x)}
-    .text("Bind Port (default: 51770)")
+    .text("Bind Port (default: 51771)")
 
   opt[String]("chain")
     .optional
