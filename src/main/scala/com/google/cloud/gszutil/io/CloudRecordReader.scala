@@ -18,8 +18,15 @@ package com.google.cloud.gszutil.io
 
 import java.nio.ByteBuffer
 
+import com.google.cloud.storage.Blob
+
 case class CloudRecordReader(dsn: Seq[String],
-                             override val lRecl: Int) extends ZRecordReaderT {
+                             override val lRecl: Int,
+                             bucket: String = "",
+                             name: String = "",
+                             gdg: Boolean = false,
+                             generation: String = "",
+                             versions: IndexedSeq[Blob] = IndexedSeq.empty) extends ZRecordReaderT {
   override def read(dst: ByteBuffer): Int = -1
   override def read(buf: Array[Byte]): Int = -1
   override def read(buf: Array[Byte], off: Int, len: Int): Int = -1

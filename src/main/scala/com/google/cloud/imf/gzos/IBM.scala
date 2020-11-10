@@ -30,11 +30,10 @@ import com.google.cloud.imf.gzos.MVSStorage.DSN
 import com.google.cloud.imf.gzos.Util.GoogleCredentialsProvider
 import com.google.cloud.imf.gzos.ZOS.{PDSIterator, RecordIterator}
 import com.google.cloud.imf.gzos.pb.GRecvProto.ZOSJobInfo
-import com.google.cloud.imf.util.{CloudLogging, Logging, SecurityUtils}
+import com.google.cloud.imf.util.{CloudLogging, Logging, SecurityUtils, Services}
 import com.google.common.base.Charsets
 import com.google.common.io.ByteStreams
 
-import scala.util.Try
 
 object IBM extends MVS with Logging {
   override def isIBM: Boolean = true
@@ -52,25 +51,44 @@ object IBM extends MVS with Logging {
   override def writeDSN(dsn: DSN): ZRecordWriterT = ZOS.writeDSN(dsn)
   override def writeDD(dd: String): ZRecordWriterT = ZOS.writeDD(dd)
   override def readDD(dd: String): ZRecordReaderT = {
-    try {
-      ZOS.readDD(dd)
-    } catch {
-      case _: Throwable =>
-        val gcsDD = sys.env.getOrElse("GCSDD","GCSLOC")
+    // Get DD information from z/OS
+    val ddInfo = ZOS.getDatasetInfo(dd)
+    CloudLogging.stdout(s"Dataset Info for $dd:\n$ddInfo")
+
+    // Obtain Cloud Storage client
+    val gcs = Services.storage(getCredentialProvider().getCredentials)
+
+    // check if DD exists in Cloud Storage
+    CloudDataSet.readCloudDD(gcs, dd, ddInfo) match {
+      case Some(r) =>
+        // Prefer Cloud Data Set if DSN exists in GCS
+        r
+      case _ =>
+        // Check for Local Data Set (standard z/OS DD)
         try {
-          val gcsParm = readDDString(gcsDD,"\n")
-          CloudLogging.stdout(s"GCS PARM:\n$gcsParm")
-          val gcsDDs = JCLParser.splitStatements(gcsParm)
-          CloudLogging.stdout(s"GCS DSNs:\n${gcsDDs.mkString("\n")}")
-          gcsDDs.find(_.name == dd) match {
-            case Some(DDStatement(_, lrecl, dsn)) =>
-              CloudRecordReader(dsn, lrecl)
-            case None =>
-              throw new RuntimeException(s"DD not found: $dd")
-          }
+          ZOS.readDD(dd)
         } catch {
-          case t: Throwable =>
-            throw new RuntimeException(s"DD not found: $dd", t)
+          // Handle DD open failure
+          case _: Throwable =>
+            val gcsDD = sys.env.getOrElse("GCSDD","GCSLOC")
+            try {
+              // Read DDs from data set
+              val gcsParm = readDDString(gcsDD,"\n")
+              CloudLogging.stdout(s"GCS PARM:\n$gcsParm")
+              // Parse DDs
+              val gcsDDs = JCLParser.splitStatements(gcsParm)
+              CloudLogging.stdout(s"GCS DSNs:\n${gcsDDs.mkString("\n")}")
+              // Search for requested DDNAME
+              gcsDDs.find(_.name == dd) match {
+                case Some(DDStatement(_, lrecl, dsn)) =>
+                  CloudRecordReader(dsn, lrecl)
+                case None =>
+                  throw new RuntimeException(s"Cloud DD '$dd' not found in $gcsDD")
+              }
+            } catch {
+              case t: Throwable =>
+                throw new RuntimeException(s"DD not found: $dd", t)
+            }
         }
     }
   }
