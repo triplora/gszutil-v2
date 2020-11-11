@@ -16,12 +16,13 @@
 
 package com.google.cloud.bqsh.cmd
 
-import com.google.cloud.bigquery.JobStatistics.QueryStatistics
-import com.google.cloud.bigquery.{BigQueryException, Clustering, JobInfo, QueryJobConfiguration, QueryParameterValue, StandardSQLTypeName, TimePartitioning}
-import com.google.cloud.bqsh.BQ.resolveDataset
+import com.google.cloud.bigquery.{BigQueryException, Clustering, JobInfo, JobStatistics,
+  QueryJobConfiguration, QueryParameterValue, StandardSQLTypeName, TimePartitioning}
 import com.google.cloud.bqsh.{ArgParser, BQ, Bqsh, Command, QueryConfig, QueryOptionParser}
 import com.google.cloud.imf.gzos.MVS
-import com.google.cloud.imf.util.{Logging, Services, StatsUtil}
+import com.google.cloud.imf.util.StatsUtil.EnhancedJob
+import com.google.cloud.imf.util.{CloudLogging, Logging, Services, StatsUtil}
+
 
 object Query extends Command[QueryConfig] with Logging {
   override val name: String = "bq query"
@@ -59,18 +60,35 @@ object Query extends Command[QueryConfig] with Logging {
       try {
         logger.info("Submitting query job")
         val job = BQ.runJob(bq, jobConfiguration, jobId, cfg.timeoutMinutes * 60, cfg.sync)
+        val jobInfo = new EnhancedJob(job)
         if (cfg.sync){
           logger.info("Query job finished")
         }
 
         // Publish results
         if (cfg.sync && cfg.statsTable.nonEmpty) {
-          logger.debug("writing stats")
           val statsTable = BQ.resolveTableSpec(cfg.statsTable, cfg.projectId, cfg.datasetId)
-          logger.debug(s"resolved stats table ${statsTable.getProject}:${statsTable.getDataset}" +
-            s".${statsTable.getTable}")
-          StatsUtil.insertJobStats(zos, jobId, scala.Option(job), bq,
-            statsTable, jobType = "query", dest = cfg.destinationTable)
+          logger.info(s"Writing stats to ${BQ.tableSpec(statsTable)}")
+          if (jobInfo.isMerge){
+            CloudLogging.stdout(jobInfo.report)
+            StatsUtil.insertJobStats(zos, jobId, Option(job), bq,
+              statsTable, jobType = "merge_query",
+              source = BQ.tableSpec(jobInfo.mergeFromTable),
+              dest = BQ.tableSpec(jobInfo.mergeIntoTable),
+              recordsIn = jobInfo.mergeFromRows.getOrElse(-1),
+              recordsOut = jobInfo.mergeInsertedRows.getOrElse(-1))
+          } else if (jobInfo.isSelect) {
+            CloudLogging.stdout(jobInfo.report)
+            StatsUtil.insertJobStats(zos, jobId, Option(job), bq,
+              statsTable, jobType = "select_query",
+              source = jobInfo.selectFromTables
+                .map(x => x.map(BQ.tableSpec).mkString(",")).getOrElse(""),
+              dest = BQ.tableSpec(jobInfo.selectIntoTable),
+              recordsOut = jobInfo.selectOutputRows.getOrElse(-1))
+          } else {
+            StatsUtil.insertJobStats(zos, jobId, Option(job), bq,
+              statsTable, jobType = "query", dest = cfg.destinationTable)
+          }
         }
 
         // check for errors
@@ -84,12 +102,20 @@ object Query extends Command[QueryConfig] with Logging {
                 logger.error(msg)
                 result = Result.Failure(msg)
               } else {
-                val stats = job.getStatistics[QueryStatistics]
-                val conf = job.getConfiguration[QueryJobConfiguration]
-                val activityCount: Long =
-                  Option[Long](stats.getNumDmlAffectedRows)
-                    .getOrElse(Option(bq.getTable(conf.getDestinationTable))
-                      .map(_.getNumRows.longValueExact()).getOrElse(0L))
+                val activityCount: Long = jobInfo.stats.getStatementType match {
+                  case JobStatistics.QueryStatistics.StatementType.SELECT =>
+                    jobInfo.selectOutputRows.getOrElse(-1)
+                  case JobStatistics.QueryStatistics.StatementType.MERGE =>
+                    jobInfo.mergeInsertedRows.getOrElse(-1)
+                  case JobStatistics.QueryStatistics.StatementType.INSERT =>
+                    jobInfo.stats.getNumDmlAffectedRows
+                  case JobStatistics.QueryStatistics.StatementType.DELETE =>
+                    jobInfo.stats.getNumDmlAffectedRows
+                  case JobStatistics.QueryStatistics.StatementType.UPDATE =>
+                    jobInfo.stats.getNumDmlAffectedRows
+                  case _ =>
+                    -1
+                }
                 result = Result(activityCount = activityCount)
               }
               BQ.throwOnError(status)
@@ -161,7 +187,7 @@ object Query extends Command[QueryConfig] with Logging {
       .setUseQueryCache(cfg.useCache)
 
     if (cfg.datasetId.nonEmpty)
-      b.setDefaultDataset(resolveDataset(cfg.datasetId, cfg.projectId))
+      b.setDefaultDataset(BQ.resolveDataset(cfg.datasetId, cfg.projectId))
 
     if (cfg.createIfNeeded)
       b.setCreateDisposition(JobInfo.CreateDisposition.CREATE_IF_NEEDED)

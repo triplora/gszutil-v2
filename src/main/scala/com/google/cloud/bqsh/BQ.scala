@@ -20,7 +20,8 @@ import java.io.{PrintWriter, StringWriter}
 
 import com.google.cloud.bigquery.{BigQuery, BigQueryError, BigQueryException, DatasetId, Field, FieldList, Job, JobId, JobInfo, JobStatus, QueryJobConfiguration, Schema, StandardSQLTypeName, TableId}
 import com.google.cloud.imf.gzos.{MVS, Util}
-import com.google.cloud.imf.util.Logging
+import com.google.cloud.imf.util.{CloudLogging, Logging, StatsUtil}
+import com.google.cloud.imf.util.StatsUtil.EnhancedJob
 import com.google.common.collect.ImmutableList
 
 import scala.annotation.tailrec
@@ -37,14 +38,69 @@ object BQ extends Logging {
     JobId.of(jobId)
   }
 
+  /** Converts TableId to String */
+  def tableSpec(t: TableId): String = s"${t.getProject}.${t.getDataset}.${t.getTable}"
+
+  /** Converts Option[TableId] to String */
+  def tableSpec(t: Option[TableId]): String = t.map(tableSpec).getOrElse("")
+
+  def tablesEqual(t: TableId, t1: TableId): Boolean = {
+    t1.getProject == t.getProject &&
+    t1.getDataset == t.getDataset &&
+    t1.getTable == t.getTable
+  }
+
+  def tablesEqual(t0: TableId, t1: Option[TableId]): Boolean = {
+    t1.exists{t => tablesEqual(t0, t)}
+  }
+
+  /** Counts rows in a table
+    * @param bq BigQuery
+    * @param table TableId
+    * @return row count
+    */
+  def rowCount(bq: BigQuery, table: TableId): Long = {
+    val tbl = bq.getTable(table)
+    val n = tbl.getNumRows.longValueExact
+    val nBytes = tbl.getNumBytes.longValue
+    val ts = StatsUtil.epochMillis2Timestamp(tbl.getLastModifiedTime)
+    CloudLogging.stdout(s"${tableSpec(table)} contains $n rows $nBytes bytes as of $ts")
+    n
+  }
+
+  /** Submits a query with Dry Run enabled
+    *
+    * @param bq BigQuery client instance
+    * @param cfg QueryJobConfiguration
+    * @param jobId QueryJobConfiguration
+    * @param timeoutSeconds maximum wait time
+    * @return
+    */
+  def queryDryRun(bq: BigQuery,
+                  cfg: QueryJobConfiguration,
+                  jobId: JobId,
+                  timeoutSeconds: Long): EnhancedJob = {
+    val jobId1 = jobId.toBuilder.setJob(jobId.getJob+"_dryrun")
+    bq.create(JobInfo.of(jobId1.build, cfg.toBuilder.setDryRun(true).build))
+    val queryJob = waitForJob(bq, jobId, timeoutMillis = timeoutSeconds * 1000L)
+    new EnhancedJob(queryJob)
+  }
+
+  /** Submits a BigQuery job and waits for completion
+    * returns a completed job or throws exception
+    *
+    * @param bq BigQuery client instance
+    * @param cfg QueryJobConfiguration
+    * @param jobId JobId
+    * @param timeoutSeconds maximum time to wait for status change
+    * @param sync if set to false, return without waiting for status change
+    * @return Job
+    */
   def runJob(bq: BigQuery,
              cfg: QueryJobConfiguration,
              jobId: JobId,
              timeoutSeconds: Long,
              sync: Boolean): Job = {
-    require(bq != null, "BigQuery must not be null")
-    require(cfg != null, "QueryJobConfiguration must not be null")
-    require(jobId != null, "JobId must not be null")
     try {
       val job = bq.create(JobInfo.of(jobId, cfg))
       if (sync) {
@@ -55,7 +111,7 @@ object BQ extends Logging {
     } catch {
       case e: BigQueryException =>
         if (e.getReason == "duplicate" && e.getMessage.startsWith("Already Exists: Job")) {
-          logger.debug(s"Waiting for job jobid=${jobId.getJob}")
+          logger.warn(s"Job already exists, waiting for completion. jobid=${jobId.getJob}")
           waitForJob(bq, jobId, timeoutMillis = timeoutSeconds * 1000L)
         } else {
           throw new RuntimeException(e)
@@ -204,21 +260,18 @@ object BQ extends Logging {
   def resolveTableSpec(tableSpec: String,
                        defaultProject: String,
                        defaultDataset: String): TableId = {
-    logger.debug(s"resolving tablespec $tableSpec")
     val i =
       if (tableSpec.count(_ == '.') == 2)
         tableSpec.indexOf('.')
       else tableSpec.indexOf(':')
     val j = tableSpec.indexOf('.',i+1)
-    logger.debug(s"located tablespec separators: $i $j")
 
     val default =
       if (defaultProject.nonEmpty && defaultDataset.nonEmpty) {
         val datasetId = resolveDataset(defaultDataset, defaultProject)
-        logger.debug(s"resolved default dataset ${datasetId.getProject}:${datasetId.getDataset}")
         Option(datasetId)
       } else {
-        logger.debug("default dataset not set")
+        logger.warn("default dataset not set")
         None
       }
 
@@ -233,7 +286,6 @@ object BQ extends Logging {
     val table =
       if (j > 0) tableSpec.substring(j+1, tableSpec.length)
       else tableSpec
-    logger.debug(s"resolved `$project:$dataset.$table`")
     TableId.of(project, dataset, table)
   }
 
