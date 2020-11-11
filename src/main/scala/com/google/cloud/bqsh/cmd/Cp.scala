@@ -104,6 +104,10 @@ object Cp extends Command[GsUtilConfig] with Logging {
         recordsOut = result.activityCount)
     }
 
+    // cleanup temp files
+    GsUtilRm.run(c.copy(recursive = true,
+      gcsUri = c.gcsUri.stripSuffix("/") + "/tmp"), zos)
+
     result
   }
 
