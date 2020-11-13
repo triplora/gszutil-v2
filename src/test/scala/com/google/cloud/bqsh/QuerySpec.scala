@@ -3,6 +3,8 @@ package com.google.cloud.bqsh
 import com.google.cloud.RetryOption
 import com.google.cloud.bigquery.JobStatistics.QueryStatistics
 import com.google.cloud.bigquery.{FieldValueList, JobId, QueryJobConfiguration}
+import com.google.cloud.bqsh.cmd.Query
+import com.google.cloud.imf.gzos.Util
 import com.google.cloud.imf.util.{CloudLogging, Services}
 import org.scalatest.flatspec.AnyFlatSpec
 import org.threeten.bp.Duration
@@ -88,5 +90,62 @@ class QuerySpec extends AnyFlatSpec {
 
       }
     }
+  }
+
+  it should "print merge stats" in {
+    val zos = Util.zProvider
+    zos.init()
+    val projectId = sys.env("PROJECT_ID")
+    val dataset = sys.env.getOrElse("DATASET","dataset")
+
+    Query.run(QueryConfig(
+      projectId = projectId,
+      sql =
+      s"""CREATE OR REPLACE TABLE `$projectId.$dataset.UPSERT01` (
+         |    ITEM_NBR INT64
+         |    ,WM_YR_WK INT64
+         |    ,STORE_CNT INT64
+         |    ,QTY INT64
+         |    ,AMT NUMERIC
+         |);
+         |
+         |INSERT INTO `$projectId.$dataset.UPSERT01` (ITEM_NBR,WM_YR_WK,STORE_CNT,QTY,AMT)
+         |VALUES
+         |(10,16,9,333,NUMERIC '333.72')
+         |,(10,17,9,333,NUMERIC '333.72')
+         |,(10,18,9,333,NUMERIC '333.72');
+         |
+         |CREATE OR REPLACE TABLE `$projectId.$dataset.ITEM_DLY_POS` as
+         |SELECT
+         | 1 as ITEM_NBR,
+         | 2 as WM_YR_WK,
+         | 3 as STORE_CNT,
+         | 4 as QTY,
+         | NUMERIC '3.14'as AMT
+         |""".stripMargin
+    ), zos)
+
+    Query.run(QueryConfig(
+      projectId = projectId,
+      sql = s"""MERGE INTO `$projectId.$dataset.ITEM_DLY_POS` D
+               |USING `$projectId.$dataset.UPSERT01` S
+               |ON D.ITEM_NBR = S.ITEM_NBR
+               |    AND D.WM_YR_WK = S.WM_YR_WK
+               |WHEN NOT MATCHED THEN INSERT (
+               |    ITEM_NBR
+               |    ,WM_YR_WK
+               |    ,STORE_CNT
+               |    ,QTY
+               |    ,AMT
+               |) VALUES (
+               |    S.ITEM_NBR
+               |    ,S.WM_YR_WK
+               |    ,S.STORE_CNT
+               |    ,S.QTY
+               |    ,S.AMT
+               |)
+               |WHEN MATCHED THEN UPDATE
+               |SET D.STORE_CNT = S.STORE_CNT,D.QTY = S.QTY,D.AMT = S.AMT""".stripMargin
+    ), zos)
   }
 }
