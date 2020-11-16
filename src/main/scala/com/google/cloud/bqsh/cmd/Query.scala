@@ -65,12 +65,13 @@ object Query extends Command[QueryConfig] with Logging {
           logger.info("Query job finished")
         }
 
+        CloudLogging.stdout(jobInfo.report)
+
         // Publish results
         if (cfg.sync && cfg.statsTable.nonEmpty) {
           val statsTable = BQ.resolveTableSpec(cfg.statsTable, cfg.projectId, cfg.datasetId)
           logger.info(s"Writing stats to ${BQ.tableSpec(statsTable)}")
           if (jobInfo.isMerge){
-            CloudLogging.stdout(jobInfo.report)
             StatsUtil.insertJobStats(zos, jobId, Option(job), bq,
               statsTable, jobType = "merge_query",
               source = BQ.tableSpec(jobInfo.mergeFromTable),
@@ -78,11 +79,9 @@ object Query extends Command[QueryConfig] with Logging {
               recordsIn = jobInfo.mergeFromRows.getOrElse(-1),
               recordsOut = jobInfo.mergeInsertedRows.getOrElse(-1))
           } else if (jobInfo.isSelect) {
-            CloudLogging.stdout(jobInfo.report)
             StatsUtil.insertJobStats(zos, jobId, Option(job), bq,
               statsTable, jobType = "select_query",
-              source = jobInfo.selectFromTables
-                .map(x => x.map(BQ.tableSpec).mkString(",")).getOrElse(""),
+              source = jobInfo.selectFromTables.map(BQ.tableSpec).mkString(","),
               dest = BQ.tableSpec(jobInfo.selectIntoTable),
               recordsOut = jobInfo.selectOutputRows.getOrElse(-1))
           } else {
@@ -102,19 +101,19 @@ object Query extends Command[QueryConfig] with Logging {
                 logger.error(msg)
                 result = Result.Failure(msg)
               } else {
-                val activityCount: Long = jobInfo.stats.getStatementType match {
-                  case JobStatistics.QueryStatistics.StatementType.SELECT =>
+                val activityCount: Long = jobInfo.statementType match {
+                  case "SELECT" =>
                     jobInfo.selectOutputRows.getOrElse(-1)
-                  case JobStatistics.QueryStatistics.StatementType.MERGE =>
+                  case "MERGE" =>
                     jobInfo.mergeInsertedRows.getOrElse(-1)
-                  case JobStatistics.QueryStatistics.StatementType.INSERT =>
+                  case "INSERT" =>
                     jobInfo.stats.getNumDmlAffectedRows
-                  case JobStatistics.QueryStatistics.StatementType.DELETE =>
+                  case "DELETE" =>
                     jobInfo.stats.getNumDmlAffectedRows
-                  case JobStatistics.QueryStatistics.StatementType.UPDATE =>
+                  case "UPDATE" =>
                     jobInfo.stats.getNumDmlAffectedRows
                   case _ =>
-                    -1
+                    0
                 }
                 result = Result(activityCount = activityCount)
               }

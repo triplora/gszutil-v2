@@ -26,6 +26,7 @@ import com.google.cloud.bqsh.BQ
 import com.google.cloud.imf.gzos.MVS
 import com.google.common.collect.ImmutableMap
 
+import scala.collection.mutable
 import scala.jdk.CollectionConverters.{ListHasAsScala, MapHasAsScala}
 
 object StatsUtil extends Logging {
@@ -51,122 +52,309 @@ object StatsUtil extends Logging {
     */
   class EnhancedJob(job: Job) {
     def conf: QueryJobConfiguration = job.getConfiguration[QueryJobConfiguration]
+    val plan: IndexedSeq[QueryStage] =
+      Option(stats.getQueryPlan).map(_.asScala.toIndexedSeq).getOrElse(IndexedSeq.empty)
+    val tableRefs: IndexedSeq[TableId] =
+      Option(stats.getReferencedTables).map(_.asScala.toIndexedSeq).getOrElse(IndexedSeq.empty)
 
     def stats: QueryStatistics = job.getStatistics[QueryStatistics]
-    def queryDuration: Long = stats.getEndTime - stats.getStartTime
-    def waitDuration: Long = stats.getStartTime - stats.getCreationTime
-    def slotMsPerByte: Double = (stats.getTotalSlotMs * 1.0d) / stats.getTotalBytesProcessed
-    def slotUtilizationRate: Double = (stats.getTotalSlotMs * 1.0d) / queryDuration
+    val statementType: String = Option(stats.getStatementType).map(_.toString).getOrElse("Query")
+    val queryDuration: Long = stats.getEndTime - stats.getStartTime
+    val waitDuration: Long = stats.getStartTime - stats.getCreationTime
+
+    val slotMsToTotalBytesRatio: Double =
+      if (stats.getTotalBytesProcessed > 0)
+        (stats.getTotalSlotMs * 1.0d) / stats.getTotalBytesProcessed
+      else 0
+
+    val slotUtilizationRate: Double =
+      if (queryDuration > 0)
+        (stats.getTotalSlotMs * 1.0d) / queryDuration
+      else 0
+
+    val shuffleBytes: Long =
+      plan.map(_.getShuffleOutputBytes).sum
+
+    val shuffleBytesSpilled: Long =
+      plan.map(_.getShuffleOutputBytesSpilled).sum
+
+    val shuffleBytesToTotalBytesRatio: Double =
+      if (stats.getTotalBytesProcessed > 0)
+        shuffleBytes / stats.getTotalBytesProcessed
+      else 0
+
+    val shuffleSpillToShuffleBytesRatio: Double =
+      if (shuffleBytes > 0)
+        shuffleBytesSpilled / shuffleBytes
+      else 0
+
+    val shuffleSpillToTotalBytesRatio: Double =
+      if (stats.getTotalBytesProcessed > 0)
+        shuffleBytesSpilled / stats.getTotalBytesProcessed
+      else 0
+
+    val stageCount: Int =
+      plan.length
+
+    def countSteps(qs: QueryStage): Int =
+      Option(qs.getSteps).map(_.size).getOrElse(0)
+
+    def countSubSteps(qss: QueryStage): Int =
+      Option(qss.getSteps)
+        .map(_.asScala.foldLeft(0){(acc1, step) => countSubSteps(step) + acc1})
+        .getOrElse(0)
+
+    def countSubSteps(qss: QueryStage.QueryStep): Int =
+      Option(qss.getSubsteps).map(_.size).getOrElse(0)
+
+    val stepCount: Int =
+      plan.foldLeft(0){(acc, queryStage) => countSteps(queryStage) + acc}
+
+    val subStepCount: Int =
+      plan.foldLeft(0){(acc,stage) => countSubSteps(stage) + acc}
+
+    /** Summary of inputs, outputs and referenced tables
+      */
+    val stageSummary: IndexedSeq[String] = {
+      plan.map{s =>
+        val tbls = s.getSteps.asScala.flatMap{s1 =>
+          val last = s1.getSubsteps.asScala.last
+          val tbl = last.stripPrefix("FROM ")
+          if (s1.getName == "READ" && last.startsWith("FROM ") && !tbl.startsWith("__")) {
+            Option(tbl)
+          } else None
+        }
+        val inputs = if (tbls.nonEmpty) tbls.mkString(" inputs:",",","") else ""
+        s"${s.getName} in:${s.getRecordsRead} out:${s.getRecordsWritten} steps:${countSteps(s)} " +
+          s"subSteps:${countSubSteps(s)}$inputs"
+      }
+    }
 
     def isDryRun: Boolean = conf.dryRun
     def bytesProcessed: Long =
       if (isDryRun) stats.getEstimatedBytesProcessed
       else stats.getTotalBytesProcessed
 
-    def isSelect: Boolean = stats.getStatementType == QueryStatistics.StatementType.SELECT
+    def isSelect: Boolean = statementType == "SELECT"
     def selectIntoTable: Option[TableId] =
       if (isSelect) Option(conf.getDestinationTable) else None
-    def selectFromTables: Option[List[TableId]] =
-      if (isSelect) Option(stats.getReferencedTables.asScala.toList)
-      else None
+    def selectFromTables: List[TableId] =
+      if (isSelect) Option(stats.getReferencedTables).map(_.asScala.toList).getOrElse(Nil)
+      else Nil
 
-    def isMerge: Boolean = stats.getStatementType == QueryStatistics.StatementType.MERGE
+    def isMerge: Boolean = statementType == "MERGE"
+
     def mergeIntoTable: Option[TableId] =
       if (isMerge) Option(conf.getDestinationTable) else None
-    def mergeFromTable: Option[TableId] =
+
+    val mergeFromTable: Option[TableId] =
       if (isMerge)
         tableRefs.filterNot{t => BQ.tablesEqual(t, mergeIntoTable)}.headOption
       else None
 
-    def plan = stats.getQueryPlan.asScala
-    def tableRefs = stats.getReferencedTables.asScala
+    /** Rows read by select query from all inputs */
+    val selectInputRows: Option[Seq[(String,Long)]] = {
+      if (isSelect) {
+        val inputs = plan.flatMap{s =>
+          s.getSteps.asScala.flatMap{step =>
+            val isRead = step.getName == "READ"
+            val lastSubStep = step.getSubsteps.asScala.last
+            val isFrom = lastSubStep.startsWith("FROM")
+            val table = lastSubStep.stripPrefix("FROM ")
+            val fromTable = !table.startsWith("__")
+            if (isRead && isFrom && fromTable){
+              Option((table,s.getRecordsRead))
+            } else None
+          }
+        }.toList
+        Option(inputs)
+      } else None
+    }
 
-    // number of rows returned by select query
-    def selectOutputRows: Option[Long] = {
+    /** Rows returned by select query */
+    val selectOutputRows: Option[Long] = {
       if (isSelect) {
         val outputStage = plan.filter(_.getName.endsWith(": Output")).lastOption
         outputStage.map(_.getRecordsWritten)
       } else None
     }
 
-    // number of rows in target table prior to merge query
-    def mergeIntoRows: Option[Long] = {
+    def countReads(qs: QueryStage): Int =
+      qs.getSteps.asScala.count(_.getName == "READ")
+
+    /** check if a stage reads from specified table */
+    def readsFrom(qs: QueryStage, t: TableId): Boolean = {
+      val ts = BQ.tableSpec(t)
+      qs.getSteps.asScala.exists{ s =>
+        s.getName == "READ" && s.getSubsteps.asScala.exists{s1 =>
+          s1.endsWith(ts) && s1.startsWith("FROM ")
+        }
+      }
+    }
+
+    /** Rows in target table prior to merge query
+      * Used as initial row count to calculate number of inserts
+      */
+    val mergeIntoRows: Option[Long] = {
       if (isMerge) {
-        val inputStage = plan.find(_.getName.endsWith(": Input"))
-        inputStage.map(_.getRecordsRead)
+        val mergeIntoStage: Option[QueryStage] =
+          mergeIntoTable.flatMap(t => plan.find(qs => readsFrom(qs, t)))
+
+        if (mergeIntoStage.map(qs => countReads(qs)).contains(1))
+          mergeIntoStage.map(_.getRecordsRead)
+        else None
       } else None
     }
 
-    // number of rows in merge from table prior to merge query
-    def mergeFromRows: Option[Long] = {
+    /** Rows in merge from table prior to merge query
+      * May not have duplicate keys unless aggregated by a subquery
+      */
+    val mergeFromRows: Option[Long] = {
       if (isMerge) {
-        val joinStage = plan.find(_.getName.endsWith(": Join+"))
-        joinStage.map(_.getRecordsRead)
+        val mergeFromStage: Option[QueryStage] =
+          mergeFromTable.flatMap(t => plan.find(qs => readsFrom(qs, t)))
+
+        mergeFromStage match {
+          case Some(qs) if qs.getName.endsWith(": Join+") =>
+            // simple merge without subquery joins with coalesce of dest table
+            Option(qs.getRecordsRead - mergeIntoRows.getOrElse(0L))
+          case Some(qs) if qs.getName.endsWith(": Input") =>
+            // merge with subquery reads merge table directly
+            Option(qs.getRecordsRead)
+          case _ =>
+            None
+        }
       } else None
     }
 
-    // number of rows written to target table by merge query
-    def mergeOutputRows: Option[Long] = {
+    /** Rows written to target table by merge query
+      * This is the number of rows in the target table after the query completes
+      */
+    val mergeOutputRows: Option[Long] = {
       if (isMerge) {
         val outputStage = plan.filter(_.getName.endsWith(": Output")).lastOption
         outputStage.map(_.getRecordsWritten)
       } else None
     }
 
-    // number of new rows added to target table by merge query
-    def mergeInsertedRows: Option[Long] = {
-      (mergeIntoRows,mergeOutputRows) match {
-        case (Some(rowsBefore),Some(rowsAfter)) =>
-          Option(rowsAfter - rowsBefore)
-        case _ => None
-      }
-    }
-
-    /** Calculates upper bound on rows updated by merge query
-      * joined = inserted + (updated + duplicates)
-      * (updated + duplicates) = joined - inserted
-      * calculated update count is inflated if duplicates exist
+    /** Rows added to target table by merge query
+      * Calculated by comparing final row count to initial row count
       */
-    def mergeUpdatedRows: Option[Long] = {
-      (mergeInsertedRows,mergeFromRows) match {
-        case (Some(insertedRows),Some(totalRows)) =>
-          Option(totalRows - insertedRows)
-        case _ => None
-      }
-    }
+    val mergeInsertedRows: Option[Long] =
+      for {before <- mergeIntoRows; after <- mergeOutputRows}
+      yield after - before
 
-    def mergeAffectedRows: Option[Long] = {
+    /** Affected rows includes both inserted and updated rows
+      * Rows not matched by a merge query are not included
+      */
+    val mergeAffectedRows: Option[Long] =
       if (isMerge) Option(stats.getNumDmlAffectedRows)
       else None
-    }
+
+    /** Calculates rows updated by merge query
+      */
+    val mergeUpdatedRows: Option[Long] =
+      for {ins <- mergeInsertedRows; aff <- mergeAffectedRows}
+      yield aff - ins
+
+    // format with 2 decimal places
+    private def f(x: Double): String = "%1.2f".format(x)
 
     /** Print table names and row counts */
     def report: String = {
-      val sb = new StringBuilder(1024)
+      val gbProcessed = stats.getTotalBytesProcessed*1.0d/(1024*1024*1024)
+      val slotMinutes = stats.getTotalSlotMs*1.0d/(1000*60)
+      val executionSeconds = queryDuration/1000d
+      val queuedSeconds = waitDuration/1000d
+
+      val sb = new StringBuilder(4096)
+      sb.append(
+        s"""
+           |$statementType summary
+           |$stageCount stages
+           |$stepCount steps
+           |$subStepCount sub-steps
+           |${stageSummary.mkString("\n")}
+           |
+           |Utilization:
+           |${f(gbProcessed)} GB processed
+           |${shuffleBytesSpilled/(1024L*1024L*1024L)} GB spilled to disk during shuffle
+           |${f(slotMinutes)} slot minutes consumed
+           |${f(slotUtilizationRate)} slots utilized on average over the duration of the query
+           |${f(slotMsToTotalBytesRatio)} ratio of slot ms to bytes processed
+           |${f(shuffleBytesToTotalBytesRatio)} ratio of bytes shuffled to bytes processed
+           |${f(shuffleSpillToShuffleBytesRatio)} ratio of bytes spilled to shuffle bytes (lower is better)
+           |${f(shuffleSpillToTotalBytesRatio)} ratio of bytes spilled to bytes processed (lower is better)
+           |
+           |Timing:
+           |${f(executionSeconds)} seconds execution time
+           |${f(queuedSeconds)} seconds waiting in queue
+           |
+           |""".stripMargin)
+
       if (isMerge) {
-        val mergeFromTableSpec = BQ.tableSpec(mergeFromTable)
-        val mergeIntoTableSpec = BQ.tableSpec(mergeIntoTable)
-        val rowsJoined = mergeFromRows.getOrElse(-1)
-        val rowsRead = mergeIntoRows.getOrElse(-1)
-        val rowsInserted = mergeInsertedRows.getOrElse(-1)
-        val rowsUpdated = mergeUpdatedRows.getOrElse(-1)
-        val affectedRows = mergeAffectedRows.getOrElse(-1)
-        val outputRows = mergeOutputRows.getOrElse(-1)
-        sb.append("MERGE query stats:\n")
-        sb.append(s"FROM $mergeFromTableSpec ($rowsJoined rows)\n")
-        sb.append(s"INTO $mergeIntoTableSpec ($rowsRead rows)\n")
-        sb.append(s"Inserted $rowsInserted rows\n")
-        sb.append(s"Updated $rowsUpdated rows\n")
-        sb.append(s"Output $outputRows rows\n")
-        sb.append(s"Affected $affectedRows rows\n")
+        sb.append("Merge results:\n")
+        for {n <- mergeIntoRows; t <- mergeIntoTable} yield {
+          sb.append(s"$n rows read from ${BQ.tableSpec(t)} (dest)\n")
+        }
+        for {n <- mergeFromRows; t <- mergeFromTable} yield {
+          sb.append(s"$n rows read from ${BQ.tableSpec(t)} (dest)\n")
+        }
+        for {
+          a <- mergeInsertedRows; b <- mergeUpdatedRows; c <- mergeAffectedRows; d <- mergeOutputRows
+        } yield {
+          sb.append(
+            s"""$d rows output
+               |$c rows affected
+               |${d - c} rows unmodified
+               |
+               |$a rows inserted
+               |$b rows updated
+               |""".stripMargin)
+        }
       } else if (isSelect) {
-        val sources = selectFromTables.map(_.map(BQ.tableSpec).mkString("\n     ,")).getOrElse("")
+        sb.append("Select results:\n")
+        val sources = selectFromTables.map(BQ.tableSpec).mkString("\n     ,")
         val dest = BQ.tableSpec(selectIntoTable)
-        sb.append("SELECT query stats:\n")
-        sb.append(s"FROM $sources\n")
-        sb.append(s"INTO $dest\n")
-        sb.append(s"Output ${selectOutputRows.getOrElse(-1)}:\n")
+        for {s <- selectInputRows} yield {
+          for ((t,n) <- s){
+            sb.append(s"$n rows from $t\n")
+          }
+        }
+        if (sources.nonEmpty)
+          sb.append(s"Input: $sources\n")
+        if (dest.nonEmpty)
+          sb.append(s"Destination: $dest\n")
+        for {n <- selectOutputRows} yield {
+          sb.append(s"Output rows: $n\n")
+        }
       }
+
+      CloudLogging.getLogger("StatsUtil")
+        .infoJson(Seq(
+          ("msgType", "queryStats"),
+          ("query", conf.getQuery),
+          ("statementType", statementType),
+          ("gbProcessed", gbProcessed),
+          ("slotMinutes", slotMinutes),
+          ("slotUtilizationRate", slotUtilizationRate),
+          ("slotMsToTotalBytesRatio", slotMsToTotalBytesRatio),
+          ("shuffleBytesPerTotalBytes", shuffleBytesToTotalBytesRatio),
+          ("shuffleSpillToShuffleBytes", shuffleSpillToShuffleBytesRatio),
+          ("shuffleSpillToTotalBytes", shuffleSpillToTotalBytesRatio),
+          ("shuffleSpillGB", shuffleBytesSpilled),
+          ("executionSeconds", executionSeconds),
+          ("queuedSeconds", queuedSeconds),
+          ("stageCount", stageCount),
+          ("stepCount", stepCount),
+          ("subStepCount", subStepCount),
+          ("stages", stageSummary.mkString(";")),
+          ("jobId", job.getJobId.getJob),
+          ("project", job.getJobId.getProject),
+          ("location", job.getJobId.getLocation),
+          ("destination", BQ.tableSpec(Option(conf.getDestinationTable))),
+        ), null)
+
       sb.result
     }
   }
