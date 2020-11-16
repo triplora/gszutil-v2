@@ -38,7 +38,7 @@ case class AvroField(field: Schema.Field) {
   // buffer for BigInteger values representing Decimal field
   @transient private val decimalBuf = new Array[Byte](16)
 
-  private val pos: Int = field.pos()
+  val pos: Int = field.pos()
   def read(row: GenericRecord, sb: CharBuffer): Unit = {
     val v = row.get(pos)
     if (v != null){
