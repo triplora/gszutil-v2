@@ -30,6 +30,8 @@ object Query extends Command[QueryConfig] with Logging {
 
   def run(cfg: QueryConfig, zos: MVS): Result = {
     val creds = zos.getCredentialProvider().getCredentials
+    CloudLogging.stdout(s"Initializing BigQuery client\n" +
+      s"projectId=${cfg.projectId} location=${cfg.location}")
     val bq = Services.bigQuery(cfg.projectId, cfg.location, creds)
 
     val queryString =

@@ -352,34 +352,12 @@ protected object ZOS {
   }
 
   /** Obtain Data Set information without opening file
-    * Uses JFCB
-    * https://www.ibm.com/support/knowledgecenter/SSLTBW_2.4.0/com.ibm.zos.v2r4.iead300/JFCB-map.htm
     * @param ddName DDNAME to obtain information for
     * @return DataSetInfo
     */
-  def getDatasetInfo(ddName: String): DataSetInfo = {
-    val jfcb = ZFile.readJFCB(ddName)
-    val recfm = jfcb.getJfcrecfm
-    val dsorg = jfcb.getJfcdsorg
-    val ind1 = jfcb.getJfcbind1
-
-    DataSetInfo(
-      dataSetName = jfcb.getJfcbdsnm
-      ,elementName = jfcb.getJfcbelnm
-      ,lrecl = jfcb.getJfclrecl
-      ,undefined = 0xC0 == (recfm & 0xC0)
-      ,fixed = 0x80 == (recfm & 0x80)
-      ,variable = 0x40 == (recfm & 0x40)
-      ,blocked = 0x10 == (recfm & 0x10)
-      ,fixedBlock = 0x08 == (recfm & 0x08)
-      ,indexedSequential = 0x80 == ((dsorg >>> 8) & 0x80)
-      ,physicalSequential = 0x40 == ((dsorg >>> 8) & 0x40)
-      ,directAccess = 0x20 == ((dsorg >>> 8) & 0x20)
-      ,partitioned = 0x02 == (dsorg & 0x02)
-      ,located = 0x30 == (ind1 & 0x30)
-      ,gdg = 0x02 == (ind1 & 0x02)
-      ,pds = 0x01 == (ind1 & 0x01)
-    )
+  def getDatasetInfo(ddName: String): Option[DataSetInfo] = {
+    // TODO get dataset info with something other than JFCB
+    None
   }
 
   def addCCAProvider(): Unit =

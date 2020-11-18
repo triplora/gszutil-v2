@@ -36,6 +36,8 @@ object Export extends Command[ExportConfig] with Logging {
 
   def run(cfg: ExportConfig, zos: MVS): Result = {
     val creds = zos.getCredentialProvider().getCredentials
+    CloudLogging.stdout(s"Initializing BigQuery client\n" +
+      s"projectId=${cfg.projectId} location=${cfg.location}")
     val bq = Services.bigQuery(cfg.projectId, cfg.location, creds)
     val bqStorage = BigQueryReadClient.create()
 

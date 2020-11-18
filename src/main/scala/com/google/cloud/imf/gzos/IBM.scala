@@ -52,43 +52,47 @@ object IBM extends MVS with Logging {
   override def writeDD(dd: String): ZRecordWriterT = ZOS.writeDD(dd)
   override def readDD(dd: String): ZRecordReaderT = {
     // Get DD information from z/OS
-    val ddInfo = ZOS.getDatasetInfo(dd)
-    CloudLogging.stdout(s"Dataset Info for $dd:\n$ddInfo")
+    ZOS.getDatasetInfo(dd) match {
+      case Some(ddInfo) =>
+        CloudLogging.stdout(s"Dataset Info for $dd:\n$ddInfo")
 
-    // Obtain Cloud Storage client
-    val gcs = Services.storage(getCredentialProvider().getCredentials)
+        // Obtain Cloud Storage client
+        val gcs = Services.storage(getCredentialProvider().getCredentials)
 
-    // check if DD exists in Cloud Storage
-    CloudDataSet.readCloudDD(gcs, dd, ddInfo) match {
-      case Some(r) =>
-        // Prefer Cloud Data Set if DSN exists in GCS
-        r
+        // check if DD exists in Cloud Storage
+        CloudDataSet.readCloudDD(gcs, dd, ddInfo) match {
+          case Some(r) =>
+            // Prefer Cloud Data Set if DSN exists in GCS
+            return r
+          case _ =>
+        }
       case _ =>
-        // Check for Local Data Set (standard z/OS DD)
+    }
+
+    // Check for Local Data Set (standard z/OS DD)
+    try {
+      ZOS.readDD(dd)
+    } catch {
+      // Handle DD open failure
+      case _: Throwable =>
+        val gcsDD = sys.env.getOrElse("GCSDD","GCSLOC")
         try {
-          ZOS.readDD(dd)
+          // Read DDs from data set
+          val gcsParm = readDDString(gcsDD,"\n")
+          CloudLogging.stdout(s"GCS PARM:\n$gcsParm")
+          // Parse DDs
+          val gcsDDs = JCLParser.splitStatements(gcsParm)
+          CloudLogging.stdout(s"GCS DSNs:\n${gcsDDs.mkString("\n")}")
+          // Search for requested DDNAME
+          gcsDDs.find(_.name == dd) match {
+            case Some(DDStatement(_, lrecl, dsn)) =>
+              CloudRecordReader(dsn, lrecl)
+            case None =>
+              throw new RuntimeException(s"Cloud DD '$dd' not found in $gcsDD")
+          }
         } catch {
-          // Handle DD open failure
-          case _: Throwable =>
-            val gcsDD = sys.env.getOrElse("GCSDD","GCSLOC")
-            try {
-              // Read DDs from data set
-              val gcsParm = readDDString(gcsDD,"\n")
-              CloudLogging.stdout(s"GCS PARM:\n$gcsParm")
-              // Parse DDs
-              val gcsDDs = JCLParser.splitStatements(gcsParm)
-              CloudLogging.stdout(s"GCS DSNs:\n${gcsDDs.mkString("\n")}")
-              // Search for requested DDNAME
-              gcsDDs.find(_.name == dd) match {
-                case Some(DDStatement(_, lrecl, dsn)) =>
-                  CloudRecordReader(dsn, lrecl)
-                case None =>
-                  throw new RuntimeException(s"Cloud DD '$dd' not found in $gcsDD")
-              }
-            } catch {
-              case t: Throwable =>
-                throw new RuntimeException(s"DD not found: $dd", t)
-            }
+          case t: Throwable =>
+            throw new RuntimeException(s"DD not found: $dd", t)
         }
     }
   }
@@ -111,6 +115,7 @@ object IBM extends MVS with Logging {
   private var cp: CredentialProvider = _
   private var keypair: KeyPair = _
   private var principal: String = _
+  private var keyfileBytes: Array[Byte] = _
 
   override def getPrincipal(): String = {
     if (principal == null) getCredentialProvider()
@@ -120,13 +125,13 @@ object IBM extends MVS with Logging {
   override def getCredentialProvider(): CredentialProvider = {
     if (cp != null) cp
     else {
-      val bytes = Util.readAllBytes(readDD("KEYFILE"))
+      if (keyfileBytes == null) keyfileBytes = Util.readAllBytes(readDD("KEYFILE"))
       val json = new JsonObjectParser(JacksonFactory.getDefaultInstance)
-        .parseAndClose(new ByteArrayInputStream(bytes), StandardCharsets.UTF_8, classOf[GenericJson])
+        .parseAndClose(new ByteArrayInputStream(keyfileBytes), StandardCharsets.UTF_8, classOf[GenericJson])
       principal = json.get("client_email").asInstanceOf[String]
       // todo read keypair
-      keypair = SecurityUtils.readServiceAccountKeyPair(bytes)
-      cp = new GoogleCredentialsProvider(bytes)
+      keypair = SecurityUtils.readServiceAccountKeyPair(keyfileBytes)
+      cp = new GoogleCredentialsProvider(keyfileBytes)
       cp
     }
   }
