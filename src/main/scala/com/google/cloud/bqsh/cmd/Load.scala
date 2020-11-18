@@ -34,9 +34,9 @@ object Load extends Command[LoadConfig] with Logging {
     val jobConfig = configureLoadJob(cfg)
     logger.info("submitting load job")
 
-    val jobId = BQ.genJobId(cfg.projectId, zos, "load")
+    val jobId = BQ.genJobId(cfg.projectId, cfg.location, zos, "load")
     bq.create(JobInfo.of(jobId, jobConfig))
-    logger.info(s"Waiting for Load Job jobid=${jobId.getJob}")
+    logger.info(s"Waiting for Load Job jobid=${BQ.toStr(jobId)}")
     val completed = BQ.waitForJob(bq, jobId, timeoutMillis = 60L * 60L * 1000L)
 
     if (cfg.statsTable.nonEmpty){
@@ -47,7 +47,7 @@ object Load extends Command[LoadConfig] with Logging {
 
     BQ.getStatus(completed) match {
       case Some(status) =>
-        logger.info(s"job ${jobId.getJob} has status ${status.state}")
+        logger.info(s"job ${BQ.toStr(jobId)} has status ${status.state}")
         if (status.hasError) {
           val msg = s"Error:\n${status.error}\nExecutionErrors: ${status.executionErrors.mkString("\n")}"
           logger.error(msg)

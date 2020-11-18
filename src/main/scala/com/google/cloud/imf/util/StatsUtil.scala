@@ -349,7 +349,7 @@ object StatsUtil extends Logging {
           ("stepCount", stepCount),
           ("subStepCount", subStepCount),
           ("stages", stageSummary.mkString(";")),
-          ("jobId", job.getJobId.getJob),
+          ("jobId", BQ.toStr(job.getJobId),
           ("project", job.getJobId.getProject),
           ("location", job.getJobId.getLocation),
           ("destination", BQ.tableSpec(Option(conf.getDestinationTable))),
@@ -367,7 +367,7 @@ object StatsUtil extends Logging {
     row.put("job_date", jobDate2Date(zos.jobDate))
     row.put("job_time", jobTime2Time(zos.jobTime))
     row.put("timestamp", epochMillis2Timestamp(System.currentTimeMillis))
-    row.put("job_id", jobId.getJob)
+    row.put("job_id", BQ.toStr(jobId))
     if (jobType.nonEmpty)
       row.put("job_type", jobType)
     if (source.nonEmpty)
@@ -428,12 +428,12 @@ object StatsUtil extends Logging {
     }
 
     logger.debug(s"inserting stats to ${tableId.getProject}:${tableId.getDataset}.${tableId.getTable}")
-    bq.insertAll(InsertAllRequest.newBuilder(tableId).addRow(jobId.getJob, row.build).build()) match {
+    bq.insertAll(InsertAllRequest.newBuilder(tableId).addRow(BQ.toStr(jobId), row.build).build()) match {
       case x if x.hasErrors =>
         val errors = x.getInsertErrors.asScala.values.flatMap(_.asScala).mkString("\n")
-        logger.error(s"failed to insert stats for Job ID ${jobId.getJob}\n$errors")
+        logger.error(s"failed to insert stats for Job ID ${BQ.toStr(jobId)}\n$errors")
       case _ =>
-        logger.debug(s"inserted job stats for Job ID ${jobId.getJob}")
+        logger.debug(s"inserted job stats for Job ID ${BQ.toStr(jobId)}")
     }
   }
 

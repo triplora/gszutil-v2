@@ -56,11 +56,10 @@ object Query extends Command[QueryConfig] with Logging {
     var result: Result = null
     for (query <- queries) {
       val jobConfiguration = configureQueryJob(query, cfg)
-      val jobId = BQ.genJobId(cfg.projectId, zos, "query")
-      logger.debug(s"generated job id ${jobId.getJob}")
+      val jobId = BQ.genJobId(cfg.projectId, cfg.location, zos, "query")
+      logger.info(s"Submitting Query Job\njobid=${BQ.toStr(jobId)}")
 
       try {
-        logger.info("Submitting query job")
         val job = BQ.runJob(bq, jobConfiguration, jobId, cfg.timeoutMinutes * 60, cfg.sync)
         val jobInfo = new EnhancedJob(job)
         if (cfg.sync){
@@ -121,7 +120,7 @@ object Query extends Command[QueryConfig] with Logging {
               }
               BQ.throwOnError(status)
             case _ =>
-              logger.error(s"Job ${jobId.getJob} not found")
+              logger.error(s"Job ${BQ.toStr(jobId)} not found")
               result = Result.Failure("missing status")
           }
         } else {

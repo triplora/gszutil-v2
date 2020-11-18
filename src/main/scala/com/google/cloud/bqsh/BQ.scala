@@ -29,13 +29,13 @@ import scala.jdk.CollectionConverters.IterableHasAsScala
 import scala.util.{Failure, Success, Try}
 
 object BQ extends Logging {
-  def genJobId(projectId: String, zos: MVS, jobType: String): JobId = {
+  def genJobId(projectId: String, location: String, zos: MVS, jobType: String): JobId = {
     val t = System.currentTimeMillis
     val job = zos.getInfo
     val jobId = Seq(
       job.getJobname,job.getStepName,job.getJobdate,job.getJobtime,job.getJobid,jobType,t.toString
     ).mkString("_")
-    JobId.of(projectId, jobId)
+    JobId.newBuilder().setProject(projectId).setLocation(location).setJob(jobId).build()
   }
 
   /** Converts TableId to String */
@@ -104,14 +104,14 @@ object BQ extends Logging {
     try {
       val job = bq.create(JobInfo.of(jobId, cfg))
       if (sync) {
-        logger.info(s"Waiting for Job jobid=${jobId.getJob}")
+        logger.info(s"Waiting for Job jobid=${BQ.toStr(jobId)}")
         waitForJob(bq, jobId, timeoutMillis = timeoutSeconds * 1000L)
       }
       else job
     } catch {
       case e: BigQueryException =>
         if (e.getReason == "duplicate" && e.getMessage.startsWith("Already Exists: Job")) {
-          logger.warn(s"Job already exists, waiting for completion. jobid=${jobId.getJob}")
+          logger.warn(s"Job already exists, waiting for completion.\njobid=${BQ.toStr(jobId)}")
           waitForJob(bq, jobId, timeoutMillis = timeoutSeconds * 1000L)
         } else {
           throw new RuntimeException(e)

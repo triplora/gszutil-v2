@@ -61,12 +61,12 @@ object Export extends Command[ExportConfig] with Logging {
     }
 
     val jobConfiguration = configureExportQueryJob(query, cfg)
-    val jobId = BQ.genJobId(cfg.projectId, zos, "query")
+    val jobId = BQ.genJobId(cfg.projectId, cfg.location, zos, "query")
 
     try {
-      logger.info(s"Submitting QueryJob. jobId=${jobId.getJob}")
+      logger.info(s"Submitting QueryJob.\njobId=${BQ.toStr(jobId)}")
       val job = BQ.runJob(bq, jobConfiguration, jobId, cfg.timeoutMinutes * 60, sync = true)
-      logger.info(s"QueryJob finished. jobId=${jobId.getJob}")
+      logger.info(s"QueryJob finished.")
 
       val conf = job.getConfiguration[QueryJobConfiguration]
 
@@ -81,7 +81,7 @@ object Export extends Command[ExportConfig] with Logging {
           logger.info(s"Job Status = ${status.state}")
           BQ.throwOnError(status)
         case _ =>
-          val msg = s"Job ${jobId.getJob} not found"
+          val msg = s"Job ${BQ.toStr(jobId)} not found"
           logger.error(msg)
           throw new RuntimeException(msg)
       }
@@ -91,7 +91,7 @@ object Export extends Command[ExportConfig] with Logging {
         case None =>
           val msg = s"Destination table ${conf.getDestinationTable.getProject}." +
             s"${conf.getDestinationTable.getDataset}." +
-            s"${conf.getDestinationTable.getTable} not found for export job ${jobId.getJob}"
+            s"${conf.getDestinationTable.getTable} not found for export job ${BQ.toStr(jobId)}"
           CloudLogging.stderr(msg)
           logger.error(msg)
           throw new RuntimeException(msg)
