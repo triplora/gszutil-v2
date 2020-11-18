@@ -90,7 +90,7 @@ object Cp extends Command[GsUtilConfig] with Logging {
       val statsTable = BQ.resolveTableSpec(c.statsTable, c.projectId, c.datasetId)
       logger.debug(s"writing stats to ${statsTable.getProject}:${statsTable
         .getDataset}:${statsTable.getTable}")
-      val jobId = BQ.genJobId(zos,"cp")
+      val jobId = BQ.genJobId(c.projectId, zos,"cp")
       StatsUtil.insertJobStats(
         zos = zos,
         jobId = jobId,

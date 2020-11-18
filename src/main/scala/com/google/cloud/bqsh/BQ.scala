@@ -29,13 +29,13 @@ import scala.jdk.CollectionConverters.IterableHasAsScala
 import scala.util.{Failure, Success, Try}
 
 object BQ extends Logging {
-  def genJobId(zos: MVS, jobType: String): JobId = {
+  def genJobId(projectId: String, zos: MVS, jobType: String): JobId = {
     val t = System.currentTimeMillis
     val job = zos.getInfo
     val jobId = Seq(
       job.getJobname,job.getStepName,job.getJobdate,job.getJobtime,job.getJobid,jobType,t.toString
     ).mkString("_")
-    JobId.of(jobId)
+    JobId.of(projectId, jobId)
   }
 
   /** Converts TableId to String */
@@ -119,6 +119,9 @@ object BQ extends Logging {
     }
   }
 
+  def toStr(j: JobId): String =
+    s"${j.getProject}:${j.getLocation}.${j.getJob}"
+
   @tailrec
   def waitForJob(bq: BigQuery,
                  jobId: JobId,
@@ -127,21 +130,24 @@ object BQ extends Logging {
                  timeoutMillis: Long = 300000,
                  retries: Int = 120): Job = {
     if (timeoutMillis <= 0){
-      throw new RuntimeException(s"Timed out waiting for ${jobId.getJob}")
+      throw new RuntimeException(s"Timed out waiting for ${toStr(jobId)}")
     } else if (retries <= 0){
-      throw new RuntimeException(s"Timed out waiting for ${jobId.getJob} - retry limit reached")
+      throw new RuntimeException(s"Timed out waiting for ${toStr(jobId)} - retry limit reached")
     }
     Try{Option(bq.getJob(jobId))} match {
       case Success(Some(job)) if isDone(job) =>
-        logger.info(s"${jobId.getJob} Status = DONE")
+        logger.info(s"${toStr(jobId)} Status = DONE")
         job
       case Failure(e) =>
         val sw = new StringWriter()
         val pw = new PrintWriter(sw)
         e.printStackTrace(pw)
         val stackTrace = sw.toString
-        logger.error(s"BigQuery Job failed jobid=${jobId.getJob}\n${e.getMessage}\n$stackTrace", e)
+        logger.error(s"BigQuery Job failed jobid=${toStr(jobId)}\n" +
+          s"${e.getMessage}\n$stackTrace", e)
         throw e
+      case Success(None) =>
+        throw new RuntimeException(s"BigQuery Job not found jobid=${toStr(jobId)}")
       case Success(_) =>
         Util.sleepOrYield(waitMillis)
         waitForJob(bq, jobId, math.min(waitMillis * 2, maxWaitMillis),

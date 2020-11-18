@@ -54,7 +54,7 @@ object Query extends Command[QueryConfig] with Logging {
     var result: Result = null
     for (query <- queries) {
       val jobConfiguration = configureQueryJob(query, cfg)
-      val jobId = BQ.genJobId(zos, "query")
+      val jobId = BQ.genJobId(cfg.projectId, zos, "query")
       logger.debug(s"generated job id ${jobId.getJob}")
 
       try {

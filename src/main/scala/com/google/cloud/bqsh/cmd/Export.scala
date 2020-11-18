@@ -59,7 +59,7 @@ object Export extends Command[ExportConfig] with Logging {
     }
 
     val jobConfiguration = configureExportQueryJob(query, cfg)
-    val jobId = BQ.genJobId(zos, "query")
+    val jobId = BQ.genJobId(cfg.projectId, zos, "query")
 
     try {
       logger.info(s"Submitting QueryJob. jobId=${jobId.getJob}")

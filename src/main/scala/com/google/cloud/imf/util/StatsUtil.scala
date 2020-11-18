@@ -298,7 +298,7 @@ object StatsUtil extends Logging {
           sb.append(s"$n rows read from ${BQ.tableSpec(t)} (dest)\n")
         }
         for {n <- mergeFromRows; t <- mergeFromTable} yield {
-          sb.append(s"$n rows read from ${BQ.tableSpec(t)} (dest)\n")
+          sb.append(s"$n rows read from ${BQ.tableSpec(t)} (src)\n")
         }
         for {
           a <- mergeInsertedRows; b <- mergeUpdatedRows; c <- mergeAffectedRows; d <- mergeOutputRows
