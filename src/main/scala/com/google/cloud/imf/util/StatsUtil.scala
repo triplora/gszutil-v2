@@ -349,7 +349,7 @@ object StatsUtil extends Logging {
           ("stepCount", stepCount),
           ("subStepCount", subStepCount),
           ("stages", stageSummary.mkString(";")),
-          ("jobId", BQ.toStr(job.getJobId),
+          ("jobId", BQ.toStr(job.getJobId)),
           ("project", job.getJobId.getProject),
           ("location", job.getJobId.getLocation),
           ("destination", BQ.tableSpec(Option(conf.getDestinationTable))),
