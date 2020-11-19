@@ -74,7 +74,7 @@ case class QueryConfig(
   debugMode: Boolean = false,
   jobId: String = "",
   jobProperties: Map[String,String] = Map.empty,
-  location: String = "",
+  location: String = "US",
   projectId: String = "",
   sync: Boolean = true,
 

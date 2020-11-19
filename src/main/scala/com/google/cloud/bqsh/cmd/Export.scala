@@ -19,14 +19,13 @@ package com.google.cloud.bqsh.cmd
 import java.io.{PrintWriter, StringWriter}
 
 import com.google.cloud.bigquery.storage.v1.ReadSession.TableReadOptions
-import com.google.cloud.bigquery.{BigQueryException, JobInfo, QueryJobConfiguration,
-  QueryParameterValue, StandardSQLTypeName}
-import com.google.cloud.bigquery.storage.v1.{BigQueryReadClient, CreateReadSessionRequest,
-  DataFormat, ReadRowsRequest, ReadSession}
+import com.google.cloud.bigquery.{BigQueryException, JobInfo, QueryJobConfiguration, QueryParameterValue, StandardSQLTypeName}
+import com.google.cloud.bigquery.storage.v1.{BigQueryReadClient, CreateReadSessionRequest, DataFormat, ReadRowsRequest, ReadSession}
 import com.google.cloud.bqsh.BQ.resolveDataset
 import com.google.cloud.bqsh.{ArgParser, BQ, Command, ExportConfig, ExportOptionParser}
 import com.google.cloud.gszutil.io.BQExporter
 import com.google.cloud.imf.gzos.{Ebcdic, MVS}
+import com.google.cloud.imf.util.StatsUtil.EnhancedJob
 import com.google.cloud.imf.util.{CloudLogging, Logging, Services, StatsUtil}
 import org.apache.avro.Schema
 
@@ -67,6 +66,8 @@ object Export extends Command[ExportConfig] with Logging {
       logger.info(s"Submitting QueryJob.\njobId=${BQ.toStr(jobId)}")
       val job = BQ.runJob(bq, jobConfiguration, jobId, cfg.timeoutMinutes * 60, sync = true)
       logger.info(s"QueryJob finished.")
+      val jobInfo = new EnhancedJob(job)
+      CloudLogging.stdout(jobInfo.report)
 
       val conf = job.getConfiguration[QueryJobConfiguration]
 
@@ -79,7 +80,7 @@ object Export extends Command[ExportConfig] with Logging {
             logger.error(msg)
           }
           logger.info(s"Job Status = ${status.state}")
-          BQ.throwOnError(status)
+          BQ.throwOnError(jobInfo, status)
         case _ =>
           val msg = s"Job ${BQ.toStr(jobId)} not found"
           logger.error(msg)

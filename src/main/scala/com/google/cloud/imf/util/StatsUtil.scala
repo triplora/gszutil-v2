@@ -21,19 +21,37 @@ import java.util.{Date, TimeZone}
 
 import com.google.cloud.bigquery.InsertAllRequest.RowToInsert
 import com.google.cloud.bigquery.JobStatistics.{LoadStatistics, QueryStatistics}
-import com.google.cloud.bigquery.{BigQuery, InsertAllRequest, Job, JobId, LoadJobConfiguration, QueryJobConfiguration, QueryStage, TableId}
+import com.google.cloud.bigquery.{BigQuery, BigQueryError, InsertAllRequest, Job, JobId, JobStatus, LoadJobConfiguration, QueryJobConfiguration, QueryStage, TableId}
 import com.google.cloud.bqsh.BQ
 import com.google.cloud.imf.gzos.MVS
 import com.google.common.collect.ImmutableMap
 
-import scala.collection.mutable
-import scala.jdk.CollectionConverters.{ListHasAsScala, MapHasAsScala}
+import scala.collection.mutable.ListBuffer
 
 object StatsUtil extends Logging {
   private def sdf(f: String): SimpleDateFormat = {
     val simpleDateFormat = new SimpleDateFormat(f)
     simpleDateFormat.setTimeZone(TimeZone.getTimeZone("UTC"))
     simpleDateFormat
+  }
+
+  /** Convert Java List to Scala Seq */
+  def l2l[T](l: java.util.List[T]): Seq[T] = {
+    if (l == null) Nil
+    else {
+      val buf = ListBuffer.empty[T]
+      l.forEach(buf.append)
+      buf.toList
+    }
+  }
+
+  def mv[K,V](m: java.util.Map[K,V]): Seq[V] = {
+    if (m == null) Nil
+    else {
+      val buf = ListBuffer.empty[V]
+      m.forEach { (k, v) => buf.append(v) }
+      buf.toList
+    }
   }
 
   val JobDateFormat: SimpleDateFormat = sdf("yyMMdd")
@@ -52,10 +70,24 @@ object StatsUtil extends Logging {
     */
   class EnhancedJob(job: Job) {
     def conf: QueryJobConfiguration = job.getConfiguration[QueryJobConfiguration]
-    val plan: IndexedSeq[QueryStage] =
-      Option(stats.getQueryPlan).map(_.asScala.toIndexedSeq).getOrElse(IndexedSeq.empty)
-    val tableRefs: IndexedSeq[TableId] =
-      Option(stats.getReferencedTables).map(_.asScala.toIndexedSeq).getOrElse(IndexedSeq.empty)
+
+    def query: String = conf.getQuery
+    val id: String = BQ.toStr(job.getJobId)
+
+    val state: JobStatus.State = if (job.getStatus != null) job.getStatus.getState else null
+
+    /** TransformingRandomAccessList Guava collection returned by BigQuery Java SDK
+      * calls QueryStage.fromPb for each element during iteration.
+      * If the job hasn't completed, ratio avg and max stats are null and fromPb throws NPE
+      */
+    val plan: Seq[QueryStage] =
+      if (state != JobStatus.State.DONE) {
+        // TODO remove this when NPE in QueryStage.fromPb is fixed
+        CloudLogging.stdout(s"unable to get QueryPlan for job with state=$state")
+        Nil
+      } else l2l(stats.getQueryPlan)
+
+    val tableRefs: Seq[TableId] = l2l(stats.getReferencedTables)
 
     def stats: QueryStatistics = job.getStatistics[QueryStatistics]
     val statementType: String = Option(stats.getStatementType).map(_.toString).getOrElse("Query")
@@ -97,12 +129,13 @@ object StatsUtil extends Logging {
       plan.length
 
     def countSteps(qs: QueryStage): Int =
-      Option(qs.getSteps).map(_.size).getOrElse(0)
+      if (qs.getSteps == null) 0
+      else qs.getSteps.size
 
     def countSubSteps(qss: QueryStage): Int =
-      Option(qss.getSteps)
-        .map(_.asScala.foldLeft(0){(acc1, step) => countSubSteps(step) + acc1})
-        .getOrElse(0)
+      l2l(qss.getSteps).foldLeft(0){(acc1, step) =>
+        countSubSteps(step) + acc1
+      }
 
     def countSubSteps(qss: QueryStage.QueryStep): Int =
       Option(qss.getSubsteps).map(_.size).getOrElse(0)
@@ -115,10 +148,10 @@ object StatsUtil extends Logging {
 
     /** Summary of inputs, outputs and referenced tables
       */
-    val stageSummary: IndexedSeq[String] = {
+    val stageSummary: Seq[String] = {
       plan.map{s =>
-        val tbls = s.getSteps.asScala.flatMap{s1 =>
-          val last = s1.getSubsteps.asScala.last
+        val tbls = l2l(s.getSteps).flatMap{s1 =>
+          val last = l2l(s1.getSubsteps).last
           val tbl = last.stripPrefix("FROM ")
           if (s1.getName == "READ" && last.startsWith("FROM ") && !tbl.startsWith("__")) {
             Option(tbl)
@@ -138,8 +171,8 @@ object StatsUtil extends Logging {
     def isSelect: Boolean = statementType == "SELECT"
     def selectIntoTable: Option[TableId] =
       if (isSelect) Option(conf.getDestinationTable) else None
-    def selectFromTables: List[TableId] =
-      if (isSelect) Option(stats.getReferencedTables).map(_.asScala.toList).getOrElse(Nil)
+    def selectFromTables: Seq[TableId] =
+      if (isSelect) tableRefs
       else Nil
 
     def isMerge: Boolean = statementType == "MERGE"
@@ -156,9 +189,9 @@ object StatsUtil extends Logging {
     val selectInputRows: Option[Seq[(String,Long)]] = {
       if (isSelect) {
         val inputs = plan.flatMap{s =>
-          s.getSteps.asScala.flatMap{step =>
+          l2l(s.getSteps).flatMap{step =>
             val isRead = step.getName == "READ"
-            val lastSubStep = step.getSubsteps.asScala.last
+            val lastSubStep = l2l(step.getSubsteps).last
             val isFrom = lastSubStep.startsWith("FROM")
             val table = lastSubStep.stripPrefix("FROM ")
             val fromTable = !table.startsWith("__")
@@ -180,13 +213,13 @@ object StatsUtil extends Logging {
     }
 
     def countReads(qs: QueryStage): Int =
-      qs.getSteps.asScala.count(_.getName == "READ")
+      l2l(qs.getSteps).count(_.getName == "READ")
 
     /** check if a stage reads from specified table */
     def readsFrom(qs: QueryStage, t: TableId): Boolean = {
       val ts = BQ.tableSpec(t)
-      qs.getSteps.asScala.exists{ s =>
-        s.getName == "READ" && s.getSubsteps.asScala.exists{s1 =>
+      l2l(qs.getSteps).exists{s =>
+        s.getName == "READ" && l2l(s.getSubsteps).exists{s1 =>
           s1.endsWith(ts) && s1.startsWith("FROM ")
         }
       }
@@ -430,7 +463,7 @@ object StatsUtil extends Logging {
     logger.debug(s"inserting stats to ${tableId.getProject}:${tableId.getDataset}.${tableId.getTable}")
     bq.insertAll(InsertAllRequest.newBuilder(tableId).addRow(BQ.toStr(jobId), row.build).build()) match {
       case x if x.hasErrors =>
-        val errors = x.getInsertErrors.asScala.values.flatMap(_.asScala).mkString("\n")
+        val errors = mv(x.getInsertErrors).flatMap(l2l).mkString("\n")
         logger.error(s"failed to insert stats for Job ID ${BQ.toStr(jobId)}\n$errors")
       case _ =>
         logger.debug(s"inserted job stats for Job ID ${BQ.toStr(jobId)}")
@@ -440,18 +473,23 @@ object StatsUtil extends Logging {
   def insertRow(content: java.util.Map[String,Any],
                 bq: BigQuery,
                 tableId: TableId): Unit = {
-    import scala.jdk.CollectionConverters.MapHasAsScala
     val request = InsertAllRequest.of(tableId, RowToInsert.of(content))
     val result = bq.insertAll(request)
     if (result.hasErrors) {
-      import scala.jdk.CollectionConverters.IterableHasAsScala
-      val errors = result.getInsertErrors.values.asScala.flatMap(_.asScala).toList
+      val errors: Seq[BigQueryError] = mv(result.getInsertErrors).flatMap(l2l)
       val tblSpec = s"${tableId.getProject}.${tableId.getDataset}.${tableId.getTable}"
-      val contentStr = content.asScala.toString()
       val sb = new StringBuilder
-      sb.append(s"Errors inserting $contentStr into $tblSpec:\n")
-      sb.append(errors.map(e => s"${e.getMessage} - ${e.getReason}").mkString("\n"))
-      logger.error(sb.result())
+      sb.append(s"Errors inserting row into $tblSpec\n")
+      content.forEach{(k,v) => sb.append(s"$k -> $v\n")}
+      sb.append("\n")
+      errors.foreach{e =>
+        sb.append("BigQueryError:\n")
+        sb.append(s"message: ${e.getMessage}\n")
+        sb.append(s"reason: ${e.getReason}\n\n")
+      }
+      val errMsg = sb.result
+      CloudLogging.stderr(errMsg)
+      logger.error(errMsg)
     }
   }
 }

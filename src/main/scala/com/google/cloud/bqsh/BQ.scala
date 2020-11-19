@@ -17,6 +17,7 @@
 package com.google.cloud.bqsh
 
 import java.io.{PrintWriter, StringWriter}
+import java.time.LocalDateTime
 
 import com.google.cloud.bigquery.{BigQuery, BigQueryError, BigQueryException, DatasetId, Field, FieldList, Job, JobId, JobInfo, JobStatus, QueryJobConfiguration, Schema, StandardSQLTypeName, TableId}
 import com.google.cloud.imf.gzos.{MVS, Util}
@@ -26,16 +27,16 @@ import com.google.common.collect.ImmutableList
 
 import scala.annotation.tailrec
 import scala.jdk.CollectionConverters.IterableHasAsScala
-import scala.util.{Failure, Success, Try}
+import scala.util.{Failure, Random, Success, Try}
 
 object BQ extends Logging {
   def genJobId(projectId: String, location: String, zos: MVS, jobType: String): JobId = {
-    val t = System.currentTimeMillis
+    val t = LocalDateTime.now
     val job = zos.getInfo
     val jobId = Seq(
-      job.getJobname,job.getStepName,job.getJobdate,job.getJobtime,job.getJobid,jobType,t.toString
+      job.getJobname,job.getStepName,job.getJobid,jobType,s"${t.getHour}${t.getMinute}${t.getSecond}"
     ).mkString("_")
-    JobId.newBuilder().setProject(projectId).setLocation(location).setJob(jobId).build()
+    JobId.newBuilder.setProject(projectId).setLocation(location).setJob(jobId).build
   }
 
   /** Converts TableId to String */
@@ -106,8 +107,10 @@ object BQ extends Logging {
       if (sync) {
         logger.info(s"Waiting for Job jobid=${BQ.toStr(jobId)}")
         waitForJob(bq, jobId, timeoutMillis = timeoutSeconds * 1000L)
+      } else {
+        logger.info(s"Returning without waiting for job to complete because sync=false jobid=${BQ.toStr(jobId)}")
+        job
       }
-      else job
     } catch {
       case e: BigQueryException =>
         if (e.getReason == "duplicate" && e.getMessage.startsWith("Already Exists: Job")) {
@@ -156,9 +159,7 @@ object BQ extends Logging {
   }
 
   def isDone(job: Job): Boolean =
-    Option(job.getStatus)
-      .flatMap(x => Option(x.getState))
-      .contains(JobStatus.State.DONE)
+    job.getStatus != null && job.getStatus.getState == JobStatus.State.DONE
 
   def hasError(job: Job): Boolean = {
     Option(job.getStatus)
@@ -186,6 +187,7 @@ object BQ extends Logging {
                       error: Option[BQError],
                       executionErrors: Seq[BQError]) {
     def hasError: Boolean = error.isDefined || executionErrors.nonEmpty
+    def isDone: Boolean = state == JobStatus.State.DONE
   }
 
   def getExecutionErrors(status: JobStatus): Seq[BQError] = {
@@ -215,7 +217,7 @@ object BQ extends Logging {
     }
   }
 
-  def throwOnError(status: BQStatus): Unit = {
+  def throwOnError(job: EnhancedJob, status: BQStatus): Unit = {
     val sb = new StringBuilder
     if (status.hasError) {
       status.error.foreach { err =>
@@ -227,16 +229,18 @@ object BQ extends Logging {
       status.executionErrors.foreach { err =>
         sb.append(err.toString)
       }
-      throw new RuntimeException(sb.result())
-    }
-  }
+      val errMsgs = sb.result
 
-  def throwOnError(job: Job): Unit = {
-    getStatus(job) match {
-      case Some(status) =>
-        throwOnError(status)
-      case _ =>
-        throw new RuntimeException("missing job status")
+      sb.clear()
+      sb.append(s"${job.id} has errors\n")
+      sb.append("Query:\n")
+      sb.append(job.query)
+      sb.append("\n")
+      sb.append("Errors:\n")
+      sb.append(errMsgs)
+
+      CloudLogging.stderr(sb.result)
+      throw new RuntimeException(errMsgs)
     }
   }
 

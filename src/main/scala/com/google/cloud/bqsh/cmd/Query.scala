@@ -16,8 +16,7 @@
 
 package com.google.cloud.bqsh.cmd
 
-import com.google.cloud.bigquery.{BigQueryException, Clustering, JobInfo, JobStatistics,
-  QueryJobConfiguration, QueryParameterValue, StandardSQLTypeName, TimePartitioning}
+import com.google.cloud.bigquery.{BigQueryException, Clustering, JobInfo, JobStatistics, JobStatus, QueryJobConfiguration, QueryParameterValue, StandardSQLTypeName, TimePartitioning}
 import com.google.cloud.bqsh.{ArgParser, BQ, Bqsh, Command, QueryConfig, QueryOptionParser}
 import com.google.cloud.imf.gzos.MVS
 import com.google.cloud.imf.util.StatsUtil.EnhancedJob
@@ -61,10 +60,24 @@ object Query extends Command[QueryConfig] with Logging {
 
       try {
         val job = BQ.runJob(bq, jobConfiguration, jobId, cfg.timeoutMinutes * 60, cfg.sync)
-        val jobInfo = new EnhancedJob(job)
+        val status = BQ.getStatus(job)
         if (cfg.sync){
-          logger.info("Query job finished")
+          if (status.isDefined) {
+            val s = status.get
+            if (s.isDone) {
+              logger.info("Query job state=DONE")
+            } else {
+              val msg = s"Query job state=${s.state} but expected DONE"
+              logger.error(msg)
+              CloudLogging.stderr(msg)
+            }
+          } else {
+            val msg = s"Query job status not available"
+            logger.error(msg)
+            CloudLogging.stderr(msg)
+          }
         }
+        val jobInfo = new EnhancedJob(job)
 
         CloudLogging.stdout(jobInfo.report)
 
@@ -94,7 +107,7 @@ object Query extends Command[QueryConfig] with Logging {
         // check for errors
         if (cfg.sync) {
           logger.info(s"Checking for errors in job status")
-          BQ.getStatus(job) match {
+          status match {
             case Some(status) =>
               logger.info(s"Status = ${status.state}")
               if (status.hasError) {
@@ -118,7 +131,7 @@ object Query extends Command[QueryConfig] with Logging {
                 }
                 result = Result(activityCount = activityCount)
               }
-              BQ.throwOnError(status)
+              BQ.throwOnError(jobInfo, status)
             case _ =>
               logger.error(s"Job ${BQ.toStr(jobId)} not found")
               result = Result.Failure("missing status")
@@ -128,6 +141,8 @@ object Query extends Command[QueryConfig] with Logging {
         }
       } catch {
         case e: BigQueryException =>
+          CloudLogging.stderr(s"Query Job threw BigQueryException\nMessage:${e.getMessage}\n" +
+            s"Query:\n$query\n")
           result = Result.Failure(e.getMessage)
       }
     }
