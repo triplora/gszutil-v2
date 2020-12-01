@@ -27,8 +27,10 @@ import com.google.cloud.gszutil.io.{CloudRecordReader, ZRecordReaderT, ZRecordWr
 import com.google.cloud.imf.gzos.MVSStorage.DSN
 import com.google.cloud.imf.gzos.pb.GRecvProto.ZOSJobInfo
 import com.google.cloud.imf.util.{CloudLogging, Logging, SecurityUtils}
+import com.ibm.dataaccess.ByteArrayUnmarshaller
 import com.ibm.jzos.{DSCB, Exec, Format1DSCB, Format3DSCB, JesSymbols, MvsJobSubmitter, PdsDirectory, RcException, RecordReader, RecordWriter, ZFile, ZFileConstants, ZFileException, ZUtil}
 
+import scala.collection.mutable.{ArrayBuffer, ListBuffer}
 import scala.util.Try
 
 /**  Calls and wraps IBM JZOS classes
@@ -358,6 +360,49 @@ protected object ZOS {
   def getDatasetInfo(ddName: String): Option[DataSetInfo] = {
     // TODO get dataset info with something other than JFCB
     None
+  }
+
+  def readAddr(buf: Array[Byte], off: Int): Long =
+    ByteArrayUnmarshaller.readInt(buf, off, true, 4, true)
+
+  def listDDs: Seq[String] = {
+    // read PSA
+    val psaLen = 4096+8
+    val psaBuf = new Array[Byte](psaLen)
+    ZUtil.peekOSMemory(0, psaBuf, 0, psaLen)
+
+    // read TCB
+    val tcbOff = 540
+    val tcbAddr = readAddr(psaBuf, tcbOff)
+    val tcbLen = 344+8
+    val tcbBuf = new Array[Byte](tcbLen)
+    ZUtil.peekOSMemory(tcbAddr, tcbBuf, 0, tcbLen)
+
+    // read TIOT
+    val tiotOff = 12
+    val tiotLen = 32*1024
+    val tiotBuf = new Array[Byte](tiotLen)
+    val tiotAddr = readAddr(tcbBuf, tiotOff)
+    ZUtil.peekOSMemory(tiotAddr, tiotBuf, 0, tiotLen)
+
+    val tiotStr = new String(tiotBuf, 0, tiotLen, Ebcdic.charset)
+    CloudLogging.stdout(s"""TCB Address: $tcbAddr
+                           |TIOT Address: $tiotAddr
+                           |TIOT:
+                           |$tiotStr""".stripMargin)
+
+    // read TIOENTRY
+    var i = 24
+    val buf = ListBuffer.empty[String]
+    while (i < tiotLen) {
+      val ddName = new String(tiotBuf, i+4, 8, Ebcdic.charset)
+      if (ddName.exists(_.isLetter)) {
+        CloudLogging.stdout(s"DD:$ddName")
+        buf.append(ddName)
+        i += ByteArrayUnmarshaller.readInt(tiotBuf, i, true, 1, true)
+      } else i = tiotLen
+    }
+    buf.toList
   }
 
   def addCCAProvider(): Unit =

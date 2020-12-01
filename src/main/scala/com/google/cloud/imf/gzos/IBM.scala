@@ -41,6 +41,7 @@ object IBM extends MVS with Logging {
     ZOS.addCCAProvider()
     System.setProperty("java.net.preferIPv4Stack" , "true")
     CloudLogging.stdout("Mainframe Connector Build Info: " + Util.readS("build.txt"))
+    CloudLogging.stdout(s"DDs:\n${ZOS.listDDs.mkString("\n")}")
   }
 
   override def exists(dsn: DSN): Boolean = ZOS.exists(dsn)
