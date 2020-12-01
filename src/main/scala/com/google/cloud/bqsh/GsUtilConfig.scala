@@ -17,6 +17,7 @@ package com.google.cloud.bqsh
 
 import com.google.cloud.gszutil.SchemaProvider
 import com.google.cloud.gszutil.io.ZRecordReaderT
+import com.google.cloud.imf.gzos.Util
 import com.google.cloud.imf.gzos.gen.DataGenUtil
 import com.google.cloud.imf.util.StaticMap
 
@@ -109,17 +110,17 @@ case class GsUtilConfig(source: String = "INFILE",
   def toMap: java.util.Map[String,Any] = {
     val m = StaticMap.builder
     m.put("type","GsUtilConfig")
-    m.put("gcsUri",gcsUri)
+    m.put("gcsUri", Util.quote(gcsUri))
     m.put("replace",replace)
     m.put("maxErrorPct",maxErrorPct.toString)
     schemaProvider.map(_.toString).foreach(m.put("schemaProvider",_))
     if (statsTable.nonEmpty)
-      m.put("statsTable",statsTable)
+      m.put("statsTable",Util.quote(statsTable))
     m.put("remote",remote)
     if (remote && remoteHost.nonEmpty) {
-      m.put("remoteHost", remoteHost)
-      m.put("remotePort", remotePort.toString)
-      m.put("nConnections",nConnections.toString)
+      m.put("remoteHost", Util.quote(remoteHost))
+      m.put("remotePort", Util.quote(remotePort.toString))
+      m.put("nConnections",Util.quote(nConnections.toString))
     }
     m.build()
   }

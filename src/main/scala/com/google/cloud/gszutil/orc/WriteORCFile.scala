@@ -98,8 +98,7 @@ object WriteORCFile extends Logging {
 
     val errPct = errCount.toDouble / records.toDouble
     if (errPct > maxErrorPct)
-      Result(message = s"error percent $errPct > $maxErrorPct",
-        activityCount = records - errCount, exitCode = 1)
+      Result(message = s"error percent $errPct > $maxErrorPct",activityCount = records - errCount, exitCode = 1)
     else
       Result(activityCount = records)
   }

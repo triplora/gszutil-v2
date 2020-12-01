@@ -165,4 +165,15 @@ object Util {
       .map{b => trimRight(new String(b, charset),' ')}
       .mkString(recordSeparator)
   }
+
+
+
+
+  def quote(s1: String): String = {
+    if(s1.startsWith("\"") && s1.endsWith("\"")) {
+      s1
+    }else{
+      s""""$s1""""
+    }
+  }
 }

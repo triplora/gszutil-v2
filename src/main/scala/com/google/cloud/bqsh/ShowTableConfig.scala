@@ -16,6 +16,7 @@
 
 package com.google.cloud.bqsh
 
+import com.google.cloud.imf.gzos.Util
 import com.google.cloud.imf.util.StaticMap
 
 case class ShowTableConfig(
@@ -33,10 +34,10 @@ case class ShowTableConfig(
   def toMap: java.util.Map[String,Any] = {
     val m = StaticMap.builder
     m.put("type","ShowTableConfig")
-    m.put("tablespec",tablespec)
-    m.put("location",location)
-    m.put("projectId",projectId)
-    m.put("datasetId",datasetId)
+    m.put("tablespec",Util.quote(tablespec))
+    m.put("location",Util.quote(location))
+    m.put("projectId",Util.quote(projectId))
+    m.put("datasetId",Util.quote(datasetId))
     m.build
   }
 }

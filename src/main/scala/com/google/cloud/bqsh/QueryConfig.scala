@@ -17,6 +17,7 @@
 package com.google.cloud.bqsh
 
 import com.google.cloud.imf.gzos.MVSStorage.{DSN, MVSDataset, MVSPDSMember}
+import com.google.cloud.imf.gzos.Util
 import com.google.cloud.imf.util.StaticMap
 
 object QueryConfig {
@@ -93,18 +94,18 @@ case class QueryConfig(
   def toMap: java.util.Map[String,Any] = {
     val m = StaticMap.builder
     m.put("type","QueryConfig")
-    m.put("sql",sql)
-    m.put("location",location)
-    m.put("projectId",projectId)
-    m.put("datasetId",datasetId)
+    m.put("sql",Util.quote(sql))
+    m.put("location",Util.quote(location))
+    m.put("projectId",Util.quote(projectId))
+    m.put("datasetId",Util.quote(datasetId))
     if (replace)
       m.put("replace","true")
     if (destinationTable.nonEmpty)
-      m.put("destinationTable",destinationTable)
+      m.put("destinationTable",Util.quote(destinationTable))
     if (jobId.nonEmpty)
-      m.put("jobId",jobId)
+      m.put("jobId",Util.quote(jobId))
     if (statsTable.nonEmpty)
-      m.put("statsTable",statsTable)
+      m.put("statsTable",Util.quote(statsTable))
     m.build()
   }
 }

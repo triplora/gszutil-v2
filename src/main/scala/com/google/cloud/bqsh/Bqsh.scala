@@ -48,7 +48,9 @@ object Bqsh extends Logging {
   }
 
   class Interpreter(zos: MVS, sysEnv: Map[String,String], var exitOnError: Boolean = true, var printCommands: Boolean = true){
+
     val env: mutable.Map[String,String] = mutable.Map.empty ++ sysEnv
+
     def runWithArgs(args: Seq[String]): Result = {
       CloudLogging.stdout(s"+ ${args.mkString(" ")}")
       val result = exec(args, env.toMap, zos)
@@ -108,6 +110,8 @@ object Bqsh extends Logging {
               runCommand(Cp, cmd.args, zos)
             case "rm" =>
               runCommand(GsUtilRm, cmd.args, zos)
+            case "cpf" =>
+              runCommand(Cpf, cmd.args, zos)
             case _ =>
               Result.Failure(s"invalid command '${args.mkString(" ")}'")
           }
