@@ -19,4 +19,28 @@ import scopt.OptionParser
 
 object ScpOptionParser extends OptionParser[ScpConfig]("scp") with ArgParser[ScpConfig]{
   override def parse(args: Seq[String]): Option[ScpConfig] = parse(args, ScpConfig())
+
+  head("scp", Bqsh.UserAgent)
+
+  help("help").text("prints this usage text")
+
+  opt[Long]("count")
+    .optional
+    .text("(optional) number of records to copy (default: unlimited)")
+    .action((x,c) => c.copy(limit = x))
+
+  opt[Unit]("noCompress")
+    .optional
+    .text("(optional) compress output with gzip (default: true)")
+    .action((_,c) => c.copy(compress = false))
+
+  arg[String]("inDsn")
+    .required
+    .text("DSN to read")
+    .action((x,c) => c.copy(inDsn = x))
+
+  arg[String]("outUri")
+    .required
+    .text("GCS URI to write data to")
+    .action((x,c) => c.copy(outUri = x))
 }
