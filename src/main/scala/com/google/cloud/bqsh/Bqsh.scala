@@ -17,7 +17,7 @@
 package com.google.cloud.bqsh
 
 import com.google.api.services.logging.v2.LoggingScopes
-import com.google.cloud.bqsh.cmd.{Cp,Export,GsUtilRm,JCLUtil,Load,Mk,Query,Result,Rm,SdsfUtil}
+import com.google.cloud.bqsh.cmd.{Cp, Export, GsUtilRm, GsZUtil, JCLUtil, Load, Mk, Query, Result, Rm, SdsfUtil}
 import com.google.cloud.imf.gzos.{MVS, Util}
 import com.google.cloud.imf.util.{CloudLogging, Logging}
 
@@ -111,6 +111,8 @@ object Bqsh extends Logging {
             case _ =>
               Result.Failure(s"invalid command '${args.mkString(" ")}'")
           }
+        } else if (cmd.name == "gszutil") {
+          runCommand(GsZUtil, cmd.args, zos)
         } else if (cmd.name == "jclutil") {
           runCommand(JCLUtil, cmd.args, zos)
         } else if (cmd.name == "sdsfutil") {
