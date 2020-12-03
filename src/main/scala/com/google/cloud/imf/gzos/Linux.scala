@@ -44,24 +44,35 @@ object Linux extends MVS with Logging {
 
   override def getDSN(dd: String): String = dd
 
+  override def dsInfo(dd: String): Option[DataSetInfo] = {
+    sys.env.get(s"${dd}_DSN") match {
+      case Some(dsn) =>
+        Option(DataSetInfo(
+          dataSetName = dsn,
+          lrecl = sys.env.getOrElse(s"${dd}_LRECL","80").toInt
+        ))
+      case None =>
+        None
+    }
+  }
+
   override def readDD(dd: String): ZRecordReaderT = {
     // Get DD information from z/OS
-    val ddInfo = DataSetInfo(
-      dataSetName = sys.env.getOrElse(s"${dd}_DSN","HLQ.DATA"),
-      lrecl = sys.env.getOrElse(s"${dd}_LRECL","80").toInt,
-      fixed = true, blocked = true
-    )
+    dsInfo(dd) match {
+      case Some(ddInfo) =>
+        // Obtain Cloud Storage client
+        val gcs = Services.storage(getCredentialProvider().getCredentials)
 
-    // Obtain Cloud Storage client
-    val gcs = Services.storage(getCredentialProvider().getCredentials)
-
-    // check if DD exists in Cloud Storage
-    CloudDataSet.readCloudDD(gcs, dd, ddInfo) match {
-      case Some(r) =>
-        // Prefer Cloud Data Set if DSN exists in GCS
-        r
-      case _ =>
-        ddFile(dd)
+        // check if DD exists in Cloud Storage
+        CloudDataSet.readCloudDD(gcs, dd, ddInfo) match {
+          case Some(r) =>
+            // Prefer Cloud Data Set if DSN exists in GCS
+            r
+          case _ =>
+            ddFile(dd)
+        }
+      case None =>
+        throw new RuntimeException(s"DD:$dd not found")
     }
   }
 

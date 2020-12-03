@@ -358,8 +358,17 @@ protected object ZOS {
     * @return DataSetInfo
     */
   def getDatasetInfo(ddName: String): Option[DataSetInfo] = {
-    // TODO get dataset info with something other than JFCB
-    None
+    try {
+      val jfcb = ZFile.readJFCB(ddName)
+      Option(DataSetInfo(
+        dataSetName = jfcb.getJfcbdsnm
+        ,elementName = jfcb.getJfcbelnm
+        ,lrecl = jfcb.getJfclrecl
+      ))
+    } catch {
+      case _: ZFileException =>
+        None
+    }
   }
 
   def readAddr(buf: Array[Byte], off: Int): Long =
