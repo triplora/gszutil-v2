@@ -34,5 +34,8 @@ case class CloudRecordReader(dsn: Seq[String],
   override def isOpen: Boolean = false
   override def getDsn: String = dsn.headOption.getOrElse("")
   override def count(): Long = 0
+  def uri: String =
+    if (gdg && generation.nonEmpty) s"gs://$bucket/$name#$generation"
+    else s"gs://$bucket/$name"
   override val blkSize: Int = lRecl
 }
