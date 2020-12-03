@@ -4,8 +4,9 @@ import java.nio.charset.StandardCharsets
 
 import com.google.cloud.bqsh.GsUtilConfig
 import com.google.cloud.bqsh.cmd.Cp
+import com.google.cloud.gszutil.Decoding.{CopyBookField, CopyBookLine, CopyBookTitle}
 import com.google.cloud.gszutil.io.ZDataSet
-import com.google.cloud.gszutil.{CopyBook, RecordSchema, TestUtil}
+import com.google.cloud.gszutil.{CopyBook, Decoder, Decoding, RecordSchema, SchemaProvider, TestUtil}
 import com.google.cloud.imf.grecv.client.GRecvClient
 import com.google.cloud.imf.grecv.server.GRecvServer
 import com.google.cloud.imf.gzos.gen.DataGenUtil
@@ -127,5 +128,77 @@ class CpSpec2 extends AnyFlatSpec with BeforeAndAfterAll {
       remotePort = serverCfg.port)
     val res = Cp.run(cfg, Linux)
     assert(res.exitCode == 0)
+  }
+
+  "Merger" should "merger fields" in {
+    val sj =
+      """{
+        |  "source": "",
+        |  "original": "",
+        |  "field": [
+        |    {
+        |      "name": "",
+        |      "typ": "",
+        |      "size": 1,
+        |      "precision": 1,
+        |      "scale": 1,
+        |      "filler": false,
+        |      "NullIf": {
+        |        "filed": "",
+        |        "value": ""
+        |      },
+        |      "cast": 1,
+        |      "format": ""
+        |    },
+        |    {
+        |      "name": "",
+        |      "typ": "",
+        |      "size": 1,
+        |      "precision": 1,
+        |      "scale": 1,
+        |      "filler": false,
+        |      "NullIf": {
+        |        "filed": true,
+        |        "value": ""
+        |      },
+        |      "cast": 1,
+        |      "format": ""
+        |    }
+        |  ],
+        |  "encoding": "",
+        |  "vartext": false,
+        |  "delimiter": ""
+        |}""".stripMargin
+
+    def parseRecord(json: String): Record = {
+
+      val builder = Record.newBuilder
+      JsonFormat.parser.ignoringUnknownFields.merge(json, builder)
+      builder.build
+    }
+
+
+    val s:SchemaProvider = CopyBook("""    01  TEST-LAYOUT-FIVE.
+                                      |        03  COL-A                    PIC S9(9) COMP.
+                                      |        03  COL-B                    PIC S9(4) COMP.
+                                      |        03  COL-C                    PIC S9(4) COMP.
+                                      |        03  COL-D                    PIC X(01).
+                                      |        03  COL-E                    PIC S9(9) COMP.
+                                      |        03  COL-F                    PIC S9(07)V9(2) COMP-3.
+                                      |        03  COL-G                    PIC S9(05)V9(4) COMP-3.
+                                      |        03  COL-H                    PIC S9(9) COMP.
+                                      |        03  COL-I                    PIC S9(9) COMP.
+                                      |        03  COL-J                    PIC S9(4) COMP.
+                                      |        03  COL-K                    PIC S9(16)V9(2) COMP-3.
+                                      |        03  COL-L                    PIC S9(16)V9(2) COMP-3.
+                                      |        03  COL-M                    PIC S9(16)V9(2) COMP-3.
+                                      |""".stripMargin)
+
+    var r = parseRecord(sj)
+
+
+
+
+    println(r)
   }
 }

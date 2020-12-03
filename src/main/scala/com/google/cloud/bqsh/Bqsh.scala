@@ -110,8 +110,6 @@ object Bqsh extends Logging {
               runCommand(Cp, cmd.args, zos)
             case "rm" =>
               runCommand(GsUtilRm, cmd.args, zos)
-            case "cpf" =>
-              runCommand(Cpf, cmd.args, zos)
             case _ =>
               Result.Failure(s"invalid command '${args.mkString(" ")}'")
           }

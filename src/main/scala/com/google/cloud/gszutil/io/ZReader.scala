@@ -97,7 +97,7 @@ object ZReader extends Logging {
     var i = 0
     try {
       while (i < decoders.length){
-        decoders(i).get(rBuf, cols(i), rowId)
+        decoders(i).get(rBuf, cols(i), rowId)  // where actual reading happens ...
         i += 1
       }
       0
@@ -125,18 +125,18 @@ object ZReader extends Logging {
                       cols: Array[ColumnVector],
                       batchSize: Int,
                       lRecl: Int,
-                      rBuf: ByteBuffer,
+                      rBuf: ByteBuffer, // what is this ?
                       err: ByteBuffer): (Int,Int) = {
     rBuf.clear
     err.clear
     var errors: Int = 0
     var rowId = 0
-    while (rowId < batchSize && buf.remaining >= rBuf.capacity()){
-      System.arraycopy(buf.array,buf.position(),rBuf.array,0,rBuf.capacity())
+    while (rowId < batchSize && buf.remaining >= rBuf.capacity()) {
+      System.arraycopy(buf.array, buf.position(), rBuf.array, 0, rBuf.capacity()) // put a record into a rBuf
       val newPos = buf.position() + lRecl
       buf.position(newPos)
       rBuf.clear // prepare record for reading
-      if (readRecord(rBuf, decoders, cols, rowId, errors) != 0){
+      if (readRecord(rBuf, decoders, cols, rowId, errors) != 0) {
         errors += 1
         if (err.remaining() >= lRecl)
           err.put(rBuf.array)

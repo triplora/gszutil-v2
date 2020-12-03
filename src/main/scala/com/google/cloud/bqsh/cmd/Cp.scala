@@ -20,12 +20,16 @@ import java.nio.channels.Channels
 import java.nio.file.Paths
 
 import com.google.cloud.bqsh.{ArgParser, BQ, Command, GsUtilConfig, GsUtilOptionParser}
+import com.google.cloud.gszutil.Decoding.{CopyBookField, CopyBookLine, CopyBookTitle}
+import com.google.cloud.gszutil.{CopyBook, Decoder, Decoding, RecordSchema, SchemaProvider}
 import com.google.cloud.gszutil.io.ZRecordReaderT
 import com.google.cloud.gszutil.orc.WriteORCFile
 import com.google.cloud.imf.grecv.client.GRecvClient
+import com.google.cloud.imf.gzos.pb.GRecvProto.Record
 import com.google.cloud.imf.gzos.{MVS, MVSStorage}
 import com.google.cloud.imf.util.{Logging, Services, StatsUtil}
 import com.google.cloud.storage.{BlobId, Storage}
+import com.google.protobuf.util.JsonFormat
 
 
 object Cp extends Command[GsUtilConfig] with Logging {
@@ -43,7 +47,74 @@ object Cp extends Command[GsUtilConfig] with Logging {
       return cpDsn(c.gcsUri, c.destDSN, gcs, zos)
     }
 
-    val schemaProvider = c.schemaProvider.getOrElse(zos.loadCopyBook(c.copyBook))
+    val sj = """{
+               |  "source": "",
+               |  "original": "",
+               |  "field": [
+               |    {
+               |      "name": "",
+               |      "typ": "",
+               |      "size": 1,
+               |      "precision": 1,
+               |      "scale": 1,
+               |      "filler": 1,
+               |      "NullIf": {
+               |        "filed": "",
+               |        "value": ""
+               |      },
+               |      "cast": 1,
+               |      "format": ""
+               |    },
+               |    {
+               |      "name": "",
+               |      "typ": "",
+               |      "size": 1,
+               |      "precision": 1,
+               |      "scale": 1,
+               |      "filler": 1,
+               |      "NullIf": {
+               |        "filed": "",
+               |        "value": ""
+               |      },
+               |      "cast": 1,
+               |      "format": ""
+               |    }
+               |  ],
+               |  "encoding": "",
+               |  "vartext": false,
+               |  "delimiter": ""
+               |}""".stripMargin
+
+    def parseRecord(json: String): Record = {
+
+      val builder = Record.newBuilder
+      JsonFormat.parser.ignoringUnknownFields.merge(json, builder)
+      builder.build
+    }
+
+    var providedRecord = parseRecord(sj)
+
+
+    def merge(s: SchemaProvider, r: Record): SchemaProvider = {
+
+      s match {
+        case x: CopyBook => {
+
+          import scala.jdk.CollectionConverters.IterableHasAsScala
+
+          val seq1: List[Record.Field] = r.getFieldList.asScala.toList
+          val v: Seq[CopyBookLine] = x.Fields.filterNot({
+            case CopyBookField(name, _) => seq1.contains(name)
+            case CopyBookTitle(_) => false
+          })
+          CopyBook(x.raw, x.transcoder, Option(v ++ seq1.map[CopyBookLine](fld => CopyBookField(fld.getName, Decoding.getDecoder(fld, x.transcoder)))))
+        }
+        case y: RecordSchema => y
+      }
+    }
+
+    val schemaProvider = merge(c.schemaProvider.getOrElse(zos.loadCopyBook(c.copyBook)), providedRecord)
+
     val in: ZRecordReaderT = c.testInput.getOrElse(zos.readDD(c.source))
     logger.info(s"gsutil cp ${in.getDsn} ${c.gcsUri}")
     val batchSize = (c.blocksPerBatch * in.blkSize) / in.lRecl

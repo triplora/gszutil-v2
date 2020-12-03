@@ -25,9 +25,13 @@ import com.google.cloud.imf.gzos.pb.GRecvProto.Record
 import scala.collection.mutable.ArrayBuffer
 
 
-case class CopyBook(raw: String, transcoder: Transcoder = Ebcdic) extends SchemaProvider {
-  final val Fields: Seq[CopyBookLine] = raw.linesIterator
-    .flatMap(Decoding.parseCopyBookLine(_,transcoder)).toSeq
+case class CopyBook(raw: String, transcoder: Transcoder = Ebcdic, altFields: Option[Seq[CopyBookLine]] = None) extends SchemaProvider {
+
+  final val Fields: Seq[CopyBookLine] = altFields match {
+    case Some(fl) => fl
+    case None => raw.linesIterator.flatMap(Decoding.parseCopyBookLine(_, transcoder)).toSeq
+  }
+
 
   override def fieldNames: Seq[String] =
     Fields.flatMap{
