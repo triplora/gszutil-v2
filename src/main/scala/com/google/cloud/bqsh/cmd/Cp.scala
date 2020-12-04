@@ -47,74 +47,13 @@ object Cp extends Command[GsUtilConfig] with Logging {
       return cpDsn(c.gcsUri, c.destDSN, gcs, zos)
     }
 
-    val sj = """{
-               |  "source": "",
-               |  "original": "",
-               |  "field": [
-               |    {
-               |      "name": "",
-               |      "typ": "",
-               |      "size": 1,
-               |      "precision": 1,
-               |      "scale": 1,
-               |      "filler": 1,
-               |      "NullIf": {
-               |        "filed": "",
-               |        "value": ""
-               |      },
-               |      "cast": 1,
-               |      "format": ""
-               |    },
-               |    {
-               |      "name": "",
-               |      "typ": "",
-               |      "size": 1,
-               |      "precision": 1,
-               |      "scale": 1,
-               |      "filler": 1,
-               |      "NullIf": {
-               |        "filed": "",
-               |        "value": ""
-               |      },
-               |      "cast": 1,
-               |      "format": ""
-               |    }
-               |  ],
-               |  "encoding": "",
-               |  "vartext": false,
-               |  "delimiter": ""
-               |}""".stripMargin
 
-    def parseRecord(json: String): Record = {
 
-      val builder = Record.newBuilder
-      JsonFormat.parser.ignoringUnknownFields.merge(json, builder)
-      builder.build
+
+    val schemaProvider:SchemaProvider =  parseRecord(getTransformationsAsString(c,gcs,zos)) match  {
+      case Some(x) => merge(c.schemaProvider.getOrElse(zos.loadCopyBook(c.copyBook)), x)
+      case None => c.schemaProvider.getOrElse(zos.loadCopyBook(c.copyBook))
     }
-
-    var providedRecord = parseRecord(sj)
-
-
-    def merge(s: SchemaProvider, r: Record): SchemaProvider = {
-
-      s match {
-        case x: CopyBook => {
-
-          import scala.jdk.CollectionConverters.IterableHasAsScala
-
-          val seq1: List[Record.Field] = r.getFieldList.asScala.toList
-          val v: Seq[CopyBookLine] = x.Fields.filterNot({
-            case CopyBookField(name, _) => seq1.contains(name)
-            case CopyBookTitle(_) => false
-          })
-          CopyBook(x.raw, x.transcoder, Option(v ++ seq1.map[CopyBookLine](fld => CopyBookField(fld.getName, Decoding.getDecoder(fld, x.transcoder)))))
-        }
-        case y: RecordSchema => y
-      }
-    }
-
-    val schemaProvider = merge(c.schemaProvider.getOrElse(zos.loadCopyBook(c.copyBook)), providedRecord)
-
     val in: ZRecordReaderT = c.testInput.getOrElse(zos.readDD(c.source))
     logger.info(s"gsutil cp ${in.getDsn} ${c.gcsUri}")
     val batchSize = (c.blocksPerBatch * in.blkSize) / in.lRecl
@@ -209,6 +148,59 @@ object Cp extends Command[GsUtilConfig] with Logging {
         Result.Success
       case None =>
         Result.Failure(s"$srcUri doesn't exist")
+    }
+  }
+
+  def tf(srcUri: String, gcs: Storage, zos: MVS): Option[String] = {
+    val uri = new URI(srcUri)
+    Option(gcs.get(BlobId.of(uri.getAuthority, uri.getPath))) match {
+      case Some(value) =>  Option(new String(value.getContent()))
+      case _ => None
+
+    }
+  }
+
+
+  def tfDSN(srcUri: String, zos: MVS): Option[String] = {
+    Option(zos.readDDString("FLDINFO",""))
+  }
+
+
+  def parseRecord(json: String): Option[Record] = {
+    if (json == "")
+      None
+    else {
+      val builder = Record.newBuilder
+      JsonFormat.parser.ignoringUnknownFields.merge(json, builder)
+      Option(builder.build)
+    }
+  }
+
+  def getTransformationsAsString(c:GsUtilConfig,gcs:Storage,zos:MVS): String = {
+    if (c.tf.nonEmpty)
+      tf(c.tf, gcs, zos).getOrElse("")
+    else
+      tfDSN(c.tfDSN, zos).getOrElse("")
+  }
+
+  def merge(s: SchemaProvider, r: Record): SchemaProvider = {
+    s match {
+      case x: CopyBook =>
+
+        import scala.jdk.CollectionConverters.IterableHasAsScala
+
+        val seq1: List[Record.Field] = r.getFieldList.asScala.toList
+        val names= seq1.map(_.getName)
+        val v: Seq[CopyBookLine] = x.Fields.filterNot({
+          case CopyBookField(name, _) =>
+            names.contains(name)
+          case CopyBookTitle(_) => false
+        })
+        CopyBook(x.raw, x.transcoder, Option(v ++ seq1.map(
+          fld =>
+            CopyBookField(fld.getName, Decoding.getDecoder(fld, x.transcoder))
+        )))
+      case y: RecordSchema => y
     }
   }
 }

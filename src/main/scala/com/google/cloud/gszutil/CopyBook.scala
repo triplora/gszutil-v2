@@ -34,7 +34,7 @@ case class CopyBook(raw: String, transcoder: Transcoder = Ebcdic, altFields: Opt
 
 
   override def fieldNames: Seq[String] =
-    Fields.flatMap{
+      altFields.getOrElse(Fields).flatMap{
       case CopyBookField(name, decoder) if !decoder.filler =>
         Option(name.replaceAllLiterally("-","_"))
       case _ =>
@@ -43,7 +43,7 @@ case class CopyBook(raw: String, transcoder: Transcoder = Ebcdic, altFields: Opt
 
   override lazy val decoders: Array[Decoder] = {
     val buf = ArrayBuffer.empty[Decoder]
-    Fields.foreach{
+    altFields.getOrElse(Fields).foreach{
       case CopyBookField(_, decoder) =>
         buf.append(decoder)
       case _ =>

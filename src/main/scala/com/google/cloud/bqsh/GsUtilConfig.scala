@@ -105,7 +105,9 @@ case class GsUtilConfig(source: String = "INFILE",
                         serviceAccount: String = "",
                         machineType: String = "n1-standard-4",
                         testInput: Option[ZRecordReaderT] = None,
-                        gcsDSNPrefix: String = ""
+                        gcsDSNPrefix: String = "",
+                        tf:String = "",
+                        tfDSN:String =""
 ) {
   def toMap: java.util.Map[String,Any] = {
     val m = StaticMap.builder
