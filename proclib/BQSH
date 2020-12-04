@@ -28,7 +28,7 @@
 //QUERY    DD DUMMY
 //INFILE   DD DUMMY
 //COPYBOOK DD DUMMY
-//KEYFILE  DD DSN=&SYSUID..KEYFILE,DISP=SHR
+//KEYFILE  DD DUMMY
 //STDENV   DD *,SYMBOLS=EXECSYS
 
 export JOBNAME=&JOBNAME
@@ -43,18 +43,38 @@ export PATH="/bin:$JH/bin"
 # Log Level
 export BQSH_ROOT_LOGGER=DEBUG
 
+# Service Account Keyfile
+export GKEYFILE="/path/to/keyfile.json"
+
+# Binary Data Sets
+export GCSDSNURI="gs://databucket/prefix"
+
+# Generational Data Sets
+export GCSGDGURI="gs://versionedbucket/prefix"
+
+# Transcoded ORC files
+export GCSOUTURI="gs://outputbucket/prefix"
+
+# Transcoding Server IP Address or Hostname
+export SRVREMOTE="0.0.0.0"
+
+# Transcoding Server Port
+export SRVPORT=51770
+
 # Native Libraries
 JL="$JH/lib"
 LP="/lib:/usr/lib:$JH/bin:$JL/s390x:$JL/s390x/j9vm:$JH/bin/classic"
-export LIBPATH="$LP"
+export LIBPATH="$LP:/usr/lib/java_runtime64"
+
+# Path to directory containing google jar files
+LD=/opt/google/lib
 
 # Java Classpath
-LD=/opt/google/lib
-CP="$LD/gszutil.jar:$LD/gszutil.dep.jar:$JL:$JL/ext"
+CP="$LD/*:$JL:$JL/ext:/usr/include/java_classes/*"
 export CLASSPATH="$CP"
 
 # JVM options
-IJO="-Xms2g -Xmx2g -Xcompressedrefs -Djava.net.preferIPv4Stack=true"
+IJO="-Xms1g -Xmx1g -Xcompressedrefs -Djava.net.preferIPv4Stack=true"
 export IBM_JAVA_OPTIONS="$IJO"
 export JZOS_MAIN_ARGS=""
 /*
