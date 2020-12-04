@@ -34,13 +34,24 @@ object ScpOptionParser extends OptionParser[ScpConfig]("scp") with ArgParser[Scp
     .text("(optional) compress output with gzip (default: true)")
     .action((_,c) => c.copy(compress = false))
 
-  arg[String]("inDsn")
-    .required
+  opt[String]("inDD")
+    .optional
+    .text("DD to read")
+    .action((x,c) => c.copy(inDD = x))
+
+  opt[String]("inDsn")
+    .optional
     .text("DSN to read")
     .action((x,c) => c.copy(inDsn = x))
 
-  arg[String]("outUri")
+  opt[String]("outUri")
     .required
     .text("GCS URI to write data to")
     .action((x,c) => c.copy(outUri = x))
+
+  checkConfig{x =>
+    if (x.inDD.nonEmpty && x.inDsn.nonEmpty) {
+      failure("only one of --inDD or --inDsn may be specified")
+    } else success
+  }
 }

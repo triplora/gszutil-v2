@@ -23,36 +23,15 @@ import com.google.cloud.imf.util.{CloudLogging, Logging, StatsUtil}
 import com.google.cloud.storage.{Blob, BlobId, Storage}
 
 object CloudDataSet extends Logging {
-  private var dsnBaseUri: Option[URI] = {
-    sys.env.get("GCSDSNPREFIX")
-      .orElse(sys.env.get("GCSPREFIX"))
-      .map(new URI(_))
-  }
-
-  private var gdgBaseUri: Option[URI] = {
-    sys.env.get("GCSGDGPREFIX")
-      .map(new URI(_))
-  }
-
-  def setBaseUri(uri1: String): Unit = {
-    val uri = new URI(uri1)
-    if (uri.getScheme != "gs")
-      throw new IllegalArgumentException(s"Invalid URI scheme $uri1")
-    dsnBaseUri = Option(uri)
-  }
-
-  def setBaseGdgUri(uri1: String): Unit = {
-    val uri = new URI(uri1)
-    if (uri.getScheme != "gs")
-      throw new IllegalArgumentException(s"Invalid URI scheme $uri1")
-    gdgBaseUri = Option(uri)
-  }
-
-  def getBaseUri: Option[URI] = dsnBaseUri
-  def getBaseGdgUri: Option[URI] = gdgBaseUri
+  private var baseDsnUri: Option[URI] = sys.env.get("GCSDSNURI").map(new URI(_))
+  private var baseGdgUri: Option[URI] = sys.env.get("GCSGDGURI").map(new URI(_))
+  def setBaseDsnUri(uri: String): Unit = baseDsnUri = Option(new URI(uri))
+  def setBaseGdgUri(uri: String): Unit = baseGdgUri = Option(new URI(uri))
+  def getBaseDsnUri: Option[URI] = baseDsnUri
+  def getBaseGdgUri: Option[URI] = baseGdgUri
 
   def readCloudDDDSN(gcs: Storage, dd: String, ddInfo: DataSetInfo): Option[CloudRecordReader] = {
-    getBaseUri match {
+    getBaseDsnUri match {
       case Some(baseUri) =>
         CloudLogging.stdout(s"Cloud DD enabled uri=$baseUri")
         readCloudDDDSN(gcs,dd,ddInfo,baseUri)
@@ -90,22 +69,38 @@ object CloudDataSet extends Logging {
     }
   }
 
-  def readCloudDDDSN(gcs: Storage, dd: String, ddInfo: DataSetInfo, dsnBaseUri: URI)
-  : Option[CloudRecordReader] = {
-    val dsn =
-      if (!ddInfo.pds) ddInfo.dataSetName
-      else ddInfo.dataSetName + "(" + ddInfo.elementName + ")"
-    val bucket = dsnBaseUri.getAuthority
-    val prefix = dsnBaseUri.getPath.stripPrefix("/").stripSuffix("/")
-    val name = if (prefix.nonEmpty) prefix + "/" + dsn else dsn
+  def buildObjectName(baseUri: URI, ds: DataSetInfo): String =
+    buildObjectName(baseUri, buildObjectName(ds))
+
+  def buildObjectName(base: URI, name: String): String = {
+    val prefix: String = {
+      val pre1 = base.getPath.stripPrefix("/").stripSuffix("/")
+      if (pre1.nonEmpty) pre1 + "/"
+      else ""
+    }
+    prefix + name
+  }
+
+  def buildObjectName(ds: DataSetInfo): String = {
+    if (ds.pds) ds.dataSetName + "/" + ds.elementName
+    else if (ds.gdg) ds.dataSetName
+    else ds.dsn
+  }
+
+  def readCloudDDDSN(gcs: Storage,
+                     dd: String,
+                     ds: DataSetInfo,
+                     baseUri: URI): Option[CloudRecordReader] = {
+    val bucket = baseUri.getAuthority
+    val name = buildObjectName(baseUri, ds)
     // check if DSN exists in GCS
     val blob: Blob = gcs.get(BlobId.of(bucket, name))
     val uri = toUri(blob)
     if (blob != null) {
       val lrecl: Int = getLrecl(blob)
       CloudLogging.stdout(s"Located Dataset for DD:$dd\n"+
-        s"DSN=$dsn\nLRECL=$lrecl\nuri=$uri")
-      Option(CloudRecordReader(Seq(dsn), lrecl, bucket = bucket, name = name))
+        s"DSN=${ds.dsn}\nLRECL=$lrecl\nuri=$uri")
+      Option(CloudRecordReader(ds.dsn, lrecl, bucket = bucket, name = name))
     }
     else None
   }
@@ -120,14 +115,12 @@ object CloudDataSet extends Logging {
     }
   }
 
-  def readCloudDDGDG(gcs: Storage, dd: String, ddInfo: DataSetInfo, gdgBaseUri: URI)
-  : Option[CloudRecordReader] = {
-    val dsn =
-      if (!ddInfo.pds) ddInfo.dataSetName
-      else ddInfo.dataSetName + "(" + ddInfo.elementName + ")"
-    val bucket = gdgBaseUri.getAuthority
-    val prefix = gdgBaseUri.getPath.stripPrefix("/").stripSuffix("/")
-    val name = if (prefix.nonEmpty) prefix + "/" + dsn else dsn
+  def readCloudDDGDG(gcs: Storage,
+                     dd: String,
+                     ds: DataSetInfo,
+                     baseUri: URI): Option[CloudRecordReader] = {
+    val bucket = baseUri.getAuthority
+    val name = buildObjectName(baseUri, ds)
     val uri = s"gs://$bucket/$name"
     // check if DSN exists in GCS
     import scala.jdk.CollectionConverters.IterableHasAsScala
@@ -143,7 +136,7 @@ object CloudDataSet extends Logging {
       versions.foreach{b =>
         sb.append(b.getGeneration)
         sb.append(" ")
-        sb.append(b.getMetadata.get("lrecl"))
+        sb.append(b.getMetadata.getOrDefault("lrecl","?"))
         sb.append(" ")
         sb.append(b.getSize)
         sb.append(" ")
@@ -162,9 +155,9 @@ object CloudDataSet extends Logging {
       }
       val lrecl = lrecls.head
       CloudLogging.stdout(s"Located Generational Dataset for DD:$dd " +
-        s"DSN=$dsn\nLRECL=$lrecl\nuri=$uri")
-      Option(CloudRecordReader(Seq(dsn), lrecl, bucket = bucket, name = name,
-        gdg = true, generation = ddInfo.elementName, versions = versions))
+        s"DSN=${ds.dsn}\nLRECL=$lrecl\nuri=$uri")
+      Option(CloudRecordReader(ds.dsn, lrecl, bucket = bucket, name = name,
+        gdg = true, gdgVersion = ds.elementName, versions = versions))
     }
     else None
   }
@@ -180,17 +173,13 @@ object CloudDataSet extends Logging {
     val cloudReader = readCloudDDDSN(gcs, dd, ddInfo)
     val cloudReaderGdg = readCloudDDGDG(gcs, dd, ddInfo)
 
-    val dsn =
-      if (!ddInfo.pds) ddInfo.dataSetName
-      else ddInfo.dataSetName + "(" + ddInfo.elementName + ")"
-
     (cloudReader, cloudReaderGdg) match {
       case (Some(r), Some(r1)) =>
         // throw exception if data set exists in both buckets
         val msg =
           s"""Ambiguous Data Set Reference
              |DD:$dd
-             |DSN=$dsn found in both standard and generational buckets
+             |DSN=${ddInfo.dsn} found in both standard and generational buckets
              |Standard: ${r.uri}
              |GDG: ${r1.uri}
              |""".stripMargin
@@ -200,7 +189,7 @@ object CloudDataSet extends Logging {
       case x =>
         val res = x._1.orElse(x._2)
         if (res.isEmpty)
-          logger.info(s"unable to find $dsn in Cloud Storage")
+          logger.info(s"unable to find ${ddInfo.dsn} in Cloud Storage")
         res
     }
   }

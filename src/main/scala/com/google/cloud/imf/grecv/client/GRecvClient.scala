@@ -159,32 +159,30 @@ object GRecvClient extends Uploader with Logging {
     CloudLogging.stdout(s"gcsDSNPrefix = $gcsDSNPrefix")
     var rowCount: Long = 0
     var errCount: Long = 0
-    for (dsn <- in.dsn){
-      val srcUri: String =
-        if (dsn.startsWith("gs://")) dsn
-        else {
-          val gcsPrefix1 = gcsDSNPrefix.stripSuffix("/")
-          s"$gcsPrefix1/$dsn"
-        }
-      CloudLogging.stdout(s"Sending transcode request for $srcUri")
-      val ch = cb.build()
-      val stub = GRecvGrpc.newBlockingStub(ch).withDeadlineAfter(3000, TimeUnit.SECONDS)
-      val res = stub.write(request.toBuilder.setSrcUri(srcUri).build())
-      ch.shutdownNow()
-      if (res.getRowCount > 0)
-        rowCount += res.getRowCount
-      if (res.getErrCount > 0)
-        errCount += res.getErrCount
-      if (res.getStatus != GRecvProtocol.OK)
-        return Result.Failure("non-success status code")
+    val srcUri: String =
+      if (in.dsn.startsWith("gs://")) in.dsn
       else {
-        val resStr = JsonFormat.printer()
-          .includingDefaultValueFields()
-          .omittingInsignificantWhitespace()
-          .print(res)
-        CloudLogging.stdout(s"Request complete. DSN=$dsn rowCount=${res.getRowCount} " +
-          s"errorCount=${res.getErrCount} $resStr")
+        val gcsPrefix1 = gcsDSNPrefix.stripSuffix("/")
+        s"$gcsPrefix1/${in.dsn}"
       }
+    CloudLogging.stdout(s"Sending transcode request for $srcUri")
+    val ch = cb.build()
+    val stub = GRecvGrpc.newBlockingStub(ch).withDeadlineAfter(3000, TimeUnit.SECONDS)
+    val res = stub.write(request.toBuilder.setSrcUri(srcUri).build())
+    ch.shutdownNow()
+    if (res.getRowCount > 0)
+      rowCount += res.getRowCount
+    if (res.getErrCount > 0)
+      errCount += res.getErrCount
+    if (res.getStatus != GRecvProtocol.OK)
+      return Result.Failure("non-success status code")
+    else {
+      val resStr = JsonFormat.printer()
+        .includingDefaultValueFields()
+        .omittingInsignificantWhitespace()
+        .print(res)
+      CloudLogging.stdout(s"Request complete. DSN=${in.dsn} rowCount=${res.getRowCount} " +
+        s"errorCount=${res.getErrCount} $resStr")
     }
     Result(activityCount = rowCount, message = s"Completed ${in.dsn.length} requests with " +
       s"$errCount errors")

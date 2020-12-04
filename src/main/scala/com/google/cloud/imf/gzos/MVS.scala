@@ -16,8 +16,6 @@
 
 package com.google.cloud.imf.gzos
 
-import java.security.KeyPair
-
 import com.google.cloud.gszutil.CopyBook
 import com.google.cloud.gszutil.io.{ZRecordReaderT, ZRecordWriterT}
 import com.google.cloud.imf.gzos.MVSStorage.DSN
@@ -39,7 +37,6 @@ trait MVS {
   def readDDString(dd: String, recordSeparator: String): String
   def getPrincipal(): String
   def getCredentialProvider(): CredentialProvider
-  def getKeyPair(): KeyPair
   def listPDS(dsn: DSN): Iterator[PDSMemberInfo]
   def loadCopyBook(dd: String): CopyBook
   def jobName: String

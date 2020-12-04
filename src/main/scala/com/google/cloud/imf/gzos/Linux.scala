@@ -48,7 +48,7 @@ object Linux extends MVS with Logging {
     sys.env.get(s"${dd}_DSN") match {
       case Some(dsn) =>
         Option(DataSetInfo(
-          dataSetName = dsn,
+          dsn = dsn,
           lrecl = sys.env.getOrElse(s"${dd}_LRECL","80").toInt
         ))
       case None =>
@@ -90,8 +90,6 @@ object Linux extends MVS with Logging {
   override def getPrincipal(): String = System.getProperty("user.name")
 
   override def getCredentialProvider(): CredentialProvider = new DefaultCredentialProvider
-
-  override def getKeyPair(): KeyPair = KeyPairGenerator.getInstance("RSA").generateKeyPair
 
   override def loadCopyBook(dd: String): CopyBook = {
     val ddValue = System.getenv(dd)

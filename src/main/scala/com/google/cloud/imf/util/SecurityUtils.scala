@@ -65,6 +65,7 @@ object SecurityUtils {
   def publicKey(privateKey: PrivateKey): PublicKey =
     publicKey(privateKey.asInstanceOf[RSAPrivateCrtKey])
 
+  // does not work on IBM hardware JCE
   def publicKey(privateKey: RSAPrivateCrtKey): PublicKey =
     RSA.generatePublic(new RSAPublicKeySpec(privateKey.getModulus, privateKey.getPublicExponent))
 

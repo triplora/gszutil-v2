@@ -19,11 +19,12 @@ import java.io.{ByteArrayInputStream, ByteArrayOutputStream}
 import java.nio.ByteBuffer
 import java.nio.channels.{Channels, ReadableByteChannel, WritableByteChannel}
 import java.nio.charset.Charset
+import java.security.{KeyPair, PrivateKey}
 
-import com.google.auth.oauth2.GoogleCredentials
+import com.google.auth.oauth2.{GoogleCredentials, ServiceAccountCredentials}
 import com.google.cloud.gszutil.io.{ZDataSet, ZRecordReaderT}
 import com.google.cloud.imf.gzos.pb.GRecvProto.ZOSJobInfo
-import com.google.cloud.imf.util.CloudLogging
+import com.google.cloud.imf.util.{CloudLogging, SecurityUtils}
 import com.google.cloud.storage.BlobInfo
 import com.google.common.base.Charsets
 import com.google.common.collect.ImmutableSet
@@ -92,6 +93,13 @@ object Util {
       GoogleCredentials
         .fromStream(new ByteArrayInputStream(bytes))
         .createScoped(Scopes)
+
+    def getClientEmail: Option[String] =
+      credentials match {
+        case x: ServiceAccountCredentials => Option(x.getClientEmail)
+        case _ => None
+      }
+
     override def getCredentials: GoogleCredentials = {
       credentials.refreshIfExpired()
       credentials

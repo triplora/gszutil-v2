@@ -25,7 +25,7 @@ import com.google.cloud.bqsh.{ArgParser, Command, ScpConfig, ScpOptionParser}
 import com.google.cloud.gszutil.io.ZRecordReaderT
 import com.google.cloud.imf.gzos.{MVS, MVSStorage}
 import com.google.cloud.imf.util.{CloudLogging, Logging, Services}
-import com.google.cloud.storage.{BlobId, BlobInfo}
+import com.google.cloud.storage.{BlobId, BlobInfo, Storage}
 import com.google.common.collect.ImmutableMap
 
 /** Simple binary copy
@@ -44,7 +44,10 @@ object Scp extends Command[ScpConfig] with Logging {
         .createScoped(StorageScopes.DEVSTORAGE_READ_WRITE)
       val gcs = Services.storage(creds)
 
-      val in: ZRecordReaderT = zos.readDSN(MVSStorage.parseDSN(config.inDsn))
+      val in: ZRecordReaderT =
+        if (config.inDsn.nonEmpty) zos.readDSN(MVSStorage.parseDSN(config.inDsn))
+        else if (config.inDD.nonEmpty) zos.readDD(config.inDD)
+        else throw new RuntimeException("no input provided")
       val lrecl = in.lRecl
 
       // include lrecl and gzip in object metadata

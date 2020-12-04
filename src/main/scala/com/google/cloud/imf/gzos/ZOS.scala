@@ -28,7 +28,7 @@ import com.google.cloud.imf.gzos.MVSStorage.DSN
 import com.google.cloud.imf.gzos.pb.GRecvProto.ZOSJobInfo
 import com.google.cloud.imf.util.{CloudLogging, Logging, SecurityUtils}
 import com.ibm.dataaccess.ByteArrayUnmarshaller
-import com.ibm.jzos.{DSCB, Exec, Format1DSCB, Format3DSCB, JesSymbols, MvsJobSubmitter, PdsDirectory, RcException, RecordReader, RecordWriter, ZFile, ZFileConstants, ZFileException, ZUtil}
+import com.ibm.jzos.{ByteUtil, DSCB, Exec, Format1DSCB, Format3DSCB, JesSymbols, MvsJobSubmitter, PdsDirectory, RcException, RecordReader, RecordWriter, ZFile, ZFileConstants, ZFileException, ZUtil}
 
 import scala.collection.mutable.{ArrayBuffer, ListBuffer}
 import scala.util.Try
@@ -360,11 +360,15 @@ protected object ZOS {
   def getDatasetInfo(ddName: String): Option[DataSetInfo] = {
     try {
       val jfcb = ZFile.readJFCB(ddName)
-      Option(DataSetInfo(
-        dataSetName = jfcb.getJfcbdsnm
-        ,elementName = jfcb.getJfcbelnm
-        ,lrecl = jfcb.getJfclrecl
-      ))
+      val dsn =
+        if (jfcb.getJfcbelnm.isEmpty) jfcb.getJfcbdsnm
+        else s"${jfcb.getJfcbdsnm}(${jfcb.getJfcbelnm})"
+      val lrecl =
+        if (jfcb.getJfclrecl == 0) 80
+        else {
+          jfcb.getJfclrecl
+        }
+      Option(DataSetInfo(dsn = dsn, lrecl = lrecl))
     } catch {
       case _: ZFileException =>
         None
@@ -374,44 +378,72 @@ protected object ZOS {
   def readAddr(buf: Array[Byte], off: Int): Long =
     ByteArrayUnmarshaller.readInt(buf, off, true, 4, true)
 
+  def readInt(address: Long, len: Int): Int = {
+    if (len > 4) throw new IllegalArgumentException("len > 8")
+    else if (len <= 0) throw new IllegalArgumentException("len <= 0")
+    else {
+      val bytes = new Array[Byte](len)
+      ZUtil.peekOSMemory(address, bytes)
+      ByteUtil.bytesAsInt(bytes)
+    }
+  }
+
+  def readStr(address: Long, len: Int): String = {
+    if (len <= 0) throw new IllegalArgumentException("len <= 0")
+    else {
+      val bytes = new Array[Byte](len)
+      ZUtil.peekOSMemory(address, bytes)
+      new String(bytes, 0, len, Ebcdic.charset).trim
+    }
+  }
+
   def listDDs: Seq[String] = {
-    // read PSA
-    val psaLen = 4096+8
-    val psaBuf = new Array[Byte](psaLen)
-    ZUtil.peekOSMemory(0, psaBuf, 0, psaLen)
+    val pCVT = ZUtil.peekOSMemory(16L, 4)
+    val pTCBW = ZUtil.peekOSMemory(pCVT + 0L, 4)
+    val pTCB = ZUtil.peekOSMemory(pTCBW + 4L, 4)
+    val pTIOT = ZUtil.peekOSMemory(pTCB + 12L, 4)
+    val pJSCB = ZUtil.peekOSMemory(pTCB + 180L, 4)
+    val pSSIB = ZUtil.peekOSMemory(pJSCB + 316L, 4)
+    val pPSCB = ZUtil.peekOSMemory(pJSCB + 264L, 4)
 
-    // read TCB
-    val tcbOff = 540
-    val tcbAddr = readAddr(psaBuf, tcbOff)
-    val tcbLen = 344+8
-    val tcbBuf = new Array[Byte](tcbLen)
-    ZUtil.peekOSMemory(tcbAddr, tcbBuf, 0, tcbLen)
-
-    // read TIOT
-    val tiotOff = 12
-    val tiotLen = 32*1024
-    val tiotBuf = new Array[Byte](tiotLen)
-    val tiotAddr = readAddr(tcbBuf, tiotOff)
-    ZUtil.peekOSMemory(tiotAddr, tiotBuf, 0, tiotLen)
-
-    val tiotStr = new String(tiotBuf, 0, tiotLen, Ebcdic.charset)
-    CloudLogging.stdout(s"""TCB Address: $tcbAddr
-                           |TIOT Address: $tiotAddr
-                           |TIOT:
-                           |$tiotStr""".stripMargin)
+    val jobName = readStr(pTIOT, 8)
+    val procStepName = readStr(pTIOT+8, 8)
+    val stepName = readStr(pTIOT+16, 8)
+    val jobId = readStr(pSSIB+12,8)
 
     // read TIOENTRY
-    var i = 24
+    var i = pTIOT + 24
     val buf = ListBuffer.empty[String]
-    while (i < tiotLen) {
-      val ddName = new String(tiotBuf, i+4, 8, Ebcdic.charset)
-      if (ddName.exists(_.isLetter)) {
-        CloudLogging.stdout(s"DD:$ddName")
-        buf.append(ddName)
-        i += ByteArrayUnmarshaller.readInt(tiotBuf, i, true, 1, true)
-      } else i = tiotLen
+    var n = 0
+    while (i < pTIOT + 32*1024 && n < 256) {
+      n += 1
+      val len = readInt(i, 1)
+      if (len > 0){
+        val ddName = readStr(i+4,8)
+        if (ddName.exists(_.isLetter))
+          buf.append(ddName)
+        i += len
+      } else i += 32*1024
     }
-    buf.toList
+
+    val ddList = buf.toList
+    CloudLogging.stdout(s"""TCB Address: $pTCB
+                           |TIOT Address: $pTIOT
+                           |JOBNAME: $jobName
+                           |JOBID: $jobId
+                           |PROCSTEPNAME: $procStepName
+                           |STEPNAME: $stepName
+                           |DDs: ${ddList.mkString(",")}
+                           |Java Version:
+                           |${ZUtil.getJavaVersionInfo}
+                           |
+                           |JZOS Version:
+                           |${ZUtil.getJzosDllVersion}
+                           |
+                           |JZOS Jar Version:
+                           |${ZUtil.getJzosJarVersion}
+                           |""".stripMargin)
+    ddList
   }
 
   def addCCAProvider(): Unit =

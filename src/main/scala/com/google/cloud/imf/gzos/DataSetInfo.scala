@@ -18,39 +18,44 @@ package com.google.cloud.imf.gzos
 
 /**
   *
-  * @param dataSetName Data Set Name (DSNAME)
-  * @param elementName Member Name (PDS) or Relative Generation Number (GDG)
+  * @param dsn Data Set Name (DSNAME)
   * @param lrecl Record Length
-  * @param undefined Record Format flag
-  * @param fixed Record Format flag
-  * @param variable Record Format flag
-  * @param blocked Record Format flag
-  * @param fixedBlock Record Format flag
-  * @param indexedSequential Data Set Organization type
-  * @param physicalSequential Data Set Organization type
-  * @param directAccess Data Set Organization type
-  * @param partitioned  Data Set Organization type
-  * @param located Located flag
-  * @param gdg Generational Data Set
-  * @param pds Partitioned Data Set
   */
-case class DataSetInfo(
-  dataSetName: String = "",
-  elementName: String = "",
-  lrecl: Int = -1,
+case class DataSetInfo(dsn: String = "",
+                       lrecl: Int = -1) {
+  val dataSetName: String = {
+    (dsn.indexOf('('), dsn.indexOf(')')) match {
+      case (i,j) if i > -1 && j > i =>
+        dsn.substring(0,i)
+      case _ =>
+        dsn
+    }
+  }
 
-  undefined: Boolean = false,
-  fixed: Boolean = false,
-  variable: Boolean = false,
-  blocked: Boolean = false,
-  fixedBlock: Boolean = false,
+  val elementName: String = {
+    (dsn.indexOf('('), dsn.indexOf(')')) match {
+      case (i,j) if i > -1 && j > i =>
+        dsn.substring(i+1,j)
+      case _ =>
+        ""
+    }
+  }
 
-  indexedSequential: Boolean = false,
-  physicalSequential: Boolean = false,
-  directAccess: Boolean = false,
-  partitioned: Boolean = false,
+  val gdg: Boolean =
+    elementName match {
+      case "" => false
+      case "0" => true
+      case "+1" => true
+      case s if s.charAt(0) == '-' && s.substring(1).forall(_.isDigit) =>
+        true
+      case _ => false
+    }
 
-  located: Boolean = false,
-  gdg: Boolean = false,
-  pds: Boolean = false
-)
+  val pds: Boolean =
+    elementName match {
+      case s if s.length <= 8 && s.length > 1 && s.forall(_.isLetterOrDigit) =>
+        true
+      case _ =>
+        false
+    }
+}

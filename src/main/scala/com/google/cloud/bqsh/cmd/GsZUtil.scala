@@ -52,7 +52,7 @@ object GsZUtil extends Command[GsZUtilConfig] with Logging {
 
     val dsInfo: DataSetInfo = {
       if (c.inDsn.nonEmpty)
-        DataSetInfo(dataSetName = c.inDsn)
+        DataSetInfo(dsn = c.inDsn)
       else {
         logger.info("--inDsn not set, looking for INFILE DD")
         zos.dsInfo("INFILE") match {
