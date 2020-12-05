@@ -16,10 +16,11 @@
 
 package com.google.cloud.bqsh.cmd
 
-import com.google.cloud.bigquery._
-import com.google.cloud.bqsh._
+import com.google.cloud.bigquery.{Clustering,JobInfo,LoadJobConfiguration,FormatOptions,CsvOptions,
+  DatastoreBackupOptions,TimePartitioning,EncryptionConfiguration}
+import com.google.cloud.bqsh.{BQ,Command,LoadConfig,ArgParser,LoadOptionParser}
 import com.google.cloud.imf.gzos.MVS
-import com.google.cloud.imf.util.{CloudLogging, Logging, Services, StatsUtil}
+import com.google.cloud.imf.util.{Logging, Services, StatsUtil}
 
 object Load extends Command[LoadConfig] with Logging {
   override val name: String = "bq load"
@@ -27,7 +28,7 @@ object Load extends Command[LoadConfig] with Logging {
 
   override def run(cfg: LoadConfig, zos: MVS, env: Map[String,String]): Result = {
     val creds = zos.getCredentialProvider().getCredentials
-    CloudLogging.stdout(s"Initializing BigQuery client\n" +
+    logger.info(s"Initializing BigQuery client\n" +
       s"projectId=${cfg.projectId} location=${cfg.location}")
     val bq =  Services.bigQuery(cfg.projectId, cfg.location, creds)
     logger.info("configuring load job")

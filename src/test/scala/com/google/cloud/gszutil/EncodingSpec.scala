@@ -16,7 +16,6 @@ class EncodingSpec extends AnyFlatSpec {
     val encoder = StringToBinaryEncoder(Ebcdic, example.length)
     val buf = encoder.encode(example)
     val decoded = new String(buf, Ebcdic.charset)
-    System.out.println(decoded)
     assert(example.equals(decoded))
   }
 
@@ -95,7 +94,6 @@ class EncodingSpec extends AnyFlatSpec {
     val decimalEncoder = DecimalToBinaryEncoder(7, 2)
     val encoded = decimalEncoder.encode(null)
     val size = PackedDecimal.sizeOf(7, 2)
-    System.out.println(size)
     assert(encoded.length == size)
     assert(decimalEncoder.encode(null).filter(_ != 0x00).isEmpty)
   }

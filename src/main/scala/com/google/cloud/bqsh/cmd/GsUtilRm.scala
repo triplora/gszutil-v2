@@ -18,7 +18,7 @@ package com.google.cloud.bqsh.cmd
 
 import java.net.URI
 
-import com.google.cloud.bqsh._
+import com.google.cloud.bqsh.{ArgParser,Command,GsUtilConfig,GsUtilOptionParser}
 import com.google.cloud.imf.gzos.MVS
 import com.google.cloud.imf.util.{Logging, Services}
 import com.google.cloud.storage.{BlobId, Storage}

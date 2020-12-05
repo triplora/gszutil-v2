@@ -24,7 +24,7 @@ import com.google.api.services.storage.StorageScopes
 import com.google.cloud.bqsh.{ArgParser, Command, ScpConfig, ScpOptionParser}
 import com.google.cloud.gszutil.io.ZRecordReaderT
 import com.google.cloud.imf.gzos.{CloudDataSet, DataSetInfo, MVS, MVSStorage, Util}
-import com.google.cloud.imf.util.{CloudLogging, Logging, Services}
+import com.google.cloud.imf.util.{Logging, Services}
 import com.google.cloud.storage.{BlobId, BlobInfo, Storage}
 import com.google.common.io.CountingOutputStream
 
@@ -72,8 +72,7 @@ object Scp extends Command[ScpConfig] with Logging {
               val msg = "scp is unable to determine output location.\n" +
                 s"either provide --outUri option or " +
                 s"set ${CloudDataSet.DsnVar} and ${CloudDataSet.GdgVar}"
-              CloudLogging.stdout(msg)
-              CloudLogging.stderr(msg)
+              logger.error(msg)
               return Result.Failure(msg)
           }
         }
@@ -103,9 +102,7 @@ object Scp extends Command[ScpConfig] with Logging {
         case t: Throwable =>
           in.close()
           val msg = s"exception during upload:\n${t.getMessage}"
-          CloudLogging.stdout(msg)
-          CloudLogging.stderr(msg)
-          CloudLogging.printStackTrace(t)
+          logger.error(msg,t)
           return Result.Failure(msg)
       }
 
@@ -124,7 +121,7 @@ object Scp extends Command[ScpConfig] with Logging {
                |read rate: $readRate mbps
                |write rate: $writeRate mbps
                |$blob""".stripMargin
-          CloudLogging.stdout(msg)
+          logger.info(msg)
 
           Result(activityCount = nRecordsRead)
         case None =>
@@ -139,8 +136,7 @@ object Scp extends Command[ScpConfig] with Logging {
         if (e.getMessage != null)
           sb.append(s"\n${e.getMessage}")
         val msg = sb.result
-        CloudLogging.stdout(msg)
-        CloudLogging.printStackTrace(e)
+        logger.error(msg, e)
         Result.Failure(msg)
     }
   }

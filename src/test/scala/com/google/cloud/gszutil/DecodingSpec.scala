@@ -514,9 +514,6 @@ class DecodingSpec extends AnyFlatSpec {
     val a = col.vector(0)
     val start = col.start(0)
     val len = col.length(0)
-    System.out.println(a)
-    System.out.println(start)
-    System.out.println(len)
     val s = new String(a,start,len, Utf8.charset)
     assert(s == "0.03")
   }
@@ -531,9 +528,6 @@ class DecodingSpec extends AnyFlatSpec {
     val a = col.vector(0)
     val start = col.start(0)
     val len = col.length(0)
-    System.out.println(a)
-    System.out.println(start)
-    System.out.println(len)
     val s = new String(a,start,len, Utf8.charset)
     assert(s == "1234567")
   }
@@ -556,7 +550,6 @@ class DecodingSpec extends AnyFlatSpec {
 
     Decoding.getDecoder(f, Ebcdic) match {
       case d: DecimalScale0AsLongDecoder =>
-        System.out.println(d)
       case _ => fail("DecimalScale0AsLongDecoder expected")
     }
   }

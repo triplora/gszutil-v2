@@ -4,7 +4,6 @@ import java.net.InetSocketAddress
 import java.util.concurrent.Executors
 
 import com.google.cloud.imf.grecv.{GRecvConfig, GzipCodec}
-import com.google.cloud.imf.gzos.Util
 import com.google.cloud.imf.util.Logging
 import com.google.cloud.storage.Storage
 import io.grpc.Server

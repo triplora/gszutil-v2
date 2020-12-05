@@ -19,7 +19,7 @@ package com.google.cloud.imf.gzos
 import java.net.URI
 
 import com.google.cloud.gszutil.io.CloudRecordReader
-import com.google.cloud.imf.util.{CloudLogging, Logging, StatsUtil}
+import com.google.cloud.imf.util.{Logging, StatsUtil}
 import com.google.cloud.storage.{Blob, BlobId, Storage}
 
 object CloudDataSet extends Logging {
@@ -58,7 +58,7 @@ object CloudDataSet extends Logging {
   def readCloudDDDSN(gcs: Storage, dd: String, ddInfo: DataSetInfo): Option[CloudRecordReader] = {
     getBaseDsnUri match {
       case Some(baseUri) =>
-        CloudLogging.stdout(s"Cloud DD enabled uri=$baseUri")
+        logger.info(s"Cloud DD enabled uri=$baseUri")
         readCloudDDDSN(gcs,dd,ddInfo,baseUri)
       case None =>
         None
@@ -81,17 +81,15 @@ object CloudDataSet extends Logging {
       import scala.jdk.CollectionConverters.MapHasAsScala
       val meta = blob.getMetadata.asScala.map{x => s"${x._1}=${x._2}"}.mkString("\n")
       val msg = s"$LreclMeta not set for $uri\n$meta"
-      CloudLogging.stdout(msg)
-      CloudLogging.stderr(msg)
+      logger.error(msg)
       throw new RuntimeException(msg)
     }
     try {
       Integer.valueOf(lreclStr)
     } catch {
-      case _: NumberFormatException =>
+      case e: NumberFormatException =>
         val msg = s"invalid lrecl '$lreclStr' for $uri"
-        CloudLogging.stdout(msg)
-        CloudLogging.stderr(msg)
+        logger.error(msg, e)
         throw new RuntimeException(msg)
     }
   }
@@ -125,7 +123,7 @@ object CloudDataSet extends Logging {
     val uri = toUri(blob)
     if (blob != null) {
       val lrecl: Int = getLrecl(blob)
-      CloudLogging.stdout(s"Located Dataset for DD:$dd\n"+
+      logger.info(s"Located Dataset for DD:$dd\n"+
         s"DSN=${ds.dsn}\nLRECL=$lrecl\nuri=$uri")
       Option(CloudRecordReader(ds.dsn, lrecl, bucket = bucket, name = name))
     }
@@ -135,7 +133,7 @@ object CloudDataSet extends Logging {
   def readCloudDDGDG(gcs: Storage, dd: String, ddInfo: DataSetInfo): Option[CloudRecordReader] = {
     getBaseGdgUri match {
       case Some(baseUri) =>
-        CloudLogging.stdout(s"Generational Cloud DD enabled uri=$baseUri")
+        logger.info(s"Generational Cloud DD enabled uri=$baseUri")
         readCloudDDGDG(gcs, dd, ddInfo, baseUri)
       case None =>
         None
@@ -170,18 +168,17 @@ object CloudDataSet extends Logging {
         sb.append(StatsUtil.epochMillis2Timestamp(b.getCreateTime))
         sb.append("\n")
       }
-      CloudLogging.stdout(sb.result)
+      logger.info(sb.result)
 
       val lrecls = versions.map(getLrecl)
       if (lrecls.distinct.length > 1){
         val msg = s"lrecl inconsistent across generations for $uri - found " +
           s"lrecls ${lrecls.mkString(",")}"
-        CloudLogging.stdout(msg)
-        CloudLogging.stderr(msg)
+        logger.error(msg)
         throw new RuntimeException(msg)
       }
       val lrecl = lrecls.head
-      CloudLogging.stdout(s"Located Generational Dataset for DD:$dd " +
+      logger.info(s"Located Generational Dataset for DD:$dd " +
         s"DSN=${ds.dsn}\nLRECL=$lrecl\nuri=$uri")
       Option(CloudRecordReader(ds.dsn, lrecl, bucket = bucket, name = name,
         gdg = true, gdgVersion = ds.elementName, versions = versions))
@@ -211,7 +208,6 @@ object CloudDataSet extends Logging {
              |GDG: ${r1.uri}
              |""".stripMargin
         logger.error(msg)
-        CloudLogging.stderr(msg)
         throw new RuntimeException(msg)
       case x =>
         val res = x._1.orElse(x._2)

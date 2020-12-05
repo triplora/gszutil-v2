@@ -17,8 +17,8 @@
 package com.google.cloud.gszutil.io
 
 import java.nio.{ByteBuffer, CharBuffer}
-import java.time.{LocalDate, ZoneId}
 import java.time.format.DateTimeFormatter
+import java.time.{LocalDate, ZoneId}
 
 import com.google.cloud.gszutil.Transcoder
 import com.google.cloud.imf.gzos.pb.GRecvProto.Record

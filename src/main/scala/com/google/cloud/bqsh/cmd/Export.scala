@@ -16,17 +16,15 @@
 
 package com.google.cloud.bqsh.cmd
 
-import java.io.{PrintWriter, StringWriter}
-
 import com.google.cloud.bigquery.storage.v1.ReadSession.TableReadOptions
-import com.google.cloud.bigquery.{BigQueryException, JobInfo, QueryJobConfiguration, QueryParameterValue, StandardSQLTypeName}
 import com.google.cloud.bigquery.storage.v1.{BigQueryReadClient, CreateReadSessionRequest, DataFormat, ReadRowsRequest, ReadSession}
+import com.google.cloud.bigquery.{BigQueryException, JobInfo, QueryJobConfiguration, QueryParameterValue, StandardSQLTypeName}
 import com.google.cloud.bqsh.BQ.resolveDataset
 import com.google.cloud.bqsh.{ArgParser, BQ, Command, ExportConfig, ExportOptionParser}
 import com.google.cloud.gszutil.io.BQExporter
 import com.google.cloud.imf.gzos.{Ebcdic, MVS}
 import com.google.cloud.imf.util.StatsUtil.EnhancedJob
-import com.google.cloud.imf.util.{CloudLogging, Logging, Services, StatsUtil}
+import com.google.cloud.imf.util.{Logging, Services, StatsUtil}
 import org.apache.avro.Schema
 
 object Export extends Command[ExportConfig] with Logging {
@@ -35,7 +33,7 @@ object Export extends Command[ExportConfig] with Logging {
 
   override def run(cfg: ExportConfig, zos: MVS, env: Map[String,String]): Result = {
     val creds = zos.getCredentialProvider().getCredentials
-    CloudLogging.stdout(s"Initializing BigQuery client\n" +
+    logger.info(s"Initializing BigQuery client\n" +
       s"projectId=${cfg.projectId} location=${cfg.location}")
     val bq = Services.bigQuery(cfg.projectId, cfg.location, creds)
     val bqStorage = BigQueryReadClient.create()
@@ -55,7 +53,7 @@ object Export extends Command[ExportConfig] with Logging {
     logger.info(s"SQL Query:\n$query")
     if (query.nonEmpty) {
       val msg = "Empty export query"
-      CloudLogging.stderr(msg)
+      logger.error(msg)
       return Result.Failure(msg)
     }
 
@@ -67,7 +65,7 @@ object Export extends Command[ExportConfig] with Logging {
       val job = BQ.runJob(bq, jobConfiguration, jobId, cfg.timeoutMinutes * 60, sync = true)
       logger.info(s"QueryJob finished.")
       val jobInfo = new EnhancedJob(job)
-      CloudLogging.stdout(jobInfo.report)
+      logger.info("Job Statistics:\n" + jobInfo.report)
 
       val conf = job.getConfiguration[QueryJobConfiguration]
 
@@ -76,7 +74,6 @@ object Export extends Command[ExportConfig] with Logging {
         case Some(status) =>
           if (status.hasError) {
             val msg = s"Error:\n${status.error}\nExecutionErrors: ${status.executionErrors.mkString("\n")}"
-            CloudLogging.stderr(msg)
             logger.error(msg)
           }
           logger.info(s"Job Status = ${status.state}")
@@ -93,7 +90,6 @@ object Export extends Command[ExportConfig] with Logging {
           val msg = s"Destination table ${conf.getDestinationTable.getProject}." +
             s"${conf.getDestinationTable.getDataset}." +
             s"${conf.getDestinationTable.getTable} not found for export job ${BQ.toStr(jobId)}"
-          CloudLogging.stderr(msg)
           logger.error(msg)
           throw new RuntimeException(msg)
       }
@@ -147,13 +143,8 @@ object Export extends Command[ExportConfig] with Logging {
       Result.Success
     } catch {
       case e: BigQueryException =>
-        val sw = new StringWriter()
-        val pw = new PrintWriter(sw)
-        e.printStackTrace(pw)
-        val stackTrace = sw.toString
-        CloudLogging.stderr(stackTrace)
-        val msg = "export query failed with BigQueryException: " + e.getMessage + "\n" + stackTrace
-        logger.error(msg)
+        val msg = "export query failed with BigQueryException: " + e.getMessage + "\n"
+        logger.error(msg, e)
         Result.Failure(msg)
     }
   }

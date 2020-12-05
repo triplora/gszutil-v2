@@ -9,10 +9,10 @@ import com.google.cloud.bqsh.{ArgParser, Command, SdsfUtilConfig, SdsfUtilOption
 import com.google.cloud.imf.gzos.MVS
 import com.google.cloud.imf.util.{Logging, Services}
 import com.google.cloud.storage.{BlobInfo, Storage}
-import com.ibm.zos.sdsf.core._
+import com.ibm.zos.sdsf.core.{ISFException,ISFStatusRunner,ISFJobDataSet,ISFStatus,
+  ISFRequestSettings,ISFScrollConstants}
 
 import scala.collection.mutable.ListBuffer
-import scala.jdk.CollectionConverters._
 
 object SdsfUtil extends Command[SdsfUtilConfig] with Logging {
   override val name: String = "sdsfutil"
@@ -22,20 +22,25 @@ object SdsfUtil extends Command[SdsfUtilConfig] with Logging {
     val gcs = Services.storage(zos.getCredentialProvider().getCredentials.createScoped(StorageScopes.DEVSTORAGE_READ_WRITE))
     try {
       for (job <- runner.jobs()) {
-        System.out.println("job:\n" + job)
+        Console.out.println("job status:\n" + job)
         for (dataset <- job.dataSets) {
-          System.out.println("dataset:\n" + dataset)
+          Console.out.println("dataset:\n" + dataset)
           save(gcs, config, job, dataset)
         }
       }
       Result.Success
     } catch {
       case e: ISFException =>
+        val sb = new StringBuilder
+        sb.append("ISFException thrown\n")
+        sb.append("SDSF Messages:\n")
         runner.messages.foreach{x =>
-          System.err.println("SDSF Messages\n" + x)
+          sb.append(x)
+          sb.append("\n")
         }
-        e.printStackTrace(System.err)
-        Result.Failure(e.getMessage)
+        val msg = sb.result
+        logger.error(msg, e)
+        Result.Failure(msg)
     }
   }
 
@@ -52,7 +57,7 @@ object SdsfUtil extends Command[SdsfUtilConfig] with Logging {
            job: EnhancedStatus,
            dataset: EnhancedDataSet): Unit = {
     val name = objName(config.objPrefix, job, dataset)
-    System.out.println(s"writing to gs://${config.bucket}/$name")
+    logger.info(s"writing to gs://${config.bucket}/$name")
     val blob = gcs.create(BlobInfo.newBuilder(config.bucket,name)
       .setContentType("text/plain").build())
 
@@ -66,6 +71,7 @@ object SdsfUtil extends Command[SdsfUtilConfig] with Logging {
   }
 
   class EnhancedRunner(runner: ISFStatusRunner) {
+    import scala.jdk.CollectionConverters.ListHasAsScala
     def jobs(): List[EnhancedStatus] =
       runner.exec.asScala.toList.map{x => new EnhancedStatus(x)}
 
@@ -96,6 +102,8 @@ object SdsfUtil extends Command[SdsfUtilConfig] with Logging {
       val settings = dataSet.getRunner.getRequestSettings
       val results = dataSet.getRunner.getRequestResults
       val lineResults = results.getLineResults
+
+      import scala.jdk.CollectionConverters.ListHasAsScala
       buf.appendAll(results.getResponseList.asScala)
 
       settings.addISFScrollType(ISFScrollConstants.Options.DOWN)
@@ -115,8 +123,11 @@ object SdsfUtil extends Command[SdsfUtilConfig] with Logging {
   class EnhancedStatus(job: ISFStatus) {
     def jobName: String = job.getJName
     def jobId: String = job.getJobID
-    def dataSets: List[EnhancedDataSet] = job.getJobDataSets.asScala.toList
-      .map{x => new EnhancedDataSet(x)}
+    def dataSets: List[EnhancedDataSet] = {
+      import scala.jdk.CollectionConverters.ListHasAsScala
+      job.getJobDataSets.asScala.toList
+        .map { x => new EnhancedDataSet(x) }
+    }
 
     override def toString: String = {
       "ISFStatus(\n" + job.toVerboseString + "\n)"

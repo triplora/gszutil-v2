@@ -33,7 +33,7 @@ object GRecv extends Logging {
 
   def main(args: Array[String]): Unit = {
     val buildInfo = "Build Info:\n" + Util.readS("build.txt")
-    System.out.println(buildInfo)
+    Console.out.println(buildInfo)
     GRecvConfigParser.parse(args) match {
       case Some(cfg) =>
         val zos = Util.zProvider
@@ -46,7 +46,7 @@ object GRecv extends Logging {
         val gcs = Services.storage(creds.createScoped(StorageScopes.DEVSTORAGE_READ_WRITE))
         new GRecvServer(cfg, gcs).start()
       case _ =>
-        System.err.println(s"Unabled to parse args '${args.mkString(" ")}'")
+        Console.err.println(s"Unabled to parse args '${args.mkString(" ")}'")
         System.exit(1)
     }
   }

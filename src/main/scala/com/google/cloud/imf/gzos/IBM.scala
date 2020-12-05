@@ -53,7 +53,7 @@ object IBM extends MVS with Logging {
     // Check for Cloud Dataset
     dsInfo(dd) match {
       case Some(ds) =>
-        CloudLogging.stdout(s"Found DD:$dd $ds")
+        logger.info(s"Found DD:$dd $ds")
 
         // Obtain Cloud Storage client
         val gcs = Services.storage(getCredentialProvider().getCredentials)
@@ -99,10 +99,10 @@ object IBM extends MVS with Logging {
     sys.env.get("GOOGLE_APPLICATION_CREDENTIALS")
       .orElse(sys.env.get("GKEYFILE")) match {
       case Some(unixPath) if unixPath.nonEmpty =>
-        CloudLogging.stdout(s"reading credentials from $unixPath")
+        logger.info(s"reading credentials from $unixPath")
         Files.readAllBytes(Paths.get(unixPath))
       case None =>
-        CloudLogging.stdout(s"reading credentials from DD:KEYFILE")
+        logger.info(s"reading credentials from DD:KEYFILE")
         Util.readAllBytes(ZOS.readDD("KEYFILE"))
     }
   }
@@ -112,7 +112,7 @@ object IBM extends MVS with Logging {
     else {
       val cp = new GoogleCredentialsProvider(readKeyfile())
       cp.getClientEmail.foreach{x =>
-        CloudLogging.stdout(s"loaded keyfile for $x")
+        logger.info(s"loaded keyfile for $x")
         principal = x
       }
       this.cp = cp

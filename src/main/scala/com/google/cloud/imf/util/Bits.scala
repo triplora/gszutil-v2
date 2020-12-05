@@ -2,14 +2,14 @@ package com.google.cloud.imf.util
 
 import java.io.{InputStream, OutputStream}
 
-object Bits {
+object Bits extends Logging {
   val littleEndian: Boolean = !System.getProperty("java.vm.vendor").contains("IBM")
 
   def getInt(is: InputStream): Int = {
     val buf = new Array[Byte](4)
     val n = is.read(buf)
     if (n != 4)
-      CloudLogging.stderr(s"Expected 4 bytes from input but read $n")
+      logger.error(s"Expected 4 bytes from input but read $n")
     decodeIntL(buf)
   }
 

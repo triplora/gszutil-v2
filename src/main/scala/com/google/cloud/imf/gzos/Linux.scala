@@ -18,7 +18,6 @@ package com.google.cloud.imf.gzos
 
 import java.nio.channels.FileChannel
 import java.nio.file.{Files, Paths, StandardOpenOption}
-import java.security.{KeyPair, KeyPairGenerator}
 import java.util.Date
 
 import com.google.cloud.gszutil
@@ -35,7 +34,7 @@ object Linux extends MVS with Logging {
   override def isIBM: Boolean = false
   override def init(): Unit = {
     System.setProperty("java.net.preferIPv4Stack" , "true")
-    System.out.println("Build Info:\n" + Util.readS("build.txt"))
+    Console.out.println("Build Info:\n" + Util.readS("build.txt"))
   }
 
   override def ddExists(dd: String): Boolean = {

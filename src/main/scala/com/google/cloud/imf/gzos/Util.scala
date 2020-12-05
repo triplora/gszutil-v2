@@ -19,12 +19,11 @@ import java.io.{ByteArrayInputStream, ByteArrayOutputStream}
 import java.nio.ByteBuffer
 import java.nio.channels.{Channels, ReadableByteChannel, WritableByteChannel}
 import java.nio.charset.Charset
-import java.security.{KeyPair, PrivateKey}
 
 import com.google.auth.oauth2.{GoogleCredentials, ServiceAccountCredentials}
 import com.google.cloud.gszutil.io.{ZDataSet, ZRecordReaderT}
 import com.google.cloud.imf.gzos.pb.GRecvProto.ZOSJobInfo
-import com.google.cloud.imf.util.{CloudLogging, SecurityUtils}
+import com.google.cloud.imf.util.Logging
 import com.google.cloud.storage.BlobInfo
 import com.google.common.base.Charsets
 import com.google.common.collect.ImmutableSet
@@ -32,18 +31,18 @@ import com.google.common.io.{BaseEncoding, Resources}
 
 import scala.util.{Random, Try}
 
-object Util {
+object Util extends Logging {
   final val isIbm = System.getProperty("java.vm.vendor").contains("IBM")
   def zProvider: MVS = if (isIbm) IBM else Linux
   def sleepOrYield(ms: Long): Unit = {
     if (isIbm) {
-      CloudLogging.stdout(s"Yielding for $ms ms...")
+      logger.info(s"Yielding for $ms ms...")
       val t1 = System.currentTimeMillis + ms
       while (System.currentTimeMillis < t1){
         Thread.`yield`()
       }
     } else {
-      CloudLogging.stdout(s"Waiting for $ms ms...")
+      logger.info(s"Waiting for $ms ms...")
       Thread.sleep(ms)
     }
   }
@@ -176,7 +175,7 @@ object Util {
 
   /** Exit with ascii art */
   def exit: Unit = {
-    Try(System.out.println(readS("logo.txt")))
+    Try(Console.out.println(readS("logo.txt")))
     System.exit(0)
   }
 }

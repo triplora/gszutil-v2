@@ -9,8 +9,8 @@ import java.util.zip.GZIPInputStream
 import com.google.cloud.gszutil.RecordSchema
 import com.google.cloud.gszutil.io.WriterCore
 import com.google.cloud.imf.grecv.GRecvProtocol
-import com.google.cloud.imf.gzos.{CloudDataSet, Util}
 import com.google.cloud.imf.gzos.pb.GRecvProto.{GRecvRequest, GRecvResponse}
+import com.google.cloud.imf.gzos.{CloudDataSet, Util}
 import com.google.cloud.imf.util.Logging
 import com.google.cloud.storage.{BlobId, Storage}
 import com.google.common.hash.Hashing

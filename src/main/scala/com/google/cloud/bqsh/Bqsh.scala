@@ -424,7 +424,7 @@ object Bqsh extends Logging {
         Result.withExport(varName, value)
       } else {
         val msg = s"${cmd.name}: command not found"
-        CloudLogging.stderr(msg)
+        logger.error(msg)
         Result.Failure(msg)
       }
     }

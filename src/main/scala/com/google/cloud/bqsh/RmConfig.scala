@@ -17,7 +17,6 @@
 package com.google.cloud.bqsh
 
 import com.google.cloud.imf.util.StaticMap
-import com.google.common.collect.ImmutableSortedMap
 
 case class RmConfig (
   dataset: Boolean = false,

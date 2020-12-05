@@ -22,18 +22,19 @@ import java.time.LocalDate
 import org.apache.avro.Schema
 import org.apache.avro.generic.GenericRecord
 
-import scala.jdk.CollectionConverters._
-
 case class AvroField(field: Schema.Field) {
   val isRequired: Boolean = field.schema().getType != Schema.Type.UNION
 
   val typeSchema: Schema =
     if (isRequired)
       field.schema()
-    else field.schema().getTypes.asScala
-      .filterNot(_.getType == Schema.Type.NULL)
-      .toArray.toIndexedSeq.headOption
-      .getOrElse(Schema.create(Schema.Type.NULL))
+    else {
+      import scala.jdk.CollectionConverters.ListHasAsScala
+      field.schema().getTypes.asScala
+        .filterNot(_.getType == Schema.Type.NULL)
+        .toArray.toIndexedSeq.headOption
+        .getOrElse(Schema.create(Schema.Type.NULL))
+    }
 
   // buffer for BigInteger values representing Decimal field
   @transient private val decimalBuf = new Array[Byte](16)

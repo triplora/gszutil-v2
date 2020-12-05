@@ -16,18 +16,21 @@ import com.google.common.hash.Hashing
 import sun.security.jca.GetInstance
 
 import scala.collection.mutable.ArrayBuffer
-import scala.jdk.CollectionConverters._
 
 object SecurityUtils {
   def printProvider(x: Provider.Service): String =
     x.getProvider.getName + "\t" + x.getType + "\t" + x.getAlgorithm + "\t" + x.getClassName
 
   def printProviders(): Unit = {
-    System.out.println("JCE Provider Services")
-    System.out.println(GetInstance.getServices("Signature", "SHA256withRSA").asScala.map(printProvider).mkString("\n"))
-    System.out.println(GetInstance.getServices("KeyFactory", "RSA").asScala.map(printProvider).mkString("\n"))
-    System.out.println(GetInstance.getServices("KeyPairGenerator", "RSA").asScala.map(printProvider).mkString("\n"))
-    System.out.println()
+    val sb = new StringBuilder
+    sb.append("JCE Provider Services\n")
+    import scala.jdk.CollectionConverters.ListHasAsScala
+    sb.append(GetInstance.getServices("Signature", "SHA256withRSA").asScala.map(printProvider).mkString("\n"))
+    sb.append("\n")
+    sb.append(GetInstance.getServices("KeyFactory", "RSA").asScala.map(printProvider).mkString("\n"))
+    sb.append("\n")
+    sb.append(GetInstance.getServices("KeyPairGenerator", "RSA").asScala.map(printProvider).mkString("\n"))
+    Console.out.println(sb.result)
   }
 
   def useConscrypt(): Unit = {

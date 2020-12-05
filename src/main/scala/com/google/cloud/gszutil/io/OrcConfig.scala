@@ -3,8 +3,8 @@ package com.google.cloud.gszutil.io
 import com.google.cloud.imf.gzos.Util
 import org.apache.hadoop.conf.Configuration
 import org.apache.hadoop.fs.FileSystem
-import org.apache.orc.{InMemoryKeystore, NoOpMemoryManager, OrcConf, OrcFile, TypeDescription}
 import org.apache.orc.OrcFile.WriterOptions
+import org.apache.orc.{InMemoryKeystore, NoOpMemoryManager, OrcConf, OrcFile, TypeDescription}
 
 object OrcConfig {
   private final val OptimalGZipBuffer = 32*1024

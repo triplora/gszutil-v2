@@ -17,9 +17,9 @@
 package com.google.cloud.bqsh.cmd
 
 import com.google.cloud.bigquery.{BigQuery, Clustering, ExternalTableDefinition, FormatOptions, StandardTableDefinition, Table, TableDefinition, TableId, TableInfo, TimePartitioning, ViewDefinition}
-import com.google.cloud.bqsh._
+import com.google.cloud.bqsh.{BQ,Command,MkConfig,ArgParser,MkOptionParser}
 import com.google.cloud.imf.gzos.MVS
-import com.google.cloud.imf.util.{CloudLogging, Logging, Services}
+import com.google.cloud.imf.util.{Logging, Services}
 
 object Mk extends Command[MkConfig] with Logging {
   override val name: String = "bq mk"
@@ -27,7 +27,7 @@ object Mk extends Command[MkConfig] with Logging {
 
   override def run(cfg: MkConfig, zos: MVS, env: Map[String,String]): Result = {
     val creds = zos.getCredentialProvider().getCredentials
-    CloudLogging.stdout(s"Initializing BigQuery client\n" +
+    logger.info(s"Initializing BigQuery client\n" +
       s"projectId=${cfg.projectId} location=${cfg.location}")
     val bq =  Services.bigQuery(cfg.projectId, cfg.location, creds)
     val tableId = BQ.resolveTableSpec(cfg.tablespec, cfg.projectId, cfg.datasetId)

@@ -64,7 +64,7 @@ object GRecvTest {
 
     val sp = mloadSchema
     val generator = DataGenUtil.generatorFor(sp, sys.env("N").toInt)
-    System.out.println(generator.generators.zip(sp.decoders).map(_.toString).mkString("\n"))
+    Console.out.println(generator.generators.zip(sp.decoders).map(_.toString).mkString("\n"))
 
     val cfg = GsUtilConfig(schemaProvider = Option(sp),
       gcsUri = s"gs://${sys.env("BUCKET")}/test/mload1.gen",

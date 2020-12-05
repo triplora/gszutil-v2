@@ -17,7 +17,7 @@
 package com.google.cloud.bqsh.cmd
 
 import com.google.cloud.bigquery.DatasetId
-import com.google.cloud.bqsh._
+import com.google.cloud.bqsh.{BQ,Command,RmConfig,ArgParser,RmOptionParser}
 import com.google.cloud.imf.gzos.MVS
 import com.google.cloud.imf.util.Services
 

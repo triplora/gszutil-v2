@@ -20,7 +20,7 @@ import com.google.cloud.bqsh.{ArgParser, Command, GsUtilConfig, GsZUtilConfig, G
 import com.google.cloud.gszutil.{CopyBook, SchemaProvider}
 import com.google.cloud.imf.grecv.client.GRecvClient
 import com.google.cloud.imf.gzos.{CloudDataSet, DataSetInfo, MVS, MVSStorage}
-import com.google.cloud.imf.util.{CloudLogging, Logging, Services}
+import com.google.cloud.imf.util.{Logging, Services}
 
 /** Command-Line utility used to request remote transcoding of
   * mainframe datasets in Cloud Storage
@@ -66,7 +66,6 @@ object GsZUtil extends Command[GsZUtilConfig] with Logging {
             val msg = "input DSN not set. provide --inDsn command-line option or" +
               " INFILE DD"
             logger.error(msg)
-            CloudLogging.stderr(msg)
             throw new RuntimeException(msg)
         }
       }

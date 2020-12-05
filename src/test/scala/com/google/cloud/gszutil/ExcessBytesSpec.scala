@@ -37,6 +37,5 @@ class ExcessBytesSpec extends AnyFlatSpec {
     val errBuf = ByteBuffer.allocate(buf.capacity())
     val (a,b) = ZReader.readBatch(buf, decoders, cols, 4, lrecl+2, rBuf, errBuf)
     val v = cols(2).asInstanceOf[DateColumnVector]
-    System.out.println(v.vector.map(_.toString).mkString(" "))
   }
 }

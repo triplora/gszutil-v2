@@ -16,8 +16,6 @@
 
 package com.google.cloud.bqsh
 
-import com.google.cloud.imf.util.CloudLogging
-
 
 object BqshParser {
   def parse(args: Seq[String], env: Map[String,String] = Map.empty): Option[ShCmd] = {

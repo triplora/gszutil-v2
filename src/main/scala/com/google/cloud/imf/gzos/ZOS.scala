@@ -15,7 +15,7 @@
  */
 package com.google.cloud.imf.gzos
 
-import java.io.{IOException, PrintWriter, StringWriter}
+import java.io.IOException
 import java.nio.ByteBuffer
 import java.nio.channels.ReadableByteChannel
 import java.nio.charset.Charset
@@ -26,7 +26,7 @@ import com.google.cloud.gszutil.Decoding
 import com.google.cloud.gszutil.io.{ZRecordReaderT, ZRecordWriterT}
 import com.google.cloud.imf.gzos.MVSStorage.DSN
 import com.google.cloud.imf.gzos.pb.GRecvProto.ZOSJobInfo
-import com.google.cloud.imf.util.{CloudLogging, Logging}
+import com.google.cloud.imf.util.Logging
 import com.ibm.dataaccess.ByteArrayUnmarshaller
 import com.ibm.jzos.{ByteUtil, DSCB, Exec, Format1DSCB, Format3DSCB, JesSymbols, MvsJobSubmitter, PdsDirectory, RcException, RecordReader, RecordWriter, ZFile, ZFileConstants, ZFileException, ZUtil}
 
@@ -36,7 +36,7 @@ import scala.util.Try
 /**  Calls and wraps IBM JZOS classes
   *
   */
-protected object ZOS {
+protected object ZOS extends Logging {
   class WrappedRecordReader(private val r: RecordReader) extends ZRecordReaderT with Logging {
     require(r.getRecfm.startsWith("F"),
       s"${r.getDDName} record format must be FB - ${r.getRecfm} " +
@@ -60,7 +60,7 @@ protected object ZOS {
     override def close(): Unit = {
       if (open) {
         open = false
-        CloudLogging.stdout("Closing " + r.getDDName + " " + r.getDsn)
+        logger.info("Closing " + r.getDDName + " " + r.getDsn)
         Try(r.close()).failed.foreach(t => logger.error(t.getMessage))
       }
     }
@@ -121,7 +121,7 @@ protected object ZOS {
     override def close(): Unit = {
       if (open) {
         open = false
-        CloudLogging.stdout("Closing " + r.getDDName + " " + r.getDsn)
+        logger.info("Closing " + r.getDDName + " " + r.getDsn)
         Try(r.close()).failed.foreach(t => logger.error(t.getMessage))
       }
     }
@@ -164,13 +164,11 @@ protected object ZOS {
     override def close(): Unit = {
       if (open) {
         open = false
-        CloudLogging.stdout("WrappedRecordWriter Closing " + w.getDDName + " " + w.getDsn)
+        logger.info("WrappedRecordWriter Closing " + w.getDDName + " " + w.getDsn)
         w.flush()
         Try(w.close()).failed.foreach{t =>
           val msg = "WrappedRecordWriter ERROR " + t.getMessage
-          CloudLogging.stdout(msg)
-          CloudLogging.stderr(msg)
-          t.printStackTrace(System.err)
+          logger.error(msg, t)
         }
       }
     }
@@ -205,8 +203,7 @@ protected object ZOS {
       } else {
         if (count >= limit) {
           val msg = s"RecordIterator ERROR ${r.getDsn} exceeded $limit record limit"
-          CloudLogging.stdout(msg)
-          CloudLogging.stderr(msg)
+          logger.error(msg)
         }
         close()
         null
@@ -224,10 +221,10 @@ protected object ZOS {
   def ddExists(ddName: String): Boolean = ZFile.ddExists(ddName)
 
   def readDSN(dsn: DSN): ZRecordReaderT = {
-    CloudLogging.stdout(s"Opening RecordReader for $dsn")
+    logger.info(s"Opening RecordReader for $dsn")
     try {
       val reader = RecordReader.newReader(dsn.fqdsn, ZFileConstants.FLAG_DISP_SHR)
-      CloudLogging.stdout(
+      logger.info(
         s"""Opened ${reader.getClass.getSimpleName}
            |DSN=${reader.getDsn}
            |RECFM=${reader.getRecfm}
@@ -246,15 +243,14 @@ protected object ZOS {
         sb.append(s"DSN=$dsn doesn't exist\n")
         sb.append(e.getMessage)
         val msg = sb.result
-        CloudLogging.stdout(msg)
-        CloudLogging.printStackTrace(e)
+        logger.error(msg, e)
         throw new RuntimeException(msg, e)
       case e: Throwable =>
         val sb = new StringBuilder
         sb.append(s"Failed to open DSN=$dsn\n")
         if (e.getMessage != null) sb.append(e.getMessage)
         val msg = sb.result
-        CloudLogging.stdout(msg)
+        logger.error(msg, e)
         throw new RuntimeException(msg, e)
     }
   }
@@ -304,24 +300,14 @@ protected object ZOS {
           writer.close()
         } catch {
           case e: ZFileException =>
-            val sw = new StringWriter()
-            val pw = new PrintWriter(sw)
-            e.printStackTrace(pw)
-            val msg = s"Failed to close writer for $ddname\n" + e.getMessage +"\n" + sw.toString
-            CloudLogging.stdout(msg)
-            CloudLogging.stderr(msg)
+            logger.error(s"Failed to close writer for $ddname\nmessage:${e.getMessage}", e)
         }
       }
       try {
         ZFile.bpxwdyn(s"free fi($ddname) msg(2)")
       } catch {
         case e: RcException =>
-          val sw = new StringWriter()
-          val pw = new PrintWriter(sw)
-          e.printStackTrace(pw)
-          val msg = s"Failed to free DD $ddname\n" + e.getMessage +"\n" + sw.toString
-          CloudLogging.stdout(msg)
-          CloudLogging.stderr(msg)
+          logger.error(s"Failed to free DD $ddname\nmessage:${e.getMessage}", e)
       }
     }
   }
@@ -341,11 +327,11 @@ protected object ZOS {
     * @return ZRecordReaderT
     */
   def readDD(ddName: String): ZRecordReaderT = {
-    CloudLogging.stdout(s"Reading DD:$ddName")
+    logger.info(s"Reading DD:$ddName")
 
     try {
       val reader: RecordReader = RecordReader.newReaderForDD(ddName)
-      CloudLogging.stdout(
+      logger.info(
         s"""Opened ${reader.getClass.getSimpleName}
            |DSN=${reader.getDsn}
            |RECFM=${reader.getRecfm}
@@ -356,8 +342,7 @@ protected object ZOS {
         // Close the dataset to avoid SC03 Abend
         reader.close()
         val msg = s"DD:$ddName not found"
-        CloudLogging.stdout(msg)
-        CloudLogging.stderr(msg)
+        logger.error(msg)
         throw new DDException(msg)
       }
 
@@ -447,7 +432,7 @@ protected object ZOS {
     }
 
     val ddList = buf.toList
-    CloudLogging.stdout(s"""JOBNAME: $jobName
+    logger.info(s"""JOBNAME: $jobName
                            |JOBID: $jobId
                            |PROCSTEPNAME: $procStepName
                            |STEPNAME: $stepName

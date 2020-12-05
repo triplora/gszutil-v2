@@ -19,9 +19,9 @@ import java.math.BigInteger
 import java.nio.ByteBuffer
 import java.time.{LocalDate, Month}
 
-import com.google.cloud.imf.gzos.{Binary, PackedDecimal}
 import com.google.cloud.imf.gzos.pb.GRecvProto.Record.Field
 import com.google.cloud.imf.gzos.pb.GRecvProto.Record.Field.NullIf
+import com.google.cloud.imf.gzos.{Binary, PackedDecimal}
 import com.google.cloud.imf.util.Logging
 import com.google.protobuf.ByteString
 import org.apache.hadoop.hive.ql.exec.vector.{BytesColumnVector, ColumnVector, DateColumnVector, Decimal64ColumnVector, LongColumnVector, TimestampColumnVector}

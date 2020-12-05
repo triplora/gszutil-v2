@@ -6,9 +6,9 @@ import com.google.cloud.bigquery.{FieldValue, StandardSQLTypeName}
 import com.google.cloud.imf.gzos.pb.GRecvProto.Record.Field
 import com.google.cloud.imf.gzos.pb.GRecvProto.Record.Field.FieldType
 import com.google.cloud.imf.gzos.{Binary, PackedDecimal}
-import com.google.cloud.imf.util.CloudLogging
+import com.google.cloud.imf.util.Logging
 
-object Encoding {
+object Encoding extends Logging {
 
   def getEncoder(f: Field, transcoder: Transcoder): BinaryEncoder = {
     if (f.getTyp == FieldType.STRING)
@@ -34,8 +34,7 @@ object Encoding {
 
       if (x.length > size) {
         val msg = s"ERROR StringToBinaryEncoder string overflow ${x.length} > $size"
-        CloudLogging.stdout(msg)
-        CloudLogging.stderr(msg)
+        logger.error(msg)
         throw new RuntimeException(msg)
       }
 

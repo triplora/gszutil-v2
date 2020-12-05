@@ -61,8 +61,6 @@ class QuerySpec extends AnyFlatSpec {
     val stats = job.getStatistics[QueryStatistics]
     val conf = job.getConfiguration[QueryJobConfiguration]
     val destTable = conf.getDestinationTable
-    System.out.println(destTable)
-    System.out.println(stats)
 
     import scala.jdk.CollectionConverters.IterableHasAsScala
 
@@ -74,21 +72,8 @@ class QuerySpec extends AnyFlatSpec {
 
     rows.foreach{row =>
       val size = row.size()
-      if (cols != size) System.out.println(s"schema cols $cols != $size row size")
-      val fields = (0 until cols).map{i => (i,schema.get(i),row.get(i))}
-      fields.foreach{f =>
-        System.out.println(f)
-        f._3.getValue match {
-          case s: String =>
-            System.out.println(s"${f._2.getName} $s")
-          case x =>
-            if (x != null)
-              System.out.println(s"${f._1} ${f._2.getName} $x ${x.getClass.getSimpleName}")
-            else
-              System.out.println(s"${f._1} ${f._2.getName} $x")
-        }
-
-      }
+      // set breakpoint here to inspect result set in debugger
+      assert(cols != size, s"schema cols $cols != $size row size")
     }
   }
 

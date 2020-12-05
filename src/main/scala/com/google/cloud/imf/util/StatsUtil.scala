@@ -83,7 +83,7 @@ object StatsUtil extends Logging {
     val plan: Seq[QueryStage] =
       if (state != JobStatus.State.DONE) {
         // TODO remove this when NPE in QueryStage.fromPb is fixed
-        CloudLogging.stdout(s"unable to get QueryPlan for job with state=$state")
+        logger.warn(s"unable to get QueryPlan for job with state=$state")
         Nil
       } else l2l(stats.getQueryPlan)
 
@@ -487,9 +487,7 @@ object StatsUtil extends Logging {
         sb.append(s"message: ${e.getMessage}\n")
         sb.append(s"reason: ${e.getReason}\n\n")
       }
-      val errMsg = sb.result
-      CloudLogging.stderr(errMsg)
-      logger.error(errMsg)
+      logger.error(sb.result)
     }
   }
 }

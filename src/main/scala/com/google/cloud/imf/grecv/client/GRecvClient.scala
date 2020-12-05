@@ -13,7 +13,7 @@ import com.google.cloud.imf.grecv.{GRecvProtocol, GzipCodec, Uploader}
 import com.google.cloud.imf.gzos.MVS
 import com.google.cloud.imf.gzos.pb.GRecvGrpc
 import com.google.cloud.imf.gzos.pb.GRecvProto.GRecvRequest
-import com.google.cloud.imf.util.{CloudLogging, Logging, Services}
+import com.google.cloud.imf.util.{Logging, Services}
 import com.google.protobuf.util.JsonFormat
 import io.grpc.okhttp.OkHttpChannelBuilder
 
@@ -25,7 +25,7 @@ object GRecvClient extends Uploader with Logging {
           in: ZRecordReaderT,
           schemaProvider: SchemaProvider,
           receiver: Uploader): Result = {
-    CloudLogging.stdout(s"GRecvClient Starting Dataset Upload to ${cfg.gcsUri}")
+    logger.info(s"GRecvClient Starting Dataset Upload to ${cfg.gcsUri}")
 
     try {
       val req = GRecvRequest.newBuilder
@@ -161,7 +161,7 @@ object GRecvClient extends Uploader with Logging {
       val stub = GRecvGrpc.newBlockingStub(ch)
         .withDeadlineAfter(90, TimeUnit.MINUTES)
       val req = request.toBuilder.setSrcUri(in.uri).build()
-      CloudLogging.stdout(
+      logger.info(
         s"""Sending GRecvRequest request
            |in:${req.getSrcUri}
            |out:${req.getBasepath}""".stripMargin)
@@ -177,7 +177,7 @@ object GRecvClient extends Uploader with Logging {
           .includingDefaultValueFields()
           .omittingInsignificantWhitespace()
           .print(res)
-        CloudLogging.stdout(s"Request complete. DSN=${in.dsn} rowCount=${res.getRowCount} " +
+        logger.info(s"Request complete. DSN=${in.dsn} rowCount=${res.getRowCount} " +
           s"errorCount=${res.getErrCount} $resStr")
         Result(activityCount = rowCount, message = s"Completed with " +
           s"$errCount errors")

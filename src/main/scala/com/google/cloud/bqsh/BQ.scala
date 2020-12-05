@@ -16,18 +16,17 @@
 
 package com.google.cloud.bqsh
 
-import java.io.{PrintWriter, StringWriter}
 import java.time.LocalDateTime
 
 import com.google.cloud.bigquery.{BigQuery, BigQueryError, BigQueryException, DatasetId, Field, FieldList, Job, JobId, JobInfo, JobStatus, QueryJobConfiguration, Schema, StandardSQLTypeName, TableId}
 import com.google.cloud.imf.gzos.{MVS, Util}
-import com.google.cloud.imf.util.{CloudLogging, Logging, StatsUtil}
 import com.google.cloud.imf.util.StatsUtil.EnhancedJob
+import com.google.cloud.imf.util.{Logging, StatsUtil}
 import com.google.common.collect.ImmutableList
 
 import scala.annotation.tailrec
 import scala.jdk.CollectionConverters.IterableHasAsScala
-import scala.util.{Failure, Random, Success, Try}
+import scala.util.{Failure, Success, Try}
 
 object BQ extends Logging {
   def genJobId(projectId: String, location: String, zos: MVS, jobType: String): JobId = {
@@ -65,7 +64,7 @@ object BQ extends Logging {
     val n = tbl.getNumRows.longValueExact
     val nBytes = tbl.getNumBytes.longValue
     val ts = StatsUtil.epochMillis2Timestamp(tbl.getLastModifiedTime)
-    CloudLogging.stdout(s"${tableSpec(table)} contains $n rows $nBytes bytes as of $ts")
+    logger.info(s"${tableSpec(table)} contains $n rows $nBytes bytes as of $ts")
     n
   }
 
@@ -142,12 +141,8 @@ object BQ extends Logging {
         logger.info(s"${toStr(jobId)} Status = DONE")
         job
       case Failure(e) =>
-        val sw = new StringWriter()
-        val pw = new PrintWriter(sw)
-        e.printStackTrace(pw)
-        val stackTrace = sw.toString
         logger.error(s"BigQuery Job failed jobid=${toStr(jobId)}\n" +
-          s"${e.getMessage}\n$stackTrace", e)
+          s"message=${e.getMessage}", e)
         throw e
       case Success(None) =>
         throw new RuntimeException(s"BigQuery Job not found jobid=${toStr(jobId)}")
@@ -239,7 +234,7 @@ object BQ extends Logging {
       sb.append("Errors:\n")
       sb.append(errMsgs)
 
-      CloudLogging.stderr(sb.result)
+      logger.error(sb.result)
       throw new RuntimeException(errMsgs)
     }
   }

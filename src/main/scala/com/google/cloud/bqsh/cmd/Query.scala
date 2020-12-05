@@ -16,11 +16,11 @@
 
 package com.google.cloud.bqsh.cmd
 
-import com.google.cloud.bigquery.{BigQueryException, Clustering, JobInfo, JobStatistics, JobStatus, QueryJobConfiguration, QueryParameterValue, StandardSQLTypeName, TimePartitioning}
+import com.google.cloud.bigquery.{BigQueryException, Clustering, JobInfo, QueryJobConfiguration, QueryParameterValue, StandardSQLTypeName, TimePartitioning}
 import com.google.cloud.bqsh.{ArgParser, BQ, Bqsh, Command, QueryConfig, QueryOptionParser}
 import com.google.cloud.imf.gzos.MVS
 import com.google.cloud.imf.util.StatsUtil.EnhancedJob
-import com.google.cloud.imf.util.{CloudLogging, Logging, Services, StatsUtil}
+import com.google.cloud.imf.util.{Logging, Services, StatsUtil}
 
 
 object Query extends Command[QueryConfig] with Logging {
@@ -29,7 +29,7 @@ object Query extends Command[QueryConfig] with Logging {
 
   override def run(cfg: QueryConfig, zos: MVS, env: Map[String,String]): Result = {
     val creds = zos.getCredentialProvider().getCredentials
-    CloudLogging.stdout(s"Initializing BigQuery client\n" +
+    logger.info(s"Initializing BigQuery client\n" +
       s"projectId=${cfg.projectId} location=${cfg.location}")
     val bq = Services.bigQuery(cfg.projectId, cfg.location, creds)
 
@@ -69,17 +69,15 @@ object Query extends Command[QueryConfig] with Logging {
             } else {
               val msg = s"Query job state=${s.state} but expected DONE"
               logger.error(msg)
-              CloudLogging.stderr(msg)
             }
           } else {
             val msg = s"Query job status not available"
             logger.error(msg)
-            CloudLogging.stderr(msg)
           }
         }
         val jobInfo = new EnhancedJob(job)
 
-        CloudLogging.stdout(jobInfo.report)
+        logger.info("Job Statistics:\n" + jobInfo.report)
 
         // Publish results
         if (cfg.sync && cfg.statsTable.nonEmpty) {
@@ -141,7 +139,7 @@ object Query extends Command[QueryConfig] with Logging {
         }
       } catch {
         case e: BigQueryException =>
-          CloudLogging.stderr(s"Query Job threw BigQueryException\nMessage:${e.getMessage}\n" +
+          logger.error(s"Query Job threw BigQueryException\nMessage:${e.getMessage}\n" +
             s"Query:\n$query\n")
           result = Result.Failure(e.getMessage)
       }
