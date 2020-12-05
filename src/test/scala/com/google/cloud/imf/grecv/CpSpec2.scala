@@ -1,11 +1,8 @@
 package com.google.cloud.imf.grecv
 
-import java.nio.charset.StandardCharsets
-
 import com.google.cloud.bqsh.GsUtilConfig
 import com.google.cloud.bqsh.cmd.Cp
-import com.google.cloud.gszutil.io.ZDataSet
-import com.google.cloud.gszutil.{CopyBook, RecordSchema, TestUtil}
+import com.google.cloud.gszutil.{CopyBook, RecordSchema}
 import com.google.cloud.imf.grecv.client.GRecvClient
 import com.google.cloud.imf.grecv.server.GRecvServer
 import com.google.cloud.imf.gzos.gen.DataGenUtil
@@ -13,7 +10,6 @@ import com.google.cloud.imf.gzos.pb.GRecvProto.Record.Field
 import com.google.cloud.imf.gzos.pb.GRecvProto.{GRecvRequest, Record}
 import com.google.cloud.imf.gzos.{Linux, PackedDecimal, Util}
 import com.google.cloud.imf.util.{CloudLogging, Services}
-import com.google.protobuf.util.JsonFormat
 import org.scalatest.BeforeAndAfterAll
 import org.scalatest.flatspec.AnyFlatSpec
 
@@ -38,30 +34,6 @@ class CpSpec2 extends AnyFlatSpec with BeforeAndAfterAll {
 
   override def afterAll(): Unit = {
     grecvServer.foreach(_.shutdown())
-  }
-
-  "Cp" should "copy" in {
-    val copybook = new String(TestUtil.resource("FLASH_STORE_DEPT.cpy.txt"),
-      StandardCharsets.UTF_8)
-    val schema = CopyBook(copybook).toRecordBuilder.build
-    JsonFormat.printer().print(schema)
-    val schemaProvider = RecordSchema(schema)
-
-    val input = new ZDataSet(TestUtil.resource("FLASH_STORE_DEPT_50k.bin"),136, 27880)
-
-    val cfg1 = GsUtilConfig(schemaProvider = Option(schemaProvider),
-                           gcsUri = "gs://gszutil-test/FLASH_STORE_DEPT",
-                           projectId = "pso-wmt-dl",
-                           datasetId = "dataset",
-                           testInput = Option(input),
-                           parallelism = 1,
-                           nConnections = 3,
-                           replace = true,
-                           remote = true,
-                           remoteHost = serverCfg.host,
-                           remotePort = serverCfg.port)
-    val res = Cp.run(cfg1, Linux, Map.empty)
-    assert(res.exitCode == 0)
   }
 
   "GRecvClient" should "upload" in {
