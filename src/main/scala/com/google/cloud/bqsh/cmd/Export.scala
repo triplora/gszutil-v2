@@ -33,7 +33,7 @@ object Export extends Command[ExportConfig] with Logging {
   override val name: String = "bq export"
   override val parser: ArgParser[ExportConfig] = ExportOptionParser
 
-  def run(cfg: ExportConfig, zos: MVS): Result = {
+  override def run(cfg: ExportConfig, zos: MVS, env: Map[String,String]): Result = {
     val creds = zos.getCredentialProvider().getCredentials
     CloudLogging.stdout(s"Initializing BigQuery client\n" +
       s"projectId=${cfg.projectId} location=${cfg.location}")

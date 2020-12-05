@@ -27,7 +27,7 @@ object Query extends Command[QueryConfig] with Logging {
   override val name: String = "bq query"
   override val parser: ArgParser[QueryConfig] = QueryOptionParser
 
-  def run(cfg: QueryConfig, zos: MVS): Result = {
+  override def run(cfg: QueryConfig, zos: MVS, env: Map[String,String]): Result = {
     val creds = zos.getCredentialProvider().getCredentials
     CloudLogging.stdout(s"Initializing BigQuery client\n" +
       s"projectId=${cfg.projectId} location=${cfg.location}")

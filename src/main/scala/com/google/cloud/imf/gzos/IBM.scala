@@ -48,7 +48,8 @@ object IBM extends MVS with Logging {
   override def writeDSN(dsn: DSN): ZRecordWriterT = ZOS.writeDSN(dsn)
   override def writeDD(dd: String): ZRecordWriterT = ZOS.writeDD(dd)
   override def dsInfo(dd: String): Option[DataSetInfo] = ZOS.getDatasetInfo(dd)
-  override def readDD(dd: String): ZRecordReaderT = {
+  override def readDD(dd: String): ZRecordReaderT = ZOS.readDD(dd)
+  override def readCloudDD(dd: String): ZRecordReaderT = {
     // Check for Cloud Dataset
     dsInfo(dd) match {
       case Some(ds) =>

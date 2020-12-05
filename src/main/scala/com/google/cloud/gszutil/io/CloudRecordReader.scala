@@ -46,6 +46,6 @@ case class CloudRecordReader(dsn: String,
   override def isOpen: Boolean = false
   override def getDsn: String = dsn
   override def count(): Long = 0
-  def uri: String = s"gs://$bucket/$name"
+  val uri: String = s"gs://$bucket/$name"
   override val blkSize: Int = lRecl
 }

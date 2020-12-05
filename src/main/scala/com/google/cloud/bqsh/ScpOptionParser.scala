@@ -36,18 +36,18 @@ object ScpOptionParser extends OptionParser[ScpConfig]("scp") with ArgParser[Scp
 
   opt[String]("inDD")
     .optional
-    .text("DD to read")
+    .text("DD to be uploaded (INFILE will be used if not provided)")
     .action((x,c) => c.copy(inDD = x))
 
   opt[String]("inDsn")
     .optional
-    .text("DSN to read")
+    .text("DSN to be uploaded")
     .action((x,c) => c.copy(inDsn = x))
 
-  opt[String]("outUri")
-    .required
-    .text("GCS URI to write data to")
-    .action((x,c) => c.copy(outUri = x))
+  opt[String]("gcsOutUri")
+    .optional
+    .text("GCS URI of dataset copy")
+    .action((x,c) => c.copy(gcsOutUri = x))
 
   checkConfig{x =>
     if (x.inDD.nonEmpty && x.inDsn.nonEmpty) {

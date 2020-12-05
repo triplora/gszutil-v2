@@ -52,7 +52,7 @@ object ShowTable extends Command[ShowTableConfig] with Logging {
     sb.result
   }
 
-  def run(cfg: ShowTableConfig, zos: MVS): Result = {
+  override def run(cfg: ShowTableConfig, zos: MVS, env: Map[String,String]): Result = {
     val creds = zos.getCredentialProvider().getCredentials
     val bq = Services.bigQuery(cfg.projectId, cfg.location, creds)
     val tableSpec = BQ.resolveTableSpec(cfg.tablespec, cfg.projectId, cfg.datasetId)

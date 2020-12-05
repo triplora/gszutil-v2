@@ -75,7 +75,7 @@ object GRecvTest {
       remote = true,
       remoteHost = "127.0.0.1",
       remotePort = 51771)
-    val res = Cp.run(cfg, Linux)
+    val res = Cp.run(cfg, Linux, Map.empty)
     assert(res.exitCode == 0)
   }
 }

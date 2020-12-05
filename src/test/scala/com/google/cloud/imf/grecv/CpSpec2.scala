@@ -60,7 +60,7 @@ class CpSpec2 extends AnyFlatSpec with BeforeAndAfterAll {
                            remote = true,
                            remoteHost = serverCfg.host,
                            remotePort = serverCfg.port)
-    val res = Cp.run(cfg1, Linux)
+    val res = Cp.run(cfg1, Linux, Map.empty)
     assert(res.exitCode == 0)
   }
 
@@ -92,8 +92,7 @@ class CpSpec2 extends AnyFlatSpec with BeforeAndAfterAll {
       .setBasepath("gs://gszutil-test/prefix")
       .build
 
-    val sendResult = GRecvClient.upload(request, serverCfg.host, serverCfg.port, 1, Util
-      .zProvider, in, "gs://gszutil-test/dsn")
+    val sendResult = GRecvClient.upload(request, serverCfg.host, serverCfg.port, 1, Util.zProvider, in)
     assert(sendResult.exitCode == 0)
   }
 
@@ -125,7 +124,7 @@ class CpSpec2 extends AnyFlatSpec with BeforeAndAfterAll {
       remote = true,
       remoteHost = serverCfg.host,
       remotePort = serverCfg.port)
-    val res = Cp.run(cfg, Linux)
+    val res = Cp.run(cfg, Linux, Map.empty)
     assert(res.exitCode == 0)
   }
 }

@@ -107,7 +107,7 @@ class QuerySpec extends AnyFlatSpec {
            |  ,QTY INT64
            |  ,AMT NUMERIC
            |);""".stripMargin
-    ), zos)
+    ), zos, Map.empty)
 
     Query.run(QueryConfig(
       projectId = projectId,
@@ -119,7 +119,7 @@ class QuerySpec extends AnyFlatSpec {
            | 1 as YR_WK,
            | 1 as QTY,
            | NUMERIC '1.01'as AMT""".stripMargin
-    ), zos)
+    ), zos, Map.empty)
   }
 
   it should "print merge stats" in {
@@ -155,7 +155,7 @@ class QuerySpec extends AnyFlatSpec {
          |  (1,1,1,NUMERIC '1.01')
          | ,(2,1,1,NUMERIC '1.01')
          |;""".stripMargin
-    ), zos)
+    ), zos, Map.empty)
 
     Query.run(QueryConfig(
       projectId = projectId,
@@ -170,7 +170,7 @@ class QuerySpec extends AnyFlatSpec {
                |SET D.QTY = S.QTY
                |   ,D.AMT = S.AMT
                |;""".stripMargin
-    ), zos)
+    ), zos, Map.empty)
   }
 
   it should "print merge stats for aggregate" in {
@@ -207,7 +207,7 @@ class QuerySpec extends AnyFlatSpec {
            | ,(1,1,1,NUMERIC '1.01')
            | ,(2,1,1,NUMERIC '1.01')
            |;""".stripMargin
-    ), zos)
+    ), zos, Map.empty)
 
     Query.run(QueryConfig(
       projectId = projectId,
@@ -230,6 +230,6 @@ class QuerySpec extends AnyFlatSpec {
                |SET
                |   D.QTY = S.QTY
                |  ,D.AMT = S.AMT""".stripMargin
-    ), zos)
+    ), zos, Map.empty)
   }
 }

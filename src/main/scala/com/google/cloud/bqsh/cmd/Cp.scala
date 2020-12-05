@@ -31,7 +31,7 @@ import com.google.cloud.storage.{BlobId, Storage}
 object Cp extends Command[GsUtilConfig] with Logging {
   override val name: String = "gsutil cp"
   override val parser: ArgParser[GsUtilConfig] = GsUtilOptionParser
-  def run(c: GsUtilConfig, zos: MVS): Result = {
+  override def run(c: GsUtilConfig, zos: MVS, env: Map[String,String]): Result = {
     val creds = zos
       .getCredentialProvider()
       .getCredentials
@@ -44,11 +44,11 @@ object Cp extends Command[GsUtilConfig] with Logging {
     }
 
     val schemaProvider = c.schemaProvider.getOrElse(zos.loadCopyBook(c.copyBook))
-    val in: ZRecordReaderT = c.testInput.getOrElse(zos.readDD(c.source))
+    val in: ZRecordReaderT = c.testInput.getOrElse(zos.readCloudDD(c.source))
     logger.info(s"gsutil cp ${in.getDsn} ${c.gcsUri}")
     val batchSize = (c.blocksPerBatch * in.blkSize) / in.lRecl
     if (c.replace) {
-      GsUtilRm.run(c.copy(recursive = true), zos)
+      GsUtilRm.run(c.copy(recursive = true), zos, env)
     } else {
       val uri = new URI(c.gcsUri)
       val withTrailingSlash = uri.getPath.stripPrefix("/").stripSuffix("/") + "/"
@@ -106,7 +106,7 @@ object Cp extends Command[GsUtilConfig] with Logging {
 
     // cleanup temp files
     GsUtilRm.run(c.copy(recursive = true,
-      gcsUri = c.gcsUri.stripSuffix("/") + "/tmp"), zos)
+      gcsUri = c.gcsUri.stripSuffix("/") + "/tmp"), zos, env)
 
     result
   }

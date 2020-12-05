@@ -19,7 +19,7 @@ package com.google.cloud.bqsh
 case class GsZUtilConfig(
                           inDsn: String = "",
                           gcsOutUri: String = "",
-                          copyBookDsn: String = "",
+                          cobDsn: String = "",
                           transformDsn: String = "",
                           remoteHost: String = "",
                           remotePort: Int = 51770)

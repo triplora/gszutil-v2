@@ -25,7 +25,7 @@ object Load extends Command[LoadConfig] with Logging {
   override val name: String = "bq load"
   override val parser: ArgParser[LoadConfig] = LoadOptionParser
 
-  override def run(cfg: LoadConfig, zos: MVS): Result = {
+  override def run(cfg: LoadConfig, zos: MVS, env: Map[String,String]): Result = {
     val creds = zos.getCredentialProvider().getCredentials
     CloudLogging.stdout(s"Initializing BigQuery client\n" +
       s"projectId=${cfg.projectId} location=${cfg.location}")

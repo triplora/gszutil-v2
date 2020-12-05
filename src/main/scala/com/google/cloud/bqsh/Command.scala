@@ -22,5 +22,5 @@ import com.google.cloud.imf.gzos.MVS
 trait Command[T] {
   val name: String
   val parser: ArgParser[T]
-  def run(config: T, zos: MVS): Result
+  def run(config: T, zos: MVS, env: Map[String,String]): Result
 }

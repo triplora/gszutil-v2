@@ -32,6 +32,7 @@ trait MVS {
   def writeDSN(dsn: DSN): ZRecordWriterT
   def writeDD(ddName: String): ZRecordWriterT
   def dsInfo(dd: String): Option[DataSetInfo]
+  def readCloudDD(dd: String): ZRecordReaderT
   def readDD(dd: String): ZRecordReaderT
   def readStdin(): String
   def readDDString(dd: String, recordSeparator: String): String

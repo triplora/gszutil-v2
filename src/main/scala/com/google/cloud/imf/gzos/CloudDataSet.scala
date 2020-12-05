@@ -23,12 +23,37 @@ import com.google.cloud.imf.util.{CloudLogging, Logging, StatsUtil}
 import com.google.cloud.storage.{Blob, BlobId, Storage}
 
 object CloudDataSet extends Logging {
-  private var baseDsnUri: Option[URI] = sys.env.get("GCSDSNURI").map(new URI(_))
-  private var baseGdgUri: Option[URI] = sys.env.get("GCSGDGURI").map(new URI(_))
+  val DsnVar = "GCSDSNURI"
+  val GdgVar = "GCSGDGURI"
+  val LreclMeta = "x-goog-meta-lrecl"
+  private var baseDsnUri: Option[URI] = sys.env.get(DsnVar).map(new URI(_))
+  private var baseGdgUri: Option[URI] = sys.env.get(GdgVar).map(new URI(_))
+  def readEnv(env: Map[String,String]): Unit = {
+    env.get(DsnVar).foreach {uri =>
+      setBaseDsnUri(uri)
+      logger.info(s"read $DsnVar from ENV: $uri")
+    }
+    env.get(GdgVar).foreach {uri =>
+      setBaseGdgUri(uri)
+      logger.info(s"read $GdgVar from ENV: $uri")
+    }
+  }
   def setBaseDsnUri(uri: String): Unit = baseDsnUri = Option(new URI(uri))
   def setBaseGdgUri(uri: String): Unit = baseGdgUri = Option(new URI(uri))
   def getBaseDsnUri: Option[URI] = baseDsnUri
   def getBaseGdgUri: Option[URI] = baseGdgUri
+
+  def getUri(ds: DataSetInfo): Option[String] = {
+    if (ds.gdg && CloudDataSet.getBaseGdgUri.isDefined) {
+      val baseUri = CloudDataSet.getBaseGdgUri.get
+      val name = CloudDataSet.buildObjectName(baseUri, ds)
+      Option(s"gs://${baseUri.getAuthority}/$name")
+    } else if (CloudDataSet.getBaseDsnUri.isDefined) {
+      val baseUri = CloudDataSet.getBaseDsnUri.get
+      val name = CloudDataSet.buildObjectName(baseUri, ds)
+      Option(s"gs://${baseUri.getAuthority}/$name")
+    } else None
+  }
 
   def readCloudDDDSN(gcs: Storage, dd: String, ddInfo: DataSetInfo): Option[CloudRecordReader] = {
     getBaseDsnUri match {
@@ -51,9 +76,11 @@ object CloudDataSet extends Logging {
 
   def getLrecl(blob: Blob): Int = {
     val uri = toUri(blob)
-    val lreclStr = blob.getMetadata.get("lrecl")
+    val lreclStr = blob.getMetadata.get(LreclMeta)
     if (lreclStr == null) {
-      val msg = s"lrecl not set for $uri"
+      import scala.jdk.CollectionConverters.MapHasAsScala
+      val meta = blob.getMetadata.asScala.map{x => s"${x._1}=${x._2}"}.mkString("\n")
+      val msg = s"$LreclMeta not set for $uri\n$meta"
       CloudLogging.stdout(msg)
       CloudLogging.stderr(msg)
       throw new RuntimeException(msg)
@@ -136,7 +163,7 @@ object CloudDataSet extends Logging {
       versions.foreach{b =>
         sb.append(b.getGeneration)
         sb.append(" ")
-        sb.append(b.getMetadata.getOrDefault("lrecl","?"))
+        sb.append(b.getMetadata.getOrDefault(LreclMeta,"?"))
         sb.append(" ")
         sb.append(b.getSize)
         sb.append(" ")

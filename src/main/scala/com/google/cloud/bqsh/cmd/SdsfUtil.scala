@@ -17,7 +17,7 @@ import scala.jdk.CollectionConverters._
 object SdsfUtil extends Command[SdsfUtilConfig] with Logging {
   override val name: String = "sdsfutil"
   override val parser: ArgParser[SdsfUtilConfig] = SdsfUtilOptionParser
-  override def run(config: SdsfUtilConfig, zos: MVS): Result = {
+  override def run(config: SdsfUtilConfig, zos: MVS, env: Map[String,String]): Result = {
     val runner = getJobs(config.jobPrefix, config.owner).runner
     val gcs = Services.storage(zos.getCredentialProvider().getCredentials.createScoped(StorageScopes.DEVSTORAGE_READ_WRITE))
     try {

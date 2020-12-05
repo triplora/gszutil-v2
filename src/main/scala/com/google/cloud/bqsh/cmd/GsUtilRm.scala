@@ -26,7 +26,7 @@ import com.google.cloud.storage.{BlobId, Storage}
 object GsUtilRm extends Command[GsUtilConfig] with Logging {
   override val name: String = "gsutil rm"
   override val parser: ArgParser[GsUtilConfig] = GsUtilOptionParser
-  override def run(c: GsUtilConfig, zos: MVS): Result = {
+  override def run(c: GsUtilConfig, zos: MVS, env: Map[String,String]): Result = {
     val creds = zos.getCredentialProvider()
       .getCredentials
     logger.info(s"gsutil rm ${c.gcsUri}")

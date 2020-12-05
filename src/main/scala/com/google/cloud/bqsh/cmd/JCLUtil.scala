@@ -10,7 +10,7 @@ object JCLUtil extends Command[JCLUtilConfig] with Logging {
   override val name: String = "jclutil"
   override val parser: ArgParser[JCLUtilConfig] = JCLUtilOptionParser
 
-  override def run(config: JCLUtilConfig, zos: MVS): Result = {
+  override def run(config: JCLUtilConfig, zos: MVS, env: Map[String,String]): Result = {
     val transform: (String) => String = replacePrefix(_, "BQ")
     val members = zos.listPDS(config.srcDSN)
 

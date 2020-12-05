@@ -23,7 +23,7 @@ with ArgParser[GsZUtilConfig]{
   override def parse(args: Seq[String]): Option[GsZUtilConfig] = {
     val envCfg = GsZUtilConfig(
       gcsOutUri = sys.env.getOrElse("GCSOUTURI", ""),
-      remoteHost = sys.env.getOrElse("SRVHOST",""),
+      remoteHost = sys.env.getOrElse("SRVHOSTNAME",""),
       remotePort = sys.env.getOrElse("SRVPORT","51770").toInt,
     )
     parse(args, envCfg)
@@ -33,13 +33,29 @@ with ArgParser[GsZUtilConfig]{
 
   help("help").text("prints this usage text")
 
+  opt[String]("cobDsn")
+    .optional
+    .text("DSN of copybook")
+    .action((x,c) => c.copy(cobDsn = x))
+
   opt[String]("inDsn")
     .optional
-    .text("DSN to read")
+    .text("DSN of data set to be transcoded to ORC")
     .action((x,c) => c.copy(inDsn = x))
 
   opt[String]("gcsOutUri")
     .optional
-    .text("Cloud Storage prefix for output ORC files (format: gs://BUCKET/PREFIX")
+    .text("Cloud Storage prefix for output ORC files (format: gs://BUCKET/PREFIX)")
     .action((x,c) => c.copy(gcsOutUri = x))
+
+  opt[String]("remoteHost")
+    .optional
+    .text("hostname or IP address of GRecv transcoding service (default: obtained from " +
+      "SRVHOSTNAME environment variable)")
+    .action((x,c) => c.copy(remoteHost = x))
+
+  opt[String]("remotePort")
+    .optional
+    .text("port of GRecv transcoding service (default: 51770 or SRVPORT environment variable)")
+    .action((x,c) => c.copy(remoteHost = x))
 }

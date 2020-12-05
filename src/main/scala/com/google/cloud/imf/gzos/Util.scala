@@ -30,7 +30,7 @@ import com.google.common.base.Charsets
 import com.google.common.collect.ImmutableSet
 import com.google.common.io.{BaseEncoding, Resources}
 
-import scala.util.Random
+import scala.util.{Random, Try}
 
 object Util {
   final val isIbm = System.getProperty("java.vm.vendor").contains("IBM")
@@ -172,5 +172,11 @@ object Util {
     bytes.grouped(lRecl)
       .map{b => trimRight(new String(b, charset),' ')}
       .mkString(recordSeparator)
+  }
+
+  /** Exit with ascii art */
+  def exit: Unit = {
+    Try(System.out.println(readS("logo.txt")))
+    System.exit(0)
   }
 }

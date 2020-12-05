@@ -55,8 +55,11 @@ object Linux extends MVS with Logging {
         None
     }
   }
-
   override def readDD(dd: String): ZRecordReaderT = {
+    ddFile(dd)
+  }
+
+  override def readCloudDD(dd: String): ZRecordReaderT = {
     // Get DD information from z/OS
     dsInfo(dd) match {
       case Some(ddInfo) =>

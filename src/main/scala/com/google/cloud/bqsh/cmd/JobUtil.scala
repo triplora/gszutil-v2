@@ -11,7 +11,7 @@ object JobUtil extends Command[JobUtilConfig] with Logging {
   override val name: String = "jclutil"
   override val parser: ArgParser[JobUtilConfig] = JobUtilOptionParser
 
-  override def run(config: JobUtilConfig, zos: MVS): Result = {
+  override def run(config: JobUtilConfig, zos: MVS, env: Map[String,String]): Result = {
     if (config.filter.nonEmpty)
       System.out.println(s"Filter regex = '${config.filter}'")
 

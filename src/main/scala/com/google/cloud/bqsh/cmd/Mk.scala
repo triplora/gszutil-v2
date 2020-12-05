@@ -25,7 +25,7 @@ object Mk extends Command[MkConfig] with Logging {
   override val name: String = "bq mk"
   override val parser: ArgParser[MkConfig] = MkOptionParser
 
-  def run(cfg: MkConfig, zos: MVS): Result = {
+  override def run(cfg: MkConfig, zos: MVS, env: Map[String,String]): Result = {
     val creds = zos.getCredentialProvider().getCredentials
     CloudLogging.stdout(s"Initializing BigQuery client\n" +
       s"projectId=${cfg.projectId} location=${cfg.location}")

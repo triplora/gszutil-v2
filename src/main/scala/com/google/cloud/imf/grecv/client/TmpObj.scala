@@ -71,27 +71,33 @@ case class TmpObj(bucket: String,
       val hash = hasher.hash().toString
       logger.debug(s"Requesting write to ORC for $srcUri")
       val ch = cb.build()
-      val stub = GRecvGrpc.newBlockingStub(ch)
-        .withCompression("gzip")
-        .withDeadlineAfter(3000, TimeUnit.SECONDS)
-      // send the request to the gRPC server, causing it to transcode to ORC
-      val res = stub.write(request.toBuilder.setSrcUri(srcUri).build())
-      ch.shutdownNow()
-      logger.info(s"Request complete. uri=$srcUri rowCount=${res.getRowCount} " +
-        s"errors=${res.getErrCount}")
-      require(res.getHash == hash, "hash mismatch")
-      require(res.getStatus == GRecvProtocol.OK, "non-success status code")
+      try {
+        val stub = GRecvGrpc.newBlockingStub(ch)
+          .withCompression("gzip")
+          .withDeadlineAfter(3000, TimeUnit.SECONDS)
+        // send the request to the gRPC server, causing it to transcode to ORC
+        val res = stub.write(request.toBuilder.setSrcUri(srcUri).build())
+        logger.info(s"Request complete. uri=$srcUri rowCount=${res.getRowCount} " +
+          s"errors=${res.getErrCount}")
+        require(res.getHash == hash, "hash mismatch")
+        require(res.getStatus == GRecvProtocol.OK, "non-success status code")
+      } finally {
+        ch.shutdownNow()
+      }
     } else {
       logger.info(s"Requesting write empty ORC file at $srcUri")
       val ch = cb.build()
-      val stub = GRecvGrpc.newBlockingStub(ch)
-        .withDeadlineAfter(3000, TimeUnit.SECONDS)
-      // send the request to the gRPC server, causing it to write an empty file
-      val res = stub.write(request.toBuilder.setNoData(true).build())
-      ch.shutdownNow()
-      logger.info(s"Request complete. uri=$srcUri rowCount=${res.getRowCount} " +
-        s"errors=${res.getErrCount}")
-      require(res.getStatus == GRecvProtocol.OK, "non-success status code")
+      try {
+        val stub = GRecvGrpc.newBlockingStub(ch)
+          .withDeadlineAfter(3000, TimeUnit.SECONDS)
+        // send the request to the gRPC server, causing it to write an empty file
+        val res = stub.write(request.toBuilder.setNoData(true).build())
+        logger.info(s"Request complete. uri=$srcUri rowCount=${res.getRowCount} " +
+          s"errors=${res.getErrCount}")
+        require(res.getStatus == GRecvProtocol.OK, "non-success status code")
+      } finally {
+        ch.shutdownNow()
+      }
     }
   }
 }
