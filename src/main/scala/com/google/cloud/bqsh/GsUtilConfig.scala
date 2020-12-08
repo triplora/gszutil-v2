@@ -106,7 +106,6 @@ case class GsUtilConfig(source: String = "INFILE",
                         machineType: String = "n1-standard-4",
                         testInput: Option[ZRecordReaderT] = None,
                         gcsDSNPrefix: String = "",
-                        tf:String = "",
                         tfDSN:String ="",
                         tfGCS:String = ""
 ) {
