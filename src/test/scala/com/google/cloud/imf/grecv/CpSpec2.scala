@@ -191,7 +191,7 @@ class CpSpec2 extends AnyFlatSpec with BeforeAndAfterAll {
     val filds = schema.decoders
     val fildNames = schema.fieldNames
     val rb = schema.toRecordBuilder.build()
-    val r = Cp.parseRecord(sj).get
+    val r = Cp.parseRecord(Option(sj)).get
 
 
     val newSchema = Cp.merge(schema, r)
