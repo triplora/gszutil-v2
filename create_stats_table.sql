@@ -9,7 +9,9 @@ CREATE TABLE `[PROJECT_ID].[DATASET_NAME].[TABLE_NAME]` (
    destination STRING,
    job_json STRING,
    records_in INT64,
-   records_out INT64
+   records_out INT64,
+   inserted INT64,
+   updated INT64
 )
 PARTITION BY job_date
 CLUSTER BY job_name, job_date, timestamp
