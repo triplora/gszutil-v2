@@ -173,8 +173,10 @@ object Cp extends Command[GsUtilConfig] with Logging {
         case _ => None
       }
     }
+    if(c.tfDSN.nonEmpty)
+      Option(zos.readDDString(c.tfDSN, ""))
     else
-      Option(zos.readDDString("TRANF", ""))
+      None
   }
 
   def merge(s: SchemaProvider, r: Record): SchemaProvider = {
