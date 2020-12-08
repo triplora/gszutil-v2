@@ -40,6 +40,16 @@ object ExportOptionParser
     .text("(optional) DD to write output records to (default: OUTFILE)")
     .action((x,c) => c.copy(outDD = x))
 
+  opt[String]("cobDsn")
+    .optional
+    .text("(optional) DSN to read copybook from. If not provided, copybook will be read from " +
+      "DD:COPYBOOK")
+    .action((x,c) => c.copy(cobDsn = x))
+
+  opt[Unit]("vartext")
+    .text("When specified, write pipe-delimited string output.")
+    .action((x,c) => c.copy(vartext = true))
+
   // Standard Options
 
   opt[Unit]("allow_large_results")

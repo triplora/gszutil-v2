@@ -18,7 +18,7 @@ package com.google.cloud.gszutil.io
 import java.nio.ByteBuffer
 
 import com.google.cloud.bigquery.storage.v1.AvroRows
-import com.google.cloud.gszutil.Transcoder
+import com.google.cloud.gszutil.{SchemaProvider, Transcoder}
 import com.google.cloud.imf.gzos.pb.GRecvProto.Record
 import com.google.cloud.imf.util.Logging
 import org.apache.avro.Schema
@@ -27,14 +27,14 @@ import org.apache.avro.io.{BinaryDecoder, DecoderFactory}
 
 import scala.jdk.CollectionConverters.ListHasAsScala
 
-class BQBinaryExporter(schema: Schema,
-                       out: Record,
-                       id: Int,
-                       writer: ZRecordWriterT,
-                       transcoder: Transcoder)
+case class BQBinaryExporter(schema: Schema,
+                            out: SchemaProvider,
+                            id: Int,
+                            writer: ZRecordWriterT,
+                            transcoder: Transcoder)
   extends Exporter with Logging {
   private val fields: Array[AvroTranscoder] =
-    schema.getFields.asScala.zip(out.getFieldList.asScala).map{
+    schema.getFields.asScala.zip(out.toRecordBuilder.getFieldList.asScala).map{
       case (avroField, copyBookField) =>
        AvroUtil.transcoder(avroField, copyBookField, transcoder)
     }.toArray

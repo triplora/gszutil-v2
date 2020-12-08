@@ -21,8 +21,9 @@ import com.google.cloud.bigquery.storage.v1.{BigQueryReadClient, CreateReadSessi
 import com.google.cloud.bigquery.{BigQueryException, JobInfo, QueryJobConfiguration, QueryParameterValue, StandardSQLTypeName}
 import com.google.cloud.bqsh.BQ.resolveDataset
 import com.google.cloud.bqsh.{ArgParser, BQ, Command, ExportConfig, ExportOptionParser}
-import com.google.cloud.gszutil.io.BQExporter
-import com.google.cloud.imf.gzos.{Ebcdic, MVS}
+import com.google.cloud.gszutil.{CopyBook, SchemaProvider}
+import com.google.cloud.gszutil.io.{BQBinaryExporter, BQExporter, Exporter}
+import com.google.cloud.imf.gzos.{Ebcdic, MVS, MVSStorage}
 import com.google.cloud.imf.util.StatsUtil.EnhancedJob
 import com.google.cloud.imf.util.{Logging, Services, StatsUtil}
 import org.apache.avro.Schema
@@ -117,9 +118,19 @@ object Export extends Command[ExportConfig] with Logging {
 
       var rowCount: Long = 0
       val recordWriter = zos.writeDD(cfg.outDD)
-      val exporter = new BQExporter(schema, 0, recordWriter, Ebcdic)
+      val sp: SchemaProvider =
+        if (cfg.cobDsn.nonEmpty) {
+          logger.info(s"reading copybook from DSN=${cfg.cobDsn}")
+          CopyBook(zos.readDSNLines(MVSStorage.parseDSN(cfg.cobDsn)).mkString("\n"))
+        } else {
+          logger.info(s"reading copybook from DD:COPYBOOK")
+          zos.loadCopyBook("COPYBOOK")
+        }
+      val exporter: Exporter = if (cfg.vartext)
+        new BQExporter(schema, 0, recordWriter, Ebcdic)
+      else BQBinaryExporter(schema, sp, 0, recordWriter, Ebcdic)
 
-      bqStorage.readRowsCallable.call(readRowsRequest).forEach{res =>
+      bqStorage.readRowsCallable.call(readRowsRequest).forEach { res =>
         if (res.hasAvroRows)
           rowCount += exporter.processRows(res.getAvroRows)
       }
