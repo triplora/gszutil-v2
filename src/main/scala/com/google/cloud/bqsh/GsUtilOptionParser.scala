@@ -150,14 +150,24 @@ object GsUtilOptionParser extends OptionParser[GsUtilConfig]("gsutil") with ArgP
           else c.copy(destDSN = x)
         },
 
-          arg[String]("tfDSN")
-          .optional
-          .text("(optional) transformations DSN  DATASET.MEMBER or PDS(MBR) ")
-          .action{(x, c) =>
-            if (x.contains("(")) c.copy(destDSN = x)
-            else if (x.contains("/")) c.copy(destPath = x)
-            else c.copy(destDSN = x)
-          }
+      arg[String]("tfDSN")
+        .optional
+        .text("(optional) transformations DSN  DATASET.MEMBER or PDS(MBR) ")
+        .action { (x, c) =>
+          if (x.contains("(")) c.copy(destDSN = x)
+          else if (x.contains("/")) c.copy(destPath = x)
+          else c.copy(destDSN = x)
+        },
+
+
+        arg[String]("tfGCS")
+        .optional
+        .text("(optional) transformations file from GCS")
+        .action { (x, c) =>
+          if (x.contains("(")) c.copy(destDSN = x)
+          else if (x.contains("/")) c.copy(destPath = x)
+          else c.copy(destDSN = x)
+        }
     )
 
   cmd("rm")

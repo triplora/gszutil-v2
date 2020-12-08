@@ -107,7 +107,8 @@ case class GsUtilConfig(source: String = "INFILE",
                         testInput: Option[ZRecordReaderT] = None,
                         gcsDSNPrefix: String = "",
                         tf:String = "",
-                        tfDSN:String =""
+                        tfDSN:String ="",
+                        tfGCS:String = ""
 ) {
   def toMap: java.util.Map[String,Any] = {
     val m = StaticMap.builder

@@ -28,7 +28,7 @@ import com.google.cloud.imf.grecv.client.GRecvClient
 import com.google.cloud.imf.gzos.pb.GRecvProto.Record
 import com.google.cloud.imf.gzos.{MVS, MVSStorage}
 import com.google.cloud.imf.util.{Logging, Services, StatsUtil}
-import com.google.cloud.storage.{BlobId, Storage}
+import com.google.cloud.storage.{BlobId, BucketInfo, Storage}
 import com.google.protobuf.util.JsonFormat
 
 
@@ -48,12 +48,11 @@ object Cp extends Command[GsUtilConfig] with Logging {
     }
 
 
-
-
-    val schemaProvider:SchemaProvider =  parseRecord(getTransformationsAsString(c,gcs,zos)) match  {
+    val schemaProvider: SchemaProvider = parseRecord(getTransformationsAsString(c, gcs, zos)) match {
       case Some(x) => merge(c.schemaProvider.getOrElse(zos.loadCopyBook(c.copyBook)), x)
       case None => c.schemaProvider.getOrElse(zos.loadCopyBook(c.copyBook))
     }
+
     val in: ZRecordReaderT = c.testInput.getOrElse(zos.readDD(c.source))
     logger.info(s"gsutil cp ${in.getDsn} ${c.gcsUri}")
     val batchSize = (c.blocksPerBatch * in.blkSize) / in.lRecl
@@ -151,36 +150,31 @@ object Cp extends Command[GsUtilConfig] with Logging {
     }
   }
 
-  def tf(srcUri: String, gcs: Storage, zos: MVS): Option[String] = {
-    val uri = new URI(srcUri)
-    Option(gcs.get(BlobId.of(uri.getAuthority, uri.getPath))) match {
-      case Some(value) =>  Option(new String(value.getContent()))
+
+  def parseRecord(json: Option[String]): Option[Record] = {
+    json match {
+      case Some(x) => {
+        val builder = Record.newBuilder
+        JsonFormat.parser.ignoringUnknownFields.merge(x, builder)
+        Option(builder.build)
+      }
       case _ => None
-
     }
   }
 
-
-  def tfDSN(srcUri: String, zos: MVS): Option[String] = {
-    Option(zos.readDDString("FLDINFO",""))
-  }
-
-
-  def parseRecord(json: String): Option[Record] = {
-    if (json == "")
-      None
-    else {
-      val builder = Record.newBuilder
-      JsonFormat.parser.ignoringUnknownFields.merge(json, builder)
-      Option(builder.build)
+  def getTransformationsAsString(c: GsUtilConfig, gcs: Storage, zos: MVS): Option[String] = {
+    if (c.tfGCS.nonEmpty) {
+      BucketInfo.of(c.tfGCS).getName
+      logger.info(s"Reading transformation from GCS: ${c.tfGCS} ")
+      val objName = c.tfGCS.split("\\")(c.tfGCS.split("\\").length - 1)
+      logger.info(s"Object name: $objName ")
+      Option(gcs.get(BlobId.of(BucketInfo.of(c.tfGCS).getName, objName))) match {
+        case Some(value) => Option(new String(value.getContent()))
+        case _ => None
+      }
     }
-  }
-
-  def getTransformationsAsString(c:GsUtilConfig,gcs:Storage,zos:MVS): String = {
-    if (c.tf.nonEmpty)
-      tf(c.tf, gcs, zos).getOrElse("")
     else
-      tfDSN(c.tfDSN, zos).getOrElse("")
+      Option(zos.readDDString("TRANF", ""))
   }
 
   def merge(s: SchemaProvider, r: Record): SchemaProvider = {
