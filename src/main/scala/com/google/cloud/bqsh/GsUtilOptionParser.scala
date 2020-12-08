@@ -141,14 +141,14 @@ object GsUtilOptionParser extends OptionParser[GsUtilConfig]("gsutil") with ArgP
           else c.copy(destDSN = x)
         },
 
-      arg[String]("tfDSN")
+      opt[String]("tfDSN")
         .optional
         .text("(optional) transformations DSN DATASET.MEMBER or PDS(MBR) ")
         .action { (x, c) =>
            c.copy(tfDSN = x)
         },
 
-        arg[String]("tfGCS")
+      opt[String]("tfGCS")
         .optional
         .text("(optional) transformations file from GCS")
         .action { (x, c) =>
