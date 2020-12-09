@@ -49,8 +49,14 @@ object Cp extends Command[GsUtilConfig] with Logging {
 
 
     val schemaProvider: SchemaProvider = parseRecord(getTransformationsAsString(c, gcs, zos)) match {
-      case Some(x) => merge(c.schemaProvider.getOrElse(zos.loadCopyBook(c.copyBook)), x)
-      case None => c.schemaProvider.getOrElse(zos.loadCopyBook(c.copyBook))
+      case Some(x) => {
+        logger.info("Merging copybook with provided transformations")
+        merge(c.schemaProvider.getOrElse(zos.loadCopyBook(c.copyBook)), x)
+      }
+      case None => {
+        logger.info("Use original copybook")
+        c.schemaProvider.getOrElse(zos.loadCopyBook(c.copyBook))
+      }
     }
 
     val in: ZRecordReaderT = c.testInput.getOrElse(zos.readDD(c.source))
@@ -163,7 +169,9 @@ object Cp extends Command[GsUtilConfig] with Logging {
   }
 
   def getTransformationsAsString(c: GsUtilConfig, gcs: Storage, zos: MVS): Option[String] = {
+    logger.info("Getting transformations as String")
     if (c.tfGCS.nonEmpty) {
+      logger.info("Fetching from GCS ... ")
       BucketInfo.of(c.tfGCS).getName
       logger.info(s"Reading transformation from GCS: ${c.tfGCS} ")
       val objName = c.tfGCS.split("\\")(c.tfGCS.split("\\").length - 1)
@@ -172,9 +180,10 @@ object Cp extends Command[GsUtilConfig] with Logging {
         case Some(value) => Option(new String(value.getContent()))
         case _ => None
       }
-    }
-    if(c.tfDSN.nonEmpty)
+    } else if (c.tfDSN.nonEmpty) {
+      logger.info("Reading from DSN ... ")
       Option(zos.readDDString(c.tfDSN, ""))
+    }
     else
       None
   }
