@@ -91,8 +91,17 @@ object SdsfUtil extends Command[SdsfUtilConfig] with Logging {
     }
 
     def lines: List[String] = {
-      val buf = ListBuffer.empty[String]
       dataSet.browse
+      getStringLines()
+    }
+
+    def jcl: String = {
+      dataSet.browseJCL()
+      getStringLines().mkString("\n")
+    }
+
+    private def getStringLines(): List[String] = {
+      val buf = ListBuffer.empty[String]
       val settings = dataSet.getRunner.getRequestSettings
       val results = dataSet.getRunner.getRequestResults
       val lineResults = results.getLineResults

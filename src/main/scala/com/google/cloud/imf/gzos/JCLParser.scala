@@ -16,6 +16,7 @@
 
 package com.google.cloud.imf.gzos
 
+import scala.collection.mutable
 import scala.collection.mutable.{ArrayBuffer, ListBuffer}
 
 object JCLParser {
@@ -75,7 +76,7 @@ object JCLParser {
     }
 
     def accept(param: String): DDStatementBuilder = {
-      param.split(",").foreach{t =>
+      filterParameters(param).split(",").foreach{t =>
         val sep = t.indexOf('=') + 1
         if (sep > -1 && t.length - sep > 0) {
           addParam(t.substring(0,sep-1), t.substring(sep))
@@ -106,6 +107,8 @@ object JCLParser {
   case class DDStatement(name: String,
                          lrecl: Int,
                          dsn: Seq[String])
+
+  case class JclStep(stepName: String, ddStatements: Seq[DDStatement])
 
   case class Statement(record: String) {
     require(record.length == 80, "JCL statement is 80 columns")
@@ -160,6 +163,23 @@ object JCLParser {
       } else ""
   }
 
+  def getJCLSteps(jcl: String): Seq[JclStep] = {
+    val statements = preprocess(jcl)
+    var currentStep: Option[String] = None
+    var ddStatements = ListBuffer.empty[String]
+    val jclSteps= mutable.Map.empty[String, ListBuffer[String]]
+    for(st <- statements if !st.isComment) {
+      if(st.hasName && st.name.toUpperCase.startsWith("STEP")) {
+        currentStep = Some(st.name)
+        ddStatements = ListBuffer.empty[String]
+        jclSteps.put(st.name, ddStatements)
+      } else if(currentStep.isDefined) {
+        ddStatements.append(st.record)
+      }
+    }
+    jclSteps.map(pair => JclStep(pair._1, splitStatements(pair._2.mkString("\n")))).toSeq
+  }
+
   def preprocess(jcl: String): Array[Statement] = {
     val buf = ArrayBuffer.empty[Statement]
     for (line <- jcl.linesIterator){
@@ -203,5 +223,26 @@ object JCLParser {
     }
 
     buf.toList
+  }
+
+  def filterParameters(params: String): String = {
+    val parameters = ListBuffer.empty[String]
+    def appendIfNeeded: (String, String) => Unit = (p: String, input: String) => {
+      val index = input.indexOf(p  + "=")
+      if(index != -1) {
+        val filteredStr = input.substring(index)
+        val commaIndex = filteredStr.indexOf(",")
+        if(commaIndex != -1) {
+          parameters.append(filteredStr.substring(0, commaIndex))
+          //check for multiple parameters
+          appendIfNeeded(p, filteredStr.substring(commaIndex + 1))
+        } else {
+          parameters.append(filteredStr)
+        }
+      }
+    }
+    appendIfNeeded("DSN", params)
+    appendIfNeeded("LRECL", params)
+    parameters.toSeq.mkString(",")
   }
 }
