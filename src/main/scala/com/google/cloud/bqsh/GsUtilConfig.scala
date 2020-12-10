@@ -41,31 +41,6 @@ object GsUtilConfig {
                    if (genData) Option(DataGenUtil.generatorFor(sp))
                    else None)
   }
-
-  def createRemote2(sourceDD: String,
-                    sp: SchemaProvider,
-                    destinationUri: String,
-                    projectId: String,
-                    datasetId: String,
-                    location: String,
-                    remoteHostname: String,
-                    remotePort: Int,
-                    genData: Boolean,
-                    gcsDSNPrefix: String): GsUtilConfig = {
-    GsUtilConfig(source = sourceDD,
-      schemaProvider = Option(sp),
-      gcsUri = destinationUri,
-      projectId = projectId,
-      datasetId = datasetId,
-      location = location,
-      remoteHost = remoteHostname,
-      remotePort = remotePort,
-      remote = true,
-      replace = true,
-      testInput = if (genData) Option(DataGenUtil.generatorFor(sp)) else None,
-      gcsDSNPrefix = gcsDSNPrefix
-    )
-  }
 }
 
 case class GsUtilConfig(source: String = "INFILE",

@@ -119,7 +119,18 @@ object GsUtilOptionParser extends OptionParser[GsUtilConfig]("gsutil") with ArgP
         .optional
         .text("destination DSN")
         .action((x, c) => c.copy(destDSN = x)),
-
+      opt[String]("tfDSN")
+        .optional
+        .text("(optional) transformations DSN DATASET.MEMBER or PDS(MBR) ")
+        .action { (x, c) =>
+          c.copy(tfDSN = x)
+        },
+      opt[String]("tfGCS")
+        .optional
+        .text("(optional) transformations file from GCS")
+        .action { (x, c) =>
+          c.copy(tfGCS = x)
+        },
       arg[String]("gcsUri")
         .required()
         .text("GCS URI in format (gs://bucket/path)")
@@ -139,20 +150,6 @@ object GsUtilOptionParser extends OptionParser[GsUtilConfig]("gsutil") with ArgP
           if (x.contains("(")) c.copy(destDSN = x)
           else if (x.contains("/")) c.copy(destPath = x)
           else c.copy(destDSN = x)
-        },
-
-      opt[String]("tfDSN")
-        .optional
-        .text("(optional) transformations DSN DATASET.MEMBER or PDS(MBR) ")
-        .action { (x, c) =>
-           c.copy(tfDSN = x)
-        },
-
-      opt[String]("tfGCS")
-        .optional
-        .text("(optional) transformations file from GCS")
-        .action { (x, c) =>
-           c.copy(tfGCS = x)
         }
     )
 

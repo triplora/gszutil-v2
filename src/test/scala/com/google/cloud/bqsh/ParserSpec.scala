@@ -156,6 +156,7 @@ class ParserSpec extends AnyFlatSpec {
       "--parallelism=4",
       "--replace",
       "--timeOutMinutes=120",
+      "--tfGCS=gs://BUCKET/t13i/tr.json",
       "gs://bucket/path"
     )
     val parsed1 = BqshParser.parse(args)
@@ -169,6 +170,7 @@ class ParserSpec extends AnyFlatSpec {
     assert(parsed.get.timeOutMinutes == 120)
     assert(parsed.get.replace)
     assert(parsed.get.gcsUri == "gs://bucket/path")
+    assert(parsed.get.tfGCS =="gs://BUCKET/t13i/tr.json")
   }
 
   it should "cp 1" in {
