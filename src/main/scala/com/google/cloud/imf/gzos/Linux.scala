@@ -16,12 +16,12 @@
 
 package com.google.cloud.imf.gzos
 
-import java.nio.channels.FileChannel
+import java.nio.channels.{FileChannel, WritableByteChannel}
 import java.nio.file.{Files, Paths, StandardOpenOption}
 import java.util.Date
 
 import com.google.cloud.gszutil
-import com.google.cloud.gszutil.io.{ChannelRecordReader, ZRecordReaderT, ZRecordWriterT}
+import com.google.cloud.gszutil.io.{ChannelRecordReader, ChannelRecordWriter, ZRecordReaderT, ZRecordWriterT}
 import com.google.cloud.gszutil.{CopyBook, Utf8}
 import com.google.cloud.imf.gzos.MVSStorage.DSN
 import com.google.cloud.imf.gzos.Util.DefaultCredentialProvider
@@ -144,7 +144,25 @@ object Linux extends MVS with Logging {
   override def readDSN(dsn: DSN): ZRecordReaderT = throw new NotImplementedError()
   override def readDSNLines(dsn: DSN): Iterator[String] = throw new NotImplementedError()
   override def writeDSN(dsn: DSN): ZRecordWriterT = throw new NotImplementedError()
-  override def writeDD(ddName: String): ZRecordWriterT = throw new NotImplementedError()
+  override def writeDD(ddName: String): ZRecordWriterT = {
+    val env = System.getenv()
+    require(env.containsKey(ddName), s"$ddName environment variable not set")
+    val ddPath = Paths.get(System.getenv(ddName))
+    val lReclKey = ddName + "_LRECL"
+    val blkSizeKey = ddName + "_BLKSIZE"
+    require(env.containsKey(lReclKey), s"$lReclKey environment variable not set")
+    require(env.containsKey(blkSizeKey), s"$blkSizeKey environment variable not set")
+    val lRecl: Int = env.get(ddName + "_LRECL").toInt
+    val blkSize: Int = env.get(ddName + "_BLKSIZE").toInt
+    logger.info(s"Opening $ddName $ddPath")
+    val ddFile = ddPath.toFile
+    ddFile.createNewFile()
+    require(ddFile.exists, s"$ddName $ddPath does not exist")
+    require(ddFile.isFile, s"$ddName $ddPath is not a file")
+
+    val channel:WritableByteChannel = FileChannel.open(ddPath, StandardOpenOption.CREATE, StandardOpenOption.WRITE)
+    new ChannelRecordWriter(channel, lRecl, blkSize)
+  }
   override def listPDS(dsn: DSN): Iterator[PDSMemberInfo] = throw new NotImplementedError()
 
   override def submitJCL(jcl: Seq[String]): Option[ZMVSJob] = throw new NotImplementedError()
