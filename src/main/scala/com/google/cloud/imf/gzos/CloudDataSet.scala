@@ -120,14 +120,17 @@ object CloudDataSet extends Logging {
     val name = buildObjectName(baseUri, ds)
     // check if DSN exists in GCS
     val blob: Blob = gcs.get(BlobId.of(bucket, name))
-    val uri = toUri(blob)
     if (blob != null) {
+      val uri = toUri(blob)
       val lrecl: Int = getLrecl(blob)
       logger.info(s"Located Dataset for DD:$dd\n"+
         s"DSN=${ds.dsn}\nLRECL=$lrecl\nuri=$uri")
       Option(CloudRecordReader(ds.dsn, lrecl, bucket = bucket, name = name))
     }
-    else None
+    else {
+      logger.info(s"GCS object doesn't exist:\ngs://$bucket/$name")
+      None
+    }
   }
 
   def readCloudDDGDG(gcs: Storage, dd: String, ddInfo: DataSetInfo): Option[CloudRecordReader] = {
