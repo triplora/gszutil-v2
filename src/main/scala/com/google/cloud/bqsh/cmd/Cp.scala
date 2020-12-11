@@ -36,6 +36,7 @@ object Cp extends Command[GsUtilConfig] with Logging {
   override val name: String = "gsutil cp"
   override val parser: ArgParser[GsUtilConfig] = GsUtilOptionParser
   def run(c: GsUtilConfig, zos: MVS): Result = {
+    logger.info("debug version:1")
     val creds = zos
       .getCredentialProvider()
       .getCredentials
@@ -174,11 +175,14 @@ object Cp extends Command[GsUtilConfig] with Logging {
       logger.info("Fetching from GCS ... ")
       BucketInfo.of(c.tfGCS).getName
       logger.info(s"Reading transformation from GCS: ${c.tfGCS} ")
-      val objName = c.tfGCS.split("\\")(c.tfGCS.split("\\").length - 1)
+      val bucket = c.tfGCS.stripPrefix("gs://").split("/")(0)
+      val objName = c.tfGCS.stripPrefix(s"gs://$bucket/")
       logger.info(s"Object name: $objName ")
-      Option(gcs.get(BlobId.of(BucketInfo.of(c.tfGCS).getName, objName))) match {
-        case Some(value) => Option(new String(value.getContent()))
-        case _ => None
+      Option(gcs.get(BlobId.of(bucket, objName))) match {
+        case Some(value) =>
+          Option(new String(value.getContent()))
+        case _ =>
+          None
       }
     } else if (c.tfDSN.nonEmpty) {
       logger.info("Reading from DSN ... ")
@@ -189,11 +193,10 @@ object Cp extends Command[GsUtilConfig] with Logging {
   }
 
   def merge(s: SchemaProvider, r: Record): SchemaProvider = {
+    import scala.jdk.CollectionConverters.IterableHasAsScala
+
     s match {
       case x: CopyBook =>
-
-        import scala.jdk.CollectionConverters.IterableHasAsScala
-
         val seq1: List[Record.Field] = r.getFieldList.asScala.toList
         val names= seq1.map(_.getName)
         val v: Seq[CopyBookLine] = x.Fields.filterNot({
@@ -205,7 +208,24 @@ object Cp extends Command[GsUtilConfig] with Logging {
           fld =>
             CopyBookField(fld.getName, Decoding.getDecoder(fld, x.transcoder))
         )))
-      case y: RecordSchema => y
+      case y: RecordSchema =>  {
+
+        val seq1: List[Record.Field] = r.getFieldList.asScala.toList
+        val fnames= seq1.map(_.getName)
+
+        val filtered = y.r.getFieldList.asScala.filterNot(x => fnames.contains(x.getName))
+        val newRec = Record.newBuilder(y.r)
+
+        var l = newRec.getFieldCount -1
+        while(l >= 0){
+          newRec.removeField(l)
+          l = l - 1
+        }
+        (filtered ++ seq1).foreach {
+          x => newRec.addField(x)
+        }
+        RecordSchema(newRec.build())
+      }
     }
   }
 }

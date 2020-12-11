@@ -43,7 +43,8 @@ final class OrcContext(private val gcs: Storage, schema: TypeDescription,
   private def newWriter(): Unit = {
     if (writer != null) closeWriter()
     partId += 1
-    currentPath = basePath.suffix(s"/$prefix-$partId.orc")
+    val w1 = s"/$prefix-$partId.orc"
+    currentPath = basePath.suffix(w1)
     writer = OrcFile.createWriter(currentPath, writerOptions)
     logger.info(s"Opened Writer for $currentPath")
   }

@@ -130,6 +130,39 @@ class CpSpec2 extends AnyFlatSpec with BeforeAndAfterAll {
     assert(res.exitCode == 0)
   }
 
+  "Should change the provided schema" should "generate" in {
+    val sp: RecordSchema = {
+      val b = Record.newBuilder
+        .setEncoding("EBCDIC")
+        .setSource(Record.Source.LAYOUT)
+      b.addFieldBuilder().setName("STRING_COL")
+        .setTyp(Field.FieldType.STRING)
+        .setSize(4)
+      b.addFieldBuilder().setName("DECIMAL_COL")
+        .setTyp(Field.FieldType.DECIMAL)
+        .setSize(PackedDecimal.sizeOf(5,2))
+        .setPrecision(7)
+        .setScale(2)
+      b.addFieldBuilder().setName("INTEGER_COL")
+        .setTyp(Field.FieldType.INTEGER)
+        .setSize(4)
+      RecordSchema(b.build)
+    }
+    val generator = DataGenUtil.generatorFor(sp, 100)
+    val cfg = GsUtilConfig(schemaProvider = Option(sp),
+      gcsUri = "gs://aghan-test/test",
+      testInput = Option(generator),
+      parallelism = 1,
+      nConnections = 2,
+      replace = true,
+      remote = false,
+      remoteHost = serverCfg.host,
+      remotePort = serverCfg.port,
+      tfGCS = "gs://aghan-test/trs/tr.json")
+    val res = Cp.run(cfg, Linux)
+    assert(res.exitCode == 0)
+  }
+
   "Merger" should "merger fields" in {
 
     val sj =
