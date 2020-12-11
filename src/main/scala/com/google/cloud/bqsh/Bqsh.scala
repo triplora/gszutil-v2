@@ -30,15 +30,18 @@ object Bqsh extends Logging {
   def main(args: Array[String]): Unit = {
 
 
-    logger.info("Passed args: ")
-    args.foreach(logger.info(_))
-    logger.info("---------------------------------------------------------------------------------------------------------")
+
     val zos = Util.zProvider
     zos.init()
     val script = zos.readStdin()
     CloudLogging.configureLogging(debugOverride = false, sys.env,
       errorLogs = Seq("org.apache.orc","io.grpc","io.netty","org.apache.http"),
       credentials = zos.getCredentialProvider().getCredentials.createScoped(LoggingScopes.LOGGING_WRITE))
+
+
+    logger.info("Passed args: ")
+    args.foreach(logger.info(_))
+    logger.info("---------------------------------------------------------------------------------------------------------")
 
     val jobInfoMap = Util.toMap(zos.getInfo)
     val cloudLogger = CloudLogging.getLogger("bqsh")
