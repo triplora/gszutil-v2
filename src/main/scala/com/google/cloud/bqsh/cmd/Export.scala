@@ -52,7 +52,7 @@ object Export extends Command[ExportConfig] with Logging {
         }
       }
     logger.info(s"SQL Query:\n$query")
-    if (query.nonEmpty) {
+    if (query.isEmpty) {
       val msg = "Empty export query"
       logger.error(msg)
       return Result.Failure(msg)
@@ -118,17 +118,19 @@ object Export extends Command[ExportConfig] with Logging {
 
       var rowCount: Long = 0
       val recordWriter = zos.writeDD(cfg.outDD)
-      val sp: SchemaProvider =
-        if (cfg.cobDsn.nonEmpty) {
-          logger.info(s"reading copybook from DSN=${cfg.cobDsn}")
-          CopyBook(zos.readDSNLines(MVSStorage.parseDSN(cfg.cobDsn)).mkString("\n"))
-        } else {
-          logger.info(s"reading copybook from DD:COPYBOOK")
-          zos.loadCopyBook("COPYBOOK")
-        }
       val exporter: Exporter = if (cfg.vartext)
         new BQExporter(schema, 0, recordWriter, Ebcdic)
-      else BQBinaryExporter(schema, sp, 0, recordWriter, Ebcdic)
+      else {
+        val sp: SchemaProvider =
+          if (cfg.cobDsn.nonEmpty) {
+            logger.info(s"reading copybook from DSN=${cfg.cobDsn}")
+            CopyBook(zos.readDSNLines(MVSStorage.parseDSN(cfg.cobDsn)).mkString("\n"))
+          } else {
+            logger.info(s"reading copybook from DD:COPYBOOK")
+            zos.loadCopyBook("COPYBOOK")
+          }
+        BQBinaryExporter(schema, sp, 0, recordWriter, Ebcdic)
+      }
 
       bqStorage.readRowsCallable.call(readRowsRequest).forEach { res =>
         if (res.hasAvroRows)
