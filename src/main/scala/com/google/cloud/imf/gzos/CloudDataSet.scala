@@ -76,14 +76,14 @@ object CloudDataSet extends Logging {
 
   def getLrecl(blob: Blob): Int = {
     val uri = toUri(blob)
-    val lreclStr = blob.getMetadata.get(LreclMeta)
-    if (lreclStr == null) {
+    if (!blob.getMetadata.containsKey(LreclMeta)) {
       import scala.jdk.CollectionConverters.MapHasAsScala
       val meta = blob.getMetadata.asScala.map{x => s"${x._1}=${x._2}"}.mkString("\n")
       val msg = s"$LreclMeta not set for $uri\n$meta"
       logger.error(msg)
       throw new RuntimeException(msg)
     }
+    val lreclStr = blob.getMetadata.get(LreclMeta)
     try {
       Integer.valueOf(lreclStr)
     } catch {
