@@ -57,7 +57,11 @@ object Cp extends Command[GsUtilConfig] with Logging {
     val schemaProvider: SchemaProvider = parseRecord(getTransformationsAsString(c, gcs, zos)) match {
       case Some(x) => {
         logger.info("Merging copybook with provided transformations")
-        merge(c.schemaProvider.getOrElse(zos.loadCopyBook(c.copyBook)), x)
+
+        logger.info(s"current schema: ${schemaProvider.toString}")
+        val s = merge(c.schemaProvider.getOrElse(zos.loadCopyBook(c.copyBook)), x)
+        logger.info(s"schema after merging: ${s.toString}")
+        s
       }
       case None => {
         logger.info("Use original copybook")
