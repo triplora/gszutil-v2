@@ -17,6 +17,7 @@ package com.google.cloud.bqsh.cmd
 
 import java.net.URI
 import java.nio.channels.Channels
+import java.nio.charset.StandardCharsets
 import java.nio.file.Paths
 
 import com.google.cloud.bqsh.{ArgParser, BQ, Command, GsUtilConfig, GsUtilOptionParser}
@@ -28,8 +29,12 @@ import com.google.cloud.imf.grecv.client.GRecvClient
 import com.google.cloud.imf.gzos.pb.GRecvProto.Record
 import com.google.cloud.imf.gzos.{MVS, MVSStorage}
 import com.google.cloud.imf.util.{Logging, Services, StatsUtil}
+import com.google.cloud.storage.Blob.BlobSourceOption
 import com.google.cloud.storage.{BlobId, BucketInfo, Storage}
 import com.google.protobuf.util.JsonFormat
+import org.apache.commons.lang.CharSet
+
+import scala.util.Try
 
 
 object Cp extends Command[GsUtilConfig] with Logging {
@@ -160,11 +165,17 @@ object Cp extends Command[GsUtilConfig] with Logging {
 
   def parseRecord(json: Option[String]): Option[Record] = {
     json match {
-      case Some(x) => {
-        val builder = Record.newBuilder
-        JsonFormat.parser.ignoringUnknownFields.merge(x, builder)
-        Option(builder.build)
-      }
+      case Some(x) =>
+        Try{
+          val builder = Record.newBuilder
+          JsonFormat.parser.ignoringUnknownFields.merge(x, builder)
+          builder
+        }.fold(e => {
+          logger.error(s"Unable to parse provided json transformations\n $x",e)
+          Option.empty
+        },
+          x=>Option(x.build())
+        )
       case _ => None
     }
   }
@@ -177,12 +188,16 @@ object Cp extends Command[GsUtilConfig] with Logging {
       logger.info(s"Reading transformation from GCS: ${c.tfGCS} ")
       val bucket = c.tfGCS.stripPrefix("gs://").split("/")(0)
       val objName = c.tfGCS.stripPrefix(s"gs://$bucket/")
-      logger.info(s"Object name: $objName ")
+      logger.info(s"Object name: $objName")
+      logger.info(s"Bucket name: $bucket")
       Option(gcs.get(BlobId.of(bucket, objName))) match {
-        case Some(value) =>
-          Option(new String(value.getContent()))
-        case _ =>
+        case Some(value) => {
+          logger.info("Encoding:"+ value.getContent())
+          Option(new String(value.getContent(),StandardCharsets.UTF_8))
+        }
+        case _ => {
           None
+        }
       }
     } else if (c.tfDSN.nonEmpty) {
       logger.info("Reading from DSN ... ")

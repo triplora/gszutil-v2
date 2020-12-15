@@ -39,9 +39,8 @@ object Bqsh extends Logging {
       credentials = zos.getCredentialProvider().getCredentials.createScoped(LoggingScopes.LOGGING_WRITE))
 
 
-    logger.info("Passed args: ")
-    args.foreach(logger.info(_))
-    logger.info("---------------------------------------------------------------------------------------------------------")
+    logger.info(s"Passed args: ${args.length}")
+    logger.info("-------------------------------------------------")
 
     val jobInfoMap = Util.toMap(zos.getInfo)
     val cloudLogger = CloudLogging.getLogger("bqsh")
