@@ -56,11 +56,15 @@ object Cp extends Command[GsUtilConfig] with Logging {
 
     val schemaProvider: SchemaProvider = parseRecord(getTransformationsAsString(c, gcs, zos)) match {
       case Some(x) => {
-        logger.info("Merging copybook with provided transformations")
+        logger.info("Merging copybook with provided transformations ...")
 
-        logger.info(s"current schema: ${schemaProvider.toString}")
-        val s = merge(c.schemaProvider.getOrElse(zos.loadCopyBook(c.copyBook)), x)
-        logger.info(s"schema after merging: ${s.toString}")
+        val sch = c.schemaProvider.getOrElse(zos.loadCopyBook(c.copyBook))
+        logger.info(s"ORCSchema: ${sch.ORCSchema.toJson}")
+
+        val s = merge(sch, x)
+        logger.info(s"Schema after merging:")
+        logger.info(s"ORCSchema:${s.ORCSchema.toJson}" )
+        logger.info(s"Schema: ${s.toString}")
         s
       }
       case None => {
@@ -216,6 +220,7 @@ object Cp extends Command[GsUtilConfig] with Logging {
 
     s match {
       case x: CopyBook =>
+        logger.info("Merging CopyBook")
         val seq1: List[Record.Field] = r.getFieldList.asScala.toList
         val names= seq1.map(_.getName)
         val v: Seq[CopyBookLine] = x.Fields.filterNot({
@@ -228,7 +233,7 @@ object Cp extends Command[GsUtilConfig] with Logging {
             CopyBookField(fld.getName, Decoding.getDecoder(fld, x.transcoder))
         )))
       case y: RecordSchema =>  {
-
+        logger.info("Merging RecordSchema")
         val seq1: List[Record.Field] = r.getFieldList.asScala.toList
         val fnames= seq1.map(_.getName)
 
