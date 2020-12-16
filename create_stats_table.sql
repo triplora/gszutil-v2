@@ -1,20 +1,43 @@
 CREATE TABLE `[PROJECT_ID].[DATASET_NAME].[TABLE_NAME]` (
    job_name STRING,
+   job_id STRING,
+   step_name STRING,
+   timestamp TIMESTAMP,
    job_date DATE,
    job_time TIME,
-   timestamp TIMESTAMP,
-   job_id STRING,
    job_type STRING,
+   bq_job_project STRING,
+   bq_job_location STRING,
+   bq_job_id STRING,
+   job_json STRING,
    source STRING,
    destination STRING,
-   job_json STRING,
-   records_in INT64,
-   records_out INT64,
-   inserted INT64,
-   updated INT64
+   rows_read INT64,
+   rows_written INT64,
+   rows_affected INT64,
+   rows_inserted INT64,
+   rows_updated INT64,
+   rows_unmodified INT64,
+   statement_type STRING,
+   query STRING,
+   execution_hours FLOAT64,
+   queued_hours FLOAT64,
+   gb_processed FLOAT64,
+   slot_hours FLOAT64,
+   slot_utilization_rate FLOAT64,
+   slot_ms_to_total_bytes_ratio FLOAT64,
+   shuffle_bytes_to_total_bytes_ratio FLOAT64,
+   shuffle_spill_to_shuffle_bytes_ratio FLOAT64,
+   shuffle_spill_to_total_bytes_ratio FLOAT64,
+   shuffle_spill_gb FLOAT64,
+   bq_stage_count INT64,
+   bq_step_count INT64,
+   bq_sub_step_count INT64,
+   bq_stage_summary STRING,
 )
 PARTITION BY job_date
-CLUSTER BY job_name, job_date, timestamp
+CLUSTER BY job_name, job_id, step_name
 OPTIONS (
   partition_expiration_days=1000,
   description="Log table for mainframe jobs"
+)

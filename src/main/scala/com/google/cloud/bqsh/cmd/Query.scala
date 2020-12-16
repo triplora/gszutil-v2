@@ -84,20 +84,20 @@ object Query extends Command[QueryConfig] with Logging {
           val statsTable = BQ.resolveTableSpec(cfg.statsTable, cfg.projectId, cfg.datasetId)
           logger.info(s"Writing stats to ${BQ.tableSpec(statsTable)}")
           if (jobInfo.isMerge){
-            StatsUtil.insertJobStats(zos, jobId, Option(job), bq,
+            StatsUtil.insertJobStats(zos, jobId, bq,
               statsTable, jobType = "merge_query",
               source = BQ.tableSpec(jobInfo.mergeFromTable),
               dest = BQ.tableSpec(jobInfo.mergeIntoTable),
               recordsIn = jobInfo.mergeFromRows.getOrElse(-1),
               recordsOut = jobInfo.mergeInsertedRows.getOrElse(-1))
           } else if (jobInfo.isSelect) {
-            StatsUtil.insertJobStats(zos, jobId, Option(job), bq,
+            StatsUtil.insertJobStats(zos, jobId, bq,
               statsTable, jobType = "select_query",
               source = jobInfo.selectFromTables.map(BQ.tableSpec).mkString(","),
               dest = BQ.tableSpec(jobInfo.selectIntoTable),
               recordsOut = jobInfo.selectOutputRows.getOrElse(-1))
           } else {
-            StatsUtil.insertJobStats(zos, jobId, Option(job), bq,
+            StatsUtil.insertJobStats(zos, jobId, bq,
               statsTable, jobType = "query", dest = cfg.destinationTable)
           }
         }

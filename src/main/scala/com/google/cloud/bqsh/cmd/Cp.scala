@@ -94,7 +94,6 @@ object Cp extends Command[GsUtilConfig] with Logging {
       StatsUtil.insertJobStats(
         zos = zos,
         jobId = jobId,
-        job = None,
         bq = Services.bigQuery(c.projectId, c.location, creds),
         tableId = statsTable,
         jobType = "cp",

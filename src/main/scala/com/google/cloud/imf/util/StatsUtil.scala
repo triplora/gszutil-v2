@@ -20,11 +20,12 @@ import java.text.SimpleDateFormat
 import java.util.{Date, TimeZone}
 
 import com.google.cloud.bigquery.InsertAllRequest.RowToInsert
-import com.google.cloud.bigquery.JobStatistics.{LoadStatistics, QueryStatistics}
-import com.google.cloud.bigquery.{BigQuery, BigQueryError, InsertAllRequest, Job, JobId, JobStatus, LoadJobConfiguration, QueryJobConfiguration, QueryStage, TableId}
+import com.google.cloud.bigquery.JobStatistics.QueryStatistics
+import com.google.cloud.bigquery.{BigQuery, BigQueryError, InsertAllRequest, Job, JobId,
+  JobStatus, QueryJobConfiguration, QueryStage, TableId}
 import com.google.cloud.bqsh.BQ
+import com.google.cloud.bqsh.BQ.SchemaRowBuilder
 import com.google.cloud.imf.gzos.MVS
-import com.google.common.collect.ImmutableMap
 
 import scala.collection.mutable.ListBuffer
 
@@ -91,8 +92,8 @@ object StatsUtil extends Logging {
 
     def stats: QueryStatistics = job.getStatistics[QueryStatistics]
     val statementType: String = Option(stats.getStatementType).map(_.toString).getOrElse("Query")
-    val queryDuration: Long = stats.getEndTime - stats.getStartTime
-    val waitDuration: Long = stats.getStartTime - stats.getCreationTime
+    val queryDurationMs: Long = stats.getEndTime - stats.getStartTime
+    val waitDurationMs: Long = stats.getStartTime - stats.getCreationTime
 
     val slotMsToTotalBytesRatio: Double =
       if (stats.getTotalBytesProcessed > 0)
@@ -100,8 +101,8 @@ object StatsUtil extends Logging {
       else 0
 
     val slotUtilizationRate: Double =
-      if (queryDuration > 0)
-        (stats.getTotalSlotMs * 1.0d) / queryDuration
+      if (queryDurationMs > 0)
+        (stats.getTotalSlotMs * 1.0d) / queryDurationMs
       else 0
 
     val shuffleBytes: Long =
@@ -297,8 +298,8 @@ object StatsUtil extends Logging {
     def report: String = {
       val gbProcessed = stats.getTotalBytesProcessed*1.0d/(1024*1024*1024)
       val slotMinutes = stats.getTotalSlotMs*1.0d/(1000*60)
-      val executionSeconds = queryDuration/1000d
-      val queuedSeconds = waitDuration/1000d
+      val executionSeconds = queryDurationMs/1000d
+      val queuedSeconds = waitDurationMs/1000d
 
       val sb = new StringBuilder(4096)
       sb.append(
@@ -375,7 +376,7 @@ object StatsUtil extends Logging {
           ("shuffleBytesPerTotalBytes", shuffleBytesToTotalBytesRatio),
           ("shuffleSpillToShuffleBytes", shuffleSpillToShuffleBytesRatio),
           ("shuffleSpillToTotalBytes", shuffleSpillToTotalBytesRatio),
-          ("shuffleSpillGB", shuffleBytesSpilled),
+          ("shuffleSpillGB", shuffleBytesSpilled*1.0d / (1024d*1024d*1024d)),
           ("executionSeconds", executionSeconds),
           ("queuedSeconds", queuedSeconds),
           ("stageCount", stageCount),
@@ -392,79 +393,40 @@ object StatsUtil extends Logging {
     }
   }
 
-  def insertJobStats(zos: MVS, jobId: JobId, job: Option[Job],
+  def insertJobStats(zos: MVS, jobId: JobId,
                      bq: BigQuery, tableId: TableId, jobType: String = "", source: String = "",
                      dest: String = "", recordsIn: Long = -1, recordsOut: Long = -1): Unit = {
-    val row = ImmutableMap.builder[String,Any]()
-    row.put("job_name", zos.jobName)
-    row.put("job_date", jobDate2Date(zos.jobDate))
-    row.put("job_time", jobTime2Time(zos.jobTime))
-    row.put("timestamp", epochMillis2Timestamp(System.currentTimeMillis))
-    row.put("job_id", BQ.toStr(jobId))
-    if (jobType.nonEmpty)
-      row.put("job_type", jobType)
-    if (source.nonEmpty)
-      row.put("source", source)
-    if (dest.nonEmpty)
-      row.put("destination", dest)
-    job match {
-      case Some(job) =>
-        jobType match {
-          case "load" =>
-            Option(job.getConfiguration[LoadJobConfiguration]) match {
-              case Some(value) =>
-                Option(job.getStatistics[LoadStatistics])
-                  .flatMap(x => Option(x.getOutputRows)) match {
-                    case Some(outputRows) =>
-                      row.put("records_out", outputRows)
-                    case _ =>
-                  }
-                val cfg = value.toString
-                row.put("job_json", cfg)
-                logger.debug(s"Job Data:\n$cfg")
-              case _ =>
-            }
+    val schema = BQ.checkTableDef(bq, tableId, LogTable.schema)
+    val row = SchemaRowBuilder(schema)
 
-          case "merge_query" =>
-            if (recordsIn >= 0)
-              row.put("records_in", recordsIn)
-            if (recordsOut >= 0)
-              row.put("records_out", recordsOut)
+    row
+      .put("job_name", zos.jobName)
+      .put("job_date", jobDate2Date(zos.jobDate))
+      .put("job_time", jobTime2Time(zos.jobTime))
+      .put("timestamp", epochMillis2Timestamp(System.currentTimeMillis))
+      .put("job_id", BQ.toStr(jobId))
+      .put("job_type", jobType)
+      .put("source", source)
+      .put("destination", dest)
 
-          case "select_query" =>
-            if (recordsOut >= 0)
-              row.put("records_out", recordsOut)
-
-          case "query" =>
-            Option(job.getConfiguration[QueryJobConfiguration]) match {
-              case Some(value) =>
-                Option(job.getStatistics[QueryStatistics])
-                  .flatMap(x => Option(x.getNumDmlAffectedRows)) match {
-                    case Some(rows) =>
-                      row.put("records_out", rows)
-                    case _ =>
-                  }
-                val cfg = value.toString
-                row.put("job_json", cfg)
-                logger.debug(s"Job Data:\n$cfg")
-              case _ =>
-            }
-
-          case "cp" =>
-            if (recordsIn >= 0)
-              row.put("records_in", recordsIn)
-            if (recordsOut >= 0)
-              row.put("records_out", recordsOut)
-          case _ =>
-        }
-      case _ =>
+    if (jobType == "cp" || jobType == "export") {
+      if (recordsIn >= 0)
+        row.put("rows_read", recordsIn)
+      if (recordsOut >= 0)
+        row.put("rows_written", recordsOut)
+    } else {
+      // any BigQuery job
+      val job1 =
+        BQ.apiGetJob(BQ.apiClient(zos.getCredentialProvider().getCredentials), jobId)
+      if (job1 != null)
+        new BQ.JobStats(job1).addToRow(row)
     }
 
-    logger.debug(s"inserting stats to ${tableId.getProject}:${tableId.getDataset}.${tableId.getTable}")
-    bq.insertAll(InsertAllRequest.newBuilder(tableId).addRow(BQ.toStr(jobId), row.build).build()) match {
+    logger.debug(s"inserting stats to ${BQ.tableSpec(tableId)}")
+    row.insert(bq, tableId, BQ.toStr(jobId)) match {
       case x if x.hasErrors =>
         val errors = mv(x.getInsertErrors).flatMap(l2l).mkString("\n")
-        logger.error(s"failed to insert stats for Job ID ${BQ.toStr(jobId)}\n$errors")
+        logger.warn(s"failed to insert stats for Job ID ${BQ.toStr(jobId)}\n$errors")
       case _ =>
         logger.debug(s"inserted job stats for Job ID ${BQ.toStr(jobId)}")
     }

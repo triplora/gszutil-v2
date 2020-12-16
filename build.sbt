@@ -67,5 +67,6 @@ scalacOptions ++= Seq(
   "-opt:l:inline",
   "-opt-inline-from:**",
   "-deprecation",
-  "-opt-warnings"
+  "-opt-warnings",
+  "-feature"
 )

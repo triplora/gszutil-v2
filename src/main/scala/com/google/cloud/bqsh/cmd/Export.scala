@@ -144,7 +144,7 @@ object Export extends Command[ExportConfig] with Logging {
         val statsTable = BQ.resolveTableSpec(cfg.statsTable, cfg.projectId, cfg.datasetId)
         val tblspec = s"${statsTable.getProject}:${statsTable.getDataset}.${statsTable.getTable}"
         logger.debug(s"Writing stats to $tblspec")
-        StatsUtil.insertJobStats(zos, jobId, scala.Option(job), bq, statsTable, jobType =
+        StatsUtil.insertJobStats(zos, jobId, bq, statsTable, jobType =
           "export", recordsOut = recordWriter.count())
       }
       require(rowCount == recordWriter.count(), s"BigQuery Storage API sent $rowCount rows but " +
