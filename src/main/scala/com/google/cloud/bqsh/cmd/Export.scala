@@ -16,8 +16,10 @@
 
 package com.google.cloud.bqsh.cmd
 
+import com.google.api.gax.core.{FixedCredentialsProvider}
+import com.google.api.gax.rpc.{FixedHeaderProvider}
 import com.google.cloud.bigquery.storage.v1.ReadSession.TableReadOptions
-import com.google.cloud.bigquery.storage.v1.{BigQueryReadClient, CreateReadSessionRequest, DataFormat, ReadRowsRequest, ReadSession}
+import com.google.cloud.bigquery.storage.v1.{BigQueryReadClient, BigQueryReadSettings, CreateReadSessionRequest, DataFormat, ReadRowsRequest, ReadSession}
 import com.google.cloud.bigquery.{BigQueryException, JobInfo, QueryJobConfiguration, QueryParameterValue, StandardSQLTypeName}
 import com.google.cloud.bqsh.BQ.resolveDataset
 import com.google.cloud.bqsh.{ArgParser, BQ, Command, ExportConfig, ExportOptionParser}
@@ -37,7 +39,14 @@ object Export extends Command[ExportConfig] with Logging {
     logger.info(s"Initializing BigQuery client\n" +
       s"projectId=${cfg.projectId} location=${cfg.location}")
     val bq = Services.bigQuery(cfg.projectId, cfg.location, creds)
-    val bqStorage = BigQueryReadClient.create()
+    val settings = BigQueryReadSettings
+      .newBuilder()
+      .setCredentialsProvider(FixedCredentialsProvider.create(creds))
+      .setHeaderProvider(FixedHeaderProvider.create("user-agent", "mainframe-util"))
+      .build
+    val bqStorage = BigQueryReadClient.create(settings)
+    logger.info(s"Initializing BigQuery storage client completed\n" +
+      s"projectId=${cfg.projectId} location=${cfg.location}")
 
     val query =
       if (cfg.sql.nonEmpty) cfg.sql
