@@ -131,34 +131,31 @@ class CpSpec2 extends AnyFlatSpec with BeforeAndAfterAll {
   }
 
   "Should change the provided schema" should "generate" in {
-    val sp: RecordSchema = {
-      val b = Record.newBuilder
-        .setEncoding("EBCDIC")
-        .setSource(Record.Source.LAYOUT)
-      b.addFieldBuilder().setName("STRING_COL")
-        .setTyp(Field.FieldType.STRING)
-        .setSize(4)
-      b.addFieldBuilder().setName("DECIMAL_COL")
-        .setTyp(Field.FieldType.DECIMAL)
-        .setSize(PackedDecimal.sizeOf(5,2))
-        .setPrecision(7)
-        .setScale(2)
-      b.addFieldBuilder().setName("INTEGER_COL")
-        .setTyp(Field.FieldType.INTEGER)
-        .setSize(4)
-      RecordSchema(b.build)
-    }
-    val generator = DataGenUtil.generatorFor(sp, 100)
+    val sp: SchemaProvider = CopyBook(
+      """        01  TEST-LAYOUT-FIVE.
+        03  ITEM-NBR                  PIC S9(9) COMP.
+ |03  STORE-NBR                       PIC S9(9) COMP.
+ |03  WM-YR-WK                        PIC S9(9) COMP.
+ |03  VENDOR-NBR                      PIC S9(9) COMP.
+ |03  EPC-MANAGER-NBR                 PIC X(12).
+ |03  CASE-REC-QTY                    PIC S9(16)V9(2) COMP-3.
+ |03  CASE-REC-SCAN-QTY               PIC S9(16)V9(2) COMP-3.
+ |03  REC-READ-RATE-PCT               PIC S9(16)V9(2) COMP-3.
+        |""".stripMargin)
+
+    val generator = DataGenUtil.generatorFor(sp, 1)
     val cfg = GsUtilConfig(schemaProvider = Option(sp),
-      gcsUri = "gs://aghan-test/test",
+      gcsUri = "gs://aghan-test/test1",
       testInput = Option(generator),
       parallelism = 1,
       nConnections = 2,
       replace = true,
       remote = false,
       remoteHost = serverCfg.host,
-      remotePort = serverCfg.port,
-      tfGCS = "gs://aghan-test/trs/tr.json")
+      remotePort = serverCfg.port
+      ,
+      tfGCS = "gs://aghan-test/trs/tr.json"
+    )
     val res = Cp.run(cfg, Linux)
     assert(res.exitCode == 0)
   }
@@ -246,4 +243,80 @@ class CpSpec2 extends AnyFlatSpec with BeforeAndAfterAll {
 
 
   }
+
+
+  "Merger2" should "merger fields" in {
+
+    val sj =
+      """{
+        |  "field": [
+        |    {
+        |      "name": "ITEM_NBR",
+        |      "typ": 2,
+        |      "size": 4,
+        |      "precision": 1,
+        |      "scale": 1,
+        |      "filler": false,
+        |      "NullIf": {
+        |        "filed": "",
+        |        "value": ""
+        |      },
+        |      "cast": 1,
+        |      "format": ""
+        |    },
+        |    {
+        |      "name": "STORE_NBR",
+        |      "typ":2,
+        |      "size": 4,
+        |      "precision": 1,
+        |      "scale": 1,
+        |      "filler": false,
+        |      "NullIf": {
+        |        "filed": true,
+        |        "value": ""
+        |      },
+        |      "cast": 1,
+        |      "format": ""
+        |    }
+        |  ]
+        |}""".stripMargin
+
+    val schema: SchemaProvider = CopyBook(
+      """        01  TEST-LAYOUT-FIVE.
+        03  ITEM-NBR                        PIC S9(9) COMP.
+ |03  STORE-NBR                       PIC S9(9) COMP.
+ |03  WM-YR-WK                        PIC S9(9) COMP.
+ |03  VENDOR-NBR                      PIC S9(9) COMP.
+ |03  EPC-MANAGER-NBR                 PIC X(12).
+ |03  CASE-REC-QTY                    PIC S9(16)V9(2) COMP-3.
+ |03  CASE-REC-SCAN-QTY               PIC S9(16)V9(2) COMP-3.
+ |03  REC-READ-RATE-PCT               PIC S9(16)V9(2) COMP-3.
+        |""".stripMargin)
+
+    val filds = schema.decoders
+    val fildNames = schema.fieldNames
+    val rb = schema.toRecordBuilder.build()
+    val r = Cp.parseRecord(Option(sj)).get
+
+
+    val newSchema = Cp.merge(schema, r)
+
+    val sc = filds.zip(fildNames)
+    val nsc = newSchema.decoders.zip(newSchema.fieldNames)
+
+    println(sc.mkString("\n"))
+    println(" - - - - - - - ")
+    println(nsc.mkString("\n"))
+    assert(newSchema.decoders.size == schema.decoders.size)
+    assert(newSchema.fieldNames.size == schema.fieldNames.size)
+
+    val updatedFiled = sc.find(_._2=="STORE_NBR").get
+    assert(nsc.exists(p => p._2 == updatedFiled._2))
+
+    val updatedFiled2 = sc.find(_._2=="ITEM_NBR").get
+    assert(nsc.exists(p => p._2 == updatedFiled2._2))
+
+
+  }
+
 }

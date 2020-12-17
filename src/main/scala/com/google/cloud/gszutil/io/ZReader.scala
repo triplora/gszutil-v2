@@ -97,7 +97,7 @@ object ZReader extends Logging {
     var i = 0
     try {
       while (i < decoders.length){
-        decoders(i).get(rBuf, cols(i), rowId)  // where actual reading happens ...
+          decoders(i).get(rBuf, cols(i), rowId)  // where actual reading happens ...
         i += 1
       }
       0

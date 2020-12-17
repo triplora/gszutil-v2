@@ -59,13 +59,11 @@ object Cp extends Command[GsUtilConfig] with Logging {
         logger.info("Merging copybook with provided transformations ...")
 
         val sch = c.schemaProvider.getOrElse(zos.loadCopyBook(c.copyBook))
-        logger.info(s"ORCSchema: ${sch.ORCSchema.toJson}")
+        logger.info(s"Current Schema: ${sch.toString}")
 
-        val s = merge(sch, x)
-        logger.info(s"Schema after merging:")
-        logger.info(s"ORCSchema:${s.ORCSchema.toJson}" )
-        logger.info(s"Schema: ${s.toString}")
-        s
+        val newSchema = merge(sch, x)
+        logger.info(s"Schema After Merging:${newSchema.toString}")
+        newSchema
       }
       case None => {
         logger.info("Use original copybook")
@@ -221,33 +219,44 @@ object Cp extends Command[GsUtilConfig] with Logging {
     s match {
       case x: CopyBook =>
         logger.info("Merging CopyBook")
+
+
+
         val seq1: List[Record.Field] = r.getFieldList.asScala.toList
-        val names= seq1.map(_.getName)
+        val names= seq1.map(_.getName.trim)
         val v: Seq[CopyBookLine] = x.Fields.filterNot({
-          case CopyBookField(name, _) =>
-            names.contains(name)
+          case CopyBookField(n1, _) =>
+            names.contains(n1)
           case CopyBookTitle(_) => false
         })
-        CopyBook(x.raw, x.transcoder, Option(v ++ seq1.map(
-          fld =>
-            CopyBookField(fld.getName, Decoding.getDecoder(fld, x.transcoder))
-        )))
-      case y: RecordSchema =>  {
+
+        val newFileds = x.Fields.map {
+          case c: CopyBookField if names.contains(c.name) =>
+            CopyBookField(c.name, Decoding.getDecoder(seq1.find(p => p.getName.trim == c.name).get, x.transcoder))
+          case x =>
+            x
+        }
+        CopyBook(x.raw, x.transcoder, Option(newFileds))
+
+      case y: RecordSchema => {
         logger.info("Merging RecordSchema")
-        val seq1: List[Record.Field] = r.getFieldList.asScala.toList
-        val fnames= seq1.map(_.getName)
+        val newOnes: List[Record.Field] = r.getFieldList.asScala.toList
+        val fnames = newOnes.map(_.getName.trim)
 
         val filtered = y.r.getFieldList.asScala.filterNot(x => fnames.contains(x.getName))
-        val newRec = Record.newBuilder(y.r)
 
-        var l = newRec.getFieldCount -1
-        while(l >= 0){
+
+        val v: List[Record.Field] = y.r.getFieldList.asScala.toList.flatMap { x =>
+          newOnes.find(p => p.getName.trim == x.getName.trim)
+        }
+
+        val newRec = Record.newBuilder(y.r)
+        var l = newRec.getFieldCount - 1
+        while (l >= 0) {
           newRec.removeField(l)
           l = l - 1
         }
-        (filtered ++ seq1).foreach {
-          x => newRec.addField(x)
-        }
+        v.foreach(u => newRec.addField(u))
         RecordSchema(newRec.build())
       }
     }
