@@ -72,9 +72,10 @@ object Util extends Logging {
 
   val StorageScope = "https://www.googleapis.com/auth/devstorage.read_write"
   val BigQueryScope = "https://www.googleapis.com/auth/bigquery"
+  val BigQueryReadScope = "https://www.googleapis.com/auth/bigquery.readonly"
   val ComputeScope = "https://www.googleapis.com/auth/compute"
   val LoggingScope = "https://www.googleapis.com/auth/logging.write"
-  final val Scopes = ImmutableSet.of(ComputeScope, StorageScope, BigQueryScope, LoggingScope)
+  final val Scopes = ImmutableSet.of(StorageScope, BigQueryScope, LoggingScope)
 
   class DefaultCredentialProvider extends CredentialProvider {
     private val credentials =

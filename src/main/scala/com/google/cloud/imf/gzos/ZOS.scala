@@ -255,65 +255,53 @@ protected object ZOS extends Logging {
     }
   }
 
-  def writeDSN(dsn: DSN, lrecl: Int, space1: Int, space2: Int, in: ReadableByteChannel): Unit = {
+  def allocate(dsn: DSN, lrecl: Int, space1: Int = 100, space2: Int = 100): String = {
     val ddname = ZFile.allocDummyDDName()
     val cmd =
       s"alloc fi($ddname) da(${dsn.fqdsn}) reuse new catalog msg(2)" +
-      s" recfm(f,b) space($space1,$space2) cyl lrecl($lrecl)"
+        s" recfm(f,b) space($space1,$space2) cyl lrecl($lrecl)"
+    logger.debug(s"Submitting BPXWDYN command:\n$cmd")
     try {
       ZFile.bpxwdyn(cmd)
     } catch {
       case e: RcException =>
-        val msg = s"Failed to allocate DD for $dsn\n$cmd"
+        val msg = s"Failed to allocate DD:$ddname for $dsn\n$cmd"
         throw new RuntimeException(msg, e)
     }
+    logger.debug(s"Allocated DD:$ddname for $dsn")
+    ddname
+  }
 
+  def writeDSN(dsn: DSN, lrecl: Int): ZRecordWriterT = {
+    val ddname = allocate(dsn, lrecl)
     var writer: RecordWriter = null
     try {
       writer = RecordWriter.newWriterForDD(ddname)
-      assert(writer.getLrecl == lrecl, s"writer lrecl = ${writer.getLrecl} but expected $lrecl")
-      val buf = ByteBuffer.allocate(lrecl*1024)
-      var n = 0
-      while (n > -1) {
-        // fill buffer
-        while (buf.remaining > lrecl && n > -1){
-          n = in.read(buf)
+    } catch {
+      case t: Throwable =>
+        logger.error(s"Failed to open writer: ${t.getMessage}", t)
+        if (writer != null) {
+          try {
+            writer.close()
+          } catch {
+            case e: ZFileException =>
+              logger.error(s"Failed to close writer for $ddname\nmessage:${e.getMessage}", e)
+          }
         }
-
-        // prepare buffer for reads
-        buf.flip()
-
-        while (buf.remaining() >= lrecl) {
-          val pos0 = buf.position()
-          val pos1 = pos0 + lrecl
-          // write record
-          writer.write(buf.array(), pos0, lrecl)
-          buf.position(pos1)
-        }
-
-        // prepare buffer for writes
-        buf.compact()
-      }
-    } finally {
-      if (writer != null) {
         try {
-          writer.close()
+          val cmd = s"free fi($ddname) msg(2)"
+          logger.debug(s"submitting BPXWDYN command:\n$cmd")
+          ZFile.bpxwdyn(cmd)
         } catch {
-          case e: ZFileException =>
-            logger.error(s"Failed to close writer for $ddname\nmessage:${e.getMessage}", e)
+          case e: RcException =>
+            logger.error(s"Failed to free DD $ddname\nmessage:${e.getMessage}", e)
         }
-      }
-      try {
-        ZFile.bpxwdyn(s"free fi($ddname) msg(2)")
-      } catch {
-        case e: RcException =>
-          logger.error(s"Failed to free DD $ddname\nmessage:${e.getMessage}", e)
-      }
     }
+    new WrappedRecordWriter(writer)
   }
 
   def writeDSN(dsn: DSN): ZRecordWriterT =
-    new WrappedRecordWriter(RecordWriter.newWriter(dsn.fqdsn, ZFileConstants.FLAG_DISP_SHR))
+    new WrappedRecordWriter(RecordWriter.newWriter(dsn.fqdsn, ZFileConstants.FLAG_DISP_MOD))
 
   def writeDD(ddName: String): ZRecordWriterT =
     new WrappedRecordWriter(RecordWriter.newWriterForDD(ddName))

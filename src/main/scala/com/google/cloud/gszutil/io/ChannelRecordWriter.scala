@@ -2,11 +2,11 @@ package com.google.cloud.gszutil.io
 import java.nio.ByteBuffer
 import java.nio.channels.WritableByteChannel
 
-class ChannelRecordWriter(private val channel: WritableByteChannel, lrecl: Int, blksize: Int) extends ZRecordWriterT {
-
+case class ChannelRecordWriter(channel: WritableByteChannel,
+                               lrecl: Int,
+                               blksize: Int) extends ZRecordWriterT {
   override val lRecl: Int = lrecl
   override val blkSize: Int = blksize
-
   private var nRecordsWritten: Int = 0
 
   override def write(src: Array[Byte]): Unit = {

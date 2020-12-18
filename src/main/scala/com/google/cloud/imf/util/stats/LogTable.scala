@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-package com.google.cloud.imf.util
+package com.google.cloud.imf.util.stats
 
 import com.google.cloud.bigquery.Field.Mode.NULLABLE
 import com.google.cloud.bigquery.StandardSQLTypeName.{FLOAT64, INT64}
@@ -43,16 +43,17 @@ object LogTable {
       BQField("rows_inserted", INT64, NULLABLE),
       BQField("rows_updated", INT64, NULLABLE),
       BQField("rows_unmodified", INT64, NULLABLE),
+      BQField("rows_before_merge", INT64, NULLABLE),
       BQField("rows_loaded", INT64, NULLABLE),
       BQField("bq_job_id"),
       BQField("bq_job_project"),
       BQField("bq_job_location"),
       BQField("statement_type"),
       BQField("query"),
-      BQField("execution_hours", FLOAT64, NULLABLE),
-      BQField("queued_hours", FLOAT64, NULLABLE),
-      BQField("gb_processed", FLOAT64, NULLABLE),
-      BQField("slot_hours", FLOAT64, NULLABLE),
+      BQField("execution_ms", INT64, NULLABLE),
+      BQField("queued_ms", INT64, NULLABLE),
+      BQField("bytes_processed", INT64, NULLABLE),
+      BQField("slot_ms", INT64, NULLABLE),
       BQField("slot_utilization_rate", FLOAT64, NULLABLE),
       BQField("slot_ms_to_total_bytes_ratio", FLOAT64, NULLABLE),
       BQField("shuffle_bytes_to_total_bytes_ratio", FLOAT64, NULLABLE),

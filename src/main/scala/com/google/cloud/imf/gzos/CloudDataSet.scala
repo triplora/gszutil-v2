@@ -22,6 +22,10 @@ import com.google.cloud.gszutil.io.CloudRecordReader
 import com.google.cloud.imf.util.{Logging, StatsUtil}
 import com.google.cloud.storage.{Blob, BlobId, Storage}
 
+/**  add these lines to environment file:
+  *  export GCSDSNURI=gs://bucket/prefix
+  *  export GCSGDGURI=gs://bucket-with-versioning/prefix
+  */
 object CloudDataSet extends Logging {
   val DsnVar = "GCSDSNURI"
   val GdgVar = "GCSGDGURI"
@@ -112,6 +116,8 @@ object CloudDataSet extends Logging {
     else ds.dsn
   }
 
+  // prefix      gs://bucket/prefix
+  // object name             prefix/HLQ.DATASET
   def readCloudDDDSN(gcs: Storage,
                      dd: String,
                      ds: DataSetInfo,

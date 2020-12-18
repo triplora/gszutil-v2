@@ -3,8 +3,8 @@ package com.google.cloud.imf.grecv.server
 import java.net.InetSocketAddress
 import java.util.concurrent.Executors
 
-import com.google.cloud.imf.grecv.{GRecvConfig, GzipCodec}
-import com.google.cloud.imf.util.Logging
+import com.google.cloud.imf.grecv.GRecvConfig
+import com.google.cloud.imf.util.{GzipCodec, Logging}
 import com.google.cloud.storage.Storage
 import io.grpc.Server
 import io.grpc.netty.NettyServerBuilder

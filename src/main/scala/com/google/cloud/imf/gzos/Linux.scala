@@ -16,7 +16,7 @@
 
 package com.google.cloud.imf.gzos
 
-import java.nio.channels.{FileChannel, WritableByteChannel}
+import java.nio.channels.FileChannel
 import java.nio.file.{Files, Paths, StandardOpenOption}
 import java.util.Date
 
@@ -145,23 +145,20 @@ object Linux extends MVS with Logging {
   override def readDSNLines(dsn: DSN): Iterator[String] = throw new NotImplementedError()
   override def writeDSN(dsn: DSN): ZRecordWriterT = throw new NotImplementedError()
   override def writeDD(ddName: String): ZRecordWriterT = {
-    val env = System.getenv()
-    require(env.containsKey(ddName), s"$ddName environment variable not set")
-    val ddPath = Paths.get(System.getenv(ddName))
-    val lReclKey = ddName + "_LRECL"
-    val blkSizeKey = ddName + "_BLKSIZE"
-    require(env.containsKey(lReclKey), s"$lReclKey environment variable not set")
-    require(env.containsKey(blkSizeKey), s"$blkSizeKey environment variable not set")
-    val lRecl: Int = env.get(ddName + "_LRECL").toInt
-    val blkSize: Int = env.get(ddName + "_BLKSIZE").toInt
-    logger.info(s"Opening $ddName $ddPath")
-    val ddFile = ddPath.toFile
-    ddFile.createNewFile()
-    require(ddFile.exists, s"$ddName $ddPath does not exist")
-    require(ddFile.isFile, s"$ddName $ddPath is not a file")
-
-    val channel:WritableByteChannel = FileChannel.open(ddPath, StandardOpenOption.CREATE, StandardOpenOption.WRITE)
-    new ChannelRecordWriter(channel, lRecl, blkSize)
+    val env = sys.env
+    require(env.contains(ddName), s"$ddName environment variable not set")
+    val ddPath = Paths.get(env(ddName))
+    val lreclVarName = s"${ddName}_LRECL"
+    val blkSizeVarName = s"${ddName}_BLKSIZE"
+    require(env.contains(lreclVarName), s"$lreclVarName environment variable not set")
+    require(env.contains(blkSizeVarName), s"$blkSizeVarName environment variable not set")
+    logger.info(s"Opening DD:$ddName from path:$ddPath")
+    if (Files.isDirectory(ddPath))
+      throw new IllegalStateException(s"Unable to write DD:$ddName because $ddPath is a directory")
+    import StandardOpenOption.{CREATE,WRITE}
+    ChannelRecordWriter(channel = FileChannel.open(ddPath, CREATE, WRITE),
+      lrecl = sys.env(lreclVarName).toInt,
+      blksize = sys.env(blkSizeVarName).toInt)
   }
   override def listPDS(dsn: DSN): Iterator[PDSMemberInfo] = throw new NotImplementedError()
 

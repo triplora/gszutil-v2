@@ -19,16 +19,15 @@ package com.google.cloud.bqsh
 import java.time.LocalDateTime
 
 import com.google.api.client.json.jackson2.JacksonFactory
-import com.google.api.services.bigquery.model.TableReference
+import com.google.api.services.bigquery.Bigquery
+import com.google.api.services.bigquery.model
 import com.google.auth.Credentials
 import com.google.auth.http.HttpCredentialsAdapter
-import com.google.cloud.bigquery.{BigQuery, BigQueryError, BigQueryException, DatasetId, Field, FieldList, InsertAllRequest, InsertAllResponse, Job, JobId, JobInfo, JobStatus, QueryJobConfiguration, Schema, StandardSQLTypeName, StandardTableDefinition, TableDefinition, TableId}
+import com.google.cloud.bigquery.InsertAllRequest.RowToInsert
+import com.google.cloud.bigquery.{BigQuery, BigQueryError, BigQueryException, CopyJobConfiguration, DatasetId, ExtractJobConfiguration, Field, FieldList, InsertAllRequest, InsertAllResponse, Job, JobConfiguration, JobId, JobInfo, JobStatus, LoadJobConfiguration, QueryJobConfiguration, Schema, StandardSQLTypeName, StandardTableDefinition, TableDefinition, TableId}
 import com.google.cloud.imf.gzos.{MVS, Util}
-import com.google.cloud.imf.util.StatsUtil.EnhancedJob
-import com.google.cloud.imf.util.{CCATransportFactory, Logging, StaticMap, StatsUtil}
-import com.google.common.collect.{ImmutableList, ImmutableMap}
-import com.google.api.services.{bigquery => bqapi}
-import com.google.api.services.bigquery.{model => bqmdl}
+import com.google.cloud.imf.util.{CCATransportFactory, Logging, StatsUtil}
+import com.google.common.collect.ImmutableList
 
 import scala.annotation.tailrec
 import scala.collection.mutable.ListBuffer
@@ -50,7 +49,8 @@ object BQ extends Logging {
 
   /** Converts Option[TableId] to String */
   def tableSpec(t: Option[TableId]): String = t.map(tableSpec).getOrElse("")
-  def tableSpec(t: bqmdl.TableReference): String = s"${t.getProjectId}.${t.getDatasetId}.${t.getTableId}"
+  def tableSpec(t: model.TableReference): String =
+    s"${t.getProjectId}.${t.getDatasetId}.${t.getTableId}"
 
   def tablesEqual(t: TableId, t1: TableId): Boolean = {
     t1.getProject == t.getProject &&
@@ -87,11 +87,10 @@ object BQ extends Logging {
   def queryDryRun(bq: BigQuery,
                   cfg: QueryJobConfiguration,
                   jobId: JobId,
-                  timeoutSeconds: Long): EnhancedJob = {
+                  timeoutSeconds: Long): Job = {
     val jobId1 = jobId.toBuilder.setJob(jobId.getJob+"_dryrun")
     bq.create(JobInfo.of(jobId1.build, cfg.toBuilder.setDryRun(true).build))
-    val queryJob = waitForJob(bq, jobId, timeoutMillis = timeoutSeconds * 1000L)
-    new EnhancedJob(queryJob)
+    waitForJob(bq, jobId, timeoutMillis = timeoutSeconds * 1000L)
   }
 
   /** Submits a BigQuery job and waits for completion
@@ -220,30 +219,38 @@ object BQ extends Logging {
     }
   }
 
-  def throwOnError(job: EnhancedJob, status: BQStatus): Unit = {
+  def throwOnError(job: Job, status: BQStatus): Unit = {
+    if (job == null) throw new IllegalStateException("job not found")
     val sb = new StringBuilder
     if (status.hasError) {
+      if (job.getJobId != null)
+        sb.append(s"${BQ.toStr(job.getJobId)} has errors\n")
+      job.getConfiguration[JobConfiguration] match {
+        case c: CopyJobConfiguration =>
+        case c: ExtractJobConfiguration =>
+        case c: LoadJobConfiguration =>
+        case c: QueryJobConfiguration =>
+          sb.append("Query:\n")
+          sb.append(c.getQuery)
+          sb.append("\n")
+        case _ =>
+      }
+      sb.append("\n")
+      sb.append("Errors:\n")
       status.error.foreach { err =>
         sb.append(err.toString)
+        sb.append("\n")
       }
       if (status.executionErrors.nonEmpty) {
         sb.append("Execution Errors:\n")
       }
-      status.executionErrors.foreach { err =>
+      status.executionErrors.foreach{err =>
         sb.append(err.toString)
+        sb.append("\n")
       }
-      val errMsgs = sb.result
-
-      sb.clear()
-      sb.append(s"${job.id} has errors\n")
-      sb.append("Query:\n")
-      sb.append(job.query)
-      sb.append("\n")
-      sb.append("Errors:\n")
-      sb.append(errMsgs)
-
-      logger.error(sb.result)
-      throw new RuntimeException(errMsgs)
+      val msg = sb.result
+      logger.error(msg)
+      throw new RuntimeException(msg)
     }
   }
 
@@ -333,20 +340,69 @@ object BQ extends Logging {
   def isValidBigQueryName(s: String): Boolean =
     s.matches("[a-zA-Z0-9_]{1,1024}")
 
-  case class BQSchema(fields: Seq[BQField] = Nil) {
-    lazy val fieldNames: Set[String] = fields.map(_.name).toSet
-    def contains(name: String): Boolean = fieldNames.contains(name)
+  /** Convert Java List to Scala Seq */
+  def l2l[T](l: java.util.List[T]): Seq[T] = {
+    if (l == null) Nil
+    else {
+      val buf = ListBuffer.empty[T]
+      l.forEach(buf.append)
+      buf.toList
+    }
   }
 
-  case class BQField(name: String, typ: StandardSQLTypeName = StandardSQLTypeName.STRING, mode: Field
-  .Mode = Field.Mode
-    .NULLABLE)
+  def mv[K,V](m: java.util.Map[K,V]): Seq[V] = {
+    if (m == null) Nil
+    else {
+      val buf = ListBuffer.empty[V]
+      m.forEach{(_, v) => buf.append(v)}
+      buf.toList
+    }
+  }
+
+  def logInsertErrors(res: InsertAllResponse): Unit = {
+    res match {
+      case x if x.hasErrors =>
+        val errors = mv(x.getInsertErrors).flatMap(l2l).mkString("\n")
+        logger.warn(s"Failed to insert rows:\n$errors")
+      case _ =>
+    }
+  }
+
+  def insertRow(content: java.util.Map[String,Any],
+                bq: BigQuery,
+                tableId: TableId): Unit = {
+    val request = InsertAllRequest.of(tableId, RowToInsert.of(content))
+    val result = bq.insertAll(request)
+    if (result.hasErrors) {
+      val errors: Seq[BigQueryError] = mv(result.getInsertErrors).flatMap(l2l)
+      val tblSpec = s"${tableId.getProject}.${tableId.getDataset}.${tableId.getTable}"
+      val sb = new StringBuilder
+      sb.append(s"Errors inserting row into $tblSpec\n")
+      content.forEach{(k,v) => sb.append(s"$k -> $v\n")}
+      sb.append("\n")
+      errors.foreach{e =>
+        sb.append("BigQueryError:\n")
+        sb.append(s"message: ${e.getMessage}\n")
+        sb.append(s"reason: ${e.getReason}\n\n")
+      }
+      logger.error(sb.result)
+    }
+  }
+
+  case class BQField(name: String,
+                     typ: StandardSQLTypeName = StandardSQLTypeName.STRING,
+                     mode: Field.Mode = Field.Mode.NULLABLE)
+
+  case class BQSchema(fields: Seq[BQField] = Nil) {
+    private val fieldNames: Set[String] = fields.map(_.name).toSet
+    def contains(name: String): Boolean = fieldNames.contains(name)
+  }
 
   /** Builder meant to be used with streaming insert
     * Won't insert columns that don't exist in the schema
     */
   case class SchemaRowBuilder(schema: Option[BQSchema] = None) {
-    private var row = StaticMap.builder
+    private val row = new java.util.HashMap[String,Any]()
     def put(name: String, value: Any): SchemaRowBuilder = {
       if (schema.isDefined && schema.get.contains(name) && value != null) {
         value match {
@@ -358,10 +414,10 @@ object BQ extends Logging {
       }
       this
     }
-    def build: java.util.Map[String,Any] = row.build()
-    def clear(): Unit = row = StaticMap.builder
+    def build: java.util.Map[String,Any] = row
+    def clear(): Unit = row.clear()
     def insert(bq: BigQuery, tableId: TableId, id: String): InsertAllResponse =
-      bq.insertAll(InsertAllRequest.newBuilder(tableId).addRow(id, row.build).build)
+      bq.insertAll(InsertAllRequest.newBuilder(tableId).addRow(id, row).build)
   }
 
   def getFields(x: TableDefinition): BQSchema = {
@@ -400,277 +456,32 @@ object BQ extends Logging {
     }
   }
 
-  def apiClient(credentials: Credentials): com.google.api.services.bigquery.Bigquery =
-    new com.google.api.services.bigquery.Bigquery(CCATransportFactory.getTransportInstance,
+  def apiClient(credentials: Credentials): Bigquery =
+    new Bigquery(CCATransportFactory.getTransportInstance,
       JacksonFactory.getDefaultInstance, new HttpCredentialsAdapter(credentials))
 
-  def apiGetJob(bq: com.google.api.services.bigquery.Bigquery, jobId: JobId): com.google
-  .api.services.bigquery.model.Job = {
+  def apiGetJob(bq: Bigquery, jobId: JobId): model.Job = {
     val req = bq.jobs().get(jobId.getProject, jobId.getJob)
     req.setLocation(jobId.getLocation)
     req.execute()
   }
 
-  def getJobJson(bq: bqapi.Bigquery, jobId: JobId): Option[String] = {
-    try {
-      val res = apiGetJob(bq,jobId)
-      if (res != null) {
-        Option(JacksonFactory.getDefaultInstance.toString(res))
+  def readsFrom(step: model.ExplainQueryStep, t: TableId): Boolean =
+    readsFrom(step, tableSpec(t))
+
+  def readsFrom(step: model.ExplainQueryStep, t: String): Boolean = {
+    if (step.getKind == null || step.getSubsteps == null) false
+    else
+      step.getKind == "READ" &&
+      step.getSubsteps.asScala.exists{subStep =>
+        subStep.startsWith("FROM ") && subStep.endsWith(t)
       }
-      else None
-    } catch {
-      case _: Throwable => None
-    }
   }
 
-  trait HasStats {
-    def addToRow(row: SchemaRowBuilder): Unit
-  }
+  def readsFrom(stage: model.ExplainQueryStage, t: model.TableReference): Boolean =
+    readsFrom(stage, tableSpec(t))
 
-  class EnhancedJobStatistics(stats: bqmdl.JobStatistics) extends HasStats {
-    def queryDurationMs: Long = stats.getEndTime - stats.getStartTime
-    def waitDurationMs: Long = stats.getStartTime - stats.getCreationTime
-    override def addToRow(row: SchemaRowBuilder): Unit = {
-    }
-  }
-
-  class EnhancedExplainQueryStep(step: bqmdl.ExplainQueryStep) {
-    def readsFrom(t: TableId): Boolean = readsFrom(BQ.tableSpec(t))
-    def readsFrom(tableSpec: String): Boolean = {
-      if (step.getKind == null || step.getSubsteps == null) false
-      else {
-        step.getKind == "READ" &&
-          step.getSubsteps.asScala.exists{subStep =>
-            subStep.startsWith("FROM ") &&
-              subStep.endsWith(tableSpec)
-          }
-      }
-    }
-  }
-
-  class EnhancedExplainQueryStage(stage: bqmdl.ExplainQueryStage) {
-    def readsFrom(t: TableId): Boolean = readsFrom(BQ.tableSpec(t))
-    def readsFrom(t: TableReference): Boolean = readsFrom(BQ.tableSpec(t))
-    def readsFrom(tableSpec: String): Boolean =
-      stage.getSteps.asScala.exists(_.readsFrom(tableSpec))
-  }
-
-  import scala.language.implicitConversions
-
-  implicit def enhanceExplainQueryStep(x: bqmdl.ExplainQueryStep): EnhancedExplainQueryStep =
-    new EnhancedExplainQueryStep(x)
-
-  implicit def enhanceExplainQueryStage(x: bqmdl.ExplainQueryStage): EnhancedExplainQueryStage =
-    new EnhancedExplainQueryStage(x)
-
-  class JobStats(j: bqmdl.Job) extends HasStats {
-    override def addToRow(row: SchemaRowBuilder): Unit = {
-      row
-        .put("bq_project", j.getJobReference.getProjectId)
-        .put("bq_location", j.getJobReference.getLocation)
-        .put("bq_job_id", j.getJobReference.getJobId)
-        .put("job_json", JacksonFactory.getDefaultInstance.toString(j))
-
-      if (j.getConfiguration.getQuery != null)
-        new QueryStats(j).addToRow(row)
-      else if (j.getConfiguration.getLoad != null)
-        new LoadStats(j).addToRow(row)
-    }
-  }
-
-  class LoadStats(j: bqmdl.Job) extends HasStats {
-    override def addToRow(row: SchemaRowBuilder): Unit = {
-      row
-        .put("source", j.getConfiguration.getLoad.getSourceUris.asScala.mkString(","))
-        .put("destination", tableSpec(j.getConfiguration.getLoad.getDestinationTable))
-        .put("rows_loaded", j.getStatistics.getLoad.getOutputRows)
-    }
-  }
-
-  class QueryStats(j: bqmdl.Job) extends HasStats {
-    def s1: bqmdl.JobStatistics = j.getStatistics
-    def s2: bqmdl.JobStatistics2 = j.getStatistics.getQuery
-
-    def queryDurationMs: Long = s1.getEndTime - s1.getStartTime
-    def waitDurationMs: Long = s1.getStartTime - s1.getCreationTime
-
-    def slotMsToTotalBytesRatio: Double =
-      if (s2.getTotalBytesProcessed > 0)
-        (s2.getTotalSlotMs * 1.0d) / s2.getTotalBytesProcessed
-      else 0
-
-    def slotUtilizationRate: Double =
-      if (queryDurationMs > 0)
-        (s2.getTotalSlotMs * 1.0d) / queryDurationMs
-      else 0
-
-    def stageSummary: Seq[String] = {
-      s2.getQueryPlan.asScala.map{stage =>
-        val tbls = stage.getSteps.asScala.flatMap{ step =>
-          val last = step.getSubsteps.asScala.last
-          val tbl = last.stripPrefix("FROM ")
-          if (step.getKind == "READ" && last.startsWith("FROM ") && !tbl.startsWith("__")) {
-            Option(tbl)
-          } else None
-        }
-        val stepCount = stage.getSteps.size
-        val subStepCount = stage.getSteps.asScala.foldLeft(0){(a,b) =>
-          a + b.getSubsteps.size
-        }
-        val inputs = if (tbls.nonEmpty) tbls.mkString(" inputs:",",","") else ""
-        s"${stage.getName} in:${stage.getRecordsRead} out:${stage.getRecordsWritten} " +
-          s"steps:$stepCount subSteps:$subStepCount$inputs"
-      }.toSeq
-    }
-
-    def stageCount: Int = s2.getQueryPlan.size
-
-    def stepCount: Int = s2.getQueryPlan.asScala.foldLeft(0){ (a, b) =>
-      a + b.getSteps.size
-    }
-
-    def subStepCount: Int = s2.getQueryPlan.asScala.foldLeft(0){ (a, b) =>
-      a + b.getSteps.asScala.foldLeft(0){(c,d) =>
-        c + d.getSubsteps.size()
-      }
-    }
-
-    def bytesProcessed: Long = s2.getTotalBytesProcessed
-
-    def shuffleBytes: Long =
-      s2.getQueryPlan.asScala.foldLeft(0L){ (a, b) => a + b.getShuffleOutputBytes}
-
-    def shuffleBytesSpilled: Long =
-      s2.getQueryPlan.asScala.foldLeft(0L){ (a, b) => a + b.getShuffleOutputBytesSpilled}
-
-    def shuffleBytesToTotalBytesRatio: Double =
-      if (s2.getTotalBytesProcessed > 0)
-        shuffleBytes / s2.getTotalBytesProcessed
-      else 0
-
-    def shuffleSpillToShuffleBytesRatio: Double =
-      if (shuffleBytes > 0)
-        shuffleBytesSpilled / shuffleBytes
-      else 0
-
-    def shuffleSpillToTotalBytesRatio: Double =
-      if (s2.getTotalBytesProcessed > 0)
-        shuffleBytesSpilled / s2.getTotalBytesProcessed
-      else 0
-
-    override def addToRow(row: SchemaRowBuilder): Unit = {
-      row
-        .put("rows_affected", s2.getNumDmlAffectedRows)
-
-      if (s2.getStatementType == "MERGE")
-        new MergeStats(j).addToRow(row)
-      else if (s2.getStatementType == "MERGE")
-        new SelectStats(j).addToRow(row)
-
-      row
-        .put("statement_type", s2.getStatementType)
-        .put("query", j.getConfiguration.getQuery.getQuery)
-        .put("execution_hours", ms2Hr(queryDurationMs))
-        .put("queued_hours", ms2Hr(waitDurationMs))
-        .put("gb_processed", b2GB(s2.getTotalBytesProcessed))
-        .put("slot_hours", ms2Hr(j.getStatistics.getTotalSlotMs))
-        .put("slot_utilization_rate", slotUtilizationRate)
-        .put("slot_ms_to_total_bytes_ratio", slotMsToTotalBytesRatio)
-        .put("shuffle_bytes_to_total_bytes_ratio", shuffleBytesToTotalBytesRatio)
-        .put("shuffle_spill_bytes_to_shuffle_bytes_ratio", shuffleSpillToShuffleBytesRatio)
-        .put("shuffle_spill_bytes_to_total_bytes_ratio", shuffleSpillToTotalBytesRatio)
-        .put("shuffle_spill_gb", b2GB(shuffleBytesSpilled))
-        .put("bq_stage_count", stageCount)
-        .put("bq_step_count", stepCount)
-        .put("bq_sub_step_count", subStepCount)
-        .put("bq_stage_summary", stageSummary.mkString("\n"))
-    }
-  }
-
-  def b2GB(b: Long): Double = b.toDouble / (1024*1024*1024)
-  def ms2Hr(ms: Long): Double = ms.toDouble / (1000*60*60)
-
-  class MergeStats(j: bqmdl.Job) extends HasStats {
-    require(j.getStatus != null && j.getStatus.getState == "DONE", "job is not done")
-    require(j.getStatistics != null && j.getStatistics.getQuery != null && j.getStatistics
-      .getQuery.getStatementType != null && j.getStatistics
-      .getQuery.getStatementType == "MERGE", "job is not a merge job")
-
-    def stats: bqmdl.JobStatistics2 = j.getStatistics.getQuery
-    def plan = stats.getQueryPlan.asScala
-
-    def destTable: TableReference = j.getConfiguration.getQuery.getDestinationTable
-    def sourceTable: TableReference = stats.getReferencedTables.asScala.find{ t =>
-      t.getTableId != destTable.getTableId ||
-        t.getDatasetId != destTable.getDatasetId ||
-        t.getProjectId != destTable.getProjectId
-    }.get
-
-    def rowsRead: Long =
-      plan.find{x =>
-        x.readsFrom(destTable) &&
-        x.getSteps.asScala.count(_.getKind == "READ") == 1
-      }.get.getRecordsRead
-
-    def rowsWritten: Long =
-      plan.flatMap{x =>
-        if (x.getName.endsWith(": Output") && x.getRecordsWritten != null)
-          Option(x.getRecordsWritten.toLong)
-        else None
-      }.lastOption.get
-
-    def rowsInserted: Long = rowsWritten - rowsRead
-    def rowsAffected: Long = stats.getNumDmlAffectedRows
-    def rowsUpdated: Long = rowsAffected - rowsInserted
-    def rowsUnmodified: Long = rowsWritten - rowsAffected
-
-    override def addToRow(row: SchemaRowBuilder): Unit = {
-      row
-        .put("rows_read", rowsRead)
-        .put("rows_written", rowsWritten)
-        .put("rows_inserted", rowsInserted)
-        .put("rows_updated", rowsUpdated)
-        .put("rows_unmodified", rowsUnmodified)
-    }
-  }
-
-  class SelectStats(j: bqmdl.Job) extends HasStats {
-    def plan = j.getStatistics.getQuery.getQueryPlan.asScala
-
-    def destTable: TableReference =
-      j.getConfiguration.getQuery.getDestinationTable
-
-    def sourceTables: Seq[TableReference] =
-      j.getStatistics.getQuery.getReferencedTables.asScala.toSeq
-
-    def inputs: Seq[(String,Long)] = {
-      plan.flatMap{s =>
-        s.getSteps.asScala.flatMap{step =>
-          val isRead = step.getKind == "READ"
-          val lastSubStep = step.getSubsteps.asScala.last
-          val isFrom = lastSubStep.startsWith("FROM")
-          val table = lastSubStep.stripPrefix("FROM ")
-          val fromTable = !table.startsWith("__")
-          if (isRead && isFrom && fromTable){
-            Option((table, s.getRecordsRead.toLong))
-          } else None
-        }
-      }.toList
-    }
-
-    def rowsRead: Long = inputs.foldLeft(0L)(_ + _._2)
-
-    def rowsWritten: Long =
-      plan.foldLeft(0L){(a,b) =>
-        if (b.getName.endsWith(": Output") && b.getRecordsWritten != null)
-          b.getRecordsWritten
-        else a
-      }
-
-    override def addToRow(row: SchemaRowBuilder): Unit = {
-      row
-        .put("rowsRead", rowsRead)
-        .put("rowsWritten", rowsWritten)
-    }
+  def readsFrom(stage: model.ExplainQueryStage, t: String): Boolean = {
+    stage.getSteps.asScala.exists(step => readsFrom(step,t))
   }
 }

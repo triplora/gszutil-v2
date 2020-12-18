@@ -9,11 +9,11 @@ import com.google.cloud.bqsh.GsUtilConfig
 import com.google.cloud.bqsh.cmd.Result
 import com.google.cloud.gszutil.SchemaProvider
 import com.google.cloud.gszutil.io.{CloudRecordReader, ZRecordReaderT}
-import com.google.cloud.imf.grecv.{GRecvProtocol, GzipCodec, Uploader}
+import com.google.cloud.imf.grecv.{GRecvProtocol, Uploader}
 import com.google.cloud.imf.gzos.MVS
 import com.google.cloud.imf.gzos.pb.GRecvGrpc
 import com.google.cloud.imf.gzos.pb.GRecvProto.GRecvRequest
-import com.google.cloud.imf.util.{Logging, Services}
+import com.google.cloud.imf.util.{GzipCodec, Logging, Services}
 import com.google.protobuf.util.JsonFormat
 import io.grpc.okhttp.OkHttpChannelBuilder
 
@@ -30,7 +30,7 @@ object GRecvClient extends Uploader with Logging {
     try {
       val req = GRecvRequest.newBuilder
         .setSchema(schemaProvider.toRecordBuilder.build)
-        .setBasepath(cfg.gcsUri)
+        .setBasepath(cfg.gcsUri) // where to write output
         .setLrecl(in.lRecl)
         .setBlksz(in.blkSize)
         .setMaxErrPct(cfg.maxErrorPct)
