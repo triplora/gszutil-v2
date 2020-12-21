@@ -60,7 +60,7 @@ object Scp extends Command[ScpConfig] with Logging {
         val ds = DataSetInfo(in.getDsn)
         // explicitly provided output URI takes precedence
         if (config.gcsOutUri.nonEmpty) {
-          logger.info(s"using output location from --gcsOutUri:\n${config.gcsOutUri}")
+          logger.info(s"using output location from --gcsOutUri:\n${config.gcsOutUri}, datasetInfo=$ds")
           config.gcsOutUri
         } else {
           // otherwise, check CloudDataSet prefixes

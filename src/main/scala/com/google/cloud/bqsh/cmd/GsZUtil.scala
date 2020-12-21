@@ -71,6 +71,7 @@ object GsZUtil extends Command[GsZUtilConfig] with Logging {
       }
     }
 
+    logger.info(s"Reading CloudDataSet with datasetInfo=$dsInfo")
     CloudDataSet.readCloudDD(gcs, "INFILE", dsInfo) match {
       case Some(in) =>
         logger.info(s"CloudDataSet found for DSN=${dsInfo.dsn}")

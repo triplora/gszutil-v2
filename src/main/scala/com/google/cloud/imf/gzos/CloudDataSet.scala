@@ -124,6 +124,7 @@ object CloudDataSet extends Logging {
                      baseUri: URI): Option[CloudRecordReader] = {
     val bucket = baseUri.getAuthority
     val name = buildObjectName(baseUri, ds)
+    logger.debug(s"Searching for object with name=$name, in bucket=$bucket")
     // check if DSN exists in GCS
     val blob: Blob = gcs.get(BlobId.of(bucket, name))
     if (blob != null) {
@@ -156,6 +157,7 @@ object CloudDataSet extends Logging {
     val bucket = baseUri.getAuthority
     val name = buildObjectName(baseUri, ds)
     val uri = s"gs://$bucket/$name"
+    logger.debug(s"Searching for object with name=$name, in bucket=$bucket")
     // check if DSN exists in GCS
     import scala.jdk.CollectionConverters.IterableHasAsScala
     val versions: IndexedSeq[Blob] = gcs.list(bucket,

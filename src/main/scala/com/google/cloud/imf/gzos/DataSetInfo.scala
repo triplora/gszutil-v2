@@ -58,4 +58,6 @@ case class DataSetInfo(dsn: String = "",
       case _ =>
         false
     }
+
+  override def toString: String = s"dataSetName=$dataSetName, elementName=$elementName, pds=$pds, gdg=$gdg"
 }
