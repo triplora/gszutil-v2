@@ -77,6 +77,8 @@ object Encoding {
         value.getValue match {
           case s: String =>
             encode(s.toLong)
+          case i: Integer =>
+            encode(i.longValue())
           case x =>
             throw new RuntimeException(s"Invalid long: $x")
         }
@@ -132,7 +134,10 @@ object Encoding {
 
     override def encodeValue(value: FieldValue): Array[Byte] =
       if (value.isNull) Array.fill(size)(0x00)
-      else throw new UnsupportedOperationException()
+      else value.getValue match {
+          case s: String => encode(s)
+          case _ => throw new UnsupportedOperationException()
+        }
   }
 
   case class BytesToBinaryEncoder(size: Int) extends BinaryEncoder {
