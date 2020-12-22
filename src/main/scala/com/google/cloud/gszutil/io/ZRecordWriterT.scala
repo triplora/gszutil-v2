@@ -16,6 +16,8 @@ trait ZRecordWriterT extends WritableByteChannel {
   /** Maximum block size */
   val blkSize: Int
 
+  val recfm: String
+
   /** Number of records read */
   def count(): Long
 

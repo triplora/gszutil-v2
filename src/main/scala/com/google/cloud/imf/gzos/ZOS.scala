@@ -138,6 +138,7 @@ protected object ZOS {
   class WrappedRecordWriter(private val w: RecordWriter) extends ZRecordWriterT {
     override val lRecl: Int = w.getLrecl
     override val blkSize: Int = w.getBlksize
+    override val recfm: String = w.getRecfm
 
     private var open = true
     private var nRecordsWritten: Long = 0
