@@ -16,14 +16,52 @@
 
 package com.google.cloud.bqsh
 
-import com.google.cloud.gszutil.Decoding.{Decimal64Decoder, LongDecoder, StringDecoder, UnsignedLongDecoder}
-import com.google.cloud.gszutil.{CopyBook, Decoding, Utf8}
+import com.google.cloud.gszutil.Decoding.{CopyBookField, Decimal64Decoder, LongDecoder, StringDecoder, UnsignedLongDecoder}
+import com.google.cloud.gszutil.Encoding.{DateStringToBinaryEncoder, DecimalToBinaryEncoder, LongToBinaryEncoder, StringToBinaryEncoder}
+import com.google.cloud.gszutil.{CopyBook, Decoding, Encoding, Utf8}
 import com.google.cloud.imf.gzos.{Ebcdic, Util}
 import com.google.cloud.imf.util.{CloudLogging, Logging}
 import org.scalatest.flatspec.AnyFlatSpec
 
 class CopyBookSpec extends AnyFlatSpec with Logging {
   CloudLogging.configureLogging(debugOverride = false)
+
+  val transcoder = Ebcdic
+  val cbFields = Seq(
+    "PIC S9 COMP." -> (new LongDecoder(2), LongToBinaryEncoder(2)),
+    "PIC S9(4) COMP." -> (new LongDecoder(2), LongToBinaryEncoder(2)),
+    "PIC S9(5) COMP." -> (new LongDecoder(4), LongToBinaryEncoder(4)),
+    "PIC S9(9) COMP." -> (new LongDecoder(4), LongToBinaryEncoder(4)),
+    "PIC S9(10) COMP." -> (new LongDecoder(8), LongToBinaryEncoder(8)),
+    "PIC S9(18) COMP." -> (new LongDecoder(8), LongToBinaryEncoder(8)),
+    "PIC 9 COMP." -> (UnsignedLongDecoder(2), LongToBinaryEncoder(2)),
+    "PIC 9(4) COMP." -> (UnsignedLongDecoder(2), LongToBinaryEncoder(2)),
+    "PIC 9(5) COMP." -> (UnsignedLongDecoder(4), LongToBinaryEncoder(4)),
+    "PIC 9(9) COMP." -> (UnsignedLongDecoder(4), LongToBinaryEncoder(4)),
+    "PIC 9(10) COMP." -> (UnsignedLongDecoder(8), LongToBinaryEncoder(8)),
+    "PIC 9(18) COMP." -> (UnsignedLongDecoder(8), LongToBinaryEncoder(8)),
+    "PIC X." -> (new StringDecoder(transcoder, 1), StringToBinaryEncoder(transcoder, 1)),
+    "PIC X(8)." -> (new StringDecoder(transcoder, 8), StringToBinaryEncoder(transcoder, 8)),
+    "PIC X(16)." -> (new StringDecoder(transcoder, 16), StringToBinaryEncoder(transcoder, 16)),
+    "PIC X(30)." -> (new StringDecoder(transcoder, 30), StringToBinaryEncoder(transcoder, 30)),
+    "PIC X(20)." -> (new StringDecoder(transcoder, 20), StringToBinaryEncoder(transcoder, 20)),
+    "PIC X(2)." -> (new StringDecoder(transcoder, 2), StringToBinaryEncoder(transcoder, 2)),
+    "PIC X(10)." -> (new StringDecoder(transcoder, 10), StringToBinaryEncoder(transcoder, 10)),
+    "PIC S9(9)V9(2) COMP-3." -> (Decimal64Decoder(9,2), DecimalToBinaryEncoder(9,2)),
+    "PIC S9(9)V9(3) COMP-3." -> (Decimal64Decoder(9,3), DecimalToBinaryEncoder(9,3)),
+    "PIC S9(13) COMP-3." -> (Decimal64Decoder(13,0), DecimalToBinaryEncoder(13,0)),
+    "PIC S9(13)V9(0) COMP-3." -> (Decimal64Decoder(13,0), DecimalToBinaryEncoder(13,0)),
+    "PIC S9(3) COMP-3." -> (Decimal64Decoder(3,0), DecimalToBinaryEncoder(3,0)),
+    "PIC S9(7) COMP-3." -> (Decimal64Decoder(7,0), DecimalToBinaryEncoder(7,0)),
+    "PIC S9(9) COMP-3." -> (Decimal64Decoder(9,0), DecimalToBinaryEncoder(9,0)),
+    "PIC S9(9)V99 COMP-3." -> (Decimal64Decoder(9,2), DecimalToBinaryEncoder(9,2)),
+    "PIC S9(6)V99 COMP-3." -> (Decimal64Decoder(6,2), DecimalToBinaryEncoder(6,2)),
+    "PIC S9(13)V99 COMP-3." -> (Decimal64Decoder(13,2), DecimalToBinaryEncoder(13,2)),
+    "PIC S9(7)V99 COMP-3." -> (Decimal64Decoder(7,2), DecimalToBinaryEncoder(7,2)),
+    "PIC S9(7)V999 COMP-3." -> (Decimal64Decoder(7,3), DecimalToBinaryEncoder(7,3)),
+    "PIC S9(16)V9(2) COMP-3." -> (Decimal64Decoder(16,2), DecimalToBinaryEncoder(16,2))
+  )
+
   "CopyBook" should "parse" in {
     val examples = Seq(
       """       01 DAILY-ITEMS.
@@ -89,46 +127,30 @@ class CopyBookSpec extends AnyFlatSpec with Logging {
   }
 
   it should "map types" in {
-    val transcoder = Ebcdic
-    Seq(
-      "PIC S9 COMP." -> new LongDecoder(2),
-      "PIC S9(4) COMP." -> new LongDecoder(2),
-      "PIC S9(5) COMP." -> new LongDecoder(4),
-      "PIC S9(9) COMP." -> new LongDecoder(4),
-      "PIC S9(10) COMP." -> new LongDecoder(8),
-      "PIC S9(18) COMP." -> new LongDecoder(8),
-      "PIC 9 COMP." -> UnsignedLongDecoder(2),
-      "PIC 9(4) COMP." -> UnsignedLongDecoder(2),
-      "PIC 9(5) COMP." -> UnsignedLongDecoder(4),
-      "PIC 9(9) COMP." -> UnsignedLongDecoder(4),
-      "PIC 9(10) COMP." -> UnsignedLongDecoder(8),
-      "PIC 9(18) COMP." -> UnsignedLongDecoder(8),
-      "PIC X." -> new StringDecoder(transcoder, 1),
-      "PIC X(8)." -> new StringDecoder(transcoder, 8),
-      "PIC X(16)." -> new StringDecoder(transcoder, 16),
-      "PIC X(30)." -> new StringDecoder(transcoder, 30),
-      "PIC X(20)." -> new StringDecoder(transcoder, 20),
-      "PIC X(2)." -> new StringDecoder(transcoder, 2),
-      "PIC X(10)." -> new StringDecoder(transcoder, 10),
-      "PIC S9(9)V9(2) COMP-3." -> Decimal64Decoder(9,2),
-      "PIC S9(9)V9(3) COMP-3." -> Decimal64Decoder(9,3),
-      "PIC S9(13) COMP-3." -> Decimal64Decoder(13,0),
-      "PIC S9(13)V9(0) COMP-3." -> Decimal64Decoder(13,0),
-      "PIC S9(3) COMP-3." -> Decimal64Decoder(3,0),
-      "PIC S9(7) COMP-3." -> Decimal64Decoder(7,0),
-      "PIC S9(9) COMP-3." -> Decimal64Decoder(9,0),
-      "PIC S9(9)V99 COMP-3." -> Decimal64Decoder(9,2),
-      "PIC S9(6)V99 COMP-3." -> Decimal64Decoder(6,2),
-      "PIC S9(13)V99 COMP-3." -> Decimal64Decoder(13,2),
-      "PIC S9(7)V99 COMP-3." -> Decimal64Decoder(7,2),
-      "PIC S9(7)V999 COMP-3." -> Decimal64Decoder(7,3),
-      "PIC S9(16)V9(2) COMP-3." -> Decimal64Decoder(16,2)
-    ).foreach{x =>
+    cbFields.foreach{x =>
       val picString = x._1
-      val expectedDecoder = x._2
+      val expectedDecoder = x._2._1
       val decoder = Decoding.typeMap(picString, transcoder, filler = false, isDate = false)
       assert(decoder == expectedDecoder)
     }
+  }
+
+  it should "get encoders" in {
+    cbFields.foreach{x =>
+      val picString = x._1
+      val expectedEncoder = x._2._2
+      val decoder = Decoding.typeMap(picString, transcoder, filler = false, isDate = true)
+      val encoder = Encoding.getEncoder(CopyBookField("", decoder, picString), transcoder)
+      assert(encoder == expectedEncoder)
+    }
+  }
+
+  it should "get date encoder" in {
+      val picString = "PIC X(10)"
+      val expectedEncoder = DateStringToBinaryEncoder()
+      val decoder = Decoding.typeMap(picString, transcoder, filler = false, isDate = true)
+      val encoder = Encoding.getEncoder(CopyBookField("03  DATE", decoder, picString), transcoder)
+      assert(encoder == expectedEncoder)
   }
 
   it should "trim" in {

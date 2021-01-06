@@ -26,6 +26,7 @@ import com.google.cloud.imf.util.Logging
 import com.google.protobuf.ByteString
 import org.apache.hadoop.hive.ql.exec.vector.{BytesColumnVector, ColumnVector, DateColumnVector, Decimal64ColumnVector, LongColumnVector, TimestampColumnVector}
 import org.apache.orc.TypeDescription
+import com.google.cloud.gszutil.CopyBookDecoderAndEncoderOps._
 
 
 object Decoding extends Logging {
@@ -585,14 +586,6 @@ object Decoding extends Logging {
       throw new IllegalArgumentException("unrecognized field type")
   }
 
-  private val charRegex = """PIC X\((\d{1,3})\)""".r
-  private val numStrRegex = """PIC 9\((\d{1,3})\)""".r
-  private val intRegex = """PIC S9\((\d{1,3})\) COMP""".r
-  private val uintRegex = """PIC 9\((\d{1,3})\) COMP""".r
-  private val decRegex = """PIC S9\((\d{1,3})\) COMP-3""".r
-  private val decRegex2 = """PIC S9\((\d{1,3})\)V9\((\d{1,3})\) COMP-3""".r
-  private val decRegex3 = """PIC S9\((\d{1,3})\)V(9{1,6}) COMP-3""".r
-
   val EBCDIC0: Byte = 0xF0.toByte
   val EBCDICNUL: Byte = 0x00.toByte
   val EBCDICSP: Byte = 0x40.toByte
@@ -657,22 +650,16 @@ object Decoding extends Logging {
         else
           UnsignedLongDecoder(8, filler = filler)
       case x =>
-        types(x)
+        types(x)._1
     }
   }
-
-  val types: Map[String,Decoder] = Map(
-    "PIC S9(6)V99 COMP-3" -> Decimal64Decoder(9,2),
-    "PIC S9(13)V99 COMP-3" -> Decimal64Decoder(9,2),
-    "PIC S9(7)V99 COMP-3" -> Decimal64Decoder(7,2)
-  )
 
   sealed trait CopyBookLine
   case class CopyBookTitle(name: String) extends CopyBookLine {
     override def toString: String = name
   }
-  case class CopyBookField(name: String, decoder: Decoder) extends CopyBookLine {
-    override def toString: String = s"${decoder.size}\t$name\t$decoder"
+  case class CopyBookField(name: String, decoder: Decoder, fieldType: String) extends CopyBookLine {
+    override def toString: String = s"${decoder.size}\t$name\t$decoder\t$fieldType"
   }
   case class Occurs(n: Int) extends CopyBookLine
 
@@ -693,7 +680,7 @@ object Decoding extends Logging {
         val isDate = name1.endsWith("DT") || name1.endsWith("DATE")
         val decoder = typeMap(typ1, transcoder, filler, isDate)
 
-        Option(CopyBookField(name.replace('-','_').trim, decoder))
+        Option(CopyBookField(name.replace('-','_').trim, decoder, typ1))
       case titleRegex(name) =>
         Option(CopyBookTitle(name))
       case titleRegex2(name) =>
