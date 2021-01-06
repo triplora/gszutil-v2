@@ -6,9 +6,11 @@ import com.google.cloud.bigquery.{FieldValue, StandardSQLTypeName}
 import com.google.cloud.imf.gzos.pb.GRecvProto.Record.Field
 import com.google.cloud.imf.gzos.pb.GRecvProto.Record.Field.FieldType
 import com.google.cloud.imf.gzos.{Binary, PackedDecimal}
-import com.google.cloud.imf.util.CloudLogging
+import com.google.cloud.imf.util.Logging
+import com.google.cloud.gszutil.CopyBookDecoderAndEncoderOps._
+import com.google.cloud.gszutil.Decoding.{CopyBookField, Decimal64Decoder}
 
-object Encoding {
+object Encoding extends Logging {
 
   def getEncoder(f: Field, transcoder: Transcoder): BinaryEncoder = {
     if (f.getTyp == FieldType.STRING)
@@ -25,6 +27,41 @@ object Encoding {
       UnknownTypeEncoder
   }
 
+  def getEncoder(cbf: CopyBookField, transcoder: Transcoder): BinaryEncoder = {
+    val decoderSize = cbf.decoder.size
+    val typ = cbf.fieldType
+    typ.stripSuffix(".") match {
+      case charRegex(_) =>
+        val name = cbf.name.toUpperCase
+        if( (name.endsWith("DT") || name.endsWith("DATE")) && decoderSize == 10) {
+          DateStringToBinaryEncoder()
+        } else {
+          StringToBinaryEncoder(transcoder, decoderSize)
+        }
+      case "PIC X" | numStrRegex(_) =>
+        StringToBinaryEncoder(transcoder, decoderSize)
+      case decRegex(p) if p.toInt >= 1 && cbf.decoder.isInstanceOf[Decimal64Decoder] =>
+        val dec = cbf.decoder.asInstanceOf[Decimal64Decoder]
+        DecimalToBinaryEncoder(dec.p, dec.s)
+      case decRegex2(p,_) if p.toInt >= 1 && cbf.decoder.isInstanceOf[Decimal64Decoder]=>
+        val dec = cbf.decoder.asInstanceOf[Decimal64Decoder]
+        DecimalToBinaryEncoder(dec.p, dec.s)
+      case decRegex3(p,_) if p.toInt >= 1 && cbf.decoder.isInstanceOf[Decimal64Decoder]=>
+        val dec = cbf.decoder.asInstanceOf[Decimal64Decoder]
+        DecimalToBinaryEncoder(dec.p, dec.s)
+      case "PIC S9 COMP" | "PIC 9 COMP"  =>
+        LongToBinaryEncoder(decoderSize)
+      case intRegex(p) if p.toInt <= 18 && p.toInt >= 1 =>
+        LongToBinaryEncoder(decoderSize)
+      case uintRegex(p) if p.toInt <= 18 && p.toInt >= 1 =>
+          LongToBinaryEncoder(decoderSize)
+      case x if types.contains(x)=>
+        types(x)._2
+      case _ =>
+        UnknownTypeEncoder
+    }
+  }
+
   case class StringToBinaryEncoder(transcoder: Transcoder, size: Int) extends BinaryEncoder {
     override type T = String
     override val bqSupportedType: StandardSQLTypeName = StandardSQLTypeName.STRING
@@ -34,8 +71,7 @@ object Encoding {
 
       if (x.length > size) {
         val msg = s"ERROR StringToBinaryEncoder string overflow ${x.length} > $size"
-        CloudLogging.stdout(msg)
-        CloudLogging.stderr(msg)
+        logger.error(msg)
         throw new RuntimeException(msg)
       }
 

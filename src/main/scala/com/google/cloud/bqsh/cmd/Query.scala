@@ -16,20 +16,20 @@
 
 package com.google.cloud.bqsh.cmd
 
-import com.google.cloud.bigquery.{BigQueryException, Clustering, JobInfo, JobStatistics, JobStatus, QueryJobConfiguration, QueryParameterValue, StandardSQLTypeName, TimePartitioning}
+import com.google.cloud.bigquery.{BigQueryException, Clustering, JobInfo, JobStatistics, QueryJobConfiguration, QueryParameterValue, StandardSQLTypeName, TimePartitioning}
 import com.google.cloud.bqsh.{ArgParser, BQ, Bqsh, Command, QueryConfig, QueryOptionParser}
 import com.google.cloud.imf.gzos.MVS
-import com.google.cloud.imf.util.StatsUtil.EnhancedJob
-import com.google.cloud.imf.util.{CloudLogging, Logging, Services, StatsUtil}
+import com.google.cloud.imf.util.stats.{JobStats, LoadStats, MergeStats, QueryStats, SelectStats}
+import com.google.cloud.imf.util.{Logging, Services, StatsUtil}
 
 
 object Query extends Command[QueryConfig] with Logging {
   override val name: String = "bq query"
   override val parser: ArgParser[QueryConfig] = QueryOptionParser
 
-  def run(cfg: QueryConfig, zos: MVS): Result = {
+  override def run(cfg: QueryConfig, zos: MVS, env: Map[String,String]): Result = {
     val creds = zos.getCredentialProvider().getCredentials
-    CloudLogging.stdout(s"Initializing BigQuery client\n" +
+    logger.info(s"Initializing BigQuery client\n" +
       s"projectId=${cfg.projectId} location=${cfg.location}")
     val bq = Services.bigQuery(cfg.projectId, cfg.location, creds)
 
@@ -69,39 +69,27 @@ object Query extends Command[QueryConfig] with Logging {
             } else {
               val msg = s"Query job state=${s.state} but expected DONE"
               logger.error(msg)
-              CloudLogging.stderr(msg)
             }
           } else {
             val msg = s"Query job status not available"
             logger.error(msg)
-            CloudLogging.stderr(msg)
           }
         }
-        val jobInfo = new EnhancedJob(job)
-
-        CloudLogging.stdout(jobInfo.report)
 
         // Publish results
         if (cfg.sync && cfg.statsTable.nonEmpty) {
           val statsTable = BQ.resolveTableSpec(cfg.statsTable, cfg.projectId, cfg.datasetId)
           logger.info(s"Writing stats to ${BQ.tableSpec(statsTable)}")
-          if (jobInfo.isMerge){
-            StatsUtil.insertJobStats(zos, jobId, Option(job), bq,
-              statsTable, jobType = "merge_query",
-              source = BQ.tableSpec(jobInfo.mergeFromTable),
-              dest = BQ.tableSpec(jobInfo.mergeIntoTable),
-              recordsIn = jobInfo.mergeFromRows.getOrElse(-1),
-              recordsOut = jobInfo.mergeInsertedRows.getOrElse(-1))
-          } else if (jobInfo.isSelect) {
-            StatsUtil.insertJobStats(zos, jobId, Option(job), bq,
-              statsTable, jobType = "select_query",
-              source = jobInfo.selectFromTables.map(BQ.tableSpec).mkString(","),
-              dest = BQ.tableSpec(jobInfo.selectIntoTable),
-              recordsOut = jobInfo.selectOutputRows.getOrElse(-1))
-          } else {
-            StatsUtil.insertJobStats(zos, jobId, Option(job), bq,
-              statsTable, jobType = "query", dest = cfg.destinationTable)
-          }
+          StatsUtil.insertJobStats(zos, jobId, bq, statsTable, jobType = "query")
+        } else {
+          val j = BQ.apiGetJob(Services.bigQueryApi(creds), jobId)
+          val sb = new StringBuilder
+          JobStats.forJob(j).foreach{s => sb.append(JobStats.report(s))}
+          QueryStats.forJob(j).foreach{s => sb.append(QueryStats.report(s))}
+          SelectStats.forJob(j).foreach{s => sb.append(SelectStats.report(s))}
+          LoadStats.forJob(j).foreach{s => sb.append(LoadStats.report(s))}
+          MergeStats.forJob(j).foreach{s => sb.append(MergeStats.report(s))}
+          logger.info(s"Query Statistics:\n${sb.result}")
         }
 
         // check for errors
@@ -115,23 +103,21 @@ object Query extends Command[QueryConfig] with Logging {
                 logger.error(msg)
                 result = Result.Failure(msg)
               } else {
-                val activityCount: Long = jobInfo.statementType match {
-                  case "SELECT" =>
-                    jobInfo.selectOutputRows.getOrElse(-1)
-                  case "MERGE" =>
-                    jobInfo.mergeInsertedRows.getOrElse(-1)
-                  case "INSERT" =>
-                    jobInfo.stats.getNumDmlAffectedRows
-                  case "DELETE" =>
-                    jobInfo.stats.getNumDmlAffectedRows
-                  case "UPDATE" =>
-                    jobInfo.stats.getNumDmlAffectedRows
-                  case _ =>
-                    0
-                }
+                val activityCount: Long =
+                  job.getStatistics[JobStatistics] match {
+                    case _: JobStatistics.CopyStatistics => -1
+                    case _: JobStatistics.ExtractStatistics => -1
+                    case s: JobStatistics.LoadStatistics => s.getOutputRows
+                    case s: JobStatistics.QueryStatistics =>
+                      if (s.getStatementType == "MERGE") s.getNumDmlAffectedRows
+                      else if (s.getStatementType == "SELECT") 0
+                      else s.getNumDmlAffectedRows
+                    case _ =>
+                      -1
+                  }
                 result = Result(activityCount = activityCount)
               }
-              BQ.throwOnError(jobInfo, status)
+              BQ.throwOnError(job, status)
             case _ =>
               logger.error(s"Job ${BQ.toStr(jobId)} not found")
               result = Result.Failure("missing status")
@@ -141,7 +127,7 @@ object Query extends Command[QueryConfig] with Logging {
         }
       } catch {
         case e: BigQueryException =>
-          CloudLogging.stderr(s"Query Job threw BigQueryException\nMessage:${e.getMessage}\n" +
+          logger.error(s"Query Job threw BigQueryException\nMessage:${e.getMessage}\n" +
             s"Query:\n$query\n")
           result = Result.Failure(e.getMessage)
       }

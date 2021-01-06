@@ -8,7 +8,7 @@ import com.google.protobuf.util.JsonFormat
 import org.apache.orc.TypeDescription
 import org.apache.orc.TypeDescription.Category
 
-trait SchemaProvider {
+trait SchemaProvider extends BinaryEncoding {
   def fieldNames: Seq[String]
 
   def decoders: Array[Decoder]

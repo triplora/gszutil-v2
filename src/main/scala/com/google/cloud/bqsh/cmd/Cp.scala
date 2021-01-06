@@ -40,8 +40,8 @@ import scala.util.Try
 object Cp extends Command[GsUtilConfig] with Logging {
   override val name: String = "gsutil cp"
   override val parser: ArgParser[GsUtilConfig] = GsUtilOptionParser
-  def run(c: GsUtilConfig, zos: MVS): Result = {
-    logger.info("debug version:1")
+
+  def run(c: GsUtilConfig, zos: MVS, env: Map[String, String]): Result = {
     val creds = zos
       .getCredentialProvider()
       .getCredentials
@@ -70,12 +70,11 @@ object Cp extends Command[GsUtilConfig] with Logging {
         c.schemaProvider.getOrElse(zos.loadCopyBook(c.copyBook))
       }
     }
-
-    val in: ZRecordReaderT = c.testInput.getOrElse(zos.readDD(c.source))
+    val in: ZRecordReaderT = c.testInput.getOrElse(zos.readCloudDD(c.source))
     logger.info(s"gsutil cp ${in.getDsn} ${c.gcsUri}")
     val batchSize = (c.blocksPerBatch * in.blkSize) / in.lRecl
     if (c.replace) {
-      GsUtilRm.run(c.copy(recursive = true), zos)
+      GsUtilRm.run(c.copy(recursive = true), zos, env)
     } else {
       val uri = new URI(c.gcsUri)
       val withTrailingSlash = uri.getPath.stripPrefix("/").stripSuffix("/") + "/"
@@ -113,15 +112,16 @@ object Cp extends Command[GsUtilConfig] with Logging {
     in.close()
     val nRead = in.count()
 
-    if (c.statsTable.nonEmpty){
+    if (c.statsTable.nonEmpty) {
       val statsTable = BQ.resolveTableSpec(c.statsTable, c.projectId, c.datasetId)
-      logger.debug(s"writing stats to ${statsTable.getProject}:${statsTable
-        .getDataset}:${statsTable.getTable}")
-      val jobId = BQ.genJobId(c.projectId, c.location, zos,"cp")
+      logger.debug(s"writing stats to ${statsTable.getProject}:${
+        statsTable
+          .getDataset
+      }:${statsTable.getTable}")
+      val jobId = BQ.genJobId(c.projectId, c.location, zos, "cp")
       StatsUtil.insertJobStats(
         zos = zos,
         jobId = jobId,
-        job = None,
         bq = Services.bigQuery(c.projectId, c.location, creds),
         tableId = statsTable,
         jobType = "cp",
@@ -133,7 +133,7 @@ object Cp extends Command[GsUtilConfig] with Logging {
 
     // cleanup temp files
     GsUtilRm.run(c.copy(recursive = true,
-      gcsUri = c.gcsUri.stripSuffix("/") + "/tmp"), zos)
+      gcsUri = c.gcsUri.stripSuffix("/") + "/tmp"), zos, env)
 
     result
   }
@@ -172,15 +172,15 @@ object Cp extends Command[GsUtilConfig] with Logging {
   def parseRecord(json: Option[String]): Option[Record] = {
     json match {
       case Some(x) =>
-        Try{
+        Try {
           val builder = Record.newBuilder
           JsonFormat.parser.ignoringUnknownFields.merge(x, builder)
           builder
         }.fold(e => {
-          logger.error(s"Unable to parse provided json transformations\n $x",e)
+          logger.error(s"Unable to parse provided json transformations\n $x", e)
           Option.empty
         },
-          x=>Option(x.build())
+          x => Option(x.build())
         )
       case _ => None
     }
@@ -198,8 +198,8 @@ object Cp extends Command[GsUtilConfig] with Logging {
       logger.info(s"Bucket name: $bucket")
       Option(gcs.get(BlobId.of(bucket, objName))) match {
         case Some(value) => {
-          logger.info("Encoding:"+ value.getContent())
-          Option(new String(value.getContent(),StandardCharsets.UTF_8))
+          logger.info("Encoding:" + value.getContent())
+          Option(new String(value.getContent(), StandardCharsets.UTF_8))
         }
         case _ => {
           None
@@ -221,18 +221,18 @@ object Cp extends Command[GsUtilConfig] with Logging {
         logger.info("Merging CopyBook")
 
 
-
         val seq1: List[Record.Field] = r.getFieldList.asScala.toList
-        val names= seq1.map(_.getName.trim)
+        val names = seq1.map(_.getName.trim)
         val v: Seq[CopyBookLine] = x.Fields.filterNot({
-          case CopyBookField(n1, _) =>
+          case CopyBookField(n1, _, _) =>
             names.contains(n1)
           case CopyBookTitle(_) => false
         })
 
         val newFileds = x.Fields.map {
           case c: CopyBookField if names.contains(c.name) =>
-            CopyBookField(c.name, Decoding.getDecoder(seq1.find(p => p.getName.trim == c.name).get, x.transcoder))
+            // TODO: possible issue after merge CopyBookField (_,_,type?) may be passed incorrectly
+            CopyBookField(c.name, Decoding.getDecoder(seq1.find(p => p.getName.trim == c.name).get, x.transcoder), c.fieldType)
           case x =>
             x
         }

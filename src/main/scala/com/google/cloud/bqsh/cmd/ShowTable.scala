@@ -20,7 +20,7 @@ import com.google.cloud.bigquery.Field.Mode
 import com.google.cloud.bigquery.{ExternalTableDefinition, MaterializedViewDefinition, ModelTableDefinition, Schema, StandardTableDefinition, TableDefinition, ViewDefinition}
 import com.google.cloud.bqsh.{ArgParser, BQ, Command, ReturnCodes, ShowTableConfig, ShowTableOptionParser}
 import com.google.cloud.imf.gzos.MVS
-import com.google.cloud.imf.util.{CloudLogging, Logging, Services}
+import com.google.cloud.imf.util.{Logging, Services}
 
 import scala.jdk.CollectionConverters.ListHasAsScala
 
@@ -52,7 +52,7 @@ object ShowTable extends Command[ShowTableConfig] with Logging {
     sb.result
   }
 
-  def run(cfg: ShowTableConfig, zos: MVS): Result = {
+  override def run(cfg: ShowTableConfig, zos: MVS, env: Map[String,String]): Result = {
     val creds = zos.getCredentialProvider().getCredentials
     val bq = Services.bigQuery(cfg.projectId, cfg.location, creds)
     val tableSpec = BQ.resolveTableSpec(cfg.tablespec, cfg.projectId, cfg.datasetId)
@@ -62,14 +62,14 @@ object ShowTable extends Command[ShowTableConfig] with Logging {
         t.getDefinition[TableDefinition] match {
           case x: StandardTableDefinition =>
             if (!cfg.quiet)
-              CloudLogging.stdout(
+              logger.info(
                 s"""TABLE
                    |Schema:
                    |${printSchema(x.getSchema)}""".stripMargin)
 
           case x: ViewDefinition =>
             if (!cfg.quiet)
-              CloudLogging.stdout(
+              logger.info(
                 s""""VIEW
                    |Schema:
                    |${printSchema(x.getSchema)}
@@ -78,7 +78,7 @@ object ShowTable extends Command[ShowTableConfig] with Logging {
 
           case x: ExternalTableDefinition =>
             if (!cfg.quiet)
-              CloudLogging.stdout(
+              logger.info(
                 s"""EXTERNAL TABLE
                    |Source URIs: ${x.getSourceUris.asScala.mkString(",")}
                    |Schema:
@@ -86,7 +86,7 @@ object ShowTable extends Command[ShowTableConfig] with Logging {
 
           case x: ModelTableDefinition =>
             if (!cfg.quiet)
-              CloudLogging.stdout(
+              logger.info(
                 s"""MODEL
                    |Schema:
                    |${printSchema(x.getSchema)}""".stripMargin)
@@ -95,7 +95,7 @@ object ShowTable extends Command[ShowTableConfig] with Logging {
           case x: MaterializedViewDefinition =>
             val dt = (System.currentTimeMillis - x.getLastRefreshTime)/1000L
             if (!cfg.quiet)
-              CloudLogging.stdout(
+              logger.info(
                 s"""MATERIALIZED VIEW
                    |Last Refresh Time: $dt seconds ago
                    |Refresh Enabled: ${x.getEnableRefresh}
@@ -107,15 +107,14 @@ object ShowTable extends Command[ShowTableConfig] with Logging {
           case x =>
             val msg = s"ShowTable ERROR Unsupported TableDefinition type: " +
               s"${x.getClass.getCanonicalName}"
-            CloudLogging.stdout(msg)
-            CloudLogging.stderr(msg)
+            logger.error(msg)
         }
         Result.Success
 
       case None =>
         val msg = s"${cfg.tablespec} doesn't exist"
         if (!cfg.quiet)
-          CloudLogging.stdout(s"show table: $msg")
+          logger.info(s"show table: $msg")
         Result(exitCode = ReturnCodes.DoesNotExist, message = msg)
     }
   }

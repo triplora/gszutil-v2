@@ -16,18 +16,19 @@
 
 package com.google.cloud.bqsh.cmd
 
-import com.google.cloud.bigquery._
-import com.google.cloud.bqsh._
+import com.google.cloud.bigquery.{Clustering,JobInfo,LoadJobConfiguration,FormatOptions,CsvOptions,
+  DatastoreBackupOptions,TimePartitioning,EncryptionConfiguration}
+import com.google.cloud.bqsh.{BQ,Command,LoadConfig,ArgParser,LoadOptionParser}
 import com.google.cloud.imf.gzos.MVS
-import com.google.cloud.imf.util.{CloudLogging, Logging, Services, StatsUtil}
+import com.google.cloud.imf.util.{Logging, Services, StatsUtil}
 
 object Load extends Command[LoadConfig] with Logging {
   override val name: String = "bq load"
   override val parser: ArgParser[LoadConfig] = LoadOptionParser
 
-  override def run(cfg: LoadConfig, zos: MVS): Result = {
+  override def run(cfg: LoadConfig, zos: MVS, env: Map[String,String]): Result = {
     val creds = zos.getCredentialProvider().getCredentials
-    CloudLogging.stdout(s"Initializing BigQuery client\n" +
+    logger.info(s"Initializing BigQuery client\n" +
       s"projectId=${cfg.projectId} location=${cfg.location}")
     val bq =  Services.bigQuery(cfg.projectId, cfg.location, creds)
     logger.info("configuring load job")
@@ -41,7 +42,7 @@ object Load extends Command[LoadConfig] with Logging {
 
     if (cfg.statsTable.nonEmpty){
       val statsTable = BQ.resolveTableSpec(cfg.statsTable, cfg.projectId, cfg.datasetId)
-      StatsUtil.insertJobStats(zos, jobId, scala.Option(completed), bq, statsTable, jobType =
+      StatsUtil.insertJobStats(zos, jobId, bq, statsTable, jobType =
         "load", source = cfg.path.mkString(","), dest = cfg.tablespec)
     }
 

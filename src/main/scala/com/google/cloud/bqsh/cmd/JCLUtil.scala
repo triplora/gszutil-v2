@@ -10,7 +10,7 @@ object JCLUtil extends Command[JCLUtilConfig] with Logging {
   override val name: String = "jclutil"
   override val parser: ArgParser[JCLUtilConfig] = JCLUtilOptionParser
 
-  override def run(config: JCLUtilConfig, zos: MVS): Result = {
+  override def run(config: JCLUtilConfig, zos: MVS, env: Map[String,String]): Result = {
     val transform: (String) => String = replacePrefix(_, "BQ")
     val members = zos.listPDS(config.srcDSN)
 
@@ -36,7 +36,7 @@ object JCLUtil extends Command[JCLUtilConfig] with Logging {
       )
 
     if (config.filter.nonEmpty){
-      System.out.println(s"Filter regex = '${config.filter}'")
+      Console.out.println(s"Filter regex = '${config.filter}'")
     }
 
     while (members.hasNext){
@@ -44,18 +44,18 @@ object JCLUtil extends Command[JCLUtilConfig] with Logging {
       if (config.printSteps) {
         printSteps(MVSPDSMember(config.src,member.name), zos)
       } else if (config.filter.isEmpty || member.name.matches(config.filter)){
-        System.out.println(s"Processing '${member.name}'")
+        Console.out.println(s"Processing '${member.name}'")
         val result = copy(MVSPDSMember(config.src,member.name),
                           MVSPDSMember(config.dest,transform(member.name)),
                           config.limit,
                           exprs,
                           zos)
         if (result.exitCode != 0) {
-          System.out.println(s"Non-zero exit code returned for ${member.name}")
+          Console.out.println(s"Non-zero exit code returned for ${member.name}")
           return result
         }
       } else {
-        System.out.println(s"Ignored '${member.name}'")
+        Console.out.println(s"Ignored '${member.name}'")
       }
     }
     Result.Success
@@ -118,23 +118,23 @@ object JCLUtil extends Command[JCLUtilConfig] with Logging {
       val steps = captureSteps(lines)
       while (steps.hasNext){
         val step = steps.next
-        System.err.println(s"$src ${step.proc} ${step.name} ${step.mbr}")
+        Console.err.println(s"$src ${step.proc} ${step.name} ${step.mbr}")
       }
     }
   }
 
   def copy(src: DSN, dest: DSN, limit: Int, exprs: Seq[(String,String)],
            zos: MVS): Result = {
-    System.out.println(s"$src -> $dest")
+    Console.out.println(s"$src -> $dest")
     if (zos.exists(dest)) {
       val msg = s"Error: $dest already exists"
       logger.error(msg)
-      System.err.println(msg)
+      Console.err.println(msg)
       return Result.Failure(msg)
     } else if (!zos.exists(src)) {
       val msg = s"Error: $src doesn't exist"
       logger.error(msg)
-      System.err.println(msg)
+      Console.err.println(msg)
       Result.Failure(msg)
     }
 

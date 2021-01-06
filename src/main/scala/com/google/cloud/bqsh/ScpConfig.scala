@@ -15,6 +15,8 @@
  */
 package com.google.cloud.bqsh
 
-case class ScpConfig(sourceDD: String = "",
-                     destGsUri: String = "",
+case class ScpConfig(inDD: String = "",
+                     inDsn: String = "",
+                     gcsOutUri: String = "",
+                     compress: Boolean = true,
                      limit: Long = Long.MaxValue)

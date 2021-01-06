@@ -16,18 +16,23 @@
 
 package com.google.cloud.bqsh
 
-import java.io.{PrintWriter, StringWriter}
 import java.time.LocalDateTime
 
-import com.google.cloud.bigquery.{BigQuery, BigQueryError, BigQueryException, DatasetId, Field, FieldList, Job, JobId, JobInfo, JobStatus, QueryJobConfiguration, Schema, StandardSQLTypeName, TableId}
+import com.google.api.client.json.jackson2.JacksonFactory
+import com.google.api.services.bigquery.Bigquery
+import com.google.api.services.bigquery.model
+import com.google.auth.Credentials
+import com.google.auth.http.HttpCredentialsAdapter
+import com.google.cloud.bigquery.InsertAllRequest.RowToInsert
+import com.google.cloud.bigquery.{BigQuery, BigQueryError, BigQueryException, CopyJobConfiguration, DatasetId, ExtractJobConfiguration, Field, FieldList, InsertAllRequest, InsertAllResponse, Job, JobConfiguration, JobId, JobInfo, JobStatus, LoadJobConfiguration, QueryJobConfiguration, Schema, StandardSQLTypeName, StandardTableDefinition, TableDefinition, TableId}
 import com.google.cloud.imf.gzos.{MVS, Util}
-import com.google.cloud.imf.util.{CloudLogging, Logging, StatsUtil}
-import com.google.cloud.imf.util.StatsUtil.EnhancedJob
+import com.google.cloud.imf.util.{CCATransportFactory, Logging, StatsUtil}
 import com.google.common.collect.ImmutableList
 
 import scala.annotation.tailrec
+import scala.collection.mutable.ListBuffer
 import scala.jdk.CollectionConverters.IterableHasAsScala
-import scala.util.{Failure, Random, Success, Try}
+import scala.util.{Failure, Success, Try}
 
 object BQ extends Logging {
   def genJobId(projectId: String, location: String, zos: MVS, jobType: String): JobId = {
@@ -44,6 +49,8 @@ object BQ extends Logging {
 
   /** Converts Option[TableId] to String */
   def tableSpec(t: Option[TableId]): String = t.map(tableSpec).getOrElse("")
+  def tableSpec(t: model.TableReference): String =
+    s"${t.getProjectId}.${t.getDatasetId}.${t.getTableId}"
 
   def tablesEqual(t: TableId, t1: TableId): Boolean = {
     t1.getProject == t.getProject &&
@@ -65,7 +72,7 @@ object BQ extends Logging {
     val n = tbl.getNumRows.longValueExact
     val nBytes = tbl.getNumBytes.longValue
     val ts = StatsUtil.epochMillis2Timestamp(tbl.getLastModifiedTime)
-    CloudLogging.stdout(s"${tableSpec(table)} contains $n rows $nBytes bytes as of $ts")
+    logger.info(s"${tableSpec(table)} contains $n rows $nBytes bytes as of $ts")
     n
   }
 
@@ -80,11 +87,10 @@ object BQ extends Logging {
   def queryDryRun(bq: BigQuery,
                   cfg: QueryJobConfiguration,
                   jobId: JobId,
-                  timeoutSeconds: Long): EnhancedJob = {
+                  timeoutSeconds: Long): Job = {
     val jobId1 = jobId.toBuilder.setJob(jobId.getJob+"_dryrun")
     bq.create(JobInfo.of(jobId1.build, cfg.toBuilder.setDryRun(true).build))
-    val queryJob = waitForJob(bq, jobId, timeoutMillis = timeoutSeconds * 1000L)
-    new EnhancedJob(queryJob)
+    waitForJob(bq, jobId, timeoutMillis = timeoutSeconds * 1000L)
   }
 
   /** Submits a BigQuery job and waits for completion
@@ -142,12 +148,8 @@ object BQ extends Logging {
         logger.info(s"${toStr(jobId)} Status = DONE")
         job
       case Failure(e) =>
-        val sw = new StringWriter()
-        val pw = new PrintWriter(sw)
-        e.printStackTrace(pw)
-        val stackTrace = sw.toString
         logger.error(s"BigQuery Job failed jobid=${toStr(jobId)}\n" +
-          s"${e.getMessage}\n$stackTrace", e)
+          s"message=${e.getMessage}", e)
         throw e
       case Success(None) =>
         throw new RuntimeException(s"BigQuery Job not found jobid=${toStr(jobId)}")
@@ -217,30 +219,38 @@ object BQ extends Logging {
     }
   }
 
-  def throwOnError(job: EnhancedJob, status: BQStatus): Unit = {
+  def throwOnError(job: Job, status: BQStatus): Unit = {
+    if (job == null) throw new IllegalStateException("job not found")
     val sb = new StringBuilder
     if (status.hasError) {
+      if (job.getJobId != null)
+        sb.append(s"${BQ.toStr(job.getJobId)} has errors\n")
+      job.getConfiguration[JobConfiguration] match {
+        case c: CopyJobConfiguration =>
+        case c: ExtractJobConfiguration =>
+        case c: LoadJobConfiguration =>
+        case c: QueryJobConfiguration =>
+          sb.append("Query:\n")
+          sb.append(c.getQuery)
+          sb.append("\n")
+        case _ =>
+      }
+      sb.append("\n")
+      sb.append("Errors:\n")
       status.error.foreach { err =>
         sb.append(err.toString)
+        sb.append("\n")
       }
       if (status.executionErrors.nonEmpty) {
         sb.append("Execution Errors:\n")
       }
-      status.executionErrors.foreach { err =>
+      status.executionErrors.foreach{err =>
         sb.append(err.toString)
+        sb.append("\n")
       }
-      val errMsgs = sb.result
-
-      sb.clear()
-      sb.append(s"${job.id} has errors\n")
-      sb.append("Query:\n")
-      sb.append(job.query)
-      sb.append("\n")
-      sb.append("Errors:\n")
-      sb.append(errMsgs)
-
-      CloudLogging.stderr(sb.result)
-      throw new RuntimeException(errMsgs)
+      val msg = sb.result
+      logger.error(msg)
+      throw new RuntimeException(msg)
     }
   }
 
@@ -329,4 +339,149 @@ object BQ extends Logging {
 
   def isValidBigQueryName(s: String): Boolean =
     s.matches("[a-zA-Z0-9_]{1,1024}")
+
+  /** Convert Java List to Scala Seq */
+  def l2l[T](l: java.util.List[T]): Seq[T] = {
+    if (l == null) Nil
+    else {
+      val buf = ListBuffer.empty[T]
+      l.forEach(buf.append)
+      buf.toList
+    }
+  }
+
+  def mv[K,V](m: java.util.Map[K,V]): Seq[V] = {
+    if (m == null) Nil
+    else {
+      val buf = ListBuffer.empty[V]
+      m.forEach{(_, v) => buf.append(v)}
+      buf.toList
+    }
+  }
+
+  def logInsertErrors(res: InsertAllResponse): Unit = {
+    res match {
+      case x if x.hasErrors =>
+        val errors = mv(x.getInsertErrors).flatMap(l2l).mkString("\n")
+        logger.warn(s"Failed to insert rows:\n$errors")
+      case _ =>
+    }
+  }
+
+  def insertRow(content: java.util.Map[String,Any],
+                bq: BigQuery,
+                tableId: TableId): Unit = {
+    val request = InsertAllRequest.of(tableId, RowToInsert.of(content))
+    val result = bq.insertAll(request)
+    if (result.hasErrors) {
+      val errors: Seq[BigQueryError] = mv(result.getInsertErrors).flatMap(l2l)
+      val tblSpec = s"${tableId.getProject}.${tableId.getDataset}.${tableId.getTable}"
+      val sb = new StringBuilder
+      sb.append(s"Errors inserting row into $tblSpec\n")
+      content.forEach{(k,v) => sb.append(s"$k -> $v\n")}
+      sb.append("\n")
+      errors.foreach{e =>
+        sb.append("BigQueryError:\n")
+        sb.append(s"message: ${e.getMessage}\n")
+        sb.append(s"reason: ${e.getReason}\n\n")
+      }
+      logger.error(sb.result)
+    }
+  }
+
+  case class BQField(name: String,
+                     typ: StandardSQLTypeName = StandardSQLTypeName.STRING,
+                     mode: Field.Mode = Field.Mode.NULLABLE)
+
+  case class BQSchema(fields: Seq[BQField] = Nil) {
+    private val fieldNames: Set[String] = fields.map(_.name).toSet
+    def contains(name: String): Boolean = fieldNames.contains(name)
+  }
+
+  /** Builder meant to be used with streaming insert
+    * Won't insert columns that don't exist in the schema
+    */
+  case class SchemaRowBuilder(schema: Option[BQSchema] = None) {
+    private val row = new java.util.HashMap[String,Any]()
+    def put(name: String, value: Any): SchemaRowBuilder = {
+      if (schema.isDefined && schema.get.contains(name) && value != null) {
+        value match {
+          case None =>
+          case s: String if s.isEmpty =>
+          case _ =>
+            row.put(name, value)
+        }
+      }
+      this
+    }
+    def build: java.util.Map[String,Any] = row
+    def clear(): Unit = row.clear()
+    def insert(bq: BigQuery, tableId: TableId, id: String): InsertAllResponse =
+      bq.insertAll(InsertAllRequest.newBuilder(tableId).addRow(id, row).build)
+  }
+
+  def getFields(x: TableDefinition): BQSchema = {
+    val buf = ListBuffer.empty[BQField]
+    x.getSchema.getFields.forEach{f =>
+      if (f.getType == null)
+        logger.warn(s"field type not set for ${f.getName}")
+      else
+        buf.append(BQField(f.getName, f.getType.getStandardType, f.getMode))
+    }
+
+    if (x.getSchema == null)
+      logger.warn(s"schema not found for standard table")
+    BQSchema(buf.result)
+  }
+
+  def checkTableDef(bq: BigQuery, tableId: TableId, expectedSchema: BQSchema): Option[BQSchema] = {
+    val ts = BQ.tableSpec(tableId)
+    Option(bq.getTable(tableId)) match {
+      case Some(table) =>
+        table.getDefinition[TableDefinition] match {
+          case x: StandardTableDefinition =>
+            val schema = getFields(x)
+            if (schema != expectedSchema) {
+              logger.warn(s"Schema mismatch\nExpected:\n$expectedSchema\n\nGot:\n$schema")
+              Option(schema)
+            } else Option(schema)
+          case x =>
+            val typ = x.getClass.getSimpleName.stripSuffix("$").stripSuffix("Definition")
+            logger.warn(s"stats table is a $typ but should be a standard table. tablespec=$ts")
+            None
+        }
+      case None =>
+        logger.warn(s"stats table not found. tablespec=$ts")
+        None
+    }
+  }
+
+  def apiClient(credentials: Credentials): Bigquery =
+    new Bigquery(CCATransportFactory.getTransportInstance,
+      JacksonFactory.getDefaultInstance, new HttpCredentialsAdapter(credentials))
+
+  def apiGetJob(bq: Bigquery, jobId: JobId): model.Job = {
+    val req = bq.jobs().get(jobId.getProject, jobId.getJob)
+    req.setLocation(jobId.getLocation)
+    req.execute()
+  }
+
+  def readsFrom(step: model.ExplainQueryStep, t: TableId): Boolean =
+    readsFrom(step, tableSpec(t))
+
+  def readsFrom(step: model.ExplainQueryStep, t: String): Boolean = {
+    if (step.getKind == null || step.getSubsteps == null) false
+    else
+      step.getKind == "READ" &&
+      step.getSubsteps.asScala.exists{subStep =>
+        subStep.startsWith("FROM ") && subStep.endsWith(t)
+      }
+  }
+
+  def readsFrom(stage: model.ExplainQueryStage, t: model.TableReference): Boolean =
+    readsFrom(stage, tableSpec(t))
+
+  def readsFrom(stage: model.ExplainQueryStage, t: String): Boolean = {
+    stage.getSteps.asScala.exists(step => readsFrom(step,t))
+  }
 }

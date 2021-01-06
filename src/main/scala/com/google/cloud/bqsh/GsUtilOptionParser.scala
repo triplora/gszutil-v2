@@ -39,11 +39,6 @@ object GsUtilOptionParser extends OptionParser[GsUtilConfig]("gsutil") with ArgP
         .action{(_,c) => c.copy(replace = true, recursive = true)}
         .text("delete before uploading"),
 
-      opt[Int]("partSizeMB")
-        .optional()
-        .action{(x,c) => c.copy(partSizeMB = x)}
-        .text("target part size in megabytes (default: 256)"),
-
       opt[Int]("batchSize")
         .optional()
         .action{(x,c) => c.copy(blocksPerBatch = x)}
@@ -69,11 +64,6 @@ object GsUtilOptionParser extends OptionParser[GsUtilConfig]("gsutil") with ArgP
         .action{(_,c) => c.copy(remote = true)}
         .text("use remote decoder (default: false"),
 
-      opt[Long]("blocks")
-        .optional()
-        .action{(x,c) => c.copy(blocks = x)}
-        .text("blocks before yield (default: 1024"),
-
       opt[String]("remoteHost")
         .optional()
         .action{(x,c) => c.copy(remoteHost = x)}
@@ -88,27 +78,6 @@ object GsUtilOptionParser extends OptionParser[GsUtilConfig]("gsutil") with ArgP
         .optional()
         .action{(x,c) => c.copy(nConnections = x)}
         .text("number of connections to remote receiver (default: 10"),
-
-      opt[String]("pkgUri")
-        .optional()
-        .action{(x,c) => c.copy(pkgUri = x.stripSuffix("/"))}
-        .text("GCS uri to tar file containing run.sh"),
-
-      opt[String]("zone")
-        .optional()
-        .action{(x,c) => c.copy(zone = x)}
-        .text("remote host zone"),
-
-      opt[String]("subnet")
-        .optional()
-        .action{(x,c) => c.copy(subnet = x)}
-        .text("remote host subnet in format " +
-          "projects/<project>/regions/<region>/subnetworks/<subnet>"),
-
-      opt[String]("serviceAccount")
-        .optional()
-        .action{(x,c) => c.copy(serviceAccount = x)}
-        .text("remote host service account"),
 
       opt[String]("destPath")
         .optional
@@ -193,10 +162,6 @@ object GsUtilOptionParser extends OptionParser[GsUtilConfig]("gsutil") with ArgP
     .action((x,c) => c.copy(projectId = x))
 
   // Custom Options
-  opt[Unit]("allow_non_ascii")
-    .text("allow non ascii characters")
-    .action((_,c) => c.copy(allowNonAscii = true))
-
   opt[String]("stats_table")
     .optional()
     .text("tablespec of table to insert stats")
@@ -208,20 +173,10 @@ object GsUtilOptionParser extends OptionParser[GsUtilConfig]("gsutil") with ArgP
     .action((x,c) => c.copy(maxErrorPct = x))
 
   checkConfig{x =>
-    if (x.remote) {
-      if (x.remoteHost.isEmpty) {
-        val missing = new StringBuilder
-        if (x.subnet.isEmpty) missing.append(" --subnet")
-        if (x.pkgUri.isEmpty) missing.append(" --pkgUri")
-        if (x.serviceAccount.isEmpty) missing.append(" --serviceAccount")
-        if (x.zone.isEmpty) missing.append(" --zone")
-
-        if (x.projectId.isEmpty)
-          failure("must specify --project_id if --remoteHost is set")
-        else if (missing.nonEmpty)
-          failure("must specify" + missing.result)
-        else success
-      } else success
+    if (x.statsTable.nonEmpty) {
+      if (x.projectId.isEmpty)
+        failure("must specify --project_id if --statsTable is set")
+      else success
     } else success
   }
 }

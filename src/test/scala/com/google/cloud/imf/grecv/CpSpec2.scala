@@ -7,6 +7,7 @@ import com.google.cloud.bqsh.cmd.Cp
 import com.google.cloud.gszutil.Decoding.{CopyBookField, CopyBookLine, CopyBookTitle}
 import com.google.cloud.gszutil.io.ZDataSet
 import com.google.cloud.gszutil.{CopyBook, Decoder, Decoding, RecordSchema, SchemaProvider, TestUtil}
+import com.google.cloud.gszutil.{CopyBook, RecordSchema}
 import com.google.cloud.imf.grecv.client.GRecvClient
 import com.google.cloud.imf.grecv.server.GRecvServer
 import com.google.cloud.imf.gzos.gen.DataGenUtil
@@ -93,8 +94,7 @@ class CpSpec2 extends AnyFlatSpec with BeforeAndAfterAll {
       .setBasepath("gs://gszutil-test/prefix")
       .build
 
-    val sendResult = GRecvClient.upload(request, serverCfg.host, serverCfg.port, 1, Util
-      .zProvider, in, "gs://gszutil-test/dsn")
+    val sendResult = GRecvClient.upload(request, serverCfg.host, serverCfg.port, 1, Util.zProvider, in)
     assert(sendResult.exitCode == 0)
   }
 
@@ -126,7 +126,7 @@ class CpSpec2 extends AnyFlatSpec with BeforeAndAfterAll {
       remote = true,
       remoteHost = serverCfg.host,
       remotePort = serverCfg.port)
-    val res = Cp.run(cfg, Linux)
+    val res = Cp.run(cfg, Linux, Map.empty)
     assert(res.exitCode == 0)
   }
 

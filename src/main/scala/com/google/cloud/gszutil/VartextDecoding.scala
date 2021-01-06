@@ -3,13 +3,14 @@ package com.google.cloud.gszutil
 import java.nio.charset.StandardCharsets
 import java.time.LocalDate
 
-import com.google.cloud.gszutil.Decoding._
+import com.google.cloud.gszutil.Decoding.{StringDecoder,NullableStringDecoder,StringAsIntDecoder,
+  StringAsDateDecoder,IntegerAsDateDecoder,StringAsDecimalDecoder}
 import com.google.cloud.imf.gzos.pb.GRecvProto.Record.Field
-import com.google.cloud.imf.gzos.pb.GRecvProto.Record.Field.FieldType._
 import org.apache.hadoop.hive.ql.exec.vector.{BytesColumnVector, ColumnVector, DateColumnVector, Decimal64ColumnVector, LongColumnVector}
 
 object VartextDecoding {
   def getVartextDecoder(f: Field, transcoder: Transcoder): Decoder = {
+    import com.google.cloud.imf.gzos.pb.GRecvProto.Record.Field.FieldType._
     val filler: Boolean = f.getFiller || f.getName.toUpperCase.startsWith("FILLER")
     if (f.getTyp == STRING) {
       if (f.getCast == INTEGER)

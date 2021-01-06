@@ -15,7 +15,7 @@
  */
 package com.google.cloud.imf.gzos
 
-import java.io.{IOException, PrintWriter, StringWriter}
+import java.io.IOException
 import java.nio.ByteBuffer
 import java.nio.channels.ReadableByteChannel
 import java.nio.charset.Charset
@@ -23,18 +23,20 @@ import java.security.Security
 import java.util.Date
 
 import com.google.cloud.gszutil.Decoding
-import com.google.cloud.gszutil.io.{CloudRecordReader, ZRecordReaderT, ZRecordWriterT}
+import com.google.cloud.gszutil.io.{ZRecordReaderT, ZRecordWriterT}
 import com.google.cloud.imf.gzos.MVSStorage.DSN
 import com.google.cloud.imf.gzos.pb.GRecvProto.ZOSJobInfo
-import com.google.cloud.imf.util.{CloudLogging, Logging, SecurityUtils}
-import com.ibm.jzos.{DSCB, Exec, Format1DSCB, Format3DSCB, JesSymbols, MvsJobSubmitter, PdsDirectory, RcException, RecordReader, RecordWriter, ZFile, ZFileConstants, ZFileException, ZUtil}
+import com.google.cloud.imf.util.Logging
+import com.ibm.dataaccess.ByteArrayUnmarshaller
+import com.ibm.jzos.{ByteUtil, DSCB, Exec, Format1DSCB, Format3DSCB, JesSymbols, MvsJobSubmitter, PdsDirectory, RcException, RecordReader, RecordWriter, ZFile, ZFileConstants, ZFileException, ZUtil}
 
+import scala.collection.mutable.ListBuffer
 import scala.util.Try
 
 /**  Calls and wraps IBM JZOS classes
   *
   */
-protected object ZOS {
+protected object ZOS extends Logging {
   class WrappedRecordReader(private val r: RecordReader) extends ZRecordReaderT with Logging {
     require(r.getRecfm.startsWith("F"),
       s"${r.getDDName} record format must be FB - ${r.getRecfm} " +
@@ -58,7 +60,7 @@ protected object ZOS {
     override def close(): Unit = {
       if (open) {
         open = false
-        CloudLogging.stdout("Closing " + r.getDDName + " " + r.getDsn)
+        logger.info("Closing " + r.getDDName + " " + r.getDsn)
         Try(r.close()).failed.foreach(t => logger.error(t.getMessage))
       }
     }
@@ -119,7 +121,7 @@ protected object ZOS {
     override def close(): Unit = {
       if (open) {
         open = false
-        CloudLogging.stdout("Closing " + r.getDDName + " " + r.getDsn)
+        logger.info("Closing " + r.getDDName + " " + r.getDsn)
         Try(r.close()).failed.foreach(t => logger.error(t.getMessage))
       }
     }
@@ -163,13 +165,11 @@ protected object ZOS {
     override def close(): Unit = {
       if (open) {
         open = false
-        CloudLogging.stdout("WrappedRecordWriter Closing " + w.getDDName + " " + w.getDsn)
+        logger.info("WrappedRecordWriter Closing " + w.getDDName + " " + w.getDsn)
         w.flush()
         Try(w.close()).failed.foreach{t =>
           val msg = "WrappedRecordWriter ERROR " + t.getMessage
-          CloudLogging.stdout(msg)
-          CloudLogging.stderr(msg)
-          t.printStackTrace(System.err)
+          logger.error(msg, t)
         }
       }
     }
@@ -204,8 +204,7 @@ protected object ZOS {
       } else {
         if (count >= limit) {
           val msg = s"RecordIterator ERROR ${r.getDsn} exceeded $limit record limit"
-          CloudLogging.stdout(msg)
-          CloudLogging.stderr(msg)
+          logger.error(msg)
         }
         close()
         null
@@ -223,12 +222,11 @@ protected object ZOS {
   def ddExists(ddName: String): Boolean = ZFile.ddExists(ddName)
 
   def readDSN(dsn: DSN): ZRecordReaderT = {
-    CloudLogging.stdout(s"reading DSN $dsn")
-
+    logger.info(s"Opening RecordReader for $dsn")
     try {
       val reader = RecordReader.newReader(dsn.fqdsn, ZFileConstants.FLAG_DISP_SHR)
-      CloudLogging.stdout(
-        s"""Reading DSN $dsn with ${reader.getClass.getSimpleName}
+      logger.info(
+        s"""Opened ${reader.getClass.getSimpleName}
            |DSN=${reader.getDsn}
            |RECFM=${reader.getRecfm}
            |BLKSIZE=${reader.getBlksize}
@@ -241,80 +239,70 @@ protected object ZOS {
       else
         throw new RuntimeException(s"Unsupported record format: '${reader.getRecfm}'")
     } catch {
-      case e: ZFileException =>
-        throw new RuntimeException(s"Failed to open DD:'$dsn'", e)
+      case e: RcException if e.getMessage != null && e.getMessage.contains("BPXWDYN failed") =>
+        val sb = new StringBuilder
+        sb.append(s"DSN=$dsn doesn't exist\n")
+        sb.append(e.getMessage)
+        val msg = sb.result
+        logger.error(msg, e)
+        throw new RuntimeException(msg, e)
+      case e: Throwable =>
+        val sb = new StringBuilder
+        sb.append(s"Failed to open DSN=$dsn\n")
+        if (e.getMessage != null) sb.append(e.getMessage)
+        val msg = sb.result
+        logger.error(msg, e)
+        throw new RuntimeException(msg, e)
     }
   }
 
-  def writeDSN(dsn: DSN, lrecl: Int, space1: Int, space2: Int, in: ReadableByteChannel): Unit = {
+  def allocate(dsn: DSN, lrecl: Int, space1: Int = 100, space2: Int = 100): String = {
     val ddname = ZFile.allocDummyDDName()
     val cmd =
       s"alloc fi($ddname) da(${dsn.fqdsn}) reuse new catalog msg(2)" +
-      s" recfm(f,b) space($space1,$space2) cyl lrecl($lrecl)"
+        s" recfm(f,b) space($space1,$space2) cyl lrecl($lrecl)"
+    logger.debug(s"Submitting BPXWDYN command:\n$cmd")
     try {
       ZFile.bpxwdyn(cmd)
     } catch {
       case e: RcException =>
-        val msg = s"Failed to allocate DD for $dsn\n$cmd"
+        val msg = s"Failed to allocate DD:$ddname for $dsn\n$cmd"
         throw new RuntimeException(msg, e)
     }
+    logger.debug(s"Allocated DD:$ddname for $dsn")
+    ddname
+  }
 
+  def writeDSN(dsn: DSN, lrecl: Int): ZRecordWriterT = {
+    val ddname = allocate(dsn, lrecl)
     var writer: RecordWriter = null
     try {
       writer = RecordWriter.newWriterForDD(ddname)
-      assert(writer.getLrecl == lrecl, s"writer lrecl = ${writer.getLrecl} but expected $lrecl")
-      val buf = ByteBuffer.allocate(lrecl*1024)
-      var n = 0
-      while (n > -1) {
-        // fill buffer
-        while (buf.remaining > lrecl && n > -1){
-          n = in.read(buf)
+    } catch {
+      case t: Throwable =>
+        logger.error(s"Failed to open writer: ${t.getMessage}", t)
+        if (writer != null) {
+          try {
+            writer.close()
+          } catch {
+            case e: ZFileException =>
+              logger.error(s"Failed to close writer for $ddname\nmessage:${e.getMessage}", e)
+          }
         }
-
-        // prepare buffer for reads
-        buf.flip()
-
-        while (buf.remaining() >= lrecl) {
-          val pos0 = buf.position()
-          val pos1 = pos0 + lrecl
-          // write record
-          writer.write(buf.array(), pos0, lrecl)
-          buf.position(pos1)
-        }
-
-        // prepare buffer for writes
-        buf.compact()
-      }
-    } finally {
-      if (writer != null) {
         try {
-          writer.close()
+          val cmd = s"free fi($ddname) msg(2)"
+          logger.debug(s"submitting BPXWDYN command:\n$cmd")
+          ZFile.bpxwdyn(cmd)
         } catch {
-          case e: ZFileException =>
-            val sw = new StringWriter()
-            val pw = new PrintWriter(sw)
-            e.printStackTrace(pw)
-            val msg = s"Failed to close writer for $ddname\n" + e.getMessage +"\n" + sw.toString
-            CloudLogging.stdout(msg)
-            CloudLogging.stderr(msg)
+          case e: RcException =>
+            logger.error(s"Failed to free DD $ddname\nmessage:${e.getMessage}", e)
         }
-      }
-      try {
-        ZFile.bpxwdyn(s"free fi($ddname) msg(2)")
-      } catch {
-        case e: RcException =>
-          val sw = new StringWriter()
-          val pw = new PrintWriter(sw)
-          e.printStackTrace(pw)
-          val msg = s"Failed to free DD $ddname\n" + e.getMessage +"\n" + sw.toString
-          CloudLogging.stdout(msg)
-          CloudLogging.stderr(msg)
-      }
     }
+    new WrappedRecordWriter(writer)
   }
 
   def writeDSN(dsn: DSN): ZRecordWriterT =
-    new WrappedRecordWriter(RecordWriter.newWriter(dsn.fqdsn, ZFileConstants.FLAG_DISP_SHR))
+    new WrappedRecordWriter(RecordWriter.newWriter(dsn.fqdsn, ZFileConstants.FLAG_DISP_MOD))
 
   def writeDD(ddName: String): ZRecordWriterT =
     new WrappedRecordWriter(RecordWriter.newWriterForDD(ddName))
@@ -328,16 +316,23 @@ protected object ZOS {
     * @return ZRecordReaderT
     */
   def readDD(ddName: String): ZRecordReaderT = {
-    CloudLogging.stdout(s"reading DD $ddName")
+    logger.info(s"Reading DD:$ddName")
 
     try {
       val reader: RecordReader = RecordReader.newReaderForDD(ddName)
-      CloudLogging.stdout(s"Reading DD $ddName with ${reader.getClass.getSimpleName}\nDSN=${reader.getDsn}\nRECFM=${reader.getRecfm}\nBLKSIZE=${reader.getBlksize}\nLRECL=${reader.getLrecl}")
+      logger.info(
+        s"""Opened ${reader.getClass.getSimpleName}
+           |DSN=${reader.getDsn}
+           |RECFM=${reader.getRecfm}
+           |BLKSIZE=${reader.getBlksize}
+           |LRECL=${reader.getLrecl}""".stripMargin)
 
       if (reader.getDsn == "NULLFILE") {
         // Close the dataset to avoid SC03 Abend
         reader.close()
-        throw new DDException(s"DD $ddName does not exist")
+        val msg = s"DD:$ddName not found"
+        logger.error(msg)
+        throw new DDException(msg)
       }
 
       if (reader.getRecfm.startsWith("F"))
@@ -357,8 +352,90 @@ protected object ZOS {
     * @return DataSetInfo
     */
   def getDatasetInfo(ddName: String): Option[DataSetInfo] = {
-    // TODO get dataset info with something other than JFCB
-    None
+    try {
+      val jfcb = ZFile.readJFCB(ddName)
+      val dsn =
+        if (jfcb.getJfcbelnm.isEmpty) jfcb.getJfcbdsnm
+        else s"${jfcb.getJfcbdsnm}(${jfcb.getJfcbelnm})"
+      val lrecl =
+        if (jfcb.getJfclrecl == 0) 80
+        else {
+          jfcb.getJfclrecl
+        }
+      Option(DataSetInfo(dsn = dsn, lrecl = lrecl))
+    } catch {
+      case _: ZFileException =>
+        None
+    }
+  }
+
+  def readAddr(buf: Array[Byte], off: Int): Long =
+    ByteArrayUnmarshaller.readInt(buf, off, true, 4, true)
+
+  def readInt(address: Long, len: Int): Int = {
+    if (len > 4) throw new IllegalArgumentException("len > 8")
+    else if (len <= 0) throw new IllegalArgumentException("len <= 0")
+    else {
+      val bytes = new Array[Byte](len)
+      ZUtil.peekOSMemory(address, bytes)
+      ByteUtil.bytesAsInt(bytes)
+    }
+  }
+
+  def readStr(address: Long, len: Int): String = {
+    if (len <= 0) throw new IllegalArgumentException("len <= 0")
+    else {
+      val bytes = new Array[Byte](len)
+      ZUtil.peekOSMemory(address, bytes)
+      new String(bytes, 0, len, Ebcdic.charset).trim
+    }
+  }
+
+  def listDDs: Seq[String] = {
+    val pCVT = ZUtil.peekOSMemory(16L, 4)
+    val pTCBW = ZUtil.peekOSMemory(pCVT + 0L, 4)
+    val pTCB = ZUtil.peekOSMemory(pTCBW + 4L, 4)
+    val pTIOT = ZUtil.peekOSMemory(pTCB + 12L, 4)
+    val pJSCB = ZUtil.peekOSMemory(pTCB + 180L, 4)
+    val pSSIB = ZUtil.peekOSMemory(pJSCB + 316L, 4)
+    val pPSCB = ZUtil.peekOSMemory(pJSCB + 264L, 4)
+
+    val jobName = readStr(pTIOT, 8)
+    val procStepName = readStr(pTIOT+8, 8)
+    val stepName = readStr(pTIOT+16, 8)
+    val jobId = readStr(pSSIB+12,8)
+
+    // read TIOENTRY
+    var i = pTIOT + 24
+    val buf = ListBuffer.empty[String]
+    var n = 0
+    while (i < pTIOT + 32*1024 && n < 256) {
+      n += 1
+      val len = readInt(i, 1)
+      if (len > 0){
+        val ddName = readStr(i+4,8)
+        if (ddName.exists(_.isLetter))
+          buf.append(ddName)
+        i += len
+      } else i += 32*1024
+    }
+
+    val ddList = buf.toList
+    logger.info(s"""JOBNAME: $jobName
+                           |JOBID: $jobId
+                           |PROCSTEPNAME: $procStepName
+                           |STEPNAME: $stepName
+                           |DDs: ${ddList.mkString(",")}
+                           |Java Version:
+                           |${ZUtil.getJavaVersionInfo}
+                           |
+                           |JZOS Version:
+                           |${ZUtil.getJzosDllVersion}
+                           |
+                           |JZOS Jar Version:
+                           |${ZUtil.getJzosJarVersion}
+                           |""".stripMargin)
+    ddList
   }
 
   def addCCAProvider(): Unit =

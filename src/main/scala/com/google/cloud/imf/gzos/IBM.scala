@@ -16,21 +16,16 @@
 
 package com.google.cloud.imf.gzos
 
-import java.io.ByteArrayInputStream
-import java.nio.charset.StandardCharsets
-import java.security.KeyPair
+import java.nio.file.{Files, Paths}
 
-import com.google.api.client.json.jackson2.JacksonFactory
-import com.google.api.client.json.{GenericJson, JsonObjectParser}
 import com.google.cloud.gszutil
 import com.google.cloud.gszutil.CopyBook
-import com.google.cloud.gszutil.io.{CloudRecordReader, ZRecordReaderT, ZRecordWriterT}
-import com.google.cloud.imf.gzos.JCLParser.DDStatement
+import com.google.cloud.gszutil.io.{ZRecordReaderT, ZRecordWriterT}
 import com.google.cloud.imf.gzos.MVSStorage.DSN
 import com.google.cloud.imf.gzos.Util.GoogleCredentialsProvider
 import com.google.cloud.imf.gzos.ZOS.{PDSIterator, RecordIterator}
 import com.google.cloud.imf.gzos.pb.GRecvProto.ZOSJobInfo
-import com.google.cloud.imf.util.{CloudLogging, Logging, SecurityUtils, Services}
+import com.google.cloud.imf.util.{CloudLogging, Logging, Services}
 import com.google.common.base.Charsets
 import com.google.common.io.ByteStreams
 
@@ -39,8 +34,10 @@ object IBM extends MVS with Logging {
   override def isIBM: Boolean = true
   override def init(): Unit = {
     ZOS.addCCAProvider()
-    System.setProperty("java.net.preferIPv4Stack" , "true")
+    System.setProperty("java.net.preferIPv4Stack", "true")
     CloudLogging.stdout("Mainframe Connector Build Info: " + Util.readS("build.txt"))
+
+    ZOS.listDDs
   }
 
   override def exists(dsn: DSN): Boolean = ZOS.exists(dsn)
@@ -50,17 +47,19 @@ object IBM extends MVS with Logging {
   override def readDSN(dsn: DSN): ZRecordReaderT = ZOS.readDSN(dsn)
   override def writeDSN(dsn: DSN): ZRecordWriterT = ZOS.writeDSN(dsn)
   override def writeDD(dd: String): ZRecordWriterT = ZOS.writeDD(dd)
-  override def readDD(dd: String): ZRecordReaderT = {
-    // Get DD information from z/OS
-    ZOS.getDatasetInfo(dd) match {
-      case Some(ddInfo) =>
-        CloudLogging.stdout(s"Dataset Info for $dd:\n$ddInfo")
+  override def dsInfo(dd: String): Option[DataSetInfo] = ZOS.getDatasetInfo(dd)
+  override def readDD(dd: String): ZRecordReaderT = ZOS.readDD(dd)
+  override def readCloudDD(dd: String): ZRecordReaderT = {
+    // Check for Cloud Dataset
+    dsInfo(dd) match {
+      case Some(ds) =>
+        logger.info(s"Found DD:$dd $ds")
 
         // Obtain Cloud Storage client
         val gcs = Services.storage(getCredentialProvider().getCredentials)
 
         // check if DD exists in Cloud Storage
-        CloudDataSet.readCloudDD(gcs, dd, ddInfo) match {
+        CloudDataSet.readCloudDD(gcs, dd, ds) match {
           case Some(r) =>
             // Prefer Cloud Data Set if DSN exists in GCS
             return r
@@ -70,31 +69,7 @@ object IBM extends MVS with Logging {
     }
 
     // Check for Local Data Set (standard z/OS DD)
-    try {
-      ZOS.readDD(dd)
-    } catch {
-      // Handle DD open failure
-      case _: Throwable =>
-        val gcsDD = sys.env.getOrElse("GCSDD","GCSLOC")
-        try {
-          // Read DDs from data set
-          val gcsParm = readDDString(gcsDD,"\n")
-          CloudLogging.stdout(s"GCS PARM:\n$gcsParm")
-          // Parse DDs
-          val gcsDDs = JCLParser.splitStatements(gcsParm)
-          CloudLogging.stdout(s"GCS DSNs:\n${gcsDDs.mkString("\n")}")
-          // Search for requested DDNAME
-          gcsDDs.find(_.name == dd) match {
-            case Some(DDStatement(_, lrecl, dsn)) =>
-              CloudRecordReader(dsn, lrecl)
-            case None =>
-              throw new RuntimeException(s"Cloud DD '$dd' not found in $gcsDD")
-          }
-        } catch {
-          case t: Throwable =>
-            throw new RuntimeException(s"DD not found: $dd", t)
-        }
-    }
+    ZOS.readDD(dd)
   }
 
   override def readDSNLines(dsn: DSN): Iterator[String] =
@@ -113,32 +88,36 @@ object IBM extends MVS with Logging {
   }
 
   private var cp: CredentialProvider = _
-  private var keypair: KeyPair = _
   private var principal: String = _
-  private var keyfileBytes: Array[Byte] = _
 
   override def getPrincipal(): String = {
     if (principal == null) getCredentialProvider()
     principal
   }
 
-  override def getCredentialProvider(): CredentialProvider = {
-    if (cp != null) cp
-    else {
-      if (keyfileBytes == null) keyfileBytes = Util.readAllBytes(readDD("KEYFILE"))
-      val json = new JsonObjectParser(JacksonFactory.getDefaultInstance)
-        .parseAndClose(new ByteArrayInputStream(keyfileBytes), StandardCharsets.UTF_8, classOf[GenericJson])
-      principal = json.get("client_email").asInstanceOf[String]
-      // todo read keypair
-      keypair = SecurityUtils.readServiceAccountKeyPair(keyfileBytes)
-      cp = new GoogleCredentialsProvider(keyfileBytes)
-      cp
+  private def readKeyfile(): Array[Byte] = {
+    sys.env.get("GOOGLE_APPLICATION_CREDENTIALS")
+      .orElse(sys.env.get("GKEYFILE")) match {
+      case Some(unixPath) if unixPath.nonEmpty =>
+        logger.info(s"reading credentials from $unixPath")
+        Files.readAllBytes(Paths.get(unixPath))
+      case None =>
+        logger.info(s"reading credentials from DD:KEYFILE")
+        Util.readAllBytes(ZOS.readDD("KEYFILE"))
     }
   }
 
-  override def getKeyPair(): KeyPair = {
-    if (keypair == null) getCredentialProvider()
-    keypair
+  override def getCredentialProvider(): CredentialProvider = {
+    if (this.cp != null) this.cp
+    else {
+      val cp = new GoogleCredentialsProvider(readKeyfile())
+      cp.getClientEmail.foreach{x =>
+        logger.info(s"loaded keyfile for $x")
+        principal = x
+      }
+      this.cp = cp
+      cp
+    }
   }
 
   override def loadCopyBook(dd: String): CopyBook = {

@@ -18,11 +18,10 @@ package com.google.cloud.imf.gzos
 
 import java.nio.channels.FileChannel
 import java.nio.file.{Files, Paths, StandardOpenOption}
-import java.security.{KeyPair, KeyPairGenerator}
 import java.util.Date
 
 import com.google.cloud.gszutil
-import com.google.cloud.gszutil.io.{ChannelRecordReader, ZRecordReaderT, ZRecordWriterT}
+import com.google.cloud.gszutil.io.{ChannelRecordReader, ChannelRecordWriter, ZRecordReaderT, ZRecordWriterT}
 import com.google.cloud.gszutil.{CopyBook, Utf8}
 import com.google.cloud.imf.gzos.MVSStorage.DSN
 import com.google.cloud.imf.gzos.Util.DefaultCredentialProvider
@@ -35,7 +34,7 @@ object Linux extends MVS with Logging {
   override def isIBM: Boolean = false
   override def init(): Unit = {
     System.setProperty("java.net.preferIPv4Stack" , "true")
-    System.out.println("Build Info:\n" + Util.readS("build.txt"))
+    Console.out.println("Build Info:\n" + Util.readS("build.txt"))
   }
 
   override def ddExists(dd: String): Boolean = {
@@ -44,24 +43,38 @@ object Linux extends MVS with Logging {
 
   override def getDSN(dd: String): String = dd
 
+  override def dsInfo(dd: String): Option[DataSetInfo] = {
+    sys.env.get(s"${dd}_DSN") match {
+      case Some(dsn) =>
+        Option(DataSetInfo(
+          dsn = dsn,
+          lrecl = sys.env.getOrElse(s"${dd}_LRECL","80").toInt
+        ))
+      case None =>
+        None
+    }
+  }
   override def readDD(dd: String): ZRecordReaderT = {
+    ddFile(dd)
+  }
+
+  override def readCloudDD(dd: String): ZRecordReaderT = {
     // Get DD information from z/OS
-    val ddInfo = DataSetInfo(
-      dataSetName = sys.env.getOrElse(s"${dd}_DSN","HLQ.DATA"),
-      lrecl = sys.env.getOrElse(s"${dd}_LRECL","80").toInt,
-      fixed = true, blocked = true
-    )
+    dsInfo(dd) match {
+      case Some(ddInfo) =>
+        // Obtain Cloud Storage client
+        val gcs = Services.storage(getCredentialProvider().getCredentials)
 
-    // Obtain Cloud Storage client
-    val gcs = Services.storage(getCredentialProvider().getCredentials)
-
-    // check if DD exists in Cloud Storage
-    CloudDataSet.readCloudDD(gcs, dd, ddInfo) match {
-      case Some(r) =>
-        // Prefer Cloud Data Set if DSN exists in GCS
-        r
-      case _ =>
-        ddFile(dd)
+        // check if DD exists in Cloud Storage
+        CloudDataSet.readCloudDD(gcs, dd, ddInfo) match {
+          case Some(r) =>
+            // Prefer Cloud Data Set if DSN exists in GCS
+            r
+          case _ =>
+            ddFile(dd)
+        }
+      case None =>
+        throw new RuntimeException(s"DD:$dd not found")
     }
   }
 
@@ -79,8 +92,6 @@ object Linux extends MVS with Logging {
   override def getPrincipal(): String = System.getProperty("user.name")
 
   override def getCredentialProvider(): CredentialProvider = new DefaultCredentialProvider
-
-  override def getKeyPair(): KeyPair = KeyPairGenerator.getInstance("RSA").generateKeyPair
 
   override def loadCopyBook(dd: String): CopyBook = {
     val ddValue = System.getenv(dd)
@@ -133,7 +144,22 @@ object Linux extends MVS with Logging {
   override def readDSN(dsn: DSN): ZRecordReaderT = throw new NotImplementedError()
   override def readDSNLines(dsn: DSN): Iterator[String] = throw new NotImplementedError()
   override def writeDSN(dsn: DSN): ZRecordWriterT = throw new NotImplementedError()
-  override def writeDD(ddName: String): ZRecordWriterT = throw new NotImplementedError()
+  override def writeDD(ddName: String): ZRecordWriterT = {
+    val env = sys.env
+    require(env.contains(ddName), s"$ddName environment variable not set")
+    val ddPath = Paths.get(env(ddName))
+    val lreclVarName = s"${ddName}_LRECL"
+    val blkSizeVarName = s"${ddName}_BLKSIZE"
+    require(env.contains(lreclVarName), s"$lreclVarName environment variable not set")
+    require(env.contains(blkSizeVarName), s"$blkSizeVarName environment variable not set")
+    logger.info(s"Opening DD:$ddName from path:$ddPath")
+    if (Files.isDirectory(ddPath))
+      throw new IllegalStateException(s"Unable to write DD:$ddName because $ddPath is a directory")
+    import StandardOpenOption.{CREATE,WRITE}
+    ChannelRecordWriter(channel = FileChannel.open(ddPath, CREATE, WRITE),
+      lrecl = sys.env(lreclVarName).toInt,
+      blksize = sys.env(blkSizeVarName).toInt)
+  }
   override def listPDS(dsn: DSN): Iterator[PDSMemberInfo] = throw new NotImplementedError()
 
   override def submitJCL(jcl: Seq[String]): Option[ZMVSJob] = throw new NotImplementedError()

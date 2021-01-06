@@ -9,11 +9,11 @@ import com.google.cloud.bqsh.GsUtilConfig
 import com.google.cloud.bqsh.cmd.Result
 import com.google.cloud.gszutil.SchemaProvider
 import com.google.cloud.gszutil.io.{CloudRecordReader, ZRecordReaderT}
-import com.google.cloud.imf.grecv.{GRecvProtocol, GzipCodec, Uploader}
+import com.google.cloud.imf.grecv.{GRecvProtocol, Uploader}
 import com.google.cloud.imf.gzos.MVS
 import com.google.cloud.imf.gzos.pb.GRecvGrpc
 import com.google.cloud.imf.gzos.pb.GRecvProto.GRecvRequest
-import com.google.cloud.imf.util.{CloudLogging, Logging, Services}
+import com.google.cloud.imf.util.{GzipCodec, Logging, Services}
 import com.google.protobuf.util.JsonFormat
 import io.grpc.okhttp.OkHttpChannelBuilder
 
@@ -25,12 +25,12 @@ object GRecvClient extends Uploader with Logging {
           in: ZRecordReaderT,
           schemaProvider: SchemaProvider,
           receiver: Uploader): Result = {
-    CloudLogging.stdout(s"GRecvClient Starting Dataset Upload to ${cfg.gcsUri}")
+    logger.info(s"GRecvClient Starting Dataset Upload to ${cfg.gcsUri}")
 
     try {
       val req = GRecvRequest.newBuilder
         .setSchema(schemaProvider.toRecordBuilder.build)
-        .setBasepath(cfg.gcsUri)
+        .setBasepath(cfg.gcsUri) // where to write output
         .setLrecl(in.lRecl)
         .setBlksz(in.blkSize)
         .setMaxErrPct(cfg.maxErrorPct)
@@ -38,8 +38,7 @@ object GRecvClient extends Uploader with Logging {
         .setPrincipal(zos.getPrincipal())
         .setTimestamp(System.currentTimeMillis())
 
-      receiver.upload(req.build, cfg.remoteHost, cfg.remotePort, cfg.nConnections, zos, in,
-        cfg.gcsDSNPrefix)
+      receiver.upload(req.build, cfg.remoteHost, cfg.remotePort, cfg.nConnections, zos, in)
     } catch {
       case e: Throwable =>
         logger.error("Dataset Upload Failed", e)
@@ -52,8 +51,7 @@ object GRecvClient extends Uploader with Logging {
                       port: Int,
                       nConnections: Int,
                       zos: MVS,
-                      in: ZRecordReaderT,
-                      gcsDSNPrefix: String): Result = {
+                      in: ZRecordReaderT): Result = {
     val cb = OkHttpChannelBuilder.forAddress(host, port)
       .compressorRegistry(GzipCodec.compressorRegistry)
       .usePlaintext() // TLS is provided by AT-TLS
@@ -67,7 +65,7 @@ object GRecvClient extends Uploader with Logging {
     Try{
       in match {
         case x: CloudRecordReader =>
-          gcsSend(req, x, cb, creds, gcsDSNPrefix)
+          gcsSend(req, x, cb, creds)
         case _ =>
           send(req, in, nConnections, cb, creds)
       }
@@ -119,18 +117,21 @@ object GRecvClient extends Uploader with Logging {
     if (bytesRead < 1){
       logger.info(s"Read $bytesRead bytes from ${in.getDsn} - requesting empty file be written")
       val ch = cb.build()
-      val stub = GRecvGrpc.newBlockingStub(ch).withDeadlineAfter(3000, TimeUnit.SECONDS)
-      val res = stub.write(request.toBuilder.setNoData(true).build())
-      ch.shutdownNow()
-      if (res.getStatus != GRecvProtocol.OK)
-        Result.Failure("non-success status code")
-      else {
-        val resStr = JsonFormat.printer()
-          .includingDefaultValueFields()
-          .omittingInsignificantWhitespace()
-          .print(res)
-        Result(activityCount = res.getRowCount, message = s"Request completed. DSN=${in.getDsn} " +
-          s" rowCount=${res.getRowCount} errorCount=${res.getErrCount} $resStr")
+      try {
+        val stub = GRecvGrpc.newBlockingStub(ch).withDeadlineAfter(3000, TimeUnit.SECONDS)
+        val res = stub.write(request.toBuilder.setNoData(true).build())
+        if (res.getStatus != GRecvProtocol.OK)
+          Result.Failure("non-success status code")
+        else {
+          val resStr = JsonFormat.printer()
+            .includingDefaultValueFields()
+            .omittingInsignificantWhitespace()
+            .print(res)
+          Result(activityCount = res.getRowCount, message = s"Request completed. DSN=${in.getDsn} " +
+            s" rowCount=${res.getRowCount} errorCount=${res.getErrCount} $resStr")
+        }
+      } finally {
+        ch.shutdownNow()
       }
     } else {
       // Each TmpObj instance sends its own request in close() method
@@ -147,46 +148,45 @@ object GRecvClient extends Uploader with Logging {
     * @param in CloudRecordReader with reference to DSN
     * @param cb OkHttpChannelBuilder used to create a gRPC client
     * @param creds OAuth2Credentials used to generate OAuth2 AccessToken
-    * @param gcsDSNPrefix base URI prepended to DSN to locate cloud datsets
     * @return
     */
   def gcsSend(request: GRecvRequest,
               in: CloudRecordReader,
               cb: OkHttpChannelBuilder,
-              creds: OAuth2Credentials,
-              gcsDSNPrefix: String): Result = {
-    CloudLogging.stdout(s"Sending transcode requests for DSNs:\n${in.dsn.mkString("\n")}")
-    CloudLogging.stdout(s"gcsDSNPrefix = $gcsDSNPrefix")
+              creds: OAuth2Credentials): Result = {
     var rowCount: Long = 0
     var errCount: Long = 0
-    for (dsn <- in.dsn){
-      val srcUri: String =
-        if (dsn.startsWith("gs://")) dsn
-        else {
-          val gcsPrefix1 = gcsDSNPrefix.stripSuffix("/")
-          s"$gcsPrefix1/$dsn"
-        }
-      CloudLogging.stdout(s"Sending transcode request for $srcUri")
-      val ch = cb.build()
-      val stub = GRecvGrpc.newBlockingStub(ch).withDeadlineAfter(3000, TimeUnit.SECONDS)
-      val res = stub.write(request.toBuilder.setSrcUri(srcUri).build())
-      ch.shutdownNow()
+    val ch = cb.build()
+    try {
+      val stub = GRecvGrpc.newBlockingStub(ch)
+        .withDeadlineAfter(90, TimeUnit.MINUTES)
+      val req = request.toBuilder.setSrcUri(in.uri).build()
+      logger.info(
+        s"""Sending GRecvRequest request
+           |in:${req.getSrcUri}
+           |out:${req.getBasepath}""".stripMargin)
+      val res = stub.write(req)
       if (res.getRowCount > 0)
         rowCount += res.getRowCount
       if (res.getErrCount > 0)
         errCount += res.getErrCount
       if (res.getStatus != GRecvProtocol.OK)
-        return Result.Failure("non-success status code")
+        Result.Failure("non-success status code")
       else {
         val resStr = JsonFormat.printer()
           .includingDefaultValueFields()
           .omittingInsignificantWhitespace()
           .print(res)
-        CloudLogging.stdout(s"Request complete. DSN=$dsn rowCount=${res.getRowCount} " +
+        logger.info(s"Request complete. DSN=${in.dsn} rowCount=${res.getRowCount} " +
           s"errorCount=${res.getErrCount} $resStr")
+        Result(activityCount = rowCount, message = s"Completed with " +
+          s"$errCount errors")
       }
+    } catch {
+      case t: Throwable =>
+        Result.Failure(s"GRecv failure: ${t.getMessage}")
+    } finally {
+      ch.shutdownNow()
     }
-    Result(activityCount = rowCount, message = s"Completed ${in.dsn.length} requests with " +
-      s"$errCount errors")
   }
 }

@@ -9,8 +9,8 @@ import java.util.zip.GZIPInputStream
 import com.google.cloud.gszutil.RecordSchema
 import com.google.cloud.gszutil.io.WriterCore
 import com.google.cloud.imf.grecv.GRecvProtocol
-import com.google.cloud.imf.gzos.Util
 import com.google.cloud.imf.gzos.pb.GRecvProto.{GRecvRequest, GRecvResponse}
+import com.google.cloud.imf.gzos.{CloudDataSet, Util}
 import com.google.cloud.imf.util.Logging
 import com.google.cloud.storage.{BlobId, Storage}
 import com.google.common.hash.Hashing
@@ -44,14 +44,14 @@ object GRecvServerListener extends Logging {
         val blob = gcs.get(BlobId.of(bucket, name))
         if (blob == null)
           throw new RuntimeException(s"GCS object not found. uri=$gcsUri")
-        val lreclMetaValue = blob.getMetadata.get("lrecl")
-        if (lreclMetaValue == null)
+        val lrecl = blob.getMetadata.get(CloudDataSet.LreclMeta)
+        if (lrecl == null)
           throw new RuntimeException("lrecl not set")
-        else if (lreclMetaValue.length < 1 || lreclMetaValue.length > 5)
-          throw new RuntimeException(s"invalid lrecl length ${lreclMetaValue.length}")
-        else if (lreclMetaValue.forall(_.isDigit))
-          throw new RuntimeException(s"invalid lrecl $lreclMetaValue")
-        lreclMetaValue.toInt
+        else if (lrecl.length < 1 || lrecl.length > 5)
+          throw new RuntimeException(s"invalid lrecl length ${lrecl.length}")
+        else if (lrecl.forall(_.isDigit))
+          throw new RuntimeException(s"invalid lrecl $lrecl")
+        lrecl.toInt
       }
 
     val input: InputStream = {

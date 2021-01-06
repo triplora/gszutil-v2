@@ -17,14 +17,14 @@
 package com.google.cloud.bqsh.cmd
 
 import com.google.cloud.bigquery.DatasetId
-import com.google.cloud.bqsh._
+import com.google.cloud.bqsh.{BQ,Command,RmConfig,ArgParser,RmOptionParser}
 import com.google.cloud.imf.gzos.MVS
 import com.google.cloud.imf.util.Services
 
 object Rm extends Command[RmConfig] {
   override val name: String = "bq rm"
   override val parser: ArgParser[RmConfig] = RmOptionParser
-  override def run(c: RmConfig, zos: MVS): Result = {
+  override def run(c: RmConfig, zos: MVS, env: Map[String,String]): Result = {
     val creds = zos.getCredentialProvider().getCredentials
     val bq = Services.bigQuery(c.projectId, c.location, creds)
 

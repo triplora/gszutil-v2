@@ -20,7 +20,7 @@ import java.nio.ByteBuffer
 import java.nio.charset.Charset
 
 import com.google.cloud.gszutil.{Decoder, SchemaProvider, VartextDecoder}
-import com.google.cloud.imf.util.{CloudLogging, Logging}
+import com.google.cloud.imf.util.Logging
 import org.apache.hadoop.hive.ql.exec.vector.{ColumnVector, VectorizedRowBatch}
 import org.apache.orc.Writer
 
@@ -248,10 +248,9 @@ object ZReader extends Logging {
     } catch {
       case e: Exception =>
         val s = new String(record, srcCharset)
-        val msg = s"ZReader.readVartextRecord failed on column $i: ${e.getMessage}\n" +
+        val msg = s"ZReader.readVartextRecord failed on column $i\nmessage=${e.getMessage}\n" +
           s"Record:\n$s"
-        CloudLogging.stdout(msg)
-        CloudLogging.stderr(msg)
+        logger.error(msg, e)
         throw e
     }
   }

@@ -34,17 +34,17 @@ case class CopyBook(raw: String, transcoder: Transcoder = Ebcdic, altFields: Opt
 
 
   override def fieldNames: Seq[String] =
-      altFields.getOrElse(Fields).flatMap{
-      case CopyBookField(name, decoder) if !decoder.filler =>
-        Option(name.replaceAllLiterally("-","_"))
+    altFields.getOrElse(Fields).flatMap {
+      case CopyBookField(name, decoder, _) if !decoder.filler =>
+        Option(name.replaceAllLiterally("-", "_"))
       case _ =>
         None
     }
 
   override lazy val decoders: Array[Decoder] = {
     val buf = ArrayBuffer.empty[Decoder]
-    altFields.getOrElse(Fields).foreach{
-      case CopyBookField(_, decoder) =>
+    altFields.getOrElse(Fields).foreach {
+      case CopyBookField(_, decoder, _) =>
         buf.append(decoder)
       case _ =>
     }
@@ -63,16 +63,27 @@ case class CopyBook(raw: String, transcoder: Transcoder = Ebcdic, altFields: Opt
 
   override def toRecordBuilder: Record.Builder = {
     val b = Record.newBuilder()
-        .setSource(Record.Source.COPYBOOK)
-        .setOriginal(raw)
+      .setSource(Record.Source.COPYBOOK)
+      .setOriginal(raw)
 
-    Fields.foreach{
-      case CopyBookField(name, decoder) =>
+    Fields.foreach {
+      case CopyBookField(name, decoder, _) =>
         b.addField(decoder.toFieldBuilder.setName(name))
       case _ =>
     }
 
     b
+  }
+
+  override def encoders: Array[BinaryEncoder] = {
+    if (vartext) {
+      throw new RuntimeException("Vartext export not supported.")
+    } else {
+      Fields.flatMap {
+        case CopyBookField(name, decoder, typ) => Option(Encoding.getEncoder(CopyBookField(name, decoder, typ), transcoder))
+        case _ => None
+      }
+    }.toArray
   }
 }
 

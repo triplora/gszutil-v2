@@ -20,29 +20,29 @@ import java.nio.ByteBuffer
 import java.nio.channels.{Channels, ReadableByteChannel, WritableByteChannel}
 import java.nio.charset.Charset
 
-import com.google.auth.oauth2.GoogleCredentials
+import com.google.auth.oauth2.{GoogleCredentials, ServiceAccountCredentials}
 import com.google.cloud.gszutil.io.{ZDataSet, ZRecordReaderT}
 import com.google.cloud.imf.gzos.pb.GRecvProto.ZOSJobInfo
-import com.google.cloud.imf.util.CloudLogging
+import com.google.cloud.imf.util.Logging
 import com.google.cloud.storage.BlobInfo
 import com.google.common.base.Charsets
 import com.google.common.collect.ImmutableSet
 import com.google.common.io.{BaseEncoding, Resources}
 
-import scala.util.Random
+import scala.util.{Random, Try}
 
-object Util {
+object Util extends Logging {
   final val isIbm = System.getProperty("java.vm.vendor").contains("IBM")
   def zProvider: MVS = if (isIbm) IBM else Linux
   def sleepOrYield(ms: Long): Unit = {
     if (isIbm) {
-      CloudLogging.stdout(s"Yielding for $ms ms...")
+      logger.info(s"Yielding for $ms ms...")
       val t1 = System.currentTimeMillis + ms
       while (System.currentTimeMillis < t1){
         Thread.`yield`()
       }
     } else {
-      CloudLogging.stdout(s"Waiting for $ms ms...")
+      logger.info(s"Waiting for $ms ms...")
       Thread.sleep(ms)
     }
   }
@@ -72,9 +72,10 @@ object Util {
 
   val StorageScope = "https://www.googleapis.com/auth/devstorage.read_write"
   val BigQueryScope = "https://www.googleapis.com/auth/bigquery"
+  val BigQueryReadScope = "https://www.googleapis.com/auth/bigquery.readonly"
   val ComputeScope = "https://www.googleapis.com/auth/compute"
   val LoggingScope = "https://www.googleapis.com/auth/logging.write"
-  final val Scopes = ImmutableSet.of(ComputeScope, StorageScope, BigQueryScope, LoggingScope)
+  final val Scopes = ImmutableSet.of(StorageScope, BigQueryScope, LoggingScope)
 
   class DefaultCredentialProvider extends CredentialProvider {
     private val credentials =
@@ -92,6 +93,13 @@ object Util {
       GoogleCredentials
         .fromStream(new ByteArrayInputStream(bytes))
         .createScoped(Scopes)
+
+    def getClientEmail: Option[String] =
+      credentials match {
+        case x: ServiceAccountCredentials => Option(x.getClientEmail)
+        case _ => None
+      }
+
     override def getCredentials: GoogleCredentials = {
       credentials.refreshIfExpired()
       credentials
@@ -164,6 +172,12 @@ object Util {
     bytes.grouped(lRecl)
       .map{b => trimRight(new String(b, charset),' ')}
       .mkString(recordSeparator)
+  }
+
+  /** Exit with ascii art */
+  def exit: Unit = {
+    Try(Console.out.println(readS("logo.txt")))
+    System.exit(0)
   }
 
 

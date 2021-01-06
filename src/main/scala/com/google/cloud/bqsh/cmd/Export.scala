@@ -16,29 +16,22 @@
 
 package com.google.cloud.bqsh.cmd
 
-import java.io.{PrintWriter, StringWriter}
-
-import com.google.cloud.bigquery.storage.v1.ReadSession.TableReadOptions
-import com.google.cloud.bigquery.{BigQueryException, JobInfo, QueryJobConfiguration, QueryParameterValue, StandardSQLTypeName}
-import com.google.cloud.bigquery.storage.v1.{BigQueryReadClient, CreateReadSessionRequest, DataFormat, ReadRowsRequest, ReadSession}
+import com.google.cloud.bigquery.{BigQuery, BigQueryException, JobInfo, QueryJobConfiguration}
 import com.google.cloud.bqsh.BQ.resolveDataset
 import com.google.cloud.bqsh.{ArgParser, BQ, Command, ExportConfig, ExportOptionParser}
-import com.google.cloud.gszutil.io.BQExporter
-import com.google.cloud.imf.gzos.{Ebcdic, MVS}
-import com.google.cloud.imf.util.StatsUtil.EnhancedJob
-import com.google.cloud.imf.util.{CloudLogging, Logging, Services, StatsUtil}
-import org.apache.avro.Schema
+import com.google.cloud.gszutil.io.`export`.{CopyBookSchemaExporter}
+import com.google.cloud.gszutil.{CopyBook, SchemaProvider}
+import com.google.cloud.imf.gzos.{Ebcdic, MVS, MVSStorage}
+import com.google.cloud.imf.util.{Logging, Services, StatsUtil}
 
 object Export extends Command[ExportConfig] with Logging {
   override val name: String = "bq export"
   override val parser: ArgParser[ExportConfig] = ExportOptionParser
 
-  def run(cfg: ExportConfig, zos: MVS): Result = {
+  override def run(cfg: ExportConfig, zos: MVS, env: Map[String,String]): Result = {
     val creds = zos.getCredentialProvider().getCredentials
-    CloudLogging.stdout(s"Initializing BigQuery client\n" +
-      s"projectId=${cfg.projectId} location=${cfg.location}")
-    val bq = Services.bigQuery(cfg.projectId, cfg.location, creds)
-    val bqStorage = BigQueryReadClient.create()
+    logger.info(s"Starting bq export\n$cfg")
+    val bq: BigQuery = Services.bigQuery(cfg.projectId, cfg.location, creds)
 
     val query =
       if (cfg.sql.nonEmpty) cfg.sql
@@ -53,11 +46,23 @@ object Export extends Command[ExportConfig] with Logging {
         }
       }
     logger.info(s"SQL Query:\n$query")
-    if (query.nonEmpty) {
+    if (query.isEmpty) {
       val msg = "Empty export query"
-      CloudLogging.stderr(msg)
+      logger.error(msg)
       return Result.Failure(msg)
     }
+
+    //copybook is required
+    val sp: SchemaProvider =
+      if (cfg.cobDsn.nonEmpty) {
+        logger.info(s"reading copybook from DSN=${cfg.cobDsn}")
+        CopyBook(zos.readDSNLines(MVSStorage.parseDSN(cfg.cobDsn)).mkString("\n"))
+      } else {
+        logger.info(s"reading copybook from DD:COPYBOOK")
+        zos.loadCopyBook("COPYBOOK")
+      }
+
+    val exporter = new CopyBookSchemaExporter(cfg, zos, sp)
 
     val jobConfiguration = configureExportQueryJob(query, cfg)
     val jobId = BQ.genJobId(cfg.projectId, cfg.location, zos, "query")
@@ -66,139 +71,41 @@ object Export extends Command[ExportConfig] with Logging {
       logger.info(s"Submitting QueryJob.\njobId=${BQ.toStr(jobId)}")
       val job = BQ.runJob(bq, jobConfiguration, jobId, cfg.timeoutMinutes * 60, sync = true)
       logger.info(s"QueryJob finished.")
-      val jobInfo = new EnhancedJob(job)
-      CloudLogging.stdout(jobInfo.report)
-
-      val conf = job.getConfiguration[QueryJobConfiguration]
 
       // check for errors
       BQ.getStatus(job) match {
         case Some(status) =>
           if (status.hasError) {
             val msg = s"Error:\n${status.error}\nExecutionErrors: ${status.executionErrors.mkString("\n")}"
-            CloudLogging.stderr(msg)
             logger.error(msg)
           }
           logger.info(s"Job Status = ${status.state}")
-          BQ.throwOnError(jobInfo, status)
+          BQ.throwOnError(job, status)
         case _ =>
           val msg = s"Job ${BQ.toStr(jobId)} not found"
           logger.error(msg)
           throw new RuntimeException(msg)
       }
-      val destTable = Option(bq.getTable(conf.getDestinationTable)) match {
-        case Some(t) =>
-          t
-        case None =>
-          val msg = s"Destination table ${conf.getDestinationTable.getProject}." +
-            s"${conf.getDestinationTable.getDataset}." +
-            s"${conf.getDestinationTable.getTable} not found for export job ${BQ.toStr(jobId)}"
-          CloudLogging.stderr(msg)
-          logger.error(msg)
-          throw new RuntimeException(msg)
-      }
 
-      // count output rows
-      val activityCount: Long = destTable.getNumRows.longValueExact
-
-      val projectPath = s"projects/${cfg.projectId}"
-      val tablePath = s"projects/${cfg.projectId}/datasets/" +
-        s"${conf.getDestinationTable.getDataset}/tables/${conf.getDestinationTable.getTable}"
-      val session: ReadSession = bqStorage.createReadSession(
-        CreateReadSessionRequest.newBuilder
-          .setParent(projectPath)
-          .setMaxStreamCount(1)
-          .setReadSession(ReadSession.newBuilder
-            .setTable(tablePath)
-            .setDataFormat(DataFormat.AVRO)
-            .setReadOptions(TableReadOptions.newBuilder.build)
-            .build).build)
-
-      val schema = new Schema.Parser().parse(session.getAvroSchema.getSchema)
-      val readRowsRequest = ReadRowsRequest.newBuilder
-        .setReadStream(session.getStreams(0).getName)
-        .build
-
-      var rowCount: Long = 0
-      val recordWriter = zos.writeDD(cfg.outDD)
-      val exporter = new BQExporter(schema, 0, recordWriter, Ebcdic)
-
-      bqStorage.readRowsCallable.call(readRowsRequest).forEach{res =>
-        if (res.hasAvroRows)
-          rowCount += exporter.processRows(res.getAvroRows)
-      }
-      exporter.close()
-      logger.info(s"Finished receiving $rowCount rows from BigQuery Storage API ReadStream")
+      val result = exporter.exportData(job)
 
       // Publish results
       if (cfg.statsTable.nonEmpty) {
         val statsTable = BQ.resolveTableSpec(cfg.statsTable, cfg.projectId, cfg.datasetId)
         val tblspec = s"${statsTable.getProject}:${statsTable.getDataset}.${statsTable.getTable}"
         logger.debug(s"Writing stats to $tblspec")
-        StatsUtil.insertJobStats(zos, jobId, scala.Option(job), bq, statsTable, jobType =
-          "export", recordsOut = recordWriter.count())
+        StatsUtil.insertJobStats(zos, jobId, bq, statsTable, jobType =
+          "export", recordsOut = result.activityCount)
       }
-      require(rowCount == recordWriter.count(), s"BigQuery Storage API sent $rowCount rows but " +
-        s"writer wrote ${recordWriter.count()}")
-      require(activityCount == recordWriter.count(), s"Table contains $activityCount rows but " +
-        s" writer wrote ${recordWriter.count()}")
-      require(activityCount == rowCount, s"Table contains $activityCount rows but BigQuery " +
-        s"Storage API sent $rowCount")
-      Result.Success
+      result
     } catch {
       case e: BigQueryException =>
-        val sw = new StringWriter()
-        val pw = new PrintWriter(sw)
-        e.printStackTrace(pw)
-        val stackTrace = sw.toString
-        CloudLogging.stderr(stackTrace)
-        val msg = "export query failed with BigQueryException: " + e.getMessage + "\n" + stackTrace
-        logger.error(msg)
+        val msg = "export query failed with BigQueryException: " + e.getMessage + "\n"
+        logger.error(msg, e)
         Result.Failure(msg)
+    } finally {
+      exporter.close()
     }
-  }
-
-  def parseParameters(parameters: Seq[String]): (Seq[QueryParameterValue], Seq[(String,QueryParameterValue)]) = {
-    val params = parameters.map(_.split(':'))
-
-    val positionalValues = params.flatMap{queryParam =>
-      if (queryParam.head.nonEmpty) None
-      else {
-        val typeId = queryParam(1)
-        val value = queryParam(2)
-        val typeName =
-          if (typeId.nonEmpty) StandardSQLTypeName.valueOf(typeId)
-          else StandardSQLTypeName.STRING
-
-        scala.Option(
-          QueryParameterValue.newBuilder()
-            .setType(typeName)
-            .setValue(value)
-            .build()
-        )
-      }
-    }
-
-    val namedValues = params.flatMap{x =>
-      if (x.head.isEmpty) None
-      else {
-        val name = x(0)
-        val t = x(1)
-        val value = x(2)
-        val typeName =
-          if (t.nonEmpty) StandardSQLTypeName.valueOf(t)
-          else StandardSQLTypeName.STRING
-
-        val parameterValue = QueryParameterValue.newBuilder()
-          .setType(typeName)
-          .setValue(value)
-          .build()
-
-        scala.Option((name, parameterValue))
-      }
-    }
-
-    (positionalValues, namedValues)
   }
 
   def configureExportQueryJob(query: String, cfg: ExportConfig): QueryJobConfiguration = {

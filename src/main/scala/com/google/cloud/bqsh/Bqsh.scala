@@ -17,7 +17,7 @@
 package com.google.cloud.bqsh
 
 import com.google.api.services.logging.v2.LoggingScopes
-import com.google.cloud.bqsh.cmd.{Cp,Export,GsUtilRm,JCLUtil,Load,Mk,Query,Result,Rm,SdsfUtil}
+import com.google.cloud.bqsh.cmd.{Cp, Export, GsUtilRm, GsZUtil, JCLUtil, Load, Mk, Query, Result, Rm, Scp, SdsfUtil}
 import com.google.cloud.imf.gzos.{MVS, Util}
 import com.google.cloud.imf.util.{CloudLogging, Logging}
 
@@ -50,8 +50,8 @@ object Bqsh extends Logging {
 
     val interpreter = new Interpreter(zos, sys.env,true, true)
     val result = interpreter.runScript(script)
-    if (result.exitCode != 0)
-      System.exit(result.exitCode)
+    if (result.exitCode == 0) Util.exit
+    else System.exit(result.exitCode)
   }
 
   class Interpreter(zos: MVS, sysEnv: Map[String,String], var exitOnError: Boolean = true, var printCommands: Boolean = true){
@@ -59,11 +59,15 @@ object Bqsh extends Logging {
     val env: mutable.Map[String,String] = mutable.Map.empty ++ sysEnv
 
     def runWithArgs(args: Seq[String]): Result = {
-      CloudLogging.stdout(s"+ ${args.mkString(" ")}")
-      val result = exec(args, env.toMap, zos)
+      val result = exec(args, zos, env.toMap)
       if (result.exitCode != 0) {
-        val msg = s"${args.mkString(" ")} returned exit code ${result.exitCode}"
-        logger.error(msg)
+        val sb = new mutable.StringBuilder()
+        sb.append(s"${args.mkString(" ")} returned exit code ${result.exitCode}")
+        if (result.message.nonEmpty) {
+          sb.append("\n")
+          sb.append(result.message)
+        }
+        logger.error(sb.result)
         if (exitOnError)
           System.exit(result.exitCode)
       }
@@ -82,48 +86,70 @@ object Bqsh extends Logging {
     }
   }
 
-  def runCommand[T](cmd: Command[T], args: Seq[String], zos: MVS): Result = {
+  def runCommand[T](cmd: Command[T],
+                    args: Seq[String],
+                    zos: MVS,
+                    env: Map[String,String]): Result = {
     cmd.parser.parse(args) match {
       case Some(c) =>
-        cmd.run(c, zos)
+        Console.out.println(
+          s"""
+             |
+             |      ${cmd.name}
+             |
+             |""".stripMargin)
+        val result = cmd.run(c, zos, env)
+        Console.out.println(
+          s"""
+             |
+             |      exit ${result.exitCode}
+             |
+             |""".stripMargin)
+        result
       case _ =>
-        Result.Failure(s"Unable to parse args for ${cmd.name}: '${args.mkString(" ")}'")
+        Result.Failure(s"Unable to parse args for ${cmd.name}:\n"
+          + args.mkString(" "))
     }
   }
 
-  def exec(args: Seq[String], env: Map[String,String], zos: MVS): Result = {
+  def exec(args: Seq[String], zos: MVS, env: Map[String,String]): Result = {
     BqshParser.parse(args, env) match {
       case Some(cmd) =>
+        CloudLogging.stdout(s"+ ${cmd.name} ${cmd.args.mkString(" ")}")
         val sub = cmd.args.headOption.getOrElse("")
         val subArgs = cmd.args.drop(1)
         if (cmd.name == "bq"){
           sub match {
             case "mk" =>
-              runCommand(Mk, subArgs, zos)
+              runCommand(Mk, subArgs, zos, cmd.env)
             case "query" =>
-              runCommand(Query, subArgs, zos)
+              runCommand(Query, subArgs, zos, cmd.env)
             case "export" =>
-              runCommand(Export, subArgs, zos)
+              runCommand(Export, subArgs, zos, cmd.env)
             case "load" =>
-              runCommand(Load, subArgs, zos)
+              runCommand(Load, subArgs, zos, cmd.env)
             case "rm" =>
-              runCommand(Rm, subArgs, zos)
+              runCommand(Rm, subArgs, zos, cmd.env)
             case _ =>
               Result.Failure(s"invalid command '${args.mkString(" ")}'")
           }
         } else if (cmd.name == "gsutil") {
           sub match {
             case "cp" =>
-              runCommand(Cp, cmd.args, zos)
+              runCommand(Cp, cmd.args, zos, cmd.env)
             case "rm" =>
-              runCommand(GsUtilRm, cmd.args, zos)
+              runCommand(GsUtilRm, cmd.args, zos, cmd.env)
             case _ =>
               Result.Failure(s"invalid command '${args.mkString(" ")}'")
           }
+        } else if (cmd.name == "gszutil") {
+          runCommand(GsZUtil, cmd.args, zos, cmd.env)
+        } else if (cmd.name == "scp") {
+          runCommand(Scp, cmd.args, zos, cmd.env)
         } else if (cmd.name == "jclutil") {
-          runCommand(JCLUtil, cmd.args, zos)
+          runCommand(JCLUtil, cmd.args, zos, cmd.env)
         } else if (cmd.name == "sdsfutil") {
-          runCommand(SdsfUtil, cmd.args, zos)
+          runCommand(SdsfUtil, cmd.args, zos, cmd.env)
         } else {
           Bqsh.eval(cmd)
         }
@@ -406,7 +432,9 @@ object Bqsh extends Logging {
         val value = cmd.name.substring(i + 1)
         Result.withExport(varName, value)
       } else {
-        Result.Failure(s"${cmd.name}: command not found")
+        val msg = s"${cmd.name}: command not found"
+        logger.error(msg)
+        Result.Failure(msg)
       }
     }
   }

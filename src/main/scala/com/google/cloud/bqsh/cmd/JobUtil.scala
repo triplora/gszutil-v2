@@ -11,25 +11,25 @@ object JobUtil extends Command[JobUtilConfig] with Logging {
   override val name: String = "jclutil"
   override val parser: ArgParser[JobUtilConfig] = JobUtilOptionParser
 
-  override def run(config: JobUtilConfig, zos: MVS): Result = {
+  override def run(config: JobUtilConfig, zos: MVS, env: Map[String,String]): Result = {
     if (config.filter.nonEmpty)
-      System.out.println(s"Filter regex = '${config.filter}'")
+      Console.out.println(s"Filter regex = '${config.filter}'")
 
     val members = zos.listPDS(config.srcDSN)
 
     while (members.hasNext){
       val member = members.next()
       if (config.filter.isEmpty || member.name.matches(config.filter)){
-        System.out.println(s"Processing '${member.name}'")
+        Console.out.println(s"Processing '${member.name}'")
         val lines = zos.readDSNLines(MVSPDSMember(config.src,member.name))
         val jcl = readJCL(lines).toArray.toSeq
         val result = zos.submitJCL(jcl)
         if (result.isDefined) {
-          System.out.println(result.get.getStatus)
-          System.out.println(result.get.getOutput)
+          Console.out.println(result.get.getStatus)
+          Console.out.println(result.get.getOutput)
         }
       } else {
-        System.out.println(s"Ignored '${member.name}'")
+        Console.out.println(s"Ignored '${member.name}'")
       }
     }
     Result.Success

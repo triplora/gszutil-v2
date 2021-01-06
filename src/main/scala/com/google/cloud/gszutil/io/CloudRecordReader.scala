@@ -20,19 +20,32 @@ import java.nio.ByteBuffer
 
 import com.google.cloud.storage.Blob
 
-case class CloudRecordReader(dsn: Seq[String],
+/**
+  *
+  * @param dsn original DSNAME
+  * @param lRecl record length
+  * @param bucket GCS bucket name
+  * @param name GCS object name
+  * @param gdg generational flag
+  * @param gdgVersion GDG generation format
+  * @param versions object generations found in Cloud Storage
+  * @param pds partitioned flag
+  */
+case class CloudRecordReader(dsn: String,
                              override val lRecl: Int,
                              bucket: String = "",
                              name: String = "",
                              gdg: Boolean = false,
-                             generation: String = "",
-                             versions: IndexedSeq[Blob] = IndexedSeq.empty) extends ZRecordReaderT {
+                             gdgVersion: String = "",
+                             versions: IndexedSeq[Blob] = IndexedSeq.empty,
+                             pds: Boolean = false) extends ZRecordReaderT {
   override def read(dst: ByteBuffer): Int = -1
   override def read(buf: Array[Byte]): Int = -1
   override def read(buf: Array[Byte], off: Int, len: Int): Int = -1
   override def close(): Unit = {}
   override def isOpen: Boolean = false
-  override def getDsn: String = dsn.headOption.getOrElse("")
+  override def getDsn: String = dsn
   override def count(): Long = 0
+  val uri: String = s"gs://$bucket/$name"
   override val blkSize: Int = lRecl
 }

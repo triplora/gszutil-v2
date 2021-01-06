@@ -79,7 +79,7 @@ class CpSpec extends AnyFlatSpec {
                            testInput = Option(input),
                            parallelism = 1,
                            replace = true)
-    val res = Cp.run(cfg, Linux)
+    val res = Cp.run(cfg, Linux, Map.empty)
     assert(res.exitCode == 0)
   }
 }

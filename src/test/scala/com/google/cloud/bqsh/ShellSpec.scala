@@ -16,6 +16,7 @@
 
 package com.google.cloud.bqsh
 
+import com.google.cloud.bqsh.cmd.{GsZUtil, Scp}
 import com.google.cloud.imf.gzos.Util
 import com.google.cloud.imf.util.CloudLogging
 import org.scalatest.flatspec.AnyFlatSpec
@@ -100,5 +101,31 @@ class ShellSpec extends AnyFlatSpec {
       "SOURCE" -> "gs://mybucket/path.orc/*"
     )
     assert(result.env == expected)
+  }
+
+  it should "scp args" in {
+    val examples = Seq(
+      Seq("--inDsn", "HLQ.DATASET.NAME"),
+      Seq("--inDsn", "HLQ.DATASET.NAME", "--gcsOutUri", "gs://bucket/prefix/data.gz"),
+      Seq("--inDD", "DDNAME", "--count", "1000", "--noCompress"),
+    )
+    for (args <- examples) {
+      if (Scp.parser.parse(args).isEmpty)
+        fail(s"unable to parse ${args.mkString("'"," ","'")}")
+    }
+  }
+
+  it should "gszutil args" in {
+    val examples = Seq(
+      Seq("--inDsn", "HLQ.DATASET.NAME",
+        "--gcsOutUri", "gs://bucket/prefix/data.gz"),
+      Seq("--inDsn", "HLQ.DATASET.NAME",
+        "--cobDsn", "HLQ.DATASET(COPYBOOK)",
+        "--gcsOutUri", "gs://bucket/prefix/data.gz"),
+    )
+    for (args <- examples) {
+      if (GsZUtil.parser.parse(args).isEmpty)
+        fail(s"unable to parse ${args.mkString("'"," ","'")}")
+    }
   }
 }

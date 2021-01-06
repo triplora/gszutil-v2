@@ -15,7 +15,7 @@
  */
 organization := "com.google.cloud.imf"
 name := "mainframe-connector"
-version := "5.3.1-SNAPSHOT"
+version := "5.5.0-SNAPSHOT"
 
 scalaVersion := "2.13.1"
 
@@ -27,7 +27,7 @@ val exGrpc = ExclusionRule(organization = "io.grpc")
 val exAvro = ExclusionRule(organization = "org.apache.avro")
 
 libraryDependencies ++= Seq(
-  "com.google.cloud.imf" %% "mainframe-util" % "2.0.0",
+  "com.google.cloud.imf" %% "mainframe-util" % "2.1.1",
   "com.github.scopt" %% "scopt" % "3.7.1",
   "org.scalatest" %% "scalatest" % "3.1.1" % Test
 )
@@ -50,7 +50,7 @@ assemblyMergeStrategy in assembly := {
 
 // Exclude IBM jars from assembly jar since they will be provided
 assemblyExcludedJars in assembly := {
-  val IBMJars = Set("ibmjzos.jar", "ibmjcecca.jar", "dataaccess.jar")
+  val IBMJars = Set("ibmjzos.jar", "ibmjcecca.jar", "dataaccess.jar", "isfjcall.jar")
   (fullClasspath in assembly).value
     .filter(file => IBMJars.contains(file.data.getName))
 }
@@ -67,5 +67,6 @@ scalacOptions ++= Seq(
   "-opt:l:inline",
   "-opt-inline-from:**",
   "-deprecation",
-  "-opt-warnings"
+  "-opt-warnings",
+  "-feature"
 )
