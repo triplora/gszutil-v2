@@ -62,7 +62,7 @@ class CpSpec2 extends AnyFlatSpec with BeforeAndAfterAll {
                            remote = true,
                            remoteHost = serverCfg.host,
                            remotePort = serverCfg.port)
-    val res = Cp.run(cfg1, Linux)
+    val res = Cp.run(cfg1, Linux, Map.empty)
     assert(res.exitCode == 0)
   }
 
@@ -156,7 +156,7 @@ class CpSpec2 extends AnyFlatSpec with BeforeAndAfterAll {
       ,
       tfGCS = "gs://aghan-test/trs/tr.json"
     )
-    val res = Cp.run(cfg, Linux)
+    val res = Cp.run(cfg, Linux, Map.empty)
     assert(res.exitCode == 0)
   }
 
