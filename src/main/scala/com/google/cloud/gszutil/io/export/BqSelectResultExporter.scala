@@ -7,14 +7,13 @@ import com.google.cloud.gszutil.SchemaProvider
 import com.google.cloud.imf.gzos.MVS
 import com.google.cloud.imf.util.Logging
 
-class CopyBookSchemaExporter(cfg: ExportConfig,
+class BqSelectResultExporter(cfg: ExportConfig,
                              zos: MVS,
-                             sp: SchemaProvider) extends NativeExporter with Logging {
-
-  private val exporter = new LocalFileExporter
+                             sp: SchemaProvider,
+                             exporter: FileExporter = new LocalFileExporter) extends NativeExporter with Logging {
 
   override def exportData(job: Job): Result = {
-    logger.info("Using CopyBookSchemaExporter.")
+    logger.info("Using BqSelectResultExporter.")
     exporter.newExport(MVSFileExport(cfg.outDD, zos))
 
     val bqResults = job.getQueryResults()
@@ -37,5 +36,5 @@ class CopyBookSchemaExporter(cfg: ExportConfig,
     Result(activityCount = rowsWritten)
   }
 
-  override def close(): Unit = if(exporter != null) exporter.endIfOpen
+  override def close(): Unit = exporter.endIfOpen()
 }

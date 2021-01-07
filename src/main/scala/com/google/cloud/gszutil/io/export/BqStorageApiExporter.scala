@@ -10,15 +10,15 @@ import com.google.cloud.imf.gzos.{Ebcdic, MVS}
 import com.google.cloud.imf.util.Logging
 import org.apache.avro.Schema
 
-class AvroSchemaExporter(cfg: ExportConfig,
-                         bqStorage: BigQueryReadClient,
-                         bq: BigQuery,
-                         zos: MVS,
-                         sp: SchemaProvider) extends NativeExporter with Logging {
+class BqStorageApiExporter(cfg: ExportConfig,
+                           bqStorage: BigQueryReadClient,
+                           bq: BigQuery,
+                           zos: MVS,
+                           sp: SchemaProvider) extends NativeExporter with Logging {
 
   private var exporter: Exporter = _
   override def exportData(job: Job): Result = {
-    logger.info("Using AvroSchemaExporter.")
+    logger.info("Using BqStorageApiExporter.")
     val conf = job.getConfiguration[QueryJobConfiguration]
     val jobId = BQ.genJobId(cfg.projectId, cfg.location, zos, "query")
 

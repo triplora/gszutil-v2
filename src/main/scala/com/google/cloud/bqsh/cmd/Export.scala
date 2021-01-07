@@ -19,7 +19,7 @@ package com.google.cloud.bqsh.cmd
 import com.google.cloud.bigquery.{BigQuery, BigQueryException, JobInfo, QueryJobConfiguration}
 import com.google.cloud.bqsh.BQ.resolveDataset
 import com.google.cloud.bqsh.{ArgParser, BQ, Command, ExportConfig, ExportOptionParser}
-import com.google.cloud.gszutil.io.`export`.{CopyBookSchemaExporter}
+import com.google.cloud.gszutil.io.`export`.{BqSelectResultExporter, LocalFileExporter}
 import com.google.cloud.gszutil.{CopyBook, SchemaProvider}
 import com.google.cloud.imf.gzos.{Ebcdic, MVS, MVSStorage}
 import com.google.cloud.imf.util.{Logging, Services, StatsUtil}
@@ -62,7 +62,7 @@ object Export extends Command[ExportConfig] with Logging {
         zos.loadCopyBook("COPYBOOK")
       }
 
-    val exporter = new CopyBookSchemaExporter(cfg, zos, sp)
+    val exporter = new BqSelectResultExporter(cfg, zos, sp)
 
     val jobConfiguration = configureExportQueryJob(query, cfg)
     val jobId = BQ.genJobId(cfg.projectId, cfg.location, zos, "query")
