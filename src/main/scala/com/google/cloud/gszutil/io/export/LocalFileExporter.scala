@@ -53,7 +53,7 @@ class LocalFileExporter extends FileExporter {
       s"$i\t$f\t$e"
     }.mkString("\n")
     CloudLogging.stdout(s"LocalFileExporter Starting BigQuery Export:\n" +
-      "Field Name\tBQ Type\tEnc Type\tEncoder\n$tbl")
+      s"Field Name\tBQ Type\tEnc Type\tEncoder\n$tbl")
 
     val bqTypes: Array[StandardSQLTypeName] =
       (0 until nCols).map(i => bqSchema.get(i).getType.getStandardType).toArray
@@ -118,8 +118,7 @@ class LocalFileExporter extends FileExporter {
         row =>
           val lineBuf = ListBuffer.empty[String]
           (0 until row.size()).foreach{
-            i =>
-              lineBuf.append(row.get(i).getStringValue)
+            i => lineBuf.append(java.util.Objects.toString(row.get(i).getValue,""))
           }
           val line = lineBuf.toSeq.mkString("|")
           val lineToExport = if (line.length < export.lRecl) {
