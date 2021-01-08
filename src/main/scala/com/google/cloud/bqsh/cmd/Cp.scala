@@ -119,10 +119,11 @@ object Cp extends Command[GsUtilConfig] with Logging {
           .getDataset
       }:${statsTable.getTable}")
       val jobId = BQ.genJobId(c.projectId, c.location, zos, "cp")
+      val bqProj = if (c.projectId.nonEmpty) c.projectId else statsTable.getProject
       StatsUtil.insertJobStats(
         zos = zos,
         jobId = jobId,
-        bq = Services.bigQuery(c.projectId, c.location, creds),
+        bq = Services.bigQuery(bqProj, c.location, creds),
         tableId = statsTable,
         jobType = "cp",
         source = sourceDSN,

@@ -174,8 +174,9 @@ object GsUtilOptionParser extends OptionParser[GsUtilConfig]("gsutil") with ArgP
 
   checkConfig{x =>
     if (x.statsTable.nonEmpty) {
-      if (x.projectId.isEmpty)
-        failure("must specify --project_id if --statsTable is set")
+      val statsTable = BQ.resolveTableSpec(x.statsTable, x.projectId, x.datasetId)
+      if (x.projectId.isEmpty && statsTable.getProject.isEmpty)
+        failure("must specify --project_id if project id not included in --statsTable arg")
       else success
     } else success
   }
