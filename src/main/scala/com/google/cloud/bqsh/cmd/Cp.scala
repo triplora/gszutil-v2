@@ -92,21 +92,36 @@ object Cp extends Command[GsUtilConfig] with Logging {
 
     val result =
       if (c.remote) {
+        logger.info("Using server for transcoding to ORC")
         val c1 =
-          if (c.gcsDSNPrefix.isEmpty)
-            c.copy(gcsDSNPrefix = env.getOrElse(CloudDataSet.DsnVar, env("GCSPREFIX")))
-          else c
-        GRecvClient.run(c1, zos, in, schemaProvider, GRecvClient)
+          if (c.gcsDSNPrefix.isEmpty) {
+            if (!env.contains(CloudDataSet.DsnVar)) {
+              logger.warn(s"${CloudDataSet.DsnVar} environment variable not set")
+              c
+            } else c.copy(gcsDSNPrefix = env(CloudDataSet.DsnVar))
+          } else c
+
+        // get hostname from environment
+        val c2 =
+          if (c.remoteHost.isEmpty)
+            c1.copy(remoteHost = env.getOrElse("SRVHOSTNAME", ""),
+                    remotePort = env.getOrElse("SRVPORT","51770").toInt)
+          else c1
+        GRecvClient.run(c2, zos, in, schemaProvider, GRecvClient)
       }
-      else WriteORCFile.run(
-        gcsUri = c.gcsUri,
-        in = in,
-        schemaProvider = schemaProvider,
-        gcs = gcs,
-        parallelism = c.parallelism,
-        batchSize = batchSize,
-        zos,
-        maxErrorPct = c.maxErrorPct)
+      else {
+        logger.warn("Not using server for transcoding to ORC - data will be read and transcoded " +
+          "to ORC locally and ORC files will be written directly to Cloud Storage")
+        WriteORCFile.run(
+          gcsUri = c.gcsUri,
+          in = in,
+          schemaProvider = schemaProvider,
+          gcs = gcs,
+          parallelism = c.parallelism,
+          batchSize = batchSize,
+          zos,
+          maxErrorPct = c.maxErrorPct)
+      }
     in.close()
     val nRead = in.count()
 

@@ -52,7 +52,7 @@ object Bqsh extends Logging {
 
   class Interpreter(zos: MVS, sysEnv: Map[String,String], var exitOnError: Boolean = true, var printCommands: Boolean = true){
 
-    val env: mutable.Map[String,String] = mutable.Map.empty.addAll(sysEnv)
+    val env: mutable.Map[String,String] = mutable.Map.from(sysEnv)
 
     def runWithArgs(args: Seq[String]): Result = {
       val result = exec(args, zos, env.toMap)
