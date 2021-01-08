@@ -19,7 +19,7 @@ package com.google.cloud.bqsh
 import scopt.OptionParser
 
 object RmOptionParser extends OptionParser[RmConfig]("rm") with ArgParser[RmConfig] {
-  def parse(args: Seq[String]): Option[RmConfig] =
+  override def parse(args: Seq[String], env: Map[String,String]): Option[RmConfig] =
     parse(args, RmConfig())
 
   head("rm", Bqsh.UserAgent)

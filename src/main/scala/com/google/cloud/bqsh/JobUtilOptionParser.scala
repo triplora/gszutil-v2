@@ -5,7 +5,7 @@ import scopt.OptionParser
 object JobUtilOptionParser
   extends OptionParser[JobUtilConfig]("jobutil")
   with ArgParser[JobUtilConfig] {
-  override def parse(args: Seq[String]): Option[JobUtilConfig] =
+  override def parse(args: Seq[String], env: Map[String,String]): Option[JobUtilConfig] =
     parse(args, JobUtilConfig())
 
   head("jobutil", Bqsh.UserAgent)

@@ -3,7 +3,7 @@ package com.google.cloud.bqsh
 import scopt.OptionParser
 
 object JCLUtilOptionParser extends OptionParser[JCLUtilConfig]("jclutil") with ArgParser[JCLUtilConfig] {
-  override def parse(args: Seq[String]): Option[JCLUtilConfig] = parse(args, JCLUtilConfig())
+  override def parse(args: Seq[String], env: Map[String,String]): Option[JCLUtilConfig] = parse(args, JCLUtilConfig())
 
   head("jclutil", Bqsh.UserAgent)
 

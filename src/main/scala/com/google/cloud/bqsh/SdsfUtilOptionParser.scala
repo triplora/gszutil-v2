@@ -8,7 +8,7 @@ import scala.util.{Failure, Success, Try}
 
 object SdsfUtilOptionParser
   extends OptionParser[SdsfUtilConfig]("sdsfutil") with ArgParser[SdsfUtilConfig] {
-  override def parse(args: Seq[String]): Option[SdsfUtilConfig] = parse(args, SdsfUtilConfig())
+  override def parse(args: Seq[String], env: Map[String,String]): Option[SdsfUtilConfig] = parse(args, SdsfUtilConfig())
 
   head("sdsfutil", Bqsh.UserAgent)
 

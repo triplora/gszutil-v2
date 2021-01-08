@@ -44,7 +44,9 @@ object Bqsh extends Logging {
     jobInfoMap.put("script", script)
     cloudLogger.log("Started BQSH", jobInfoMap, CloudLogging.Info)
 
-    val interpreter = new Interpreter(zos, sys.env,true, true)
+    // TODO collect job-specific environment variables from parm file
+    val jobEnv: Map[String,String] = sys.env
+    val interpreter = new Interpreter(zos, jobEnv,true, true)
     val result = interpreter.runScript(script)
     if (result.exitCode == 0) Util.exit
     else System.exit(result.exitCode)
@@ -86,7 +88,7 @@ object Bqsh extends Logging {
                     args: Seq[String],
                     zos: MVS,
                     env: Map[String,String]): Result = {
-    cmd.parser.parse(args) match {
+    cmd.parser.parse(args, env) match {
       case Some(c) =>
         Console.out.println(
           s"""

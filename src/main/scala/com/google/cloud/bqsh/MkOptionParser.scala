@@ -25,7 +25,7 @@ import scala.util.Try
 
 object MkOptionParser extends OptionParser[MkConfig]("mk") with ArgParser[MkConfig] {
   private val DefaultConfig = MkConfig()
-  def parse(args: Seq[String]): Option[MkConfig] = parse(args, DefaultConfig)
+  override def parse(args: Seq[String], env: Map[String,String]): Option[MkConfig] = parse(args, DefaultConfig)
 
   head("mk", Bqsh.UserAgent)
 

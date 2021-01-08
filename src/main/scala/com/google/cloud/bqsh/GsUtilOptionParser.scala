@@ -23,8 +23,13 @@ import scopt.OptionParser
 
 
 object GsUtilOptionParser extends OptionParser[GsUtilConfig]("gsutil") with ArgParser[GsUtilConfig] {
-  def parse(args: Seq[String]): Option[GsUtilConfig] =
-    parse(args, GsUtilConfig())
+  override def parse(args: Seq[String], env: Map[String,String]): Option[GsUtilConfig] = {
+    val envCfg = GsUtilConfig(
+      remoteHost = env.getOrElse("SRVHOSTNAME",""),
+      remotePort = env.getOrElse("SRVPORT","51770").toInt
+    )
+    parse(args, envCfg)
+  }
 
   head("gsutil", Bqsh.UserAgent)
 

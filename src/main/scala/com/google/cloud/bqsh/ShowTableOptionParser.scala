@@ -21,7 +21,7 @@ import scopt.OptionParser
 object ShowTableOptionParser
   extends OptionParser[ShowTableConfig]("show")
   with ArgParser[ShowTableConfig] {
-  def parse(args: Seq[String]): Option[ShowTableConfig] = parse(args, ShowTableConfig())
+  override def parse(args: Seq[String], env: Map[String,String]): Option[ShowTableConfig] = parse(args, ShowTableConfig())
 
   head("show", Bqsh.UserAgent)
 

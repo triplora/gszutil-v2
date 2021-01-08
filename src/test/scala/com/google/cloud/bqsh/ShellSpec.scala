@@ -110,7 +110,7 @@ class ShellSpec extends AnyFlatSpec {
       Seq("--inDD", "DDNAME", "--count", "1000", "--noCompress"),
     )
     for (args <- examples) {
-      if (Scp.parser.parse(args).isEmpty)
+      if (Scp.parser.parse(args, sys.env).isEmpty)
         fail(s"unable to parse ${args.mkString("'"," ","'")}")
     }
   }
@@ -124,7 +124,7 @@ class ShellSpec extends AnyFlatSpec {
         "--gcsOutUri", "gs://bucket/prefix/data.gz"),
     )
     for (args <- examples) {
-      if (GsZUtil.parser.parse(args).isEmpty)
+      if (GsZUtil.parser.parse(args, sys.env).isEmpty)
         fail(s"unable to parse ${args.mkString("'"," ","'")}")
     }
   }

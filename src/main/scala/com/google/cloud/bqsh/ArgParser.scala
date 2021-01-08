@@ -17,5 +17,5 @@
 package com.google.cloud.bqsh
 
 trait ArgParser[T] {
-  def parse(args: Seq[String]): Option[T]
+  def parse(args: Seq[String], env: Map[String,String]): Option[T]
 }

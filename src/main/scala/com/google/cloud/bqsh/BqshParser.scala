@@ -21,7 +21,7 @@ object BqshParser {
   def parse(args: Seq[String], env: Map[String,String] = Map.empty): Option[ShCmd] = {
     val a = args.map(x => Bqsh.replaceEnvVars(x, env)).filter(_.nonEmpty)
     if (a.nonEmpty){
-      Option(ShCmd(a.head, a.drop(1)))
+      Option(ShCmd(a.head, a.drop(1), env))
     } else None
   }
 }

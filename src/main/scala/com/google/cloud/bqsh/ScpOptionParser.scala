@@ -18,7 +18,7 @@ package com.google.cloud.bqsh
 import scopt.OptionParser
 
 object ScpOptionParser extends OptionParser[ScpConfig]("scp") with ArgParser[ScpConfig]{
-  override def parse(args: Seq[String]): Option[ScpConfig] = parse(args, ScpConfig())
+  override def parse(args: Seq[String], env: Map[String,String]): Option[ScpConfig] = parse(args, ScpConfig())
 
   head("scp", Bqsh.UserAgent)
 

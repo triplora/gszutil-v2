@@ -34,7 +34,7 @@ class ParserSpec extends AnyFlatSpec {
     )
     val parsed1 = BqshParser.parse(args)
     assert(parsed1.isDefined)
-    val parsed = MkOptionParser.parse(parsed1.get.args.drop(1))
+    val parsed = MkOptionParser.parse(parsed1.get.args.drop(1), sys.env)
     assert(parsed.isDefined)
     assert(parsed.get.timePartitioningExpiration == 31536000)
     assert(parsed.get.timePartitioningField == "date")
@@ -58,7 +58,7 @@ class ParserSpec extends AnyFlatSpec {
     )
     val parsed1 = BqshParser.parse(args)
     assert(parsed1.isDefined)
-    val parsed = LoadOptionParser.parse(parsed1.get.args.drop(1))
+    val parsed = LoadOptionParser.parse(parsed1.get.args.drop(1), sys.env)
     assert(parsed.isDefined)
     val opts = parsed.get
     assert(opts.replace)
@@ -80,7 +80,7 @@ class ParserSpec extends AnyFlatSpec {
     )
     val parsed1 = BqshParser.parse(args)
     assert(parsed1.isDefined)
-    val parsed = QueryOptionParser.parse(parsed1.get.args.drop(1))
+    val parsed = QueryOptionParser.parse(parsed1.get.args.drop(1), sys.env)
     assert(parsed.isDefined)
   }
 
@@ -98,7 +98,7 @@ class ParserSpec extends AnyFlatSpec {
     )
     val parsed1 = BqshParser.parse(args)
     assert(parsed1.isDefined)
-    val parsed = QueryOptionParser.parse(parsed1.get.args.drop(1))
+    val parsed = QueryOptionParser.parse(parsed1.get.args.drop(1), sys.env)
     assert(parsed.isDefined)
     assert(!parsed.get.sync)
   }
@@ -115,7 +115,7 @@ class ParserSpec extends AnyFlatSpec {
     )
     val parsed1 = BqshParser.parse(args)
     assert(parsed1.isDefined)
-    val parsed = QueryOptionParser.parse(parsed1.get.args.drop(1))
+    val parsed = QueryOptionParser.parse(parsed1.get.args.drop(1), sys.env)
     assert(parsed.isDefined)
   }
 
@@ -130,7 +130,7 @@ class ParserSpec extends AnyFlatSpec {
     )
     val parsed1 = BqshParser.parse(args)
     assert(parsed1.isDefined)
-    val parsed = RmOptionParser.parse(parsed1.get.args.drop(1))
+    val parsed = RmOptionParser.parse(parsed1.get.args.drop(1), sys.env)
     assert(parsed.isDefined)
   }
 
@@ -142,7 +142,7 @@ class ParserSpec extends AnyFlatSpec {
     )
     val parsed1 = BqshParser.parse(args)
     assert(parsed1.isDefined)
-    val parsed = GsUtilOptionParser.parse(parsed1.get.args)
+    val parsed = GsUtilOptionParser.parse(parsed1.get.args, sys.env)
     assert(parsed.isDefined)
     assert(parsed.get.mode == "rm")
     assert(parsed.get.gcsUri == "gs://bucket/path")
@@ -162,7 +162,7 @@ class ParserSpec extends AnyFlatSpec {
     val parsed1 = BqshParser.parse(args)
     assert(parsed1.isDefined)
     assert(parsed1.get.name == "gsutil")
-    val parsed = GsUtilOptionParser.parse(parsed1.get.args)
+    val parsed = GsUtilOptionParser.parse(parsed1.get.args, sys.env)
     assert(parsed.isDefined)
     assert(parsed.get.replace)
     assert(parsed.get.mode == "cp")
@@ -179,7 +179,7 @@ class ParserSpec extends AnyFlatSpec {
     assert(parsed1.isDefined)
     assert(parsed1.get.name == "gsutil")
 
-    val parsed = GsUtilOptionParser.parse(parsed1.get.args)
+    val parsed = GsUtilOptionParser.parse(parsed1.get.args, sys.env)
     assert(parsed.isDefined)
     assert(parsed.get.mode == "cp")
     assert(parsed.get.gcsUri == "gs://bucket/object")
@@ -193,7 +193,7 @@ class ParserSpec extends AnyFlatSpec {
     assert(parsed1.isDefined)
     assert(parsed1.get.name == "gsutil")
 
-    val parsed = GsUtilOptionParser.parse(parsed1.get.args)
+    val parsed = GsUtilOptionParser.parse(parsed1.get.args, sys.env)
     assert(parsed.isDefined)
     assert(parsed.get.mode == "cp")
     assert(parsed.get.gcsUri == "gs://bucket/object")

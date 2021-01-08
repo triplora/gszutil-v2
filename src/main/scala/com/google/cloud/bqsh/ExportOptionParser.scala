@@ -21,7 +21,7 @@ import scopt.OptionParser
 object ExportOptionParser
   extends OptionParser[ExportConfig]("export")
   with ArgParser[ExportConfig] {
-  def parse(args: Seq[String]): Option[ExportConfig] =
+  override def parse(args: Seq[String], env: Map[String,String]): Option[ExportConfig] =
     parse(args, ExportConfig())
 
   head("export", Bqsh.UserAgent)

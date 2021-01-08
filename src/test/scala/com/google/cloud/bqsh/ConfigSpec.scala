@@ -28,7 +28,7 @@ class ConfigSpec extends AnyFlatSpec {
     parsed match {
       case Some(command) =>
         assert(command.name == "bq")
-        val opts = LoadOptionParser.parse(command.args.drop(1))
+        val opts = LoadOptionParser.parse(command.args.drop(1), sys.env)
         assert(opts.isDefined)
         opts match {
           case Some(config) =>

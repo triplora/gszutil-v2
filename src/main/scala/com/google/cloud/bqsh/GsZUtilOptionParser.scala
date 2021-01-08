@@ -20,11 +20,11 @@ import scopt.OptionParser
 
 object GsZUtilOptionParser extends OptionParser[GsZUtilConfig]("gszutil")
 with ArgParser[GsZUtilConfig]{
-  override def parse(args: Seq[String]): Option[GsZUtilConfig] = {
+  override def parse(args: Seq[String], env: Map[String,String]): Option[GsZUtilConfig] = {
     val envCfg = GsZUtilConfig(
-      gcsOutUri = sys.env.getOrElse("GCSOUTURI", ""),
-      remoteHost = sys.env.getOrElse("SRVHOSTNAME",""),
-      remotePort = sys.env.getOrElse("SRVPORT","51770").toInt,
+      gcsOutUri = env.getOrElse("GCSOUTURI", ""),
+      remoteHost = env.getOrElse("SRVHOSTNAME",""),
+      remotePort = env.getOrElse("SRVPORT","51770").toInt,
     )
     parse(args, envCfg)
   }

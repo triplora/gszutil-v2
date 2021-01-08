@@ -19,7 +19,7 @@ package com.google.cloud.bqsh
 import scopt.OptionParser
 
 object QueryOptionParser extends OptionParser[QueryConfig]("query") with ArgParser[QueryConfig] {
-  def parse(args: Seq[String]): Option[QueryConfig] =
+  override def parse(args: Seq[String], env: Map[String,String]): Option[QueryConfig] =
     parse(args, QueryConfig())
 
   head("query", Bqsh.UserAgent)
