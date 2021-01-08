@@ -77,7 +77,7 @@ class LocalFileExporter extends FileExporter {
         case err =>
           // Print helpful error message containing schema, row, encoder
           val sb = new StringBuilder
-          sb.append("Export failed to encode row:\n")
+          sb.append(s"Export failed to encode row with: ${err.message} :")
           sb.append("Field Name\tBQ Type\tEncoder\tValue\n")
           (0 until math.max(bqFields.length,row.size())).foreach{i =>
             val field = bqFields.lift(i)
