@@ -27,7 +27,6 @@ import com.google.cloud.storage.Blob
   * @param bucket GCS bucket name
   * @param name GCS object name
   * @param gdg generational flag
-  * @param gdgVersion GDG generation format
   * @param versions object generations found in Cloud Storage
   * @param pds partitioned flag
   */
@@ -36,7 +35,6 @@ case class CloudRecordReader(dsn: String,
                              bucket: String = "",
                              name: String = "",
                              gdg: Boolean = false,
-                             gdgVersion: String = "",
                              versions: IndexedSeq[Blob] = IndexedSeq.empty,
                              pds: Boolean = false) extends ZRecordReaderT {
   override def read(dst: ByteBuffer): Int = -1

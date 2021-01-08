@@ -99,7 +99,7 @@ object CloudDataSet extends Logging {
   }
 
   def buildObjectName(baseUri: URI, ds: DataSetInfo): String =
-    buildObjectName(baseUri, buildObjectName(ds))
+    buildObjectName(baseUri, ds.objectName)
 
   def buildObjectName(base: URI, name: String): String = {
     val prefix: String = {
@@ -108,12 +108,6 @@ object CloudDataSet extends Logging {
       else ""
     }
     prefix + name
-  }
-
-  def buildObjectName(ds: DataSetInfo): String = {
-    if (ds.pds) ds.dataSetName + "/" + ds.elementName
-    else if (ds.gdg) ds.dataSetName
-    else ds.dsn
   }
 
   // prefix      gs://bucket/prefix
@@ -192,7 +186,7 @@ object CloudDataSet extends Logging {
       logger.info(s"Located Generational Dataset for DD:$dd " +
         s"DSN=${ds.dsn}\nLRECL=$lrecl\nuri=$uri")
       Option(CloudRecordReader(ds.dsn, lrecl, bucket = bucket, name = name,
-        gdg = true, gdgVersion = ds.elementName, versions = versions))
+        gdg = true, versions = versions))
     }
     else None
   }

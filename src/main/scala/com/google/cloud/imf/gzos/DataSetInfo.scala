@@ -23,7 +23,7 @@ package com.google.cloud.imf.gzos
   */
 case class DataSetInfo(dsn: String = "",
                        lrecl: Int = -1) {
-  val dataSetName: String = {
+  private val dataSetName: String = {
     (dsn.indexOf('('), dsn.indexOf(')')) match {
       case (i,j) if i > -1 && j > i =>
         dsn.substring(0,i)
@@ -41,15 +41,13 @@ case class DataSetInfo(dsn: String = "",
     }
   }
 
-  val gdg: Boolean =
-    elementName match {
-      case "" => false
-      case "0" => true
-      case "+1" => true
-      case s if s.charAt(0) == '-' && s.substring(1).forall(_.isDigit) =>
-        true
-      case _ => false
-    }
+  val gdg: Boolean = {
+    val i = dataSetName.lastIndexOf('.')
+    i > -1 &&
+      dataSetName.length - i == 9 &&
+      dataSetName.charAt(i+1) == 'G' &&
+      dataSetName.charAt(i+6) == 'V'
+  }
 
   val pds: Boolean =
     elementName match {
@@ -58,6 +56,17 @@ case class DataSetInfo(dsn: String = "",
       case _ =>
         false
     }
+
+  private def dropLastQualifier(dsn: String): String = {
+    val i = dsn.lastIndexOf('.')
+    if (i > -1) dsn.substring(0,i) else dsn
+  }
+
+  def objectName: String = {
+    if (pds) dataSetName + "/" + elementName
+    else if (gdg) dropLastQualifier(dataSetName)
+    else dsn
+  }
 
   override def toString: String = s"dataSetName=$dataSetName, elementName=$elementName, pds=$pds, gdg=$gdg"
 }

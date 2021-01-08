@@ -17,7 +17,6 @@ package com.google.cloud.imf.gzos
 
 import java.io.IOException
 import java.nio.ByteBuffer
-import java.nio.channels.ReadableByteChannel
 import java.nio.charset.Charset
 import java.security.Security
 import java.util.Date
@@ -26,7 +25,7 @@ import com.google.cloud.gszutil.Decoding
 import com.google.cloud.gszutil.io.{ZRecordReaderT, ZRecordWriterT}
 import com.google.cloud.imf.gzos.MVSStorage.DSN
 import com.google.cloud.imf.gzos.pb.GRecvProto.ZOSJobInfo
-import com.google.cloud.imf.util.Logging
+import com.google.cloud.imf.util.{CloudLogging, Logging}
 import com.ibm.dataaccess.ByteArrayUnmarshaller
 import com.ibm.jzos.{ByteUtil, DSCB, Exec, Format1DSCB, Format3DSCB, JesSymbols, MvsJobSubmitter, PdsDirectory, RcException, RecordReader, RecordWriter, ZFile, ZFileConstants, ZFileException, ZUtil}
 
@@ -60,8 +59,8 @@ protected object ZOS extends Logging {
     override def close(): Unit = {
       if (open) {
         open = false
-        logger.info("Closing " + r.getDDName + " " + r.getDsn)
-        Try(r.close()).failed.foreach(t => logger.error(t.getMessage))
+        CloudLogging.stdout("Closing " + r.getDDName + " " + r.getDsn)
+        Try(r.close()).failed.foreach(t => CloudLogging.stdOutAndStdErr(t.getMessage))
       }
     }
 
@@ -222,10 +221,10 @@ protected object ZOS extends Logging {
   def ddExists(ddName: String): Boolean = ZFile.ddExists(ddName)
 
   def readDSN(dsn: DSN): ZRecordReaderT = {
-    logger.info(s"Opening RecordReader for $dsn")
+    CloudLogging.stdout(s"Opening RecordReader for $dsn")
     try {
       val reader = RecordReader.newReader(dsn.fqdsn, ZFileConstants.FLAG_DISP_SHR)
-      logger.info(
+      CloudLogging.stdout(
         s"""Opened ${reader.getClass.getSimpleName}
            |DSN=${reader.getDsn}
            |RECFM=${reader.getRecfm}
@@ -244,14 +243,14 @@ protected object ZOS extends Logging {
         sb.append(s"DSN=$dsn doesn't exist\n")
         sb.append(e.getMessage)
         val msg = sb.result
-        logger.error(msg, e)
+        CloudLogging.stdOutAndStdErr(msg)
         throw new RuntimeException(msg, e)
       case e: Throwable =>
         val sb = new StringBuilder
         sb.append(s"Failed to open DSN=$dsn\n")
         if (e.getMessage != null) sb.append(e.getMessage)
         val msg = sb.result
-        logger.error(msg, e)
+        CloudLogging.printStackTrace(e, msg)
         throw new RuntimeException(msg, e)
     }
   }
@@ -316,11 +315,11 @@ protected object ZOS extends Logging {
     * @return ZRecordReaderT
     */
   def readDD(ddName: String): ZRecordReaderT = {
-    logger.info(s"Reading DD:$ddName")
+    CloudLogging.stdout(s"Reading DD:$ddName")
 
     try {
       val reader: RecordReader = RecordReader.newReaderForDD(ddName)
-      logger.info(
+      CloudLogging.stdout(
         s"""Opened ${reader.getClass.getSimpleName}
            |DSN=${reader.getDsn}
            |RECFM=${reader.getRecfm}
@@ -331,7 +330,7 @@ protected object ZOS extends Logging {
         // Close the dataset to avoid SC03 Abend
         reader.close()
         val msg = s"DD:$ddName not found"
-        logger.error(msg)
+        CloudLogging.stdOutAndStdErr(msg)
         throw new DDException(msg)
       }
 
@@ -421,19 +420,11 @@ protected object ZOS extends Logging {
     }
 
     val ddList = buf.toList
-    logger.info(s"""JOBNAME: $jobName
+    CloudLogging.stdout(s"""JOBNAME: $jobName
                            |JOBID: $jobId
                            |PROCSTEPNAME: $procStepName
                            |STEPNAME: $stepName
                            |DDs: ${ddList.mkString(",")}
-                           |Java Version:
-                           |${ZUtil.getJavaVersionInfo}
-                           |
-                           |JZOS Version:
-                           |${ZUtil.getJzosDllVersion}
-                           |
-                           |JZOS Jar Version:
-                           |${ZUtil.getJzosJarVersion}
                            |""".stripMargin)
     ddList
   }

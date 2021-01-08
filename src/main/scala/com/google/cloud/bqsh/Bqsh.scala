@@ -19,25 +19,21 @@ package com.google.cloud.bqsh
 import com.google.api.services.logging.v2.LoggingScopes
 import com.google.cloud.bqsh.cmd.{Cp, Export, GsUtilRm, GsZUtil, JCLUtil, Load, Mk, Query, Result, Rm, Scp, SdsfUtil}
 import com.google.cloud.imf.gzos.{MVS, Util}
-import com.google.cloud.imf.util.{CloudLogging, Logging}
+import com.google.cloud.imf.util.{CloudLogging, Logging, Services}
 
 import scala.collection.mutable
 import scala.collection.mutable.ListBuffer
 
 object Bqsh extends Logging {
-  val UserAgent = "google-pso-tool/gszutil/4.0"
+  val UserAgent: String = Services.UserAgent
 
   def main(args: Array[String]): Unit = {
-
-
-
     val zos = Util.zProvider
     zos.init()
     val script = zos.readStdin()
     CloudLogging.configureLogging(debugOverride = false, sys.env,
       errorLogs = Seq("org.apache.orc","io.grpc","io.netty","org.apache.http"),
       credentials = zos.getCredentialProvider().getCredentials.createScoped(LoggingScopes.LOGGING_WRITE))
-
 
     logger.info(s"Passed args: ${args.length}")
     logger.info("-------------------------------------------------")
@@ -56,7 +52,7 @@ object Bqsh extends Logging {
 
   class Interpreter(zos: MVS, sysEnv: Map[String,String], var exitOnError: Boolean = true, var printCommands: Boolean = true){
 
-    val env: mutable.Map[String,String] = mutable.Map.empty ++ sysEnv
+    val env: mutable.Map[String,String] = mutable.Map.empty.addAll(sysEnv)
 
     def runWithArgs(args: Seq[String]): Result = {
       val result = exec(args, zos, env.toMap)

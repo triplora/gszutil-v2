@@ -22,17 +22,15 @@ import java.nio.file.Paths
 
 import com.google.cloud.bqsh.{ArgParser, BQ, Command, GsUtilConfig, GsUtilOptionParser}
 import com.google.cloud.gszutil.Decoding.{CopyBookField, CopyBookLine, CopyBookTitle}
-import com.google.cloud.gszutil.{CopyBook, Decoder, Decoding, RecordSchema, SchemaProvider}
 import com.google.cloud.gszutil.io.ZRecordReaderT
 import com.google.cloud.gszutil.orc.WriteORCFile
+import com.google.cloud.gszutil.{CopyBook, Decoding, RecordSchema, SchemaProvider}
 import com.google.cloud.imf.grecv.client.GRecvClient
 import com.google.cloud.imf.gzos.pb.GRecvProto.Record
-import com.google.cloud.imf.gzos.{MVS, MVSStorage}
+import com.google.cloud.imf.gzos.{CloudDataSet, MVS, MVSStorage}
 import com.google.cloud.imf.util.{Logging, Services, StatsUtil}
-import com.google.cloud.storage.Blob.BlobSourceOption
 import com.google.cloud.storage.{BlobId, BucketInfo, Storage}
 import com.google.protobuf.util.JsonFormat
-import org.apache.commons.lang.CharSet
 
 import scala.util.Try
 
@@ -96,7 +94,7 @@ object Cp extends Command[GsUtilConfig] with Logging {
       if (c.remote) {
         val c1 =
           if (c.gcsDSNPrefix.isEmpty)
-            c.copy(gcsDSNPrefix = sys.env.getOrElse("GCSDSNPREFIX", sys.env("GCSPREFIX")))
+            c.copy(gcsDSNPrefix = env.getOrElse(CloudDataSet.DsnVar, env("GCSPREFIX")))
           else c
         GRecvClient.run(c1, zos, in, schemaProvider, GRecvClient)
       }
@@ -114,10 +112,7 @@ object Cp extends Command[GsUtilConfig] with Logging {
 
     if (c.statsTable.nonEmpty) {
       val statsTable = BQ.resolveTableSpec(c.statsTable, c.projectId, c.datasetId)
-      logger.debug(s"writing stats to ${statsTable.getProject}:${
-        statsTable
-          .getDataset
-      }:${statsTable.getTable}")
+      logger.debug(s"writing stats to ${BQ.tableSpec(statsTable)}")
       val jobId = BQ.genJobId(c.projectId, c.location, zos, "cp")
       val bqProj = if (c.projectId.nonEmpty) c.projectId else statsTable.getProject
       StatsUtil.insertJobStats(
