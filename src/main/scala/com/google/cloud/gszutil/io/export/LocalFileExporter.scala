@@ -84,8 +84,8 @@ class LocalFileExporter extends FileExporter {
             val name = field.map(_.getName).getOrElse("None")
             val bqType = field.map(_.getType.getStandardType.toString).getOrElse("None")
             val encoder = mvsEncoders.lift(i).map(_.toString).getOrElse("None")
-//            val value = Option(row.get(i).getValue).getOrElse("null")
-//            sb.append(s"$name\t$bqType\t$encoder\t$value\n")
+            val value = scala.Option(row.get(i).getValue).getOrElse("null")
+            sb.append(s"$name\t$bqType\t$encoder\t$value\n")
           }
           val msg = sb.result()
           CloudLogging.stdout(msg)
