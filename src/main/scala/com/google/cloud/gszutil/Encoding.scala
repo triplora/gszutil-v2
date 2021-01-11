@@ -52,7 +52,12 @@ object Encoding extends Logging {
       case "PIC S9 COMP" | "PIC 9 COMP"  =>
         LongToBinaryEncoder(decoderSize)
       case intRegex(p) if p.toInt <= 18 && p.toInt >= 1 =>
-        LongToBinaryEncoder(decoderSize)
+        val name = cbf.name.toUpperCase
+        if((name.endsWith("DT") || name.endsWith("DATE")) && p.toInt == 9) {
+          DateStringToBinaryEncoder()
+        } else {
+          LongToBinaryEncoder(decoderSize)
+        }
       case uintRegex(p) if p.toInt <= 18 && p.toInt >= 1 =>
           LongToBinaryEncoder(decoderSize)
       case x if types.contains(x)=>

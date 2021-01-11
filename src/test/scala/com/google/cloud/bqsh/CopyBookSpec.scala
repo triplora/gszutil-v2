@@ -145,12 +145,20 @@ class CopyBookSpec extends AnyFlatSpec with Logging {
     }
   }
 
-  it should "get date encoder" in {
+  it should "get date encoder for PIC X(10)" in {
       val picString = "PIC X(10)"
       val expectedEncoder = DateStringToBinaryEncoder()
       val decoder = Decoding.typeMap(picString, transcoder, filler = false, isDate = true)
       val encoder = Encoding.getEncoder(CopyBookField("03  DATE", decoder, picString), transcoder)
       assert(encoder == expectedEncoder)
+  }
+
+  it should "get date encoder PIC S9(9) COMP." in {
+    val picString = "PIC S9(9) COMP."
+    val expectedEncoder = DateStringToBinaryEncoder()
+    val decoder = Decoding.typeMap(picString, transcoder, filler = false, isDate = true)
+    val encoder = Encoding.getEncoder(CopyBookField("03  DATE", decoder, picString), transcoder)
+    assert(encoder == expectedEncoder)
   }
 
   it should "trim" in {
