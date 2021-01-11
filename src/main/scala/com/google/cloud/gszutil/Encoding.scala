@@ -32,12 +32,7 @@ object Encoding extends Logging {
     val typ = cbf.fieldType
     typ.stripSuffix(".") match {
       case charRegex(_) =>
-        val name = cbf.name.toUpperCase
-        if( (name.endsWith("DT") || name.endsWith("DATE")) && decoderSize == 10) {
-          DateStringToBinaryEncoder()
-        } else {
-          StringToBinaryEncoder(transcoder, decoderSize)
-        }
+        StringToBinaryEncoder(transcoder, decoderSize)
       case "PIC X" | numStrRegex(_) =>
         StringToBinaryEncoder(transcoder, decoderSize)
       case decRegex(p) if p.toInt >= 1 && cbf.decoder.isInstanceOf[Decimal64Decoder] =>
