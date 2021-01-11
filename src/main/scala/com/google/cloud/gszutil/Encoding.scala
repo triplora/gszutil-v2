@@ -129,8 +129,10 @@ object Encoding extends Logging {
     override def encode(x: T): Array[Byte] = {
       if (x == null)
         Array.fill(size)(0x00)
-      else
-        PackedDecimal.pack(x, size)
+      else {
+        if (s == 0) PackedDecimal.packScale0(x, size)
+        else PackedDecimal.pack(x, size)
+      }
     }
 
     override def encodeValue(value: FieldValue): Array[Byte] = {

@@ -23,8 +23,13 @@ public class PackedDecimal {
         return ((p + s) / 2) + 1;
     }
 
-    public static int precisionOf(int size) {
-        return (size - 1) * 2;
+    // doesnt work when scale 0
+    public static int precisionOf(int size, boolean isScale0) {
+        int p = (size - 1) * 2;
+        if (isScale0) {
+            p = p + 1;
+        }
+        return p;
     }
 
     public static long unpack(ByteBuffer buf, int len) {
@@ -81,12 +86,16 @@ public class PackedDecimal {
     }
 
     public static byte[] pack(long x, int len){
-        return pack(x,len,new byte[len],0);
+        return pack(x,len,new byte[len],0,false);
     }
 
-    public static byte[] pack(long x, int len, byte[] buf, int off){
+    public static byte[] packScale0(long x, int len) {
+        return pack(x,len,new byte[len], 0, true);
+    }
+
+    public static byte[] pack(long x, int len, byte[] buf, int off, boolean isScale0){
         com.ibm.dataaccess.DecimalData.convertLongToPackedDecimal(x, buf, off,
-                precisionOf(len), true);
+                precisionOf(len, isScale0), true);
         return buf;
     }
 }

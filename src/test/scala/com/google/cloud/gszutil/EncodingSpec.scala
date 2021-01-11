@@ -3,6 +3,8 @@ package com.google.cloud.gszutil
 import java.nio.ByteBuffer
 import java.time.LocalDate
 
+import com.google.cloud.bigquery.FieldValue
+import com.google.cloud.bigquery.FieldValue.Attribute
 import com.google.cloud.gszutil.Decoding.{Decimal64Decoder, IntAsDateDecoder, LongDecoder}
 import com.google.cloud.gszutil.Encoding._
 import com.google.cloud.imf.gzos.{Ebcdic, PackedDecimal}
@@ -109,5 +111,17 @@ class EncodingSpec extends AnyFlatSpec {
     }
     val l = v1.toLong
     assert(l == 15399L)
+  }
+
+  "packed decimal" should "encode scale 0 decimal" in {
+    val e = DecimalToBinaryEncoder(5, 0)
+    val v = FieldValue.of(Attribute.PRIMITIVE, "12345")
+    val r = e.encodeValue(v)
+
+    val d = Decimal64Decoder(5, 0)
+    val dv = d.columnVector(1).asInstanceOf[Decimal64ColumnVector]
+    d.get(ByteBuffer.wrap(r), dv, 0)
+
+    assert(12345 == dv.vector(0))
   }
 }
