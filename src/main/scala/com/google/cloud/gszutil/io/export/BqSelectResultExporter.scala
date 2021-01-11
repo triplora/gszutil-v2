@@ -17,16 +17,16 @@ class BqSelectResultExporter(cfg: ExportConfig,
     exporter.newExport(MVSFileExport(cfg.outDD, zos))
 
     val bqResults = job.getQueryResults()
+    val totalRows = bqResults.getTotalRows
 
     if (cfg.vartext) {
-      logger.info("Using pipe-delimited string for export.")
+      logger.info(s"Using pipe-delimited string for export, totalRows=$totalRows")
       exporter.exportPipeDelimitedRows(bqResults.iterateAll())
     } else {
-      logger.info("Using TD schema for export.")
+      logger.info(s"Using TD schema for export, totalRows=$totalRows")
       exporter.exportBQSelectResult(bqResults.iterateAll(), bqResults.getSchema.getFields, sp.encoders)
     }
 
-    val totalRows = bqResults.getTotalRows
     val rowsWritten = exporter.currentExport.rowsWritten()
     logger.info(s"Received $totalRows rows from BigQuery API, written $rowsWritten rows.")
 
