@@ -13,6 +13,7 @@ class LocalFileExporterSpec extends AnyFlatSpec {
     private var rowCounter: Long = 0
     override def close(): Unit = {}
     override def lRecl: Int = recordLength
+    override def recfm: String = recordLength.toString
     override def ddName: String = this.getClass.getSimpleName
     override def transcoder: Transcoder = Utf8
     override def rowsWritten(): Long = rowCounter
