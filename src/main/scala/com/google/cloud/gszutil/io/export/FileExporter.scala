@@ -15,5 +15,8 @@ trait FileExporter {
                            mvsEncoders: Array[BinaryEncoder]): Result
 
   /** Exports data into pipe delimited string file */
-  def exportPipeDelimitedRows(rows: java.lang.Iterable[FieldValueList]): Result
+  def exportPipeDelimitedRows(rows: java.lang.Iterable[FieldValueList], rowCount: Long): Result
+
+  def validateExport(bqSchema: FieldList,
+                     mvsEncoders: Array[BinaryEncoder]): Unit
 }

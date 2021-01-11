@@ -45,7 +45,7 @@ class LocalFileExporterSpec extends AnyFlatSpec {
     val rows = util.Arrays.asList(FieldValueList.of(values, schema))
 
     assert(mockFileExport.rowsWritten() == 0)
-    assert(exporter.exportPipeDelimitedRows(rows) == Result.Success)
+    assert(exporter.exportPipeDelimitedRows(rows, 1) == Result.Success)
     assert(mockFileExport.rowsWritten() == 1)
   }
 }

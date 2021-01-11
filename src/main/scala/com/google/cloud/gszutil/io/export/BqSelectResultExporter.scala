@@ -1,6 +1,6 @@
 package com.google.cloud.gszutil.io.`export`
 
-import com.google.cloud.bigquery.Job
+import com.google.cloud.bigquery.{Job, TableResult}
 import com.google.cloud.bqsh.ExportConfig
 import com.google.cloud.bqsh.cmd.Result
 import com.google.cloud.gszutil.SchemaProvider
@@ -17,20 +17,49 @@ class BqSelectResultExporter(cfg: ExportConfig,
     exporter.newExport(MVSFileExport(cfg.outDD, zos))
 
     val bqResults = job.getQueryResults()
-    val totalRows = bqResults.getTotalRows
+    val totalRowsToExport = bqResults.getTotalRows
 
     if (cfg.vartext) {
-      logger.info(s"Using pipe-delimited string for export, totalRows=$totalRows")
-      exporter.exportPipeDelimitedRows(bqResults.iterateAll())
+      logger.info(s"Using pipe-delimited string for export, totalRows=$totalRowsToExport")
+      exporter.exportPipeDelimitedRows(bqResults.iterateAll(), totalRowsToExport)
     } else {
-      logger.info(s"Using TD schema for export, totalRows=$totalRows")
-      exporter.exportBQSelectResult(bqResults.iterateAll(), bqResults.getSchema.getFields, sp.encoders)
+      logger.info(s"Using TD schema for export, totalRows=$totalRowsToExport")
+      // bqResults.iterateAll() fails with big amount of data
+      // the reason why 'manual' approach is used
+      //exporter.exportBQSelectResult(bqResults.iterateAll(), bqResults.getSchema.getFields, sp.encoders)
+      var rowsProcessed: Long = 0
+      var currentPage: TableResult = bqResults
+      // first page should always be present
+      var hasNext = true
+      while (hasNext) {
+        logger.info(s"Encoding page of data")
+        exporter.exportBQSelectResult(currentPage.getValues,
+          bqResults.getSchema.getFields, sp.encoders) match {
+          // success exitCode = 0
+          case Result(_, 0, rowsWritten, _) =>
+            rowsProcessed += rowsWritten
+            logger.info(s"$rowsWritten rows of current page written")
+            logger.info(s"$rowsProcessed rows of $totalRowsToExport already exported")
+            if (currentPage.hasNextPage) {
+              hasNext = true
+              currentPage = currentPage.getNextPage
+            }
+            else {
+              hasNext = false
+            }
+            if (rowsProcessed > totalRowsToExport)
+              throw new RuntimeException("Internal issue, to many rows exported!!!")
+
+          // failure, exitCode = 1
+          case Result(_, 1, _, msg) => throw new RuntimeException(s"Failed when encoding values to file: $msg")
+        }
+      }
     }
 
     val rowsWritten = exporter.currentExport.rowsWritten()
-    logger.info(s"Received $totalRows rows from BigQuery API, written $rowsWritten rows.")
+    logger.info(s"Received $totalRowsToExport rows from BigQuery API, written $rowsWritten rows.")
 
-    require(totalRows == rowsWritten, s"BigQuery API sent $totalRows rows but " +
+    require(totalRowsToExport == rowsWritten, s"BigQuery API sent $totalRowsToExport rows but " +
       s"writer wrote $rowsWritten")
 
     Result(activityCount = rowsWritten)

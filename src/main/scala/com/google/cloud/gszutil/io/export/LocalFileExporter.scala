@@ -22,6 +22,46 @@ class LocalFileExporter extends FileExporter {
   override def exportBQSelectResult(rows: java.lang.Iterable[FieldValueList],
                                     bqSchema: FieldList,
                                     mvsEncoders: Array[BinaryEncoder]): Result = {
+    //validation
+    validateExport(bqSchema, mvsEncoders)
+
+    val nCols = bqSchema.size()
+    val bqFields = (0 until nCols).map{i => bqSchema.get(i)}
+    var rowsCounter = 0
+
+    val buf = ByteBuffer.allocate(export.lRecl)
+    rows.forEach{row =>
+      buf.clear()
+      MVSBinaryRowEncoder.toBinary(row, mvsEncoders, buf) match {
+        case result if result.exitCode == 0 =>
+          rowsCounter += 1
+          export.appendBytes(buf.array())
+        case err =>
+          // Print helpful error message containing schema, row, encoder
+          val sb = new StringBuilder
+          sb.append("Export failed to encode row:\n")
+          sb.append("Field Name\tBQ Type\tEncoder\tValue\n")
+          (0 until math.max(bqFields.length,row.size())).foreach{i =>
+            val field = bqFields.lift(i)
+            val name = field.map(_.getName).getOrElse("None")
+            val bqType = field.map(_.getType.getStandardType.toString).getOrElse("None")
+            val encoder = mvsEncoders.lift(i).map(_.toString).getOrElse("None")
+            val value = scala.Option(row.get(i).getValue).getOrElse("null")
+            sb.append(s"$name\t$bqType\t$encoder\t$value\n")
+          }
+          val msg = sb.result()
+          CloudLogging.stdout(msg)
+          CloudLogging.stderr(msg)
+          CloudLogging.stderr(s"\n${err.message}")
+          return err
+      }
+    }
+    Result.Success.copy(activityCount = rowsCounter)
+  }
+
+
+  override def validateExport(bqSchema: FieldList, mvsEncoders: Array[BinaryEncoder]): Unit = {
+
     val queryLRECL = mvsEncoders.map(_.size).foldLeft(0)(_ + _)
     CloudLogging.stdout(
       s"""BINARY EXPORT
@@ -66,54 +106,14 @@ class LocalFileExporter extends FileExporter {
         s"!= $nEnc encoders"
       CloudLogging.stdout(msg)
       CloudLogging.stderr(msg)
-      return Result.Failure(msg)
+      throw new RuntimeException(s"Export validation failure: $msg")
     }
-
-    // validate field types
-    // fail if target type is not string and source type does not match target type
-    (0 until nCols)
-      .filter{i => encTypes(i) != StandardSQLTypeName.STRING && bqTypes(i) != encTypes(i)} match {
-      case x if x.nonEmpty =>
-        val fields =
-          x.map(i => s"$i\t${bqFields(i).getName}\t${bqTypes(i)}\t${encTypes(i)}").mkString("\n")
-        val msg = s"LocalFileExporter ERROR Export field type mismatch:\n$fields"
-        CloudLogging.stdout(msg)
-        CloudLogging.stderr(msg)
-        return Result.Failure(msg)
-      case _ =>
-    }
-
-    val buf = ByteBuffer.allocate(export.lRecl)
-    rows.forEach{row =>
-      buf.clear()
-      MVSBinaryRowEncoder.toBinary(row, mvsEncoders, buf) match {
-        case result if result.exitCode == 0 =>
-          export.appendBytes(buf.array())
-        case err =>
-          // Print helpful error message containing schema, row, encoder
-          val sb = new StringBuilder
-          sb.append(s"Export failed to encode row with: ${err.message} :")
-          sb.append("Field Name\tBQ Type\tEncoder\tValue\n")
-          (0 until math.max(bqFields.length,row.size())).foreach{i =>
-            val field = bqFields.lift(i)
-            val name = field.map(_.getName).getOrElse("None")
-            val bqType = field.map(_.getType.getStandardType.toString).getOrElse("None")
-            val encoder = mvsEncoders.lift(i).map(_.toString).getOrElse("None")
-            val value = scala.Option(row.get(i).getValue).getOrElse("null")
-            sb.append(s"$name\t$bqType\t$encoder\t$value\n")
-          }
-          val msg = sb.result()
-          CloudLogging.stdout(msg)
-          CloudLogging.stderr(msg)
-          return err
-      }
-    }
-
-    Result.Success
   }
 
-  override def exportPipeDelimitedRows(rows: java.lang.Iterable[FieldValueList]): Result = {
+  override def exportPipeDelimitedRows(rows: java.lang.Iterable[FieldValueList], rowsCount: Long): Result = {
     def run(): Unit = {
+      var processedRows = 0
+      val halfOfMili = 500 * 1000
       rows.forEach{
         row =>
           val lineBuf = ListBuffer.empty[String]
@@ -130,6 +130,11 @@ class LocalFileExporter extends FileExporter {
             .encode(lineToExport.substring(0, export.lRecl-1))
 
           export.appendBytes(bytes)
+          processedRows += 1
+
+          if (rowsCount > halfOfMili  && processedRows % halfOfMili == 0) {
+            CloudLogging.stdout(s"$processedRows Rows exported...")
+          }
       }
     }
 
