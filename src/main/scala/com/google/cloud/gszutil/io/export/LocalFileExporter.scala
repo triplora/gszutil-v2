@@ -22,9 +22,6 @@ class LocalFileExporter extends FileExporter {
   override def exportBQSelectResult(rows: java.lang.Iterable[FieldValueList],
                                     bqSchema: FieldList,
                                     mvsEncoders: Array[BinaryEncoder]): Result = {
-    //validation
-    validateExport(bqSchema, mvsEncoders)
-
     val nCols = bqSchema.size()
     val bqFields = (0 until nCols).map{i => bqSchema.get(i)}
     var rowsCounter = 0
@@ -107,6 +104,20 @@ class LocalFileExporter extends FileExporter {
       CloudLogging.stdout(msg)
       CloudLogging.stderr(msg)
       throw new RuntimeException(s"Export validation failure: $msg")
+    }
+
+    // validate field types
+    // fail if target type is not string and source type does not match target type
+    (0 until nCols)
+      .filter{i => encTypes(i) != StandardSQLTypeName.STRING && bqTypes(i) != encTypes(i)} match {
+      case x if x.nonEmpty =>
+        val fields =
+          x.map(i => s"$i\t${bqFields(i).getName}\t${bqTypes(i)}\t${encTypes(i)}").mkString("\n")
+        val msg = s"LocalFileExporter ERROR Export field type mismatch:\n$fields"
+        CloudLogging.stdout(msg)
+        CloudLogging.stderr(msg)
+        throw new RuntimeException(s"Export validation failure:  $msg")
+      case _ =>
     }
   }
 

@@ -27,6 +27,8 @@ class BqSelectResultExporter(cfg: ExportConfig,
       // bqResults.iterateAll() fails with big amount of data
       // the reason why 'manual' approach is used
       //exporter.exportBQSelectResult(bqResults.iterateAll(), bqResults.getSchema.getFields, sp.encoders)
+      //validation
+      exporter.validateExport(bqResults.getSchema.getFields, sp.encoders)
       var rowsProcessed: Long = 0
       var currentPage: TableResult = bqResults
       // first page should always be present
