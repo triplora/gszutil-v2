@@ -14,6 +14,7 @@ case class MVSFileExport(outDD: String, zos: MVS) extends FileExport with Loggin
   val dsn: String = writer.getDsn
   logger.debug(s"Opened DSN: $dsn")
   val lRecl: Int = writer.lRecl
+  val recfm: String = writer.recfm
   override val transcoder: Transcoder = zos.transcoder
   private val buf = ByteBuffer.allocate(lRecl)
   private var bytesWritten = 0L

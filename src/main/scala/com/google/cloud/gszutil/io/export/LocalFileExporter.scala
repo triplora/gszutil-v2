@@ -22,6 +22,21 @@ class LocalFileExporter extends FileExporter {
   override def exportBQSelectResult(rows: java.lang.Iterable[FieldValueList],
                                     bqSchema: FieldList,
                                     mvsEncoders: Array[BinaryEncoder]): Result = {
+    val queryLRECL = mvsEncoders.map(_.size).foldLeft(0)(_ + _)
+    CloudLogging.stdout(
+      s"""BINARY EXPORT
+         |OUTPUT FILE LRECL = ${export.lRecl}
+         |OUTPUT FILE RECFM = ${export.recfm}
+         |QUERY SCHEMA LRECL = $queryLRECL
+         |""".stripMargin)
+
+    if (export.recfm != "FB")
+      throw new UnsupportedOperationException(s"Unsupported file RECFM: ${export.recfm}")
+
+    if (queryLRECL > export.lRecl)
+      throw new RuntimeException(s"Output file LRECL is shorter than in provided schema. " +
+        s"Output file LRECL = ${export.lRecl}, schema LRECL = $queryLRECL.")
+
     if (!isOpen) {
       // export is closed, just not export
       return Result.Success

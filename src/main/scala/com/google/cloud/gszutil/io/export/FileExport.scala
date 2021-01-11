@@ -5,6 +5,7 @@ import com.google.cloud.gszutil.Transcoder
 trait FileExport {
   def close(): Unit
   def lRecl: Int
+  def recfm: String
   def appendBytes(buf: Array[Byte]): Unit
   def ddName: String
   def transcoder: Transcoder
