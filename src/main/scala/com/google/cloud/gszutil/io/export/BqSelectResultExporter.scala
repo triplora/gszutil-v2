@@ -18,6 +18,7 @@ class BqSelectResultExporter(cfg: ExportConfig,
 
     val bqResults = job.getQueryResults()
     val totalRowsToExport = bqResults.getTotalRows
+    var rowsProcessed: Long = 0
 
     if (cfg.vartext) {
       logger.info(s"Using pipe-delimited string for export, totalRows=$totalRowsToExport")
@@ -29,12 +30,11 @@ class BqSelectResultExporter(cfg: ExportConfig,
       //exporter.exportBQSelectResult(bqResults.iterateAll(), bqResults.getSchema.getFields, sp.encoders)
       //validation
       exporter.validateExport(bqResults.getSchema.getFields, sp.encoders)
-      var rowsProcessed: Long = 0
       var currentPage: TableResult = bqResults
       // first page should always be present
       var hasNext = true
       while (hasNext) {
-        logger.info(s"Encoding page of data")
+        logger.info("Encoding page of data")
         exporter.exportBQSelectResult(currentPage.getValues,
           bqResults.getSchema.getFields, sp.encoders) match {
           // success exitCode = 0
@@ -58,13 +58,10 @@ class BqSelectResultExporter(cfg: ExportConfig,
       }
     }
 
-    val rowsWritten = exporter.currentExport.rowsWritten()
-    logger.info(s"Received $totalRowsToExport rows from BigQuery API, written $rowsWritten rows.")
-
-    require(totalRowsToExport == rowsWritten, s"BigQuery API sent $totalRowsToExport rows but " +
-      s"writer wrote $rowsWritten")
-
-    Result(activityCount = rowsWritten)
+    logger.info(s"Received $totalRowsToExport rows from BigQuery API, written $rowsProcessed rows.")
+    require(totalRowsToExport == rowsProcessed, s"BigQuery API sent $totalRowsToExport rows but " +
+      s"writer wrote $rowsProcessed")
+    Result(activityCount = rowsProcessed)
   }
 
   override def close(): Unit = exporter.endIfOpen()

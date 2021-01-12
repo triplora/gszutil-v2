@@ -18,10 +18,10 @@ class LocalFileExporter extends FileExporter {
   override def currentExport: FileExport = export
   override def newExport(e: FileExport): Unit = export = e
   override def endIfOpen: Unit = if (export != null) export.close()
-
   override def exportBQSelectResult(rows: java.lang.Iterable[FieldValueList],
                                     bqSchema: FieldList,
                                     mvsEncoders: Array[BinaryEncoder]): Result = {
+
     val nCols = bqSchema.size()
     val bqFields = (0 until nCols).map{i => bqSchema.get(i)}
     var rowsCounter = 0
@@ -55,7 +55,6 @@ class LocalFileExporter extends FileExporter {
     }
     Result.Success.copy(activityCount = rowsCounter)
   }
-
 
   override def validateExport(bqSchema: FieldList, mvsEncoders: Array[BinaryEncoder]): Unit = {
 
@@ -122,6 +121,7 @@ class LocalFileExporter extends FileExporter {
   }
 
   override def exportPipeDelimitedRows(rows: java.lang.Iterable[FieldValueList], rowsCount: Long): Result = {
+    CloudLogging.stdout("Exporting row(s) as pipe-delimited string(s)...")
     def run(): Unit = {
       var processedRows = 0
       val halfOfMili = 500 * 1000
@@ -151,7 +151,7 @@ class LocalFileExporter extends FileExporter {
 
     Try(run) match {
       case Success(_) => Result.Success
-      case Failure(t) => Result.Failure(t.getMessage)
+      case Failure(t) => throw t
     }
   }
 }
