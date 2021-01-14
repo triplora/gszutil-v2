@@ -22,9 +22,7 @@ import com.google.cloud.bqsh.BQ.{BQField, BQSchema}
 
 
 object LogTable {
-  val RecordsOut = "records_out"
-
-  // schema version 2020-12-15
+  // schema version 2021-01-14
   val schema: BQSchema = {
     BQSchema(Seq(
       BQField("timestamp"),
@@ -41,6 +39,7 @@ object LogTable {
       BQField("rows_written", INT64, NULLABLE),
       BQField("rows_affected", INT64, NULLABLE),
       BQField("rows_inserted", INT64, NULLABLE),
+      BQField("rows_deleted", INT64, NULLABLE),
       BQField("rows_updated", INT64, NULLABLE),
       BQField("rows_unmodified", INT64, NULLABLE),
       BQField("rows_before_merge", INT64, NULLABLE),

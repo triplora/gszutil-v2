@@ -79,7 +79,8 @@ object MergeStats {
         else 0
       }.getOrElse(0)
 
-    val rowsInserted: Long = rowsWritten - rowsBeforeMerge
+    val rowsInserted: Long = if (rowsWritten > rowsBeforeMerge) rowsWritten - rowsBeforeMerge else 0
+    val rowsDeleted: Long = if (rowsWritten < rowsBeforeMerge) rowsBeforeMerge - rowsWritten else 0
     val rowsAffected: Long = if (s.getNumDmlAffectedRows != null) s.getNumDmlAffectedRows else 0
     val rowsUpdated: Long = rowsAffected - rowsInserted
     val rowsUnmodified: Long = rowsWritten - rowsAffected
@@ -93,6 +94,7 @@ object MergeStats {
       rowsAffected = rowsAffected,
       rowsUnmodified = rowsUnmodified,
       rowsInserted = rowsInserted,
+      rowsDeleted = rowsDeleted,
       rowsUpdated = rowsUpdated,
     ))
   }
@@ -105,6 +107,7 @@ object MergeStats {
       .put("rows_read", s.fromTableRows)
       .put("rows_updated", s.rowsUpdated)
       .put("rows_inserted", s.rowsInserted)
+      .put("rows_deleted", s.rowsDeleted)
       .put("rows_unmodified", s.rowsUnmodified)
       .put("rows_affected", s.rowsAffected)
       .put("rows_written", s.rowsWritten)
@@ -118,6 +121,7 @@ object MergeStats {
        |${s.rowsAffected} rows affected
        |${s.rowsUnmodified} rows unmodified
        |${s.rowsInserted} rows inserted
+       |${s.rowsDeleted} rows deleted
        |${s.rowsUpdated} rows updated
        |""".stripMargin
   }
@@ -130,4 +134,5 @@ case class MergeStats(fromTable: String,
                       rowsAffected: Long,
                       rowsUnmodified: Long,
                       rowsInserted: Long,
+                      rowsDeleted: Long,
                       rowsUpdated: Long)

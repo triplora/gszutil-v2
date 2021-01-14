@@ -17,6 +17,7 @@ CREATE TABLE `[PROJECT_ID].[DATASET_NAME].[TABLE_NAME]` (
   rows_written INT64,
   rows_affected INT64,
   rows_inserted INT64,
+  rows_deleted INT64,
   rows_updated INT64,
   rows_unmodified INT64,
   statement_type STRING,
@@ -42,4 +43,6 @@ PARTITION BY job_date
 CLUSTER BY job_name, job_id, step_name
 OPTIONS (
  partition_expiration_days=1000,
- description="Log table for mainframe jobs")
+ description="Log table for mainframe jobs"),
+ require_partition_filter=true
+)
