@@ -24,6 +24,8 @@ import scala.concurrent.Future
 
 class CpSpec2 extends AnyFlatSpec with BeforeAndAfterAll {
   CloudLogging.configureLogging(debugOverride = true, errorLogs = Seq("io.netty","org.apache","io.grpc"))
+  val TestBucket = sys.env("BUCKET")
+  val TestProject = sys.env("PROJECT")
 
   def server(cfg: GRecvConfig): Future[GRecvServer] = Future{
     val s = new GRecvServer(cfg, Services.storage())
@@ -52,8 +54,8 @@ class CpSpec2 extends AnyFlatSpec with BeforeAndAfterAll {
     val input = new ZDataSet(TestUtil.resource("FLASH_STORE_DEPT_50k.bin"),136, 27880)
 
     val cfg1 = GsUtilConfig(schemaProvider = Option(schemaProvider),
-                           gcsUri = "gs://gszutil-test/FLASH_STORE_DEPT",
-                           projectId = "pso-wmt-dl",
+                           gcsUri = s"gs://$TestBucket/FLASH_STORE_DEPT",
+                           projectId = TestProject,
                            datasetId = "dataset",
                            testInput = Option(input),
                            parallelism = 1,
@@ -91,7 +93,7 @@ class CpSpec2 extends AnyFlatSpec with BeforeAndAfterAll {
       .setSchema(record)
       .setLrecl(in.lRecl)
       .setBlksz(in.blkSize)
-      .setBasepath("gs://gszutil-test/prefix")
+      .setBasepath(s"gs://$TestBucket/prefix")
       .build
 
     val sendResult = GRecvClient.upload(request, serverCfg.host, serverCfg.port, 1, Util.zProvider, in)
@@ -118,7 +120,7 @@ class CpSpec2 extends AnyFlatSpec with BeforeAndAfterAll {
     }
     val generator = DataGenUtil.generatorFor(sp, 100)
     val cfg = GsUtilConfig(schemaProvider = Option(sp),
-      gcsUri = "gs://gszutil-test/GENERATED",
+      gcsUri = s"gs://$TestBucket/GENERATED",
       testInput = Option(generator),
       parallelism = 1,
       nConnections = 2,
@@ -145,7 +147,7 @@ class CpSpec2 extends AnyFlatSpec with BeforeAndAfterAll {
 
     val generator = DataGenUtil.generatorFor(sp, 1)
     val cfg = GsUtilConfig(schemaProvider = Option(sp),
-      gcsUri = "gs://aghan-test/test1",
+      gcsUri = s"gs://$TestBucket/test1",
       testInput = Option(generator),
       parallelism = 1,
       nConnections = 2,
@@ -154,7 +156,7 @@ class CpSpec2 extends AnyFlatSpec with BeforeAndAfterAll {
       remoteHost = serverCfg.host,
       remotePort = serverCfg.port
       ,
-      tfGCS = "gs://aghan-test/trs/tr.json"
+      tfGCS = s"gs://$TestBucket/trs/tr.json"
     )
     val res = Cp.run(cfg, Linux, Map.empty)
     assert(res.exitCode == 0)

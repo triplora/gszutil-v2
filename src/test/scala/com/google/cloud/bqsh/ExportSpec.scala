@@ -19,7 +19,7 @@ class ExportSpec extends AnyFlatSpec with BeforeAndAfterAll {
 
   /**
     * Provide env variables to execute this test
-    * PROJECT_ID=pso-wmt-dl
+    * PROJECT_ID
     * OUTFILE=path_to_output_file
     * OUTFILE_LRECL=length
     * OUTFILE_BLKSIZE=blkSIze

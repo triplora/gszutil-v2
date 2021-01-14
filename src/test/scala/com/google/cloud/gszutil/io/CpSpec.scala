@@ -68,13 +68,15 @@ object CpSpec {
 
 class CpSpec extends AnyFlatSpec {
   CloudLogging.configureLogging(debugOverride = true, errorLogs = "org.apache"::"io.grpc"::"io.netty"::Nil)
+  val TestBucket = sys.env("BUCKET")
+  val TestProject = sys.env("PROJECT")
 
   "Cp" should "copy vartext" in {
     val input = new ZDataSet(TestUtil.resource("mload1.dat"),111, 1110)
     val sp = CpSpec.mload1Schema
     val cfg = GsUtilConfig(schemaProvider = Option(sp),
-                           gcsUri = "gs://gszutil-test/mload1.dat",
-                           projectId = "pso-wmt-dl",
+                           gcsUri = s"gs://$TestBucket/mload1.dat",
+                           projectId = TestProject,
                            datasetId = "dataset",
                            testInput = Option(input),
                            parallelism = 1,
