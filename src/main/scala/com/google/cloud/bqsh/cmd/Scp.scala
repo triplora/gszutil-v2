@@ -142,9 +142,8 @@ object Scp extends Command[ScpConfig] with Logging {
   }
 
   /** object metadata with lrecl and gzip */
-  def blobMetadata(lrecl: Int, gzip: Boolean): java.util.Map[String,String] = {
+  def blobMetadata(lrecl: Int): java.util.Map[String,String] = {
     val m = new java.util.HashMap[String,String]()
-    m.put("content-encoding", if (gzip) "gzip" else "identity")
     m.put("x-goog-meta-lrecl", s"$lrecl")
     m
   }
@@ -165,7 +164,8 @@ object Scp extends Command[ScpConfig] with Logging {
   def openGcsUri(gcs: Storage, uri: String, lrecl: Int, compress: Boolean): OutputStream = {
     val blobInfo = BlobInfo.newBuilder(blobId(uri))
       .setContentType("application/octet-stream")
-      .setMetadata(blobMetadata(lrecl, compress)).build
+      .setContentEncoding(if (compress) "gzip" else "identity")
+      .setMetadata(blobMetadata(lrecl)).build
     if (compress) openGcsBlobGzip(gcs, blobInfo)
     else openGcsBlob(gcs, blobInfo)
   }
