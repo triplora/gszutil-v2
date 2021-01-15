@@ -26,8 +26,8 @@ object GRecvServerListener extends Logging {
             responseObserver: StreamObserver[GRecvResponse],
             compress: Boolean): Unit = {
     val jobInfo: java.util.Map[String,Any] = Util.toMap(req.getJobinfo)
-    val msg1 = "Received request for " + req.getSrcUri + " " +
-      JsonFormat.printer.omittingInsignificantWhitespace().print(req.getJobinfo)
+    val msg1 = s"Received request for ${req.getSrcUri} compress=$compress" +
+      s"${JsonFormat.printer.omittingInsignificantWhitespace().print(req.getJobinfo)}"
     logger.info(msg1)
 
     if (req.getSchema.getFieldCount == 0) {
@@ -86,7 +86,7 @@ object GRecvServerListener extends Logging {
         // write an empty ORC file which can be registered as an external table
         new ByteArrayInputStream(Array.emptyByteArray)
       } else {
-        if (blob != null) open(gcs, blob)
+        if (blob != null) open(gcs, blob, compress)
         else {
           val msg = s"${req.getSrcUri} not found"
           logger.error(msg)
@@ -158,7 +158,7 @@ object GRecvServerListener extends Logging {
            bufSz: Int = 2 * 1024 * 1024): InputStream = {
     val is0: InputStream = Channels.newInputStream(gcs.reader(blob.getBlobId))
     val is1: InputStream =
-      if (isGzip && !blob.getContentEncoding.equalsIgnoreCase("gzip"))
+      if (isGzip && !"gzip".equalsIgnoreCase(blob.getContentEncoding))
         new GZIPInputStream(is0, 32 * 1024)
       else
         is0
