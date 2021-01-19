@@ -31,6 +31,15 @@ object GsZUtil extends Command[GsZUtilConfig] with Logging {
   override val name: String = "gszutil"
   override val parser: ArgParser[GsZUtilConfig] = GsZUtilOptionParser
   override def run(c: GsZUtilConfig, zos: MVS, env: Map[String,String]): Result = {
+    logger.info(
+      s"""GsZUtil starts with following arguments:
+         |--inDsn=${c.inDsn},
+         |--gcsOutUri=${c.gcsOutUri},
+         |--cobDsn=${c.cobDsn},
+         |--transformDsn=${c.transformDsn},
+         |--remoteHost=${c.remoteHost},
+         |--remotePort=${c.remotePort}
+         |""".stripMargin)
     val sp: SchemaProvider =
       if (c.cobDsn.nonEmpty) {
         logger.info(s"reading copybook from DSN=${c.cobDsn}")
@@ -78,7 +87,7 @@ object GsZUtil extends Command[GsZUtilConfig] with Logging {
         GRecvClient.run(cpConfig, zos, in, sp, GRecvClient)
       case None =>
         logger.error(s"CloudDataSet not found for DSN=${dsInfo.dsn}")
-        Result.Failure(s"DSN ${c.inDsn} not found")
+        Result.Failure(s"DSN ${dsInfo.dsn} not found")
     }
   }
 }
