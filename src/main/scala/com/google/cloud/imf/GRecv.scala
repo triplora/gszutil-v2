@@ -43,8 +43,10 @@ object GRecv extends Logging {
           errorLogs = Seq("org.apache.orc","io.grpc","io.netty","org.apache.http"),
           credentials = creds.createScoped(LoggingScopes.LOGGING_WRITE))
         logger.info(s"Starting GRecvServer\n$buildInfo")
-        val gcs = Services.storage(creds.createScoped(StorageScopes.DEVSTORAGE_READ_WRITE))
-        new GRecvServer(cfg, gcs).start()
+        val credentials = creds.createScoped(StorageScopes.DEVSTORAGE_READ_WRITE)
+        val gcs = Services.storage(credentials)
+        val lowLevelClient = Services.storageApi(credentials)
+        new GRecvServer(cfg, gcs, lowLevelClient).start()
       case _ =>
         Console.err.println(s"Unabled to parse args '${args.mkString(" ")}'")
         System.exit(1)

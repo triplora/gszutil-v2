@@ -3,6 +3,7 @@ package com.google.cloud.imf.grecv.server
 import java.time.ZoneId
 import java.time.format.DateTimeFormatter
 
+import com.google.api.services.storage.{Storage => LowLevelStorageApi}
 import com.google.cloud.imf.gzos.pb.GRecvGrpc.GRecvImplBase
 import com.google.cloud.imf.gzos.pb.GRecvProto.{GRecvRequest, GRecvResponse, HealthCheckRequest, HealthCheckResponse}
 import com.google.cloud.imf.util.Logging
@@ -13,7 +14,7 @@ import io.grpc.stub.StreamObserver
 import scala.util.Random
 
 
-class GRecvService(private val gcs: Storage) extends GRecvImplBase with Logging {
+class GRecvService(private val gcs: Storage, private val lowLevelStorageApi: LowLevelStorageApi) extends GRecvImplBase with Logging {
   private val fmt = DateTimeFormatter.ofPattern("yyyyMMddhhMMss")
   private val rng = new Random()
 
@@ -23,7 +24,7 @@ class GRecvService(private val gcs: Storage) extends GRecvImplBase with Logging 
     val requestJson = JsonFormat.printer().omittingInsignificantWhitespace().print(request)
     logger.debug(s"Received GRecvRequest\n```\n$requestJson\n```")
     try {
-      GRecvServerListener.write(request, gcs, partId, responseObserver, compress = true)
+      GRecvServerListener.write(request, gcs, lowLevelStorageApi, partId, responseObserver, compress = true)
     } catch {
       case t: Throwable =>
         logger.error(t.getMessage, t)
