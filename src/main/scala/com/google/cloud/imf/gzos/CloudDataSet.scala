@@ -80,9 +80,10 @@ object CloudDataSet extends Logging {
 
   def getLrecl(blob: Blob): Int = {
     val uri = toUri(blob)
-    if (!blob.getMetadata.containsKey(LreclMeta)) {
+    val maybeMetadata = Option(blob.getMetadata)
+    if (!maybeMetadata.exists(m => m.containsKey(LreclMeta))) {
       import scala.jdk.CollectionConverters.MapHasAsScala
-      val meta = blob.getMetadata.asScala.map{x => s"${x._1}=${x._2}"}.mkString("\n")
+      val meta = maybeMetadata.map(_.asScala.map{x => s"${x._1}=${x._2}"}.mkString("\n"))
       val msg = s"$LreclMeta not set for $uri\n$meta"
       logger.error(msg)
       throw new RuntimeException(msg)
@@ -118,7 +119,7 @@ object CloudDataSet extends Logging {
                      baseUri: URI): Option[CloudRecordReader] = {
     val bucket = baseUri.getAuthority
     val name = buildObjectName(baseUri, ds)
-    logger.debug(s"Searching for object with name=$name, in bucket=$bucket")
+    logger.info(s"Searching for object with name=$name, with objectName=${ds.objectName} in bucket=$bucket")
     // check if DSN exists in GCS
     val blob: Blob = gcs.get(BlobId.of(bucket, name))
     if (blob != null) {
@@ -166,7 +167,7 @@ object CloudDataSet extends Logging {
       versions.foreach{b =>
         sb.append(b.getGeneration)
         sb.append(" ")
-        sb.append(b.getMetadata.getOrDefault(LreclMeta,"?"))
+        sb.append(Option(b.getMetadata).getOrElse(LreclMeta,"?"))
         sb.append(" ")
         sb.append(b.getSize)
         sb.append(" ")

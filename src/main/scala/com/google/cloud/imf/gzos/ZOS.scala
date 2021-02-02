@@ -353,9 +353,11 @@ protected object ZOS extends Logging {
   def getDatasetInfo(ddName: String): Option[DataSetInfo] = {
     try {
       val jfcb = ZFile.readJFCB(ddName)
-      val dsn =
+      val dsn = {
         if (jfcb.getJfcbelnm.isEmpty) jfcb.getJfcbdsnm
         else s"${jfcb.getJfcbdsnm}(${jfcb.getJfcbelnm})"
+      }
+      logger.info(s"getDatasetInfo for dd=$ddName, dsn=$dsn")
       val lrecl =
         if (jfcb.getJfclrecl == 0) 80
         else {

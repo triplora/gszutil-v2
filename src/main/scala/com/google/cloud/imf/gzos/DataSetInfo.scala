@@ -49,6 +49,14 @@ case class DataSetInfo(dsn: String = "",
       dataSetName.charAt(i+6) == 'V'
   }
 
+  val generation: Option[String] = {
+    if(gdg) {
+      Option(dataSetName.substring(dataSetName.lastIndexOf('.'))).map(s => s.substring(1, 9))
+    } else {
+      None
+    }
+  }
+
   val pds: Boolean =
     elementName match {
       case s if s.length <= 8 && s.length > 1 && s.forall(_.isLetterOrDigit) =>
@@ -62,11 +70,15 @@ case class DataSetInfo(dsn: String = "",
     if (i > -1) dsn.substring(0,i) else dsn
   }
 
+  def isBaseGDG: Boolean = gdg && generation.isDefined && elementName.isEmpty
+
+  def isSelectedGDG: Boolean = gdg && generation.isDefined && elementName.nonEmpty
+
   def objectName: String = {
     if (pds) dataSetName + "/" + elementName
     else if (gdg) dropLastQualifier(dataSetName)
     else dsn
   }
 
-  override def toString: String = s"dataSetName=$dataSetName, elementName=$elementName, pds=$pds, gdg=$gdg"
+  override def toString: String = s"dataSetName=$dataSetName, elementName=$elementName, pds=$pds, gdg=$gdg, generation=${generation.orNull}"
 }
