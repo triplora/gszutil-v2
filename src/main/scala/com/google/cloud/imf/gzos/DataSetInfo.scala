@@ -16,6 +16,8 @@
 
 package com.google.cloud.imf.gzos
 
+import com.google.cloud.imf.util.CloudDataSetUtil._
+
 /**
   *
   * @param dsn Data Set Name (DSNAME)
@@ -41,21 +43,9 @@ case class DataSetInfo(dsn: String = "",
     }
   }
 
-  val gdg: Boolean = {
-    val i = dataSetName.lastIndexOf('.')
-    i > -1 &&
-      dataSetName.length - i == 9 &&
-      dataSetName.charAt(i+1) == 'G' &&
-      dataSetName.charAt(i+6) == 'V'
-  }
+  val gdg: Boolean = isGdg(dataSetName)
 
-  val generation: Option[String] = {
-    if(gdg) {
-      Option(dataSetName.substring(dataSetName.lastIndexOf('.'))).map(s => s.substring(1, 9))
-    } else {
-      None
-    }
-  }
+  val generation: Option[String] = extractGDGVersion(dataSetName)
 
   val pds: Boolean =
     elementName match {

@@ -21,6 +21,7 @@ import java.net.URI
 import com.google.cloud.gszutil.io.CloudRecordReader
 import com.google.cloud.imf.util.{Logging, StatsUtil}
 import com.google.cloud.storage.{Blob, BlobId, Storage}
+import com.google.cloud.imf.util.CloudDataSetUtil._
 
 /**  add these lines to environment file:
   *  export GCSDSNURI=gs://bucket/prefix
@@ -152,19 +153,32 @@ object CloudDataSet extends Logging {
     val bucket = baseUri.getAuthority
     val name = buildObjectName(baseUri, ds)
     val uri = s"gs://$bucket/$name"
-    logger.debug(s"Searching for object with name=$name, in bucket=$bucket")
+    logger.debug(s"Searching for object with name=$name, in bucket=$bucket, gdg=${ds.gdg}")
     // check if DSN exists in GCS
     import scala.jdk.CollectionConverters.IterableHasAsScala
-    val versions: IndexedSeq[Blob] = gcs.list(bucket,
+    implicit val versions: IndexedSeq[Blob] = gcs.list(bucket,
       Storage.BlobListOption.prefix(name),
       Storage.BlobListOption.versions(true))
-      .iterateAll.asScala.toIndexedSeq.sortBy(_.getGeneration)
+      .iterateAll.asScala.toIndexedSeq.sortBy(_.getName)
 
-    if (versions.nonEmpty) {
+    //with Mainframe GDG version in the suffix and with latest GCS generation
+    val relativeVersions = findRelativeGDGVersions(ds, name).toIndexedSeq
+    logger.info(s"""
+                   |GDG versions found for $uri
+                   |GDG = ${ds.gdg},
+                   |base GDG = ${ds.isBaseGDG},
+                   |selected GDG = ${ds.isSelectedGDG},
+                   |generation = ${ds.generation},
+                   |found total versions = ${versions.size},
+                   |found relative versions = ${relativeVersions.size},
+                   |total versions = ${versions.map(b => s"name=${b.getName};generation=${b.getGeneration}").mkString("\n")}
+        """.stripMargin)
+
+    if (relativeVersions.nonEmpty) {
       val sb = new StringBuilder
-      sb.append(s"$uri has ${versions.length} generations\n")
+      sb.append(s"Total relative versions found: ${versions.length} for $uri\n")
       sb.append("generation\tlrecl\tsize\tcreated\n")
-      versions.foreach{b =>
+      relativeVersions.foreach{b =>
         sb.append(b.getGeneration)
         sb.append(" ")
         sb.append(Option(b.getMetadata).getOrElse(LreclMeta,"?"))
@@ -176,7 +190,7 @@ object CloudDataSet extends Logging {
       }
       logger.info(sb.result)
 
-      val lrecls = versions.map(getLrecl)
+      val lrecls = relativeVersions.map(getLrecl)
       if (lrecls.distinct.length > 1){
         val msg = s"lrecl inconsistent across generations for $uri - found " +
           s"lrecls ${lrecls.mkString(",")}"
@@ -187,10 +201,23 @@ object CloudDataSet extends Logging {
       logger.info(s"Located Generational Dataset for DD:$dd " +
         s"DSN=${ds.dsn}\nLRECL=$lrecl\nuri=$uri")
       Option(CloudRecordReader(ds.dsn, lrecl, bucket = bucket, name = name,
-        gdg = true, versions = versions))
+        gdg = true, versions = relativeVersions))
     }
     else None
   }
+
+  def findRelativeGDGVersions(ds: DataSetInfo, objectName: String)(implicit versions: IndexedSeq[Blob]): Iterable[Blob] = {
+    ds.generation match {
+      case Some(v) if(ds.elementName.nonEmpty) => selectedGDG(versions, v)
+      case _ => baseGDG(versions, objectName)
+    }
+  }
+
+  def baseGDG(versions: IndexedSeq[Blob], baseName: String): Iterable[Blob] =
+    versions.groupBy(b => b.getName).collect{case p if p._1 == baseName || isGdg(p._1) => p._2.maxBy(_.getGeneration)}
+
+  def selectedGDG(versions: IndexedSeq[Blob], version: String): Iterable[Blob] =
+    versions.sortBy(_.getGeneration).find(b => version == extractGDGVersion(b.getName).orNull).toSeq
 
   /** Checks GCS for dataset and creates a Record Reader if found
     *
