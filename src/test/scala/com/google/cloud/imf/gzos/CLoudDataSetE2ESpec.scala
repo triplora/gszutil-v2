@@ -94,6 +94,21 @@ class CLoudDataSetE2ESpec extends AnyFlatSpec with BeforeAndAfter {
     assert(result.left.get.isInstanceOf[RuntimeException])
   }
 
+  /*
+      Base GDG
+      - DSN from job:               N01.R6.US.MDS.TD345.POS.SANARY
+      - DSN after resoling in code: N01.R6.US.MDS.TD345.POS.SANARY.G0001V00
+      - search in GCS by name:      N01.R6.US.MDS.TD345.POS.SANARY
+      - expected names in GCS:      N01.R6.US.MDS.TD345.POS.SANARY.G0001V00
+                                    N01.R6.US.MDS.TD345.POS.SANARY.G0002V00
+                                    N01.R6.US.MDS.TD345.POS.SANARY.G0003V00
+                                    N01.R6.US.MDS.TD345.POS.SANARY
+      - expected output:            N01.R6.US.MDS.TD345.POS.SANARY.G0001V00
+                                    N01.R6.US.MDS.TD345.POS.SANARY.G0002V00
+                                    N01.R6.US.MDS.TD345.POS.SANARY.G0003V00
+                                    N01.R6.US.MDS.TD345.POS.SANARY
+
+   */
   it should "GDG bucket: return cloudReader for object from gdg bucket when version isn't specified (base gdg)" in {
     val dataSetInfo = DataSetInfo(gdgBaseDsn)
 
@@ -107,6 +122,17 @@ class CLoudDataSetE2ESpec extends AnyFlatSpec with BeforeAndAfter {
     assert(result.get.bucket == gdgBucketUri.getAuthority)
   }
 
+  /*
+    Individual GDG
+      - DSN from job:               N01.R6.US.MDS.TD345.POS.SANARY(3)
+      - DSN after resoling in code: N01.R6.US.MDS.TD345.POS.SANARY.G0003V00(3)
+      - search in GCS by name:      N01.R6.US.MDS.TD345.POS.SANARY
+      - expected names in GCS:      N01.R6.US.MDS.TD345.POS.SANARY metadata: G0001V00
+                                    N01.R6.US.MDS.TD345.POS.SANARY metadata: G0002V00
+                                    N01.R6.US.MDS.TD345.POS.SANARY metadata: G0003V00
+                                    N01.R6.US.MDS.TD345.POS.SANARY metadata: G0004V00
+      - expected output:            N01.R6.US.MDS.TD345.POS.SANARY metadata: G0003V00
+  */
   it should "GDG bucket: return cloudReader for object from gdg bucket when version specified (selected gdg)" in {
     val dataSetInfo = DataSetInfo(gdgDsn1)
 

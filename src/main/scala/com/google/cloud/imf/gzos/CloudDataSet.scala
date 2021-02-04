@@ -100,16 +100,16 @@ object CloudDataSet extends Logging {
     }
   }
 
-  def buildObjectName(baseUri: URI, ds: DataSetInfo): String =
+  def buildObjectName(baseUri: URI, ds: DataSetInfo): (String, String) =
     buildObjectName(baseUri, ds.objectName)
 
-  def buildObjectName(base: URI, name: String): String = {
+  def buildObjectName(base: URI, name: String): (String, String) = {
     val prefix: String = {
       val pre1 = base.getPath.stripPrefix("/").stripSuffix("/")
       if (pre1.nonEmpty) pre1 + "/"
       else ""
     }
-    prefix + name
+    (prefix, name)
   }
 
   // prefix      gs://bucket/prefix
@@ -119,19 +119,20 @@ object CloudDataSet extends Logging {
                      ds: DataSetInfo,
                      baseUri: URI): Option[CloudRecordReader] = {
     val bucket = baseUri.getAuthority
-    val name = buildObjectName(baseUri, ds)
-    logger.info(s"Searching for object with name=$name, with objectName=${ds.objectName} in bucket=$bucket")
+    val (prefix, name) = buildObjectName(baseUri, ds)
+    val fullName = prefix + name
+    logger.info(s"Searching for object with name=$fullName in bucket=$bucket")
     // check if DSN exists in GCS
-    val blob: Blob = gcs.get(BlobId.of(bucket, name))
+    val blob: Blob = gcs.get(BlobId.of(bucket, fullName))
     if (blob != null) {
       val uri = toUri(blob)
       val lrecl: Int = getLrecl(blob)
       logger.info(s"Located Dataset for DD:$dd\n"+
         s"DSN=${ds.dsn}\nLRECL=$lrecl\nuri=$uri")
-      Option(CloudRecordReader(ds.dsn, lrecl, bucket = bucket, name = name))
+      Option(CloudRecordReader(ds.dsn, lrecl, bucket = bucket, prefix = prefix, name = name))
     }
     else {
-      logger.info(s"GCS object doesn't exist:\ngs://$bucket/$name")
+      logger.info(s"GCS object doesn't exist:\ngs://$bucket/$fullName")
       None
     }
   }
@@ -151,13 +152,14 @@ object CloudDataSet extends Logging {
                      ds: DataSetInfo,
                      baseUri: URI): Option[CloudRecordReader] = {
     val bucket = baseUri.getAuthority
-    val name = buildObjectName(baseUri, ds)
-    val uri = s"gs://$bucket/$name"
-    logger.debug(s"Searching for object with name=$name, in bucket=$bucket, gdg=${ds.gdg}")
+    val (prefix, name) = buildObjectName(baseUri, ds)
+    val fullName = prefix + name
+    val uri = s"gs://$bucket/$fullName"
+    logger.debug(s"Searching for object with name=$fullName, in bucket=$bucket, gdg=${ds.gdg}")
     // check if DSN exists in GCS
     import scala.jdk.CollectionConverters.IterableHasAsScala
     implicit val versions: IndexedSeq[Blob] = gcs.list(bucket,
-      Storage.BlobListOption.prefix(name),
+      Storage.BlobListOption.prefix(fullName),
       Storage.BlobListOption.versions(true))
       .iterateAll.asScala.toIndexedSeq.sortBy(_.getName)
 
@@ -200,7 +202,7 @@ object CloudDataSet extends Logging {
       val lrecl = lrecls.head
       logger.info(s"Located Generational Dataset for DD:$dd " +
         s"DSN=${ds.dsn}\nLRECL=$lrecl\nuri=$uri")
-      Option(CloudRecordReader(ds.dsn, lrecl, bucket = bucket, name = name,
+      Option(CloudRecordReader(ds.dsn, lrecl, bucket = bucket, prefix = prefix, name = name,
         gdg = true, versions = relativeVersions))
     }
     else None

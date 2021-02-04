@@ -154,39 +154,58 @@ object GRecvClient extends Uploader with Logging {
               in: CloudRecordReader,
               cb: OkHttpChannelBuilder,
               creds: OAuth2Credentials): Result = {
-    var rowCount: Long = 0
-    var errCount: Long = 0
-    val ch = cb.build()
-    try {
-      val stub = GRecvGrpc.newBlockingStub(ch)
-        .withDeadlineAfter(90, TimeUnit.MINUTES)
-      val req = request.toBuilder.setSrcUri(in.uri).build()
-      logger.info(
-        s"""Sending GRecvRequest request
-           |in:${req.getSrcUri}
-           |out:${req.getBasepath}""".stripMargin)
-      val res = stub.write(req)
-      if (res.getRowCount > 0)
-        rowCount += res.getRowCount
-      if (res.getErrCount > 0)
-        errCount += res.getErrCount
-      if (res.getStatus != GRecvProtocol.OK)
-        Result.Failure("non-success status code")
-      else {
-        val resStr = JsonFormat.printer()
-          .includingDefaultValueFields()
-          .omittingInsignificantWhitespace()
-          .print(res)
-        logger.info(s"Request complete. DSN=${in.dsn} rowCount=${res.getRowCount} " +
-          s"errorCount=${res.getErrCount} $resStr")
-        Result(activityCount = rowCount, message = s"Completed with " +
-          s"$errCount errors")
+
+    def gcsSendImpl: String => Result = (uri: String) => {
+      var rowCount: Long = 0
+      var errCount: Long = 0
+      val ch = cb.build()
+      try {
+        val stub = GRecvGrpc.newBlockingStub(ch)
+          .withDeadlineAfter(90, TimeUnit.MINUTES)
+        val req = request.toBuilder.setSrcUri(uri).build()
+        logger.info(
+          s"""Sending GRecvRequest request
+             |in:${req.getSrcUri}
+             |out:${req.getBasepath}""".stripMargin)
+        val res = stub.write(req)
+        if (res.getRowCount > 0)
+          rowCount += res.getRowCount
+        if (res.getErrCount > 0)
+          errCount += res.getErrCount
+        if (res.getStatus != GRecvProtocol.OK)
+          Result.Failure("non-success status code")
+        else {
+          val resStr = JsonFormat.printer()
+            .includingDefaultValueFields()
+            .omittingInsignificantWhitespace()
+            .print(res)
+          logger.info(s"Request complete. DSN=${in.dsn}, uri=$uri rowCount=${res.getRowCount} " +
+            s"errorCount=${res.getErrCount} $resStr")
+          Result(activityCount = rowCount, message = s"Completed with " +
+            s"$errCount errors")
+        }
+      } catch {
+        case t: Throwable =>
+          Result.Failure(s"GRecv failure: ${t.getMessage}")
+      } finally {
+        ch.shutdownNow()
       }
-    } catch {
-      case t: Throwable =>
-        Result.Failure(s"GRecv failure: ${t.getMessage}")
-    } finally {
-      ch.shutdownNow()
+    }
+
+    if(in.gdg) {
+      logger.debug(s"Sending GRecvRequest request for GDG ${in.versions.size} versions")
+      val results = in.versions.map {v =>
+        val uri = in.gdgUri(v.getName, v.getGeneration)
+        val result = gcsSendImpl(uri)
+        logger.info(s"GRecvRequest for $uri completed with exit code ${result.exitCode}")
+        result
+      }
+      results.find(r => r.exitCode != 0) match {
+        case Some(failed) => failed
+        case None => results.head
+      }
+    } else {
+      gcsSendImpl(in.uri)
     }
   }
 }

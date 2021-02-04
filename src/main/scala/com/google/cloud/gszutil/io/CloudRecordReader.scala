@@ -33,6 +33,7 @@ import com.google.cloud.storage.Blob
 case class CloudRecordReader(dsn: String,
                              override val lRecl: Int,
                              bucket: String = "",
+                             prefix: String = "",
                              name: String = "",
                              gdg: Boolean = false,
                              versions: IndexedSeq[Blob] = IndexedSeq.empty,
@@ -44,6 +45,7 @@ case class CloudRecordReader(dsn: String,
   override def isOpen: Boolean = false
   override def getDsn: String = dsn
   override def count(): Long = 0
-  val uri: String = s"gs://$bucket/$name"
+  val uri: String = s"gs://$bucket/$prefix$name"
+  val gdgUri = (objectName: String, generation: Long) => s"gs://$bucket/$prefix$objectName#$generation"
   override val blkSize: Int = lRecl
 }
