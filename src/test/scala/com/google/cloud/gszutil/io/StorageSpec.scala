@@ -16,10 +16,8 @@
 
 package com.google.cloud.gszutil.io
 
-import java.io.{BufferedInputStream, InputStream}
-import java.nio.channels.Channels
+import java.io.InputStream
 import java.nio.charset.StandardCharsets
-import java.util.zip.GZIPInputStream
 
 import com.google.cloud.bqsh.cmd.Scp
 import com.google.cloud.imf.grecv.server.GRecvServerListener
@@ -30,8 +28,10 @@ import org.scalatest.flatspec.AnyFlatSpec
 import scala.util.Random
 
 class StorageSpec extends AnyFlatSpec {
+
   "gcs" should "serve gzip" in {
     val gcs = Services.storage()
+    val lowLevelApi = Services.storageApi(Services.storageCredentials())
     val bucket = sys.env("BUCKET")
     val name = "test1.gz"
     val obj = Scp.openGcsUri(gcs, s"gs://$bucket/$name", 8, compress = true)
@@ -41,7 +41,7 @@ class StorageSpec extends AnyFlatSpec {
     obj.close()
 
     val blob = gcs.get(BlobId.of(bucket,name))
-    val is: InputStream = GRecvServerListener.open(gcs, blob)
+    val is: InputStream = GRecvServerListener.open(gcs, lowLevelApi, blob)
     val bytes1 = new Array[Byte](bytes.length)
     val n = is.read(bytes1)
     assert(n == bytes1.length)

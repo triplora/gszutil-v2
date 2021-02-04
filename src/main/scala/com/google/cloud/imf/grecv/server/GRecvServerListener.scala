@@ -6,6 +6,7 @@ import java.nio.ByteBuffer
 import java.nio.channels.Channels
 import java.util.zip.GZIPInputStream
 
+import com.google.api.services.storage.{Storage => LowLevelStorageApi}
 import com.google.cloud.gszutil.RecordSchema
 import com.google.cloud.gszutil.io.WriterCore
 import com.google.cloud.imf.grecv.GRecvProtocol
@@ -22,6 +23,7 @@ import org.apache.hadoop.fs.Path
 object GRecvServerListener extends Logging {
   def write(req: GRecvRequest,
             gcs: Storage,
+            lowLevelStorageApi: LowLevelStorageApi,
             id: String,
             responseObserver: StreamObserver[GRecvResponse],
             compress: Boolean): Unit = {
@@ -86,7 +88,7 @@ object GRecvServerListener extends Logging {
         // write an empty ORC file which can be registered as an external table
         new ByteArrayInputStream(Array.emptyByteArray)
       } else {
-        if (blob != null) open(gcs, blob, compress)
+        if (blob != null) open(gcs, lowLevelStorageApi, blob, compress)
         else {
           val msg = s"${req.getSrcUri} not found"
           logger.error(msg)
@@ -153,12 +155,18 @@ object GRecvServerListener extends Logging {
   }
 
   def open(gcs: Storage,
+           lowLevelStorageApi: LowLevelStorageApi,
            blob: Blob,
            isGzip: Boolean = true,
            bufSz: Int = 2 * 1024 * 1024): InputStream = {
-    val is0: InputStream = Channels.newInputStream(gcs.reader(blob.getBlobId))
+    val contentEncoding = Option(blob.getContentEncoding).map(_.toLowerCase)
+    logger.info(s"Requesting input stream, contentEncoding=${contentEncoding.getOrElse("")} blobId=${blob.getBlobId} blobSIze=${blob.getSize}")
+    val is0: InputStream = contentEncoding match {
+      case Some("gzip") => lowLevelStorageApi.objects().get(blob.getBlobId.getBucket, blob.getBlobId.getName).executeMediaAsInputStream()
+      case _ => Channels.newInputStream(gcs.reader(blob.getBlobId))
+    }
     val is1: InputStream =
-      if (isGzip && !"gzip".equalsIgnoreCase(blob.getContentEncoding))
+      if (isGzip && !contentEncoding.exists(_.equals("gzip")))
         new GZIPInputStream(is0, 32 * 1024)
       else
         is0

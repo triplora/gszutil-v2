@@ -4,9 +4,8 @@ import java.nio.charset.StandardCharsets
 
 import com.google.cloud.bqsh.GsUtilConfig
 import com.google.cloud.bqsh.cmd.Cp
-import com.google.cloud.gszutil.Decoding.{CopyBookField, CopyBookLine, CopyBookTitle}
 import com.google.cloud.gszutil.io.ZDataSet
-import com.google.cloud.gszutil.{CopyBook, Decoder, Decoding, RecordSchema, SchemaProvider, TestUtil}
+import com.google.cloud.gszutil.{SchemaProvider, TestUtil}
 import com.google.cloud.gszutil.{CopyBook, RecordSchema}
 import com.google.cloud.imf.grecv.client.GRecvClient
 import com.google.cloud.imf.grecv.server.GRecvServer
@@ -28,7 +27,7 @@ class CpSpec2 extends AnyFlatSpec with BeforeAndAfterAll {
   val TestProject = sys.env("PROJECT")
 
   def server(cfg: GRecvConfig): Future[GRecvServer] = Future{
-    val s = new GRecvServer(cfg, Services.storage())
+    val s = new GRecvServer(cfg, Services.storage(), Services.storageApi(Services.storageCredentials()))
     s.start(block = false)
     s
   }
