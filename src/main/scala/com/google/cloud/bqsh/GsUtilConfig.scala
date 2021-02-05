@@ -80,7 +80,8 @@ case class GsUtilConfig(source: String = "INFILE",
                         maxErrorPct: Double = 0,
                         blocksPerBatch: Int = 128,
                         parallelism: Int = 4,
-                        timeOutMinutes: Int = -1,
+                        timeOutMinutes: Option[Int] = None,
+                        keepAliveTimeInSeconds: Option[Int] = None,
 
                         // Global
                         projectId: String = "",

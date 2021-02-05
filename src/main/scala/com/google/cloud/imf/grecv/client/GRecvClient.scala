@@ -38,7 +38,7 @@ object GRecvClient extends Uploader with Logging {
         .setPrincipal(zos.getPrincipal())
         .setTimestamp(System.currentTimeMillis())
 
-      receiver.upload(req.build, cfg.remoteHost, cfg.remotePort, cfg.nConnections, zos, in)
+      receiver.upload(req.build, cfg.remoteHost, cfg.remotePort, cfg.nConnections, zos, in, cfg.timeOutMinutes, cfg.keepAliveTimeInSeconds)
     } catch {
       case e: Throwable =>
         logger.error("Dataset Upload Failed", e)
@@ -51,11 +51,14 @@ object GRecvClient extends Uploader with Logging {
                       port: Int,
                       nConnections: Int,
                       zos: MVS,
-                      in: ZRecordReaderT): Result = {
+                      in: ZRecordReaderT,
+                      timeOutMinutes: Option[Int],
+                      keepAliveTimeInSeconds: Option[Int]): Result = {
+    logger.debug(s"Timeouts used for upload: keepAliveTimeInSeconds=$keepAliveTimeInSeconds, timeOutMinutes=$timeOutMinutes")
     val cb = OkHttpChannelBuilder.forAddress(host, port)
       .compressorRegistry(GzipCodec.compressorRegistry)
       .usePlaintext() // TLS is provided by AT-TLS
-      .keepAliveTime(240, TimeUnit.SECONDS)
+      .keepAliveTime(keepAliveTimeInSeconds.getOrElse(480).toLong, TimeUnit.SECONDS)
       .keepAliveWithoutCalls(true)
 
     val creds: GoogleCredentials = zos.getCredentialProvider().getCredentials
@@ -65,9 +68,9 @@ object GRecvClient extends Uploader with Logging {
     Try{
       in match {
         case x: CloudRecordReader =>
-          gcsSend(req, x, cb, creds)
+          gcsSend(req, x, cb, creds, timeOutMinutes)
         case _ =>
-          send(req, in, nConnections, cb, creds)
+          send(req, in, nConnections, cb, creds, timeOutMinutes)
       }
     } match {
       case Failure(e) =>
@@ -83,7 +86,8 @@ object GRecvClient extends Uploader with Logging {
            in: ZRecordReaderT,
            connections: Int = 1,
            cb: OkHttpChannelBuilder,
-           creds: OAuth2Credentials): Result = {
+           creds: OAuth2Credentials,
+           timeOutMinutes: Option[Int]): Result = {
     logger.debug(s"Sending ${in.getDsn}")
 
     val blksz = in.lRecl * 1024
@@ -118,7 +122,7 @@ object GRecvClient extends Uploader with Logging {
       logger.info(s"Read $bytesRead bytes from ${in.getDsn} - requesting empty file be written")
       val ch = cb.build()
       try {
-        val stub = GRecvGrpc.newBlockingStub(ch).withDeadlineAfter(3000, TimeUnit.SECONDS)
+        val stub = GRecvGrpc.newBlockingStub(ch).withDeadlineAfter(timeOutMinutes.getOrElse(50).toLong, TimeUnit.MINUTES)
         val res = stub.write(request.toBuilder.setNoData(true).build())
         if (res.getStatus != GRecvProtocol.OK)
           Result.Failure("non-success status code")
@@ -148,18 +152,20 @@ object GRecvClient extends Uploader with Logging {
     * @param in CloudRecordReader with reference to DSN
     * @param cb OkHttpChannelBuilder used to create a gRPC client
     * @param creds OAuth2Credentials used to generate OAuth2 AccessToken
+   *  @param timeOutMinutes timeout in minutes for GRecvGrpc call
     * @return
     */
   def gcsSend(request: GRecvRequest,
               in: CloudRecordReader,
               cb: OkHttpChannelBuilder,
-              creds: OAuth2Credentials): Result = {
+              creds: OAuth2Credentials,
+              timeOutMinutes: Option[Int]): Result = {
     var rowCount: Long = 0
     var errCount: Long = 0
     val ch = cb.build()
     try {
       val stub = GRecvGrpc.newBlockingStub(ch)
-        .withDeadlineAfter(90, TimeUnit.MINUTES)
+        .withDeadlineAfter(timeOutMinutes.getOrElse(90).toLong, TimeUnit.MINUTES)
       val req = request.toBuilder.setSrcUri(in.uri).build()
       logger.info(
         s"""Sending GRecvRequest request

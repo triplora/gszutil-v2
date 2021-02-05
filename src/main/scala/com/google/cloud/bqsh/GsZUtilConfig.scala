@@ -22,4 +22,6 @@ case class GsZUtilConfig(
                           cobDsn: String = "",
                           transformDsn: String = "",
                           remoteHost: String = "",
-                          remotePort: Int = 51770)
+                          remotePort: Int = 51770,
+                          timeOutMinutes: Option[Int] = None,
+                          keepAliveTimeInSeconds: Option[Int] = None)

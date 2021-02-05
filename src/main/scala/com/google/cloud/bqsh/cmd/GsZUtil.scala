@@ -38,7 +38,9 @@ object GsZUtil extends Command[GsZUtilConfig] with Logging {
          |--cobDsn=${c.cobDsn},
          |--transformDsn=${c.transformDsn},
          |--remoteHost=${c.remoteHost},
-         |--remotePort=${c.remotePort}
+         |--remotePort=${c.remotePort},
+         |--timeOutMinutes=${c.timeOutMinutes},
+         |--keepAliveTimeInSeconds=${c.keepAliveTimeInSeconds}
          |""".stripMargin)
     val sp: SchemaProvider =
       if (c.cobDsn.nonEmpty) {
@@ -59,7 +61,9 @@ object GsZUtil extends Command[GsZUtilConfig] with Logging {
       replace = true,
       remoteHost = c.remoteHost,
       remotePort = c.remotePort,
-      gcsUri = c.gcsOutUri
+      gcsUri = c.gcsOutUri,
+      timeOutMinutes = c.timeOutMinutes,
+      keepAliveTimeInSeconds = c.keepAliveTimeInSeconds
     )
 
     val dsInfo: DataSetInfo = {

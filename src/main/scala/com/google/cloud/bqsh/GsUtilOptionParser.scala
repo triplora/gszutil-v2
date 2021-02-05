@@ -61,8 +61,13 @@ object GsUtilOptionParser extends OptionParser[GsUtilConfig]("gsutil") with ArgP
 
       opt[Int]("timeOutMinutes")
         .optional()
-        .action{(x,c) => c.copy(timeOutMinutes = x)}
-        .text("(optional) Timeout in minutes. (default: 1 day)"),
+        .action{(x,c) => c.copy(timeOutMinutes = Option(x))}
+        .text("(optional) Timeout in minutes for GRecvGrpc call. (default for GCS: 90 minutes, for Mainframe: 50 minutes)"),
+
+      opt[Int]("keepAliveTimeInSeconds")
+        .optional()
+        .action{(x,c) => c.copy(keepAliveTimeInSeconds = Option(x))}
+        .text("(optional) keep alive timeout in seconds for http channel. (default: 480 seconds)"),
 
       opt[Unit]("remote")
         .optional()
