@@ -26,7 +26,6 @@ final class OrcContext(private val gcs: Storage, schema: TypeDescription,
   private val fs = new SimpleGCSFileSystem(gcs,
     new FileSystem.Statistics(SimpleGCSFileSystem.Scheme))
   val writerOptions: WriterOptions = OrcConfig.buildWriterOptions(schema, fs)
-  newWriter() // Initialize Writer and Path
 
   private var partId: Long = -1
   private var bytesSinceLastFlush: Long = 0
@@ -37,6 +36,7 @@ final class OrcContext(private val gcs: Storage, schema: TypeDescription,
   private var errors: Long = 0 // errors across all partitions
   private var writer: Writer = _
   private var currentPath: Path = _
+  newWriter() // Initialize Writer and Path
 
   def errPct: Double = errors.doubleValue / rowsWritten
 
