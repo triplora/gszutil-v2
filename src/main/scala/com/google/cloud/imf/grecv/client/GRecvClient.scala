@@ -195,7 +195,7 @@ object GRecvClient extends Uploader with Logging {
     if(in.gdg) {
       logger.debug(s"Sending GRecvRequest request for GDG ${in.versions.size} versions")
       val results = in.versions.map {v =>
-        val uri = in.gdgUri(v.getName, v.getGeneration)
+        val uri = in.gdgUri(v.getName)
         val result = gcsSendImpl(uri)
         logger.info(s"GRecvRequest for $uri completed with exit code ${result.exitCode}")
         result

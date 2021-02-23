@@ -16,7 +16,7 @@ class DataSetInfoSpec extends AnyFlatSpec {
     "N1.R6.MDS(0)" -> ExpectedDataSetInfo("0", false, false, "N1.R6.MDS(0)", None),
     "N1.R6.MDS(TD11)" -> ExpectedDataSetInfo("TD11", true, false, "N1.R6.MDS/TD11", None),
     "N1.R6.MDS.G1234V56" -> ExpectedDataSetInfo("", false, true, "N1.R6.MDS", Some("G1234V56")),
-    "N01.R6.US.MDS.TD345.POS.SENARY.G0001V00(-3)" -> ExpectedDataSetInfo("-3", false, true, "N01.R6.US.MDS.TD345.POS.SENARY", Some("G0001V00")),
+    "N01.R6.US.MDS.TD345.POS.SENARY.G0001V00(-3)" -> ExpectedDataSetInfo("-3", false, true, "N01.R6.US.MDS.TD345.POS.SENARY.G0001V00", Some("G0001V00")),
     "N01.R6.US.MDS.TD345.POS.SENARY.G0001V00" -> ExpectedDataSetInfo("", false, true, "N01.R6.US.MDS.TD345.POS.SENARY", Some("G0001V00")),
   )
 
