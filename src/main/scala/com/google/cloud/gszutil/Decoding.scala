@@ -90,6 +90,13 @@ object Decoding extends Logging {
           .setValue(ByteString.copyFrom(nullIf)).build)
       b
     }
+
+    override def equals(obj: Any): Boolean =
+      obj match {
+        case dec: NullableStringDecoder =>
+          dec.nullIf == nullIf && dec.filler == filler && dec.size == size
+        case _ => false
+      }
   }
 
   class StringDecoder(transcoder: Transcoder,
@@ -436,6 +443,12 @@ object Decoding extends Logging {
         .setSize(size)
         .setFiller(filler)
         .setTyp(Field.FieldType.INTEGER)
+
+    override def equals(obj: Any): Boolean =
+      obj match {
+        case d: LongDecoder => d.size == d.size && d.filler == filler
+        case _ => false
+      }
   }
 
   case class UnsignedLongDecoder(override val size: Int,
@@ -530,6 +543,12 @@ object Decoding extends Logging {
         .setSize(size)
         .setFiller(filler)
         .setTyp(Field.FieldType.BYTES)
+
+    override def equals(obj: Any): Boolean =
+      obj match {
+        case d: BytesDecoder => d.size == size && d.filler == filler
+        case _ => false
+      }
   }
 
   def getDecoder(f: Field, transcoder: Transcoder): Decoder = {
@@ -620,6 +639,8 @@ object Decoding extends Logging {
         new NullableStringDecoder(transcoder, size, filler = filler, nullIf = nullIfBytes)
       case "PIC X" =>
         new NullableStringDecoder(transcoder, 1, filler = filler, nullIf = Array.emptyByteArray)
+      case bytesRegex(s) =>
+        new BytesDecoder(s.toInt, filler)
       case numStrRegex(size) =>
         new StringDecoder(transcoder, size.toInt, filler = filler)
       case decRegex(p) if p.toInt >= 1 =>

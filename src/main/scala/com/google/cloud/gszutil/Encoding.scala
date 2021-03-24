@@ -35,6 +35,8 @@ object Encoding extends Logging {
         StringToBinaryEncoder(transcoder, decoderSize)
       case "PIC X" | numStrRegex(_) =>
         StringToBinaryEncoder(transcoder, decoderSize)
+      case bytesRegex(s) =>
+        BytesToBinaryEncoder(s.toInt)
       case decRegex(p) if p.toInt >= 1 && cbf.decoder.isInstanceOf[Decimal64Decoder] =>
         val dec = cbf.decoder.asInstanceOf[Decimal64Decoder]
         DecimalToBinaryEncoder(dec.p, dec.s)

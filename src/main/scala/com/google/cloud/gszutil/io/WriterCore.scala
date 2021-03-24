@@ -14,6 +14,9 @@ class WriterCore(schemaProvider: SchemaProvider,
                  name: String) extends Logging {
   require(schemaProvider.LRECL > 0, "LRECL must be a positive number")
   require(schemaProvider.fieldNames.nonEmpty, "schema must not be empty")
+  if(schemaProvider.LRECL < lrecl) {
+    logger.warn(s"Schema LRECL ${schemaProvider.LRECL} less then input lrecl $lrecl)")
+  }
   val orc = new OrcContext(gcs, schemaProvider.ORCSchema, basePath, name)
   val BatchSize = 1024
   private val reader = new ZReader(schemaProvider, BatchSize, lrecl)

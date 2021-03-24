@@ -16,8 +16,8 @@
 
 package com.google.cloud.bqsh
 
-import com.google.cloud.gszutil.Decoding.{CopyBookField, Decimal64Decoder, LongDecoder, StringDecoder, UnsignedLongDecoder}
-import com.google.cloud.gszutil.Encoding.{DateStringToBinaryEncoder, DecimalToBinaryEncoder, LongToBinaryEncoder, StringToBinaryEncoder}
+import com.google.cloud.gszutil.Decoding.{BytesDecoder, CopyBookField, Decimal64Decoder, LongDecoder, NullableStringDecoder, StringDecoder, UnsignedLongDecoder}
+import com.google.cloud.gszutil.Encoding.{BytesToBinaryEncoder, DateStringToBinaryEncoder, DecimalToBinaryEncoder, LongToBinaryEncoder, StringToBinaryEncoder}
 import com.google.cloud.gszutil.{CopyBook, Decoding, Encoding, Utf8}
 import com.google.cloud.imf.gzos.{Ebcdic, Util}
 import com.google.cloud.imf.util.{CloudLogging, Logging}
@@ -40,13 +40,13 @@ class CopyBookSpec extends AnyFlatSpec with Logging {
     "PIC 9(9) COMP." -> (UnsignedLongDecoder(4), LongToBinaryEncoder(4)),
     "PIC 9(10) COMP." -> (UnsignedLongDecoder(8), LongToBinaryEncoder(8)),
     "PIC 9(18) COMP." -> (UnsignedLongDecoder(8), LongToBinaryEncoder(8)),
-    "PIC X." -> (new StringDecoder(transcoder, 1), StringToBinaryEncoder(transcoder, 1)),
-    "PIC X(8)." -> (new StringDecoder(transcoder, 8), StringToBinaryEncoder(transcoder, 8)),
-    "PIC X(16)." -> (new StringDecoder(transcoder, 16), StringToBinaryEncoder(transcoder, 16)),
-    "PIC X(30)." -> (new StringDecoder(transcoder, 30), StringToBinaryEncoder(transcoder, 30)),
-    "PIC X(20)." -> (new StringDecoder(transcoder, 20), StringToBinaryEncoder(transcoder, 20)),
-    "PIC X(2)." -> (new StringDecoder(transcoder, 2), StringToBinaryEncoder(transcoder, 2)),
-    "PIC X(10)." -> (new StringDecoder(transcoder, 10), StringToBinaryEncoder(transcoder, 10)),
+    "PIC X." -> (new NullableStringDecoder(transcoder, 1, Array.emptyByteArray), StringToBinaryEncoder(transcoder, 1)),
+    "PIC X(8)." -> (new NullableStringDecoder(transcoder, 8, Array.emptyByteArray), StringToBinaryEncoder(transcoder, 8)),
+    "PIC X(16)." -> (new NullableStringDecoder(transcoder, 16, Array.emptyByteArray), StringToBinaryEncoder(transcoder, 16)),
+    "PIC X(30)." -> (new NullableStringDecoder(transcoder, 30, Array.emptyByteArray), StringToBinaryEncoder(transcoder, 30)),
+    "PIC X(20)." -> (new NullableStringDecoder(transcoder, 20, Array.emptyByteArray), StringToBinaryEncoder(transcoder, 20)),
+    "PIC X(2)." -> (new NullableStringDecoder(transcoder, 2, Array.emptyByteArray), StringToBinaryEncoder(transcoder, 2)),
+    "PIC X(10)." -> (new NullableStringDecoder(transcoder, 10, Array.emptyByteArray), StringToBinaryEncoder(transcoder, 10)),
     "PIC S9(9)V9(2) COMP-3." -> (Decimal64Decoder(9,2), DecimalToBinaryEncoder(9,2)),
     "PIC S9(9)V9(3) COMP-3." -> (Decimal64Decoder(9,3), DecimalToBinaryEncoder(9,3)),
     "PIC S9(13) COMP-3." -> (Decimal64Decoder(13,0), DecimalToBinaryEncoder(13,0)),
@@ -59,7 +59,8 @@ class CopyBookSpec extends AnyFlatSpec with Logging {
     "PIC S9(13)V99 COMP-3." -> (Decimal64Decoder(13,2), DecimalToBinaryEncoder(13,2)),
     "PIC S9(7)V99 COMP-3." -> (Decimal64Decoder(7,2), DecimalToBinaryEncoder(7,2)),
     "PIC S9(7)V999 COMP-3." -> (Decimal64Decoder(7,3), DecimalToBinaryEncoder(7,3)),
-    "PIC S9(16)V9(2) COMP-3." -> (Decimal64Decoder(16,2), DecimalToBinaryEncoder(16,2))
+    "PIC S9(16)V9(2) COMP-3." -> (Decimal64Decoder(16,2), DecimalToBinaryEncoder(16,2)),
+    "PIC X(4064)" -> (new BytesDecoder(4064), BytesToBinaryEncoder(4064))
   )
 
   "CopyBook" should "parse" in {

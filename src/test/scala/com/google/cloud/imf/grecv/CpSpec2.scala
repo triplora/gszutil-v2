@@ -83,6 +83,7 @@ class CpSpec2 extends AnyFlatSpec with BeforeAndAfterAll {
         |        03  COL-K                    PIC S9(16)V9(2) COMP-3.
         |        03  COL-L                    PIC S9(16)V9(2) COMP-3.
         |        03  COL-M                    PIC S9(16)V9(2) COMP-3.
+        |        03  COL-N                    PIC X(4064)
         |""".stripMargin)
 
     val record = copyBook.toRecordBuilder.build
@@ -95,7 +96,7 @@ class CpSpec2 extends AnyFlatSpec with BeforeAndAfterAll {
       .setBasepath(s"gs://$TestBucket/prefix")
       .build
 
-    val sendResult = GRecvClient.upload(request, serverCfg.host, serverCfg.port, 1, Util.zProvider, in)
+    val sendResult = GRecvClient.upload(request, serverCfg.host, serverCfg.port, 1, Util.zProvider, in, None, None)
     assert(sendResult.exitCode == 0)
   }
 
