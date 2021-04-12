@@ -9,9 +9,9 @@ The utility is deployed as a cataloged procedure called by the [JCL EXEC stateme
 
 ## Usage
 
-Users can make multiple calls in a single step by entering commands on separate lines or delimited by semicolon (`;`).
+Users can make multiple calls in a single step by entering commands on separate lines or delimited by a semicolon (`;`).
 
-Typically a JES job will contain multiple steps, each step executing the `BQSH` procedure with one or more `gsutil` or `bq` commands.
+Typically, a JES job will contain multiple steps, each step executing the `BQSH` procedure with one or more `gsutil` or `bq` commands.
 
 
 ### Simple file copy
@@ -283,6 +283,29 @@ Usage: rm [options] tablespec
   --sync <value>           If set to true, wait for the command to complete before returning, and use the job completion status as the error code. If set to false, the job is created, and successful completion status is used for the error code. The default value is true.
 ```
 
+## Environment variables
+
+|Name|Default|Description|
+|---|:---:|---|
+|KEYFILE, GKEYFILE, GOOGLE_APPLICATION_CREDENTIALS | no|Path to json keyfile that provides authentication credentials to your application code.
+|BQSH_ROOT_LOGGER| INFO| Logg level of logger|
+|LOG_PROJECT|no|Cloud logging google project id|
+|LOG_ID|no|Cloud logging log id|
+|BQ_CONNECT_TIMEOUT_MILLIS|30000| BigQuery API client timeout (msec) in making the initial connection, occurs only upon starting the TCP connection, this usually happens if the remote machine does not answer
+|BQ_READ_TIMEOUT_MILLIS|30000|BigQuery API client timeout (msec) on waiting to read data. If the server (or network) fails to deliver any data timeout seconds after the client makes a socket read call, a read timeout error will be raised.
+|BQ_MAX_ATTEMPTS_COUNT|5|BigQuery API client max request attemts before fail. Controls retry logic.
+|STORAGE_CONNECT_TIMEOUT_MILLIS|20000|Google Storage API client timeout (msec) in making the initial connection, occurs only upon starting the TCP connection, this usually happens if the remote machine does not answer
+|STORAGE_READ_TIMEOUT_MILLIS|20000|Google Storage API client timeout (msec) on waiting to read data. If the server (or network) fails to deliver any data timeout seconds after the client makes a socket read call, a read timeout error will be raised.
+|STORAGE_MAX_ATTEMPTS_COUNT|3|Google Storage API client max request attemts before fail. Controls retry logic.
+|GCSDSNURI|no|Default destination Google Cloud Storage Bucket for scp(Simple file copy) command. (Format: gs://bucket/prefix)
+|GCSGDGURI|no|Default destination Google Cloud Storage Bucket for scp(Simple file copy) command when source is versioned dataset (GDG - Generation Data Groups) (Example: gs://bucket-with-versioning/prefix)
+|SRVHOSTNAME|no|BMLU GRPC server DNS hostname or IP
+|SRVPORT|51770|BMLU GRPC server port
+|GCSOUTURI|no|Default Cloud Storage prefix for output ORC files (Format: gs://BUCKET/PREFIX)|
+|JOBDATE|UNKNOWN|JCL job starting date
+|JOBTIME|UNKNOWN|JCL job starting time
+|_BPX_SHAREAS|no| Controls execution in shell. [More details here](https://www.ibm.com/docs/en/zos/2.2.0?topic=shell-setting-bpx-shareas-bpx-spawn-script)|
+_BPX_SPAWN_SCRIPT|no| Controls execution in shell. [More details here](https://www.ibm.com/docs/en/zos/2.2.0?topic=shell-setting-bpx-shareas-bpx-spawn-script)|
 
 ## Pre-Requisites
 
