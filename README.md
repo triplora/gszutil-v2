@@ -283,6 +283,7 @@ Usage: rm [options] tablespec
   --sync <value>           If set to true, wait for the command to complete before returning, and use the job completion status as the error code. If set to false, the job is created, and successful completion status is used for the error code. The default value is true.
 ```
 
+
 ## Environment variables
 
 |Name|Default|Description|
@@ -306,6 +307,26 @@ Usage: rm [options] tablespec
 |JOBTIME|UNKNOWN|JCL job starting time
 |_BPX_SHAREAS|no| Controls execution in shell. [More details here](https://www.ibm.com/docs/en/zos/2.2.0?topic=shell-setting-bpx-shareas-bpx-spawn-script)|
 _BPX_SPAWN_SCRIPT|no| Controls execution in shell. [More details here](https://www.ibm.com/docs/en/zos/2.2.0?topic=shell-setting-bpx-shareas-bpx-spawn-script)|
+
+## High level architecture
+
+![bqsh sequence diagram](./img/bqsh_high_level_sequence_diagram.png)
+
+### Commands dispatch table
+
+|Command|Type
+|---|:---:|
+|'bq mk'| [Mk](./src/main/scala/com/google/cloud/bqsh/cmd/Mk.scala)
+|'bq query'| [Query](./src/main/scala/com/google/cloud/bqsh/cmd/Query.scala)
+|'bq export'| [Export](./src/main/scala/com/google/cloud/bqsh/cmd/Export.scala)
+|'bq load'| [Load](./src/main/scala/com/google/cloud/bqsh/cmd/Load.scala)
+|'bq rm'| [Rm](./src/main/scala/com/google/cloud/bqsh/cmd/Rm.scala)
+|'gsutil| [Cp](./src/main/scala/com/google/cloud/bqsh/cmd/Cp.scala)
+|'gsutil rm'| [GsUtilRm](./src/main/scala/com/google/cloud/bqsh/cmd/GsUtilRm.scala)
+|'gszutil'| [GsZUtil](./src/main/scala/com/google/cloud/bqsh/cmd/GsZUtil.scala)
+|'scp'| [Scp](./src/main/scala/com/google/cloud/bqsh/cmd/Scp.scala)
+|'jclutil'| [JCLUtil](./src/main/scala/com/google/cloud/bqsh/cmd/JCLUtil.scala)
+|'sdsfutil'| [SdsfUtil](./src/main/scala/com/google/cloud/bqsh/cmd/SdsfUtil.scala)
 
 ## Pre-Requisites
 
