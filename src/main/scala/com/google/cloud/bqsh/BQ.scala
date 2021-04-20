@@ -324,9 +324,8 @@ object BQ extends Logging {
 
   def parseField(s: String): Field = {
     val Array(field,dataType) = s.split(':')
-    val fieldList = FieldList.of()
     val typeName = StandardSQLTypeName.valueOf(dataType)
-    Field.newBuilder(field,typeName,fieldList).build
+    Field.newBuilder(field,typeName).build
   }
 
   def parseSchema(s: Seq[String]): Schema = {
