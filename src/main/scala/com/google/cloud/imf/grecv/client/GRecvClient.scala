@@ -5,14 +5,14 @@ import java.util.concurrent.TimeUnit
 
 import com.google.api.services.storage.StorageScopes
 import com.google.auth.oauth2.{GoogleCredentials, OAuth2Credentials}
-import com.google.cloud.bqsh.GsUtilConfig
+import com.google.cloud.bqsh.{ExportConfig, GsUtilConfig}
 import com.google.cloud.bqsh.cmd.Result
-import com.google.cloud.gszutil.SchemaProvider
+import com.google.cloud.gszutil.{SchemaProvider}
 import com.google.cloud.gszutil.io.{CloudRecordReader, ZRecordReaderT}
 import com.google.cloud.imf.grecv.{GRecvProtocol, Uploader}
 import com.google.cloud.imf.gzos.MVS
 import com.google.cloud.imf.gzos.pb.GRecvGrpc
-import com.google.cloud.imf.gzos.pb.GRecvProto.GRecvRequest
+import com.google.cloud.imf.gzos.pb.GRecvProto.{GRecvExportRequest, GRecvRequest}
 import com.google.cloud.imf.util.{GzipCodec, Logging, Services}
 import com.google.protobuf.util.JsonFormat
 import io.grpc.okhttp.OkHttpChannelBuilder
@@ -20,12 +20,12 @@ import io.grpc.okhttp.OkHttpChannelBuilder
 import scala.util.{Failure, Success, Try}
 
 object GRecvClient extends Uploader with Logging {
-  def run(cfg: GsUtilConfig,
-          zos: MVS,
-          in: ZRecordReaderT,
-          schemaProvider: SchemaProvider,
-          receiver: Uploader): Result = {
-    logger.info(s"GRecvClient Starting Dataset Upload to ${cfg.gcsUri}")
+  def write(cfg: GsUtilConfig,
+            zos: MVS,
+            in: ZRecordReaderT,
+            schemaProvider: SchemaProvider,
+            receiver: Uploader): Result = {
+    logger.info(s"GRecvClient (Write) Starting Dataset Upload to ${cfg.gcsUri}")
 
     try {
       val req = GRecvRequest.newBuilder
@@ -46,6 +46,42 @@ object GRecvClient extends Uploader with Logging {
     }
   }
 
+  def export(sql: String,
+             copybook: String,
+             outputUri: String,
+             cfg: ExportConfig,
+             zos: MVS): Result = {
+    logger.debug(s"GRecvClient (Export) Starting exporting data to $outputUri")
+    import scala.jdk.CollectionConverters._
+    val request = GRecvExportRequest.newBuilder()
+      .setSql(sql)
+      .setCopybook(copybook)
+      .setOutputUri(outputUri)
+      .putAllExportConfigs(cfg.toMap.asJava)
+      .setJobinfo(zos.getInfo)
+      .build()
+
+    val client =
+      httpClientBuilder(cfg.remoteHost, cfg.remotePort, cfg.keepAliveTimeInSeconds).build()
+
+    try {
+      val response =  GRecvGrpc.newBlockingStub(client)
+        .withDeadlineAfter(cfg.timeoutMinutes.toLong, TimeUnit.MINUTES).`export`(request)
+
+      if (response.getStatus != GRecvProtocol.OK)
+        Result.Failure("Export server error!")
+      else {
+        logger.info(s"Export request successfully completed, rowCount=${response.getRowCount}")
+        Result(activityCount = response.getRowCount)
+      }
+    } catch {
+      case t: Throwable =>
+        Result.Failure(s"GRecv Export failure: ${t.getMessage}")
+    } finally {
+      client.shutdownNow()
+    }
+  }
+
   override def upload(req: GRecvRequest,
                       host: String,
                       port: Int,
@@ -55,11 +91,7 @@ object GRecvClient extends Uploader with Logging {
                       timeOutMinutes: Option[Int],
                       keepAliveTimeInSeconds: Option[Int]): Result = {
     logger.debug(s"Timeouts used for upload: keepAliveTimeInSeconds=$keepAliveTimeInSeconds, timeOutMinutes=$timeOutMinutes")
-    val cb = OkHttpChannelBuilder.forAddress(host, port)
-      .compressorRegistry(GzipCodec.compressorRegistry)
-      .usePlaintext() // TLS is provided by AT-TLS
-      .keepAliveTime(keepAliveTimeInSeconds.getOrElse(480).toLong, TimeUnit.SECONDS)
-      .keepAliveWithoutCalls(true)
+    val cb = httpClientBuilder(host, port, keepAliveTimeInSeconds.getOrElse(480))
 
     val creds: GoogleCredentials = zos.getCredentialProvider().getCredentials
       .createScoped(StorageScopes.DEVSTORAGE_READ_WRITE)
@@ -195,4 +227,11 @@ object GRecvClient extends Uploader with Logging {
       ch.shutdownNow()
     }
   }
+
+  private def httpClientBuilder(host: String, port: Int, keepAlive: Int) =
+    OkHttpChannelBuilder.forAddress(host, port)
+      .compressorRegistry(GzipCodec.compressorRegistry)
+      .usePlaintext() // TLS is provided by AT-TLS
+      .keepAliveTime(keepAlive.toLong, TimeUnit.SECONDS)
+      .keepAliveWithoutCalls(true)
 }

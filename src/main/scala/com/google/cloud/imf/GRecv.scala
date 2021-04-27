@@ -16,9 +16,11 @@
 
 package com.google.cloud.imf
 
+import com.google.api.services.bigquery.BigqueryScopes
 import com.google.api.services.logging.v2.LoggingScopes
 import com.google.api.services.storage.StorageScopes
 import com.google.auth.oauth2.GoogleCredentials
+import com.google.cloud.bigquery.BigQuery
 import com.google.cloud.imf.grecv.GRecvConfigParser
 import com.google.cloud.imf.grecv.server.GRecvServer
 import com.google.cloud.imf.gzos.Util
@@ -44,9 +46,12 @@ object GRecv extends Logging {
           credentials = creds.createScoped(LoggingScopes.LOGGING_WRITE))
         logger.info(s"Starting GRecvServer\n$buildInfo")
         val credentials = creds.createScoped(StorageScopes.DEVSTORAGE_READ_WRITE)
+        val bqCredentials = creds.createScoped(BigqueryScopes.DEVSTORAGE_READ_ONLY)
         val gcs = Services.storage(credentials)
         val lowLevelClient = Services.storageApi(credentials)
-        new GRecvServer(cfg, gcs, lowLevelClient).start()
+
+        val bq: (String, String) => BigQuery = (x,y) => Services.bigQuery(x, y, bqCredentials)
+        new GRecvServer(cfg, gcs, lowLevelClient, bq).start()
       case _ =>
         Console.err.println(s"Unabled to parse args '${args.mkString(" ")}'")
         System.exit(1)

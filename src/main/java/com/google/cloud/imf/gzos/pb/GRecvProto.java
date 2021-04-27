@@ -92,7 +92,7 @@ public final class GRecvProto {
   /**
    * Protobuf type {@code com.google.cloud.imf.gzos.Record}
    */
-  public  static final class Record extends
+  public static final class Record extends
       com.google.protobuf.GeneratedMessageV3 implements
       // @@protoc_insertion_point(message_implements:com.google.cloud.imf.gzos.Record)
       RecordOrBuilder {
@@ -291,6 +291,10 @@ public final class GRecvProto {
 
       public final com.google.protobuf.Descriptors.EnumValueDescriptor
           getValueDescriptor() {
+        if (this == UNRECOGNIZED) {
+          throw new java.lang.IllegalStateException(
+              "Can't get the descriptor of an unrecognized enum value.");
+        }
         return getDescriptor().getValues().get(ordinal());
       }
       public final com.google.protobuf.Descriptors.EnumDescriptor
@@ -417,7 +421,7 @@ public final class GRecvProto {
     /**
      * Protobuf type {@code com.google.cloud.imf.gzos.Record.Field}
      */
-    public  static final class Field extends
+    public static final class Field extends
         com.google.protobuf.GeneratedMessageV3 implements
         // @@protoc_insertion_point(message_implements:com.google.cloud.imf.gzos.Record.Field)
         FieldOrBuilder {
@@ -712,6 +716,10 @@ public final class GRecvProto {
 
         public final com.google.protobuf.Descriptors.EnumValueDescriptor
             getValueDescriptor() {
+          if (this == UNRECOGNIZED) {
+            throw new java.lang.IllegalStateException(
+                "Can't get the descriptor of an unrecognized enum value.");
+          }
           return getDescriptor().getValues().get(ordinal());
         }
         public final com.google.protobuf.Descriptors.EnumDescriptor
@@ -771,7 +779,7 @@ public final class GRecvProto {
       /**
        * Protobuf type {@code com.google.cloud.imf.gzos.Record.Field.NullIf}
        */
-      public  static final class NullIf extends
+      public static final class NullIf extends
           com.google.protobuf.GeneratedMessageV3 implements
           // @@protoc_insertion_point(message_implements:com.google.cloud.imf.gzos.Record.Field.NullIf)
           NullIfOrBuilder {
@@ -864,6 +872,7 @@ public final class GRecvProto {
          * <code>string field = 1;</code>
          * @return The field.
          */
+        @java.lang.Override
         public java.lang.String getField() {
           java.lang.Object ref = field_;
           if (ref instanceof java.lang.String) {
@@ -880,6 +889,7 @@ public final class GRecvProto {
          * <code>string field = 1;</code>
          * @return The bytes for field.
          */
+        @java.lang.Override
         public com.google.protobuf.ByteString
             getFieldBytes() {
           java.lang.Object ref = field_;
@@ -900,6 +910,7 @@ public final class GRecvProto {
          * <code>bytes value = 2;</code>
          * @return The value.
          */
+        @java.lang.Override
         public com.google.protobuf.ByteString getValue() {
           return value_;
         }
@@ -1304,6 +1315,7 @@ public final class GRecvProto {
            * <code>bytes value = 2;</code>
            * @return The value.
            */
+          @java.lang.Override
           public com.google.protobuf.ByteString getValue() {
             return value_;
           }
@@ -1390,6 +1402,7 @@ public final class GRecvProto {
        * <code>string name = 1;</code>
        * @return The name.
        */
+      @java.lang.Override
       public java.lang.String getName() {
         java.lang.Object ref = name_;
         if (ref instanceof java.lang.String) {
@@ -1406,6 +1419,7 @@ public final class GRecvProto {
        * <code>string name = 1;</code>
        * @return The bytes for name.
        */
+      @java.lang.Override
       public com.google.protobuf.ByteString
           getNameBytes() {
         java.lang.Object ref = name_;
@@ -1426,14 +1440,14 @@ public final class GRecvProto {
        * <code>.com.google.cloud.imf.gzos.Record.Field.FieldType typ = 2;</code>
        * @return The enum numeric value on the wire for typ.
        */
-      public int getTypValue() {
+      @java.lang.Override public int getTypValue() {
         return typ_;
       }
       /**
        * <code>.com.google.cloud.imf.gzos.Record.Field.FieldType typ = 2;</code>
        * @return The typ.
        */
-      public com.google.cloud.imf.gzos.pb.GRecvProto.Record.Field.FieldType getTyp() {
+      @java.lang.Override public com.google.cloud.imf.gzos.pb.GRecvProto.Record.Field.FieldType getTyp() {
         @SuppressWarnings("deprecation")
         com.google.cloud.imf.gzos.pb.GRecvProto.Record.Field.FieldType result = com.google.cloud.imf.gzos.pb.GRecvProto.Record.Field.FieldType.valueOf(typ_);
         return result == null ? com.google.cloud.imf.gzos.pb.GRecvProto.Record.Field.FieldType.UNRECOGNIZED : result;
@@ -1445,6 +1459,7 @@ public final class GRecvProto {
        * <code>int32 size = 3;</code>
        * @return The size.
        */
+      @java.lang.Override
       public int getSize() {
         return size_;
       }
@@ -1455,6 +1470,7 @@ public final class GRecvProto {
        * <code>int32 precision = 4;</code>
        * @return The precision.
        */
+      @java.lang.Override
       public int getPrecision() {
         return precision_;
       }
@@ -1465,6 +1481,7 @@ public final class GRecvProto {
        * <code>int32 scale = 5;</code>
        * @return The scale.
        */
+      @java.lang.Override
       public int getScale() {
         return scale_;
       }
@@ -1475,6 +1492,7 @@ public final class GRecvProto {
        * <code>bool filler = 6;</code>
        * @return The filler.
        */
+      @java.lang.Override
       public boolean getFiller() {
         return filler_;
       }
@@ -1485,6 +1503,7 @@ public final class GRecvProto {
        * <code>.com.google.cloud.imf.gzos.Record.Field.NullIf nullif = 7;</code>
        * @return Whether the nullif field is set.
        */
+      @java.lang.Override
       public boolean hasNullif() {
         return nullif_ != null;
       }
@@ -1492,12 +1511,14 @@ public final class GRecvProto {
        * <code>.com.google.cloud.imf.gzos.Record.Field.NullIf nullif = 7;</code>
        * @return The nullif.
        */
+      @java.lang.Override
       public com.google.cloud.imf.gzos.pb.GRecvProto.Record.Field.NullIf getNullif() {
         return nullif_ == null ? com.google.cloud.imf.gzos.pb.GRecvProto.Record.Field.NullIf.getDefaultInstance() : nullif_;
       }
       /**
        * <code>.com.google.cloud.imf.gzos.Record.Field.NullIf nullif = 7;</code>
        */
+      @java.lang.Override
       public com.google.cloud.imf.gzos.pb.GRecvProto.Record.Field.NullIfOrBuilder getNullifOrBuilder() {
         return getNullif();
       }
@@ -1508,14 +1529,14 @@ public final class GRecvProto {
        * <code>.com.google.cloud.imf.gzos.Record.Field.FieldType cast = 8;</code>
        * @return The enum numeric value on the wire for cast.
        */
-      public int getCastValue() {
+      @java.lang.Override public int getCastValue() {
         return cast_;
       }
       /**
        * <code>.com.google.cloud.imf.gzos.Record.Field.FieldType cast = 8;</code>
        * @return The cast.
        */
-      public com.google.cloud.imf.gzos.pb.GRecvProto.Record.Field.FieldType getCast() {
+      @java.lang.Override public com.google.cloud.imf.gzos.pb.GRecvProto.Record.Field.FieldType getCast() {
         @SuppressWarnings("deprecation")
         com.google.cloud.imf.gzos.pb.GRecvProto.Record.Field.FieldType result = com.google.cloud.imf.gzos.pb.GRecvProto.Record.Field.FieldType.valueOf(cast_);
         return result == null ? com.google.cloud.imf.gzos.pb.GRecvProto.Record.Field.FieldType.UNRECOGNIZED : result;
@@ -1527,6 +1548,7 @@ public final class GRecvProto {
        * <code>string format = 9;</code>
        * @return The format.
        */
+      @java.lang.Override
       public java.lang.String getFormat() {
         java.lang.Object ref = format_;
         if (ref instanceof java.lang.String) {
@@ -1543,6 +1565,7 @@ public final class GRecvProto {
        * <code>string format = 9;</code>
        * @return The bytes for format.
        */
+      @java.lang.Override
       public com.google.protobuf.ByteString
           getFormatBytes() {
         java.lang.Object ref = format_;
@@ -2088,7 +2111,7 @@ public final class GRecvProto {
          * <code>.com.google.cloud.imf.gzos.Record.Field.FieldType typ = 2;</code>
          * @return The enum numeric value on the wire for typ.
          */
-        public int getTypValue() {
+        @java.lang.Override public int getTypValue() {
           return typ_;
         }
         /**
@@ -2097,6 +2120,7 @@ public final class GRecvProto {
          * @return This builder for chaining.
          */
         public Builder setTypValue(int value) {
+          
           typ_ = value;
           onChanged();
           return this;
@@ -2105,6 +2129,7 @@ public final class GRecvProto {
          * <code>.com.google.cloud.imf.gzos.Record.Field.FieldType typ = 2;</code>
          * @return The typ.
          */
+        @java.lang.Override
         public com.google.cloud.imf.gzos.pb.GRecvProto.Record.Field.FieldType getTyp() {
           @SuppressWarnings("deprecation")
           com.google.cloud.imf.gzos.pb.GRecvProto.Record.Field.FieldType result = com.google.cloud.imf.gzos.pb.GRecvProto.Record.Field.FieldType.valueOf(typ_);
@@ -2140,6 +2165,7 @@ public final class GRecvProto {
          * <code>int32 size = 3;</code>
          * @return The size.
          */
+        @java.lang.Override
         public int getSize() {
           return size_;
         }
@@ -2170,6 +2196,7 @@ public final class GRecvProto {
          * <code>int32 precision = 4;</code>
          * @return The precision.
          */
+        @java.lang.Override
         public int getPrecision() {
           return precision_;
         }
@@ -2200,6 +2227,7 @@ public final class GRecvProto {
          * <code>int32 scale = 5;</code>
          * @return The scale.
          */
+        @java.lang.Override
         public int getScale() {
           return scale_;
         }
@@ -2230,6 +2258,7 @@ public final class GRecvProto {
          * <code>bool filler = 6;</code>
          * @return The filler.
          */
+        @java.lang.Override
         public boolean getFiller() {
           return filler_;
         }
@@ -2379,7 +2408,7 @@ public final class GRecvProto {
          * <code>.com.google.cloud.imf.gzos.Record.Field.FieldType cast = 8;</code>
          * @return The enum numeric value on the wire for cast.
          */
-        public int getCastValue() {
+        @java.lang.Override public int getCastValue() {
           return cast_;
         }
         /**
@@ -2388,6 +2417,7 @@ public final class GRecvProto {
          * @return This builder for chaining.
          */
         public Builder setCastValue(int value) {
+          
           cast_ = value;
           onChanged();
           return this;
@@ -2396,6 +2426,7 @@ public final class GRecvProto {
          * <code>.com.google.cloud.imf.gzos.Record.Field.FieldType cast = 8;</code>
          * @return The cast.
          */
+        @java.lang.Override
         public com.google.cloud.imf.gzos.pb.GRecvProto.Record.Field.FieldType getCast() {
           @SuppressWarnings("deprecation")
           com.google.cloud.imf.gzos.pb.GRecvProto.Record.Field.FieldType result = com.google.cloud.imf.gzos.pb.GRecvProto.Record.Field.FieldType.valueOf(cast_);
@@ -2560,14 +2591,14 @@ public final class GRecvProto {
      * <code>.com.google.cloud.imf.gzos.Record.Source source = 1;</code>
      * @return The enum numeric value on the wire for source.
      */
-    public int getSourceValue() {
+    @java.lang.Override public int getSourceValue() {
       return source_;
     }
     /**
      * <code>.com.google.cloud.imf.gzos.Record.Source source = 1;</code>
      * @return The source.
      */
-    public com.google.cloud.imf.gzos.pb.GRecvProto.Record.Source getSource() {
+    @java.lang.Override public com.google.cloud.imf.gzos.pb.GRecvProto.Record.Source getSource() {
       @SuppressWarnings("deprecation")
       com.google.cloud.imf.gzos.pb.GRecvProto.Record.Source result = com.google.cloud.imf.gzos.pb.GRecvProto.Record.Source.valueOf(source_);
       return result == null ? com.google.cloud.imf.gzos.pb.GRecvProto.Record.Source.UNRECOGNIZED : result;
@@ -2579,6 +2610,7 @@ public final class GRecvProto {
      * <code>string original = 2;</code>
      * @return The original.
      */
+    @java.lang.Override
     public java.lang.String getOriginal() {
       java.lang.Object ref = original_;
       if (ref instanceof java.lang.String) {
@@ -2595,6 +2627,7 @@ public final class GRecvProto {
      * <code>string original = 2;</code>
      * @return The bytes for original.
      */
+    @java.lang.Override
     public com.google.protobuf.ByteString
         getOriginalBytes() {
       java.lang.Object ref = original_;
@@ -2614,12 +2647,14 @@ public final class GRecvProto {
     /**
      * <code>repeated .com.google.cloud.imf.gzos.Record.Field field = 3;</code>
      */
+    @java.lang.Override
     public java.util.List<com.google.cloud.imf.gzos.pb.GRecvProto.Record.Field> getFieldList() {
       return field_;
     }
     /**
      * <code>repeated .com.google.cloud.imf.gzos.Record.Field field = 3;</code>
      */
+    @java.lang.Override
     public java.util.List<? extends com.google.cloud.imf.gzos.pb.GRecvProto.Record.FieldOrBuilder> 
         getFieldOrBuilderList() {
       return field_;
@@ -2627,18 +2662,21 @@ public final class GRecvProto {
     /**
      * <code>repeated .com.google.cloud.imf.gzos.Record.Field field = 3;</code>
      */
+    @java.lang.Override
     public int getFieldCount() {
       return field_.size();
     }
     /**
      * <code>repeated .com.google.cloud.imf.gzos.Record.Field field = 3;</code>
      */
+    @java.lang.Override
     public com.google.cloud.imf.gzos.pb.GRecvProto.Record.Field getField(int index) {
       return field_.get(index);
     }
     /**
      * <code>repeated .com.google.cloud.imf.gzos.Record.Field field = 3;</code>
      */
+    @java.lang.Override
     public com.google.cloud.imf.gzos.pb.GRecvProto.Record.FieldOrBuilder getFieldOrBuilder(
         int index) {
       return field_.get(index);
@@ -2650,6 +2688,7 @@ public final class GRecvProto {
      * <code>string encoding = 4;</code>
      * @return The encoding.
      */
+    @java.lang.Override
     public java.lang.String getEncoding() {
       java.lang.Object ref = encoding_;
       if (ref instanceof java.lang.String) {
@@ -2666,6 +2705,7 @@ public final class GRecvProto {
      * <code>string encoding = 4;</code>
      * @return The bytes for encoding.
      */
+    @java.lang.Override
     public com.google.protobuf.ByteString
         getEncodingBytes() {
       java.lang.Object ref = encoding_;
@@ -2686,6 +2726,7 @@ public final class GRecvProto {
      * <code>bool vartext = 5;</code>
      * @return The vartext.
      */
+    @java.lang.Override
     public boolean getVartext() {
       return vartext_;
     }
@@ -2696,6 +2737,7 @@ public final class GRecvProto {
      * <code>bytes delimiter = 6;</code>
      * @return The delimiter.
      */
+    @java.lang.Override
     public com.google.protobuf.ByteString getDelimiter() {
       return delimiter_;
     }
@@ -3132,7 +3174,7 @@ public final class GRecvProto {
        * <code>.com.google.cloud.imf.gzos.Record.Source source = 1;</code>
        * @return The enum numeric value on the wire for source.
        */
-      public int getSourceValue() {
+      @java.lang.Override public int getSourceValue() {
         return source_;
       }
       /**
@@ -3141,6 +3183,7 @@ public final class GRecvProto {
        * @return This builder for chaining.
        */
       public Builder setSourceValue(int value) {
+        
         source_ = value;
         onChanged();
         return this;
@@ -3149,6 +3192,7 @@ public final class GRecvProto {
        * <code>.com.google.cloud.imf.gzos.Record.Source source = 1;</code>
        * @return The source.
        */
+      @java.lang.Override
       public com.google.cloud.imf.gzos.pb.GRecvProto.Record.Source getSource() {
         @SuppressWarnings("deprecation")
         com.google.cloud.imf.gzos.pb.GRecvProto.Record.Source result = com.google.cloud.imf.gzos.pb.GRecvProto.Record.Source.valueOf(source_);
@@ -3576,6 +3620,7 @@ public final class GRecvProto {
        * <code>bool vartext = 5;</code>
        * @return The vartext.
        */
+      @java.lang.Override
       public boolean getVartext() {
         return vartext_;
       }
@@ -3606,6 +3651,7 @@ public final class GRecvProto {
        * <code>bytes delimiter = 6;</code>
        * @return The delimiter.
        */
+      @java.lang.Override
       public com.google.protobuf.ByteString getDelimiter() {
         return delimiter_;
       }
@@ -3777,7 +3823,7 @@ public final class GRecvProto {
   /**
    * Protobuf type {@code com.google.cloud.imf.gzos.ZOSJobInfo}
    */
-  public  static final class ZOSJobInfo extends
+  public static final class ZOSJobInfo extends
       com.google.protobuf.GeneratedMessageV3 implements
       // @@protoc_insertion_point(message_implements:com.google.cloud.imf.gzos.ZOSJobInfo)
       ZOSJobInfoOrBuilder {
@@ -3906,6 +3952,7 @@ public final class GRecvProto {
      * <code>string jobid = 1;</code>
      * @return The jobid.
      */
+    @java.lang.Override
     public java.lang.String getJobid() {
       java.lang.Object ref = jobid_;
       if (ref instanceof java.lang.String) {
@@ -3922,6 +3969,7 @@ public final class GRecvProto {
      * <code>string jobid = 1;</code>
      * @return The bytes for jobid.
      */
+    @java.lang.Override
     public com.google.protobuf.ByteString
         getJobidBytes() {
       java.lang.Object ref = jobid_;
@@ -3942,6 +3990,7 @@ public final class GRecvProto {
      * <code>string jobname = 2;</code>
      * @return The jobname.
      */
+    @java.lang.Override
     public java.lang.String getJobname() {
       java.lang.Object ref = jobname_;
       if (ref instanceof java.lang.String) {
@@ -3958,6 +4007,7 @@ public final class GRecvProto {
      * <code>string jobname = 2;</code>
      * @return The bytes for jobname.
      */
+    @java.lang.Override
     public com.google.protobuf.ByteString
         getJobnameBytes() {
       java.lang.Object ref = jobname_;
@@ -3978,6 +4028,7 @@ public final class GRecvProto {
      * <code>string jobdate = 3;</code>
      * @return The jobdate.
      */
+    @java.lang.Override
     public java.lang.String getJobdate() {
       java.lang.Object ref = jobdate_;
       if (ref instanceof java.lang.String) {
@@ -3994,6 +4045,7 @@ public final class GRecvProto {
      * <code>string jobdate = 3;</code>
      * @return The bytes for jobdate.
      */
+    @java.lang.Override
     public com.google.protobuf.ByteString
         getJobdateBytes() {
       java.lang.Object ref = jobdate_;
@@ -4014,6 +4066,7 @@ public final class GRecvProto {
      * <code>string jobtime = 4;</code>
      * @return The jobtime.
      */
+    @java.lang.Override
     public java.lang.String getJobtime() {
       java.lang.Object ref = jobtime_;
       if (ref instanceof java.lang.String) {
@@ -4030,6 +4083,7 @@ public final class GRecvProto {
      * <code>string jobtime = 4;</code>
      * @return The bytes for jobtime.
      */
+    @java.lang.Override
     public com.google.protobuf.ByteString
         getJobtimeBytes() {
       java.lang.Object ref = jobtime_;
@@ -4050,6 +4104,7 @@ public final class GRecvProto {
      * <code>string step_name = 5;</code>
      * @return The stepName.
      */
+    @java.lang.Override
     public java.lang.String getStepName() {
       java.lang.Object ref = stepName_;
       if (ref instanceof java.lang.String) {
@@ -4066,6 +4121,7 @@ public final class GRecvProto {
      * <code>string step_name = 5;</code>
      * @return The bytes for stepName.
      */
+    @java.lang.Override
     public com.google.protobuf.ByteString
         getStepNameBytes() {
       java.lang.Object ref = stepName_;
@@ -4086,6 +4142,7 @@ public final class GRecvProto {
      * <code>string proc_step_name = 6;</code>
      * @return The procStepName.
      */
+    @java.lang.Override
     public java.lang.String getProcStepName() {
       java.lang.Object ref = procStepName_;
       if (ref instanceof java.lang.String) {
@@ -4102,6 +4159,7 @@ public final class GRecvProto {
      * <code>string proc_step_name = 6;</code>
      * @return The bytes for procStepName.
      */
+    @java.lang.Override
     public com.google.protobuf.ByteString
         getProcStepNameBytes() {
       java.lang.Object ref = procStepName_;
@@ -4122,6 +4180,7 @@ public final class GRecvProto {
      * <code>string user = 7;</code>
      * @return The user.
      */
+    @java.lang.Override
     public java.lang.String getUser() {
       java.lang.Object ref = user_;
       if (ref instanceof java.lang.String) {
@@ -4138,6 +4197,7 @@ public final class GRecvProto {
      * <code>string user = 7;</code>
      * @return The bytes for user.
      */
+    @java.lang.Override
     public com.google.protobuf.ByteString
         getUserBytes() {
       java.lang.Object ref = user_;
@@ -5255,7 +5315,7 @@ public final class GRecvProto {
   /**
    * Protobuf type {@code com.google.cloud.imf.gzos.GRecvRequest}
    */
-  public  static final class GRecvRequest extends
+  public static final class GRecvRequest extends
       com.google.protobuf.GeneratedMessageV3 implements
       // @@protoc_insertion_point(message_implements:com.google.cloud.imf.gzos.GRecvRequest)
       GRecvRequestOrBuilder {
@@ -5419,6 +5479,7 @@ public final class GRecvProto {
      * <code>.com.google.cloud.imf.gzos.Record schema = 1;</code>
      * @return Whether the schema field is set.
      */
+    @java.lang.Override
     public boolean hasSchema() {
       return schema_ != null;
     }
@@ -5426,12 +5487,14 @@ public final class GRecvProto {
      * <code>.com.google.cloud.imf.gzos.Record schema = 1;</code>
      * @return The schema.
      */
+    @java.lang.Override
     public com.google.cloud.imf.gzos.pb.GRecvProto.Record getSchema() {
       return schema_ == null ? com.google.cloud.imf.gzos.pb.GRecvProto.Record.getDefaultInstance() : schema_;
     }
     /**
      * <code>.com.google.cloud.imf.gzos.Record schema = 1;</code>
      */
+    @java.lang.Override
     public com.google.cloud.imf.gzos.pb.GRecvProto.RecordOrBuilder getSchemaOrBuilder() {
       return getSchema();
     }
@@ -5442,6 +5505,7 @@ public final class GRecvProto {
      * <code>int32 lrecl = 2;</code>
      * @return The lrecl.
      */
+    @java.lang.Override
     public int getLrecl() {
       return lrecl_;
     }
@@ -5452,6 +5516,7 @@ public final class GRecvProto {
      * <code>int32 blksz = 3;</code>
      * @return The blksz.
      */
+    @java.lang.Override
     public int getBlksz() {
       return blksz_;
     }
@@ -5462,6 +5527,7 @@ public final class GRecvProto {
      * <code>string basepath = 4;</code>
      * @return The basepath.
      */
+    @java.lang.Override
     public java.lang.String getBasepath() {
       java.lang.Object ref = basepath_;
       if (ref instanceof java.lang.String) {
@@ -5478,6 +5544,7 @@ public final class GRecvProto {
      * <code>string basepath = 4;</code>
      * @return The bytes for basepath.
      */
+    @java.lang.Override
     public com.google.protobuf.ByteString
         getBasepathBytes() {
       java.lang.Object ref = basepath_;
@@ -5498,6 +5565,7 @@ public final class GRecvProto {
      * <code>double max_err_pct = 5;</code>
      * @return The maxErrPct.
      */
+    @java.lang.Override
     public double getMaxErrPct() {
       return maxErrPct_;
     }
@@ -5508,6 +5576,7 @@ public final class GRecvProto {
      * <code>bytes public_key = 6;</code>
      * @return The publicKey.
      */
+    @java.lang.Override
     public com.google.protobuf.ByteString getPublicKey() {
       return publicKey_;
     }
@@ -5518,6 +5587,7 @@ public final class GRecvProto {
      * <code>bytes signature = 7;</code>
      * @return The signature.
      */
+    @java.lang.Override
     public com.google.protobuf.ByteString getSignature() {
       return signature_;
     }
@@ -5528,6 +5598,7 @@ public final class GRecvProto {
      * <code>string principal = 8;</code>
      * @return The principal.
      */
+    @java.lang.Override
     public java.lang.String getPrincipal() {
       java.lang.Object ref = principal_;
       if (ref instanceof java.lang.String) {
@@ -5544,6 +5615,7 @@ public final class GRecvProto {
      * <code>string principal = 8;</code>
      * @return The bytes for principal.
      */
+    @java.lang.Override
     public com.google.protobuf.ByteString
         getPrincipalBytes() {
       java.lang.Object ref = principal_;
@@ -5564,6 +5636,7 @@ public final class GRecvProto {
      * <code>.com.google.cloud.imf.gzos.ZOSJobInfo jobinfo = 9;</code>
      * @return Whether the jobinfo field is set.
      */
+    @java.lang.Override
     public boolean hasJobinfo() {
       return jobinfo_ != null;
     }
@@ -5571,12 +5644,14 @@ public final class GRecvProto {
      * <code>.com.google.cloud.imf.gzos.ZOSJobInfo jobinfo = 9;</code>
      * @return The jobinfo.
      */
+    @java.lang.Override
     public com.google.cloud.imf.gzos.pb.GRecvProto.ZOSJobInfo getJobinfo() {
       return jobinfo_ == null ? com.google.cloud.imf.gzos.pb.GRecvProto.ZOSJobInfo.getDefaultInstance() : jobinfo_;
     }
     /**
      * <code>.com.google.cloud.imf.gzos.ZOSJobInfo jobinfo = 9;</code>
      */
+    @java.lang.Override
     public com.google.cloud.imf.gzos.pb.GRecvProto.ZOSJobInfoOrBuilder getJobinfoOrBuilder() {
       return getJobinfo();
     }
@@ -5587,6 +5662,7 @@ public final class GRecvProto {
      * <code>int64 timestamp = 10;</code>
      * @return The timestamp.
      */
+    @java.lang.Override
     public long getTimestamp() {
       return timestamp_;
     }
@@ -5597,6 +5673,7 @@ public final class GRecvProto {
      * <code>string src_uri = 11;</code>
      * @return The srcUri.
      */
+    @java.lang.Override
     public java.lang.String getSrcUri() {
       java.lang.Object ref = srcUri_;
       if (ref instanceof java.lang.String) {
@@ -5613,6 +5690,7 @@ public final class GRecvProto {
      * <code>string src_uri = 11;</code>
      * @return The bytes for srcUri.
      */
+    @java.lang.Override
     public com.google.protobuf.ByteString
         getSrcUriBytes() {
       java.lang.Object ref = srcUri_;
@@ -5633,6 +5711,7 @@ public final class GRecvProto {
      * <code>bool no_data = 12;</code>
      * @return The noData.
      */
+    @java.lang.Override
     public boolean getNoData() {
       return noData_;
     }
@@ -6280,6 +6359,7 @@ public final class GRecvProto {
        * <code>int32 lrecl = 2;</code>
        * @return The lrecl.
        */
+      @java.lang.Override
       public int getLrecl() {
         return lrecl_;
       }
@@ -6310,6 +6390,7 @@ public final class GRecvProto {
        * <code>int32 blksz = 3;</code>
        * @return The blksz.
        */
+      @java.lang.Override
       public int getBlksz() {
         return blksz_;
       }
@@ -6416,6 +6497,7 @@ public final class GRecvProto {
        * <code>double max_err_pct = 5;</code>
        * @return The maxErrPct.
        */
+      @java.lang.Override
       public double getMaxErrPct() {
         return maxErrPct_;
       }
@@ -6446,6 +6528,7 @@ public final class GRecvProto {
        * <code>bytes public_key = 6;</code>
        * @return The publicKey.
        */
+      @java.lang.Override
       public com.google.protobuf.ByteString getPublicKey() {
         return publicKey_;
       }
@@ -6479,6 +6562,7 @@ public final class GRecvProto {
        * <code>bytes signature = 7;</code>
        * @return The signature.
        */
+      @java.lang.Override
       public com.google.protobuf.ByteString getSignature() {
         return signature_;
       }
@@ -6707,6 +6791,7 @@ public final class GRecvProto {
        * <code>int64 timestamp = 10;</code>
        * @return The timestamp.
        */
+      @java.lang.Override
       public long getTimestamp() {
         return timestamp_;
       }
@@ -6813,6 +6898,7 @@ public final class GRecvProto {
        * <code>bool no_data = 12;</code>
        * @return The noData.
        */
+      @java.lang.Override
       public boolean getNoData() {
         return noData_;
       }
@@ -6890,6 +6976,1397 @@ public final class GRecvProto {
 
   }
 
+  public interface GRecvExportRequestOrBuilder extends
+      // @@protoc_insertion_point(interface_extends:com.google.cloud.imf.gzos.GRecvExportRequest)
+      com.google.protobuf.MessageOrBuilder {
+
+    /**
+     * <code>string sql = 1;</code>
+     * @return The sql.
+     */
+    java.lang.String getSql();
+    /**
+     * <code>string sql = 1;</code>
+     * @return The bytes for sql.
+     */
+    com.google.protobuf.ByteString
+        getSqlBytes();
+
+    /**
+     * <code>string copybook = 2;</code>
+     * @return The copybook.
+     */
+    java.lang.String getCopybook();
+    /**
+     * <code>string copybook = 2;</code>
+     * @return The bytes for copybook.
+     */
+    com.google.protobuf.ByteString
+        getCopybookBytes();
+
+    /**
+     * <code>string output_uri = 3;</code>
+     * @return The outputUri.
+     */
+    java.lang.String getOutputUri();
+    /**
+     * <code>string output_uri = 3;</code>
+     * @return The bytes for outputUri.
+     */
+    com.google.protobuf.ByteString
+        getOutputUriBytes();
+
+    /**
+     * <code>map&lt;string, string&gt; export_configs = 4;</code>
+     */
+    int getExportConfigsCount();
+    /**
+     * <code>map&lt;string, string&gt; export_configs = 4;</code>
+     */
+    boolean containsExportConfigs(
+        java.lang.String key);
+    /**
+     * Use {@link #getExportConfigsMap()} instead.
+     */
+    @java.lang.Deprecated
+    java.util.Map<java.lang.String, java.lang.String>
+    getExportConfigs();
+    /**
+     * <code>map&lt;string, string&gt; export_configs = 4;</code>
+     */
+    java.util.Map<java.lang.String, java.lang.String>
+    getExportConfigsMap();
+    /**
+     * <code>map&lt;string, string&gt; export_configs = 4;</code>
+     */
+
+    java.lang.String getExportConfigsOrDefault(
+        java.lang.String key,
+        java.lang.String defaultValue);
+    /**
+     * <code>map&lt;string, string&gt; export_configs = 4;</code>
+     */
+
+    java.lang.String getExportConfigsOrThrow(
+        java.lang.String key);
+
+    /**
+     * <code>.com.google.cloud.imf.gzos.ZOSJobInfo jobinfo = 5;</code>
+     * @return Whether the jobinfo field is set.
+     */
+    boolean hasJobinfo();
+    /**
+     * <code>.com.google.cloud.imf.gzos.ZOSJobInfo jobinfo = 5;</code>
+     * @return The jobinfo.
+     */
+    com.google.cloud.imf.gzos.pb.GRecvProto.ZOSJobInfo getJobinfo();
+    /**
+     * <code>.com.google.cloud.imf.gzos.ZOSJobInfo jobinfo = 5;</code>
+     */
+    com.google.cloud.imf.gzos.pb.GRecvProto.ZOSJobInfoOrBuilder getJobinfoOrBuilder();
+  }
+  /**
+   * Protobuf type {@code com.google.cloud.imf.gzos.GRecvExportRequest}
+   */
+  public static final class GRecvExportRequest extends
+      com.google.protobuf.GeneratedMessageV3 implements
+      // @@protoc_insertion_point(message_implements:com.google.cloud.imf.gzos.GRecvExportRequest)
+      GRecvExportRequestOrBuilder {
+  private static final long serialVersionUID = 0L;
+    // Use GRecvExportRequest.newBuilder() to construct.
+    private GRecvExportRequest(com.google.protobuf.GeneratedMessageV3.Builder<?> builder) {
+      super(builder);
+    }
+    private GRecvExportRequest() {
+      sql_ = "";
+      copybook_ = "";
+      outputUri_ = "";
+    }
+
+    @java.lang.Override
+    @SuppressWarnings({"unused"})
+    protected java.lang.Object newInstance(
+        UnusedPrivateParameter unused) {
+      return new GRecvExportRequest();
+    }
+
+    @java.lang.Override
+    public final com.google.protobuf.UnknownFieldSet
+    getUnknownFields() {
+      return this.unknownFields;
+    }
+    private GRecvExportRequest(
+        com.google.protobuf.CodedInputStream input,
+        com.google.protobuf.ExtensionRegistryLite extensionRegistry)
+        throws com.google.protobuf.InvalidProtocolBufferException {
+      this();
+      if (extensionRegistry == null) {
+        throw new java.lang.NullPointerException();
+      }
+      int mutable_bitField0_ = 0;
+      com.google.protobuf.UnknownFieldSet.Builder unknownFields =
+          com.google.protobuf.UnknownFieldSet.newBuilder();
+      try {
+        boolean done = false;
+        while (!done) {
+          int tag = input.readTag();
+          switch (tag) {
+            case 0:
+              done = true;
+              break;
+            case 10: {
+              java.lang.String s = input.readStringRequireUtf8();
+
+              sql_ = s;
+              break;
+            }
+            case 18: {
+              java.lang.String s = input.readStringRequireUtf8();
+
+              copybook_ = s;
+              break;
+            }
+            case 26: {
+              java.lang.String s = input.readStringRequireUtf8();
+
+              outputUri_ = s;
+              break;
+            }
+            case 34: {
+              if (!((mutable_bitField0_ & 0x00000001) != 0)) {
+                exportConfigs_ = com.google.protobuf.MapField.newMapField(
+                    ExportConfigsDefaultEntryHolder.defaultEntry);
+                mutable_bitField0_ |= 0x00000001;
+              }
+              com.google.protobuf.MapEntry<java.lang.String, java.lang.String>
+              exportConfigs__ = input.readMessage(
+                  ExportConfigsDefaultEntryHolder.defaultEntry.getParserForType(), extensionRegistry);
+              exportConfigs_.getMutableMap().put(
+                  exportConfigs__.getKey(), exportConfigs__.getValue());
+              break;
+            }
+            case 42: {
+              com.google.cloud.imf.gzos.pb.GRecvProto.ZOSJobInfo.Builder subBuilder = null;
+              if (jobinfo_ != null) {
+                subBuilder = jobinfo_.toBuilder();
+              }
+              jobinfo_ = input.readMessage(com.google.cloud.imf.gzos.pb.GRecvProto.ZOSJobInfo.parser(), extensionRegistry);
+              if (subBuilder != null) {
+                subBuilder.mergeFrom(jobinfo_);
+                jobinfo_ = subBuilder.buildPartial();
+              }
+
+              break;
+            }
+            default: {
+              if (!parseUnknownField(
+                  input, unknownFields, extensionRegistry, tag)) {
+                done = true;
+              }
+              break;
+            }
+          }
+        }
+      } catch (com.google.protobuf.InvalidProtocolBufferException e) {
+        throw e.setUnfinishedMessage(this);
+      } catch (java.io.IOException e) {
+        throw new com.google.protobuf.InvalidProtocolBufferException(
+            e).setUnfinishedMessage(this);
+      } finally {
+        this.unknownFields = unknownFields.build();
+        makeExtensionsImmutable();
+      }
+    }
+    public static final com.google.protobuf.Descriptors.Descriptor
+        getDescriptor() {
+      return com.google.cloud.imf.gzos.pb.GRecvProto.internal_static_com_google_cloud_imf_gzos_GRecvExportRequest_descriptor;
+    }
+
+    @SuppressWarnings({"rawtypes"})
+    @java.lang.Override
+    protected com.google.protobuf.MapField internalGetMapField(
+        int number) {
+      switch (number) {
+        case 4:
+          return internalGetExportConfigs();
+        default:
+          throw new RuntimeException(
+              "Invalid map field number: " + number);
+      }
+    }
+    @java.lang.Override
+    protected com.google.protobuf.GeneratedMessageV3.FieldAccessorTable
+        internalGetFieldAccessorTable() {
+      return com.google.cloud.imf.gzos.pb.GRecvProto.internal_static_com_google_cloud_imf_gzos_GRecvExportRequest_fieldAccessorTable
+          .ensureFieldAccessorsInitialized(
+              com.google.cloud.imf.gzos.pb.GRecvProto.GRecvExportRequest.class, com.google.cloud.imf.gzos.pb.GRecvProto.GRecvExportRequest.Builder.class);
+    }
+
+    public static final int SQL_FIELD_NUMBER = 1;
+    private volatile java.lang.Object sql_;
+    /**
+     * <code>string sql = 1;</code>
+     * @return The sql.
+     */
+    @java.lang.Override
+    public java.lang.String getSql() {
+      java.lang.Object ref = sql_;
+      if (ref instanceof java.lang.String) {
+        return (java.lang.String) ref;
+      } else {
+        com.google.protobuf.ByteString bs = 
+            (com.google.protobuf.ByteString) ref;
+        java.lang.String s = bs.toStringUtf8();
+        sql_ = s;
+        return s;
+      }
+    }
+    /**
+     * <code>string sql = 1;</code>
+     * @return The bytes for sql.
+     */
+    @java.lang.Override
+    public com.google.protobuf.ByteString
+        getSqlBytes() {
+      java.lang.Object ref = sql_;
+      if (ref instanceof java.lang.String) {
+        com.google.protobuf.ByteString b = 
+            com.google.protobuf.ByteString.copyFromUtf8(
+                (java.lang.String) ref);
+        sql_ = b;
+        return b;
+      } else {
+        return (com.google.protobuf.ByteString) ref;
+      }
+    }
+
+    public static final int COPYBOOK_FIELD_NUMBER = 2;
+    private volatile java.lang.Object copybook_;
+    /**
+     * <code>string copybook = 2;</code>
+     * @return The copybook.
+     */
+    @java.lang.Override
+    public java.lang.String getCopybook() {
+      java.lang.Object ref = copybook_;
+      if (ref instanceof java.lang.String) {
+        return (java.lang.String) ref;
+      } else {
+        com.google.protobuf.ByteString bs = 
+            (com.google.protobuf.ByteString) ref;
+        java.lang.String s = bs.toStringUtf8();
+        copybook_ = s;
+        return s;
+      }
+    }
+    /**
+     * <code>string copybook = 2;</code>
+     * @return The bytes for copybook.
+     */
+    @java.lang.Override
+    public com.google.protobuf.ByteString
+        getCopybookBytes() {
+      java.lang.Object ref = copybook_;
+      if (ref instanceof java.lang.String) {
+        com.google.protobuf.ByteString b = 
+            com.google.protobuf.ByteString.copyFromUtf8(
+                (java.lang.String) ref);
+        copybook_ = b;
+        return b;
+      } else {
+        return (com.google.protobuf.ByteString) ref;
+      }
+    }
+
+    public static final int OUTPUT_URI_FIELD_NUMBER = 3;
+    private volatile java.lang.Object outputUri_;
+    /**
+     * <code>string output_uri = 3;</code>
+     * @return The outputUri.
+     */
+    @java.lang.Override
+    public java.lang.String getOutputUri() {
+      java.lang.Object ref = outputUri_;
+      if (ref instanceof java.lang.String) {
+        return (java.lang.String) ref;
+      } else {
+        com.google.protobuf.ByteString bs = 
+            (com.google.protobuf.ByteString) ref;
+        java.lang.String s = bs.toStringUtf8();
+        outputUri_ = s;
+        return s;
+      }
+    }
+    /**
+     * <code>string output_uri = 3;</code>
+     * @return The bytes for outputUri.
+     */
+    @java.lang.Override
+    public com.google.protobuf.ByteString
+        getOutputUriBytes() {
+      java.lang.Object ref = outputUri_;
+      if (ref instanceof java.lang.String) {
+        com.google.protobuf.ByteString b = 
+            com.google.protobuf.ByteString.copyFromUtf8(
+                (java.lang.String) ref);
+        outputUri_ = b;
+        return b;
+      } else {
+        return (com.google.protobuf.ByteString) ref;
+      }
+    }
+
+    public static final int EXPORT_CONFIGS_FIELD_NUMBER = 4;
+    private static final class ExportConfigsDefaultEntryHolder {
+      static final com.google.protobuf.MapEntry<
+          java.lang.String, java.lang.String> defaultEntry =
+              com.google.protobuf.MapEntry
+              .<java.lang.String, java.lang.String>newDefaultInstance(
+                  com.google.cloud.imf.gzos.pb.GRecvProto.internal_static_com_google_cloud_imf_gzos_GRecvExportRequest_ExportConfigsEntry_descriptor, 
+                  com.google.protobuf.WireFormat.FieldType.STRING,
+                  "",
+                  com.google.protobuf.WireFormat.FieldType.STRING,
+                  "");
+    }
+    private com.google.protobuf.MapField<
+        java.lang.String, java.lang.String> exportConfigs_;
+    private com.google.protobuf.MapField<java.lang.String, java.lang.String>
+    internalGetExportConfigs() {
+      if (exportConfigs_ == null) {
+        return com.google.protobuf.MapField.emptyMapField(
+            ExportConfigsDefaultEntryHolder.defaultEntry);
+      }
+      return exportConfigs_;
+    }
+
+    public int getExportConfigsCount() {
+      return internalGetExportConfigs().getMap().size();
+    }
+    /**
+     * <code>map&lt;string, string&gt; export_configs = 4;</code>
+     */
+
+    @java.lang.Override
+    public boolean containsExportConfigs(
+        java.lang.String key) {
+      if (key == null) { throw new java.lang.NullPointerException(); }
+      return internalGetExportConfigs().getMap().containsKey(key);
+    }
+    /**
+     * Use {@link #getExportConfigsMap()} instead.
+     */
+    @java.lang.Override
+    @java.lang.Deprecated
+    public java.util.Map<java.lang.String, java.lang.String> getExportConfigs() {
+      return getExportConfigsMap();
+    }
+    /**
+     * <code>map&lt;string, string&gt; export_configs = 4;</code>
+     */
+    @java.lang.Override
+
+    public java.util.Map<java.lang.String, java.lang.String> getExportConfigsMap() {
+      return internalGetExportConfigs().getMap();
+    }
+    /**
+     * <code>map&lt;string, string&gt; export_configs = 4;</code>
+     */
+    @java.lang.Override
+
+    public java.lang.String getExportConfigsOrDefault(
+        java.lang.String key,
+        java.lang.String defaultValue) {
+      if (key == null) { throw new java.lang.NullPointerException(); }
+      java.util.Map<java.lang.String, java.lang.String> map =
+          internalGetExportConfigs().getMap();
+      return map.containsKey(key) ? map.get(key) : defaultValue;
+    }
+    /**
+     * <code>map&lt;string, string&gt; export_configs = 4;</code>
+     */
+    @java.lang.Override
+
+    public java.lang.String getExportConfigsOrThrow(
+        java.lang.String key) {
+      if (key == null) { throw new java.lang.NullPointerException(); }
+      java.util.Map<java.lang.String, java.lang.String> map =
+          internalGetExportConfigs().getMap();
+      if (!map.containsKey(key)) {
+        throw new java.lang.IllegalArgumentException();
+      }
+      return map.get(key);
+    }
+
+    public static final int JOBINFO_FIELD_NUMBER = 5;
+    private com.google.cloud.imf.gzos.pb.GRecvProto.ZOSJobInfo jobinfo_;
+    /**
+     * <code>.com.google.cloud.imf.gzos.ZOSJobInfo jobinfo = 5;</code>
+     * @return Whether the jobinfo field is set.
+     */
+    @java.lang.Override
+    public boolean hasJobinfo() {
+      return jobinfo_ != null;
+    }
+    /**
+     * <code>.com.google.cloud.imf.gzos.ZOSJobInfo jobinfo = 5;</code>
+     * @return The jobinfo.
+     */
+    @java.lang.Override
+    public com.google.cloud.imf.gzos.pb.GRecvProto.ZOSJobInfo getJobinfo() {
+      return jobinfo_ == null ? com.google.cloud.imf.gzos.pb.GRecvProto.ZOSJobInfo.getDefaultInstance() : jobinfo_;
+    }
+    /**
+     * <code>.com.google.cloud.imf.gzos.ZOSJobInfo jobinfo = 5;</code>
+     */
+    @java.lang.Override
+    public com.google.cloud.imf.gzos.pb.GRecvProto.ZOSJobInfoOrBuilder getJobinfoOrBuilder() {
+      return getJobinfo();
+    }
+
+    private byte memoizedIsInitialized = -1;
+    @java.lang.Override
+    public final boolean isInitialized() {
+      byte isInitialized = memoizedIsInitialized;
+      if (isInitialized == 1) return true;
+      if (isInitialized == 0) return false;
+
+      memoizedIsInitialized = 1;
+      return true;
+    }
+
+    @java.lang.Override
+    public void writeTo(com.google.protobuf.CodedOutputStream output)
+                        throws java.io.IOException {
+      if (!getSqlBytes().isEmpty()) {
+        com.google.protobuf.GeneratedMessageV3.writeString(output, 1, sql_);
+      }
+      if (!getCopybookBytes().isEmpty()) {
+        com.google.protobuf.GeneratedMessageV3.writeString(output, 2, copybook_);
+      }
+      if (!getOutputUriBytes().isEmpty()) {
+        com.google.protobuf.GeneratedMessageV3.writeString(output, 3, outputUri_);
+      }
+      com.google.protobuf.GeneratedMessageV3
+        .serializeStringMapTo(
+          output,
+          internalGetExportConfigs(),
+          ExportConfigsDefaultEntryHolder.defaultEntry,
+          4);
+      if (jobinfo_ != null) {
+        output.writeMessage(5, getJobinfo());
+      }
+      unknownFields.writeTo(output);
+    }
+
+    @java.lang.Override
+    public int getSerializedSize() {
+      int size = memoizedSize;
+      if (size != -1) return size;
+
+      size = 0;
+      if (!getSqlBytes().isEmpty()) {
+        size += com.google.protobuf.GeneratedMessageV3.computeStringSize(1, sql_);
+      }
+      if (!getCopybookBytes().isEmpty()) {
+        size += com.google.protobuf.GeneratedMessageV3.computeStringSize(2, copybook_);
+      }
+      if (!getOutputUriBytes().isEmpty()) {
+        size += com.google.protobuf.GeneratedMessageV3.computeStringSize(3, outputUri_);
+      }
+      for (java.util.Map.Entry<java.lang.String, java.lang.String> entry
+           : internalGetExportConfigs().getMap().entrySet()) {
+        com.google.protobuf.MapEntry<java.lang.String, java.lang.String>
+        exportConfigs__ = ExportConfigsDefaultEntryHolder.defaultEntry.newBuilderForType()
+            .setKey(entry.getKey())
+            .setValue(entry.getValue())
+            .build();
+        size += com.google.protobuf.CodedOutputStream
+            .computeMessageSize(4, exportConfigs__);
+      }
+      if (jobinfo_ != null) {
+        size += com.google.protobuf.CodedOutputStream
+          .computeMessageSize(5, getJobinfo());
+      }
+      size += unknownFields.getSerializedSize();
+      memoizedSize = size;
+      return size;
+    }
+
+    @java.lang.Override
+    public boolean equals(final java.lang.Object obj) {
+      if (obj == this) {
+       return true;
+      }
+      if (!(obj instanceof com.google.cloud.imf.gzos.pb.GRecvProto.GRecvExportRequest)) {
+        return super.equals(obj);
+      }
+      com.google.cloud.imf.gzos.pb.GRecvProto.GRecvExportRequest other = (com.google.cloud.imf.gzos.pb.GRecvProto.GRecvExportRequest) obj;
+
+      if (!getSql()
+          .equals(other.getSql())) return false;
+      if (!getCopybook()
+          .equals(other.getCopybook())) return false;
+      if (!getOutputUri()
+          .equals(other.getOutputUri())) return false;
+      if (!internalGetExportConfigs().equals(
+          other.internalGetExportConfigs())) return false;
+      if (hasJobinfo() != other.hasJobinfo()) return false;
+      if (hasJobinfo()) {
+        if (!getJobinfo()
+            .equals(other.getJobinfo())) return false;
+      }
+      if (!unknownFields.equals(other.unknownFields)) return false;
+      return true;
+    }
+
+    @java.lang.Override
+    public int hashCode() {
+      if (memoizedHashCode != 0) {
+        return memoizedHashCode;
+      }
+      int hash = 41;
+      hash = (19 * hash) + getDescriptor().hashCode();
+      hash = (37 * hash) + SQL_FIELD_NUMBER;
+      hash = (53 * hash) + getSql().hashCode();
+      hash = (37 * hash) + COPYBOOK_FIELD_NUMBER;
+      hash = (53 * hash) + getCopybook().hashCode();
+      hash = (37 * hash) + OUTPUT_URI_FIELD_NUMBER;
+      hash = (53 * hash) + getOutputUri().hashCode();
+      if (!internalGetExportConfigs().getMap().isEmpty()) {
+        hash = (37 * hash) + EXPORT_CONFIGS_FIELD_NUMBER;
+        hash = (53 * hash) + internalGetExportConfigs().hashCode();
+      }
+      if (hasJobinfo()) {
+        hash = (37 * hash) + JOBINFO_FIELD_NUMBER;
+        hash = (53 * hash) + getJobinfo().hashCode();
+      }
+      hash = (29 * hash) + unknownFields.hashCode();
+      memoizedHashCode = hash;
+      return hash;
+    }
+
+    public static com.google.cloud.imf.gzos.pb.GRecvProto.GRecvExportRequest parseFrom(
+        java.nio.ByteBuffer data)
+        throws com.google.protobuf.InvalidProtocolBufferException {
+      return PARSER.parseFrom(data);
+    }
+    public static com.google.cloud.imf.gzos.pb.GRecvProto.GRecvExportRequest parseFrom(
+        java.nio.ByteBuffer data,
+        com.google.protobuf.ExtensionRegistryLite extensionRegistry)
+        throws com.google.protobuf.InvalidProtocolBufferException {
+      return PARSER.parseFrom(data, extensionRegistry);
+    }
+    public static com.google.cloud.imf.gzos.pb.GRecvProto.GRecvExportRequest parseFrom(
+        com.google.protobuf.ByteString data)
+        throws com.google.protobuf.InvalidProtocolBufferException {
+      return PARSER.parseFrom(data);
+    }
+    public static com.google.cloud.imf.gzos.pb.GRecvProto.GRecvExportRequest parseFrom(
+        com.google.protobuf.ByteString data,
+        com.google.protobuf.ExtensionRegistryLite extensionRegistry)
+        throws com.google.protobuf.InvalidProtocolBufferException {
+      return PARSER.parseFrom(data, extensionRegistry);
+    }
+    public static com.google.cloud.imf.gzos.pb.GRecvProto.GRecvExportRequest parseFrom(byte[] data)
+        throws com.google.protobuf.InvalidProtocolBufferException {
+      return PARSER.parseFrom(data);
+    }
+    public static com.google.cloud.imf.gzos.pb.GRecvProto.GRecvExportRequest parseFrom(
+        byte[] data,
+        com.google.protobuf.ExtensionRegistryLite extensionRegistry)
+        throws com.google.protobuf.InvalidProtocolBufferException {
+      return PARSER.parseFrom(data, extensionRegistry);
+    }
+    public static com.google.cloud.imf.gzos.pb.GRecvProto.GRecvExportRequest parseFrom(java.io.InputStream input)
+        throws java.io.IOException {
+      return com.google.protobuf.GeneratedMessageV3
+          .parseWithIOException(PARSER, input);
+    }
+    public static com.google.cloud.imf.gzos.pb.GRecvProto.GRecvExportRequest parseFrom(
+        java.io.InputStream input,
+        com.google.protobuf.ExtensionRegistryLite extensionRegistry)
+        throws java.io.IOException {
+      return com.google.protobuf.GeneratedMessageV3
+          .parseWithIOException(PARSER, input, extensionRegistry);
+    }
+    public static com.google.cloud.imf.gzos.pb.GRecvProto.GRecvExportRequest parseDelimitedFrom(java.io.InputStream input)
+        throws java.io.IOException {
+      return com.google.protobuf.GeneratedMessageV3
+          .parseDelimitedWithIOException(PARSER, input);
+    }
+    public static com.google.cloud.imf.gzos.pb.GRecvProto.GRecvExportRequest parseDelimitedFrom(
+        java.io.InputStream input,
+        com.google.protobuf.ExtensionRegistryLite extensionRegistry)
+        throws java.io.IOException {
+      return com.google.protobuf.GeneratedMessageV3
+          .parseDelimitedWithIOException(PARSER, input, extensionRegistry);
+    }
+    public static com.google.cloud.imf.gzos.pb.GRecvProto.GRecvExportRequest parseFrom(
+        com.google.protobuf.CodedInputStream input)
+        throws java.io.IOException {
+      return com.google.protobuf.GeneratedMessageV3
+          .parseWithIOException(PARSER, input);
+    }
+    public static com.google.cloud.imf.gzos.pb.GRecvProto.GRecvExportRequest parseFrom(
+        com.google.protobuf.CodedInputStream input,
+        com.google.protobuf.ExtensionRegistryLite extensionRegistry)
+        throws java.io.IOException {
+      return com.google.protobuf.GeneratedMessageV3
+          .parseWithIOException(PARSER, input, extensionRegistry);
+    }
+
+    @java.lang.Override
+    public Builder newBuilderForType() { return newBuilder(); }
+    public static Builder newBuilder() {
+      return DEFAULT_INSTANCE.toBuilder();
+    }
+    public static Builder newBuilder(com.google.cloud.imf.gzos.pb.GRecvProto.GRecvExportRequest prototype) {
+      return DEFAULT_INSTANCE.toBuilder().mergeFrom(prototype);
+    }
+    @java.lang.Override
+    public Builder toBuilder() {
+      return this == DEFAULT_INSTANCE
+          ? new Builder() : new Builder().mergeFrom(this);
+    }
+
+    @java.lang.Override
+    protected Builder newBuilderForType(
+        com.google.protobuf.GeneratedMessageV3.BuilderParent parent) {
+      Builder builder = new Builder(parent);
+      return builder;
+    }
+    /**
+     * Protobuf type {@code com.google.cloud.imf.gzos.GRecvExportRequest}
+     */
+    public static final class Builder extends
+        com.google.protobuf.GeneratedMessageV3.Builder<Builder> implements
+        // @@protoc_insertion_point(builder_implements:com.google.cloud.imf.gzos.GRecvExportRequest)
+        com.google.cloud.imf.gzos.pb.GRecvProto.GRecvExportRequestOrBuilder {
+      public static final com.google.protobuf.Descriptors.Descriptor
+          getDescriptor() {
+        return com.google.cloud.imf.gzos.pb.GRecvProto.internal_static_com_google_cloud_imf_gzos_GRecvExportRequest_descriptor;
+      }
+
+      @SuppressWarnings({"rawtypes"})
+      protected com.google.protobuf.MapField internalGetMapField(
+          int number) {
+        switch (number) {
+          case 4:
+            return internalGetExportConfigs();
+          default:
+            throw new RuntimeException(
+                "Invalid map field number: " + number);
+        }
+      }
+      @SuppressWarnings({"rawtypes"})
+      protected com.google.protobuf.MapField internalGetMutableMapField(
+          int number) {
+        switch (number) {
+          case 4:
+            return internalGetMutableExportConfigs();
+          default:
+            throw new RuntimeException(
+                "Invalid map field number: " + number);
+        }
+      }
+      @java.lang.Override
+      protected com.google.protobuf.GeneratedMessageV3.FieldAccessorTable
+          internalGetFieldAccessorTable() {
+        return com.google.cloud.imf.gzos.pb.GRecvProto.internal_static_com_google_cloud_imf_gzos_GRecvExportRequest_fieldAccessorTable
+            .ensureFieldAccessorsInitialized(
+                com.google.cloud.imf.gzos.pb.GRecvProto.GRecvExportRequest.class, com.google.cloud.imf.gzos.pb.GRecvProto.GRecvExportRequest.Builder.class);
+      }
+
+      // Construct using com.google.cloud.imf.gzos.pb.GRecvProto.GRecvExportRequest.newBuilder()
+      private Builder() {
+        maybeForceBuilderInitialization();
+      }
+
+      private Builder(
+          com.google.protobuf.GeneratedMessageV3.BuilderParent parent) {
+        super(parent);
+        maybeForceBuilderInitialization();
+      }
+      private void maybeForceBuilderInitialization() {
+        if (com.google.protobuf.GeneratedMessageV3
+                .alwaysUseFieldBuilders) {
+        }
+      }
+      @java.lang.Override
+      public Builder clear() {
+        super.clear();
+        sql_ = "";
+
+        copybook_ = "";
+
+        outputUri_ = "";
+
+        internalGetMutableExportConfigs().clear();
+        if (jobinfoBuilder_ == null) {
+          jobinfo_ = null;
+        } else {
+          jobinfo_ = null;
+          jobinfoBuilder_ = null;
+        }
+        return this;
+      }
+
+      @java.lang.Override
+      public com.google.protobuf.Descriptors.Descriptor
+          getDescriptorForType() {
+        return com.google.cloud.imf.gzos.pb.GRecvProto.internal_static_com_google_cloud_imf_gzos_GRecvExportRequest_descriptor;
+      }
+
+      @java.lang.Override
+      public com.google.cloud.imf.gzos.pb.GRecvProto.GRecvExportRequest getDefaultInstanceForType() {
+        return com.google.cloud.imf.gzos.pb.GRecvProto.GRecvExportRequest.getDefaultInstance();
+      }
+
+      @java.lang.Override
+      public com.google.cloud.imf.gzos.pb.GRecvProto.GRecvExportRequest build() {
+        com.google.cloud.imf.gzos.pb.GRecvProto.GRecvExportRequest result = buildPartial();
+        if (!result.isInitialized()) {
+          throw newUninitializedMessageException(result);
+        }
+        return result;
+      }
+
+      @java.lang.Override
+      public com.google.cloud.imf.gzos.pb.GRecvProto.GRecvExportRequest buildPartial() {
+        com.google.cloud.imf.gzos.pb.GRecvProto.GRecvExportRequest result = new com.google.cloud.imf.gzos.pb.GRecvProto.GRecvExportRequest(this);
+        int from_bitField0_ = bitField0_;
+        result.sql_ = sql_;
+        result.copybook_ = copybook_;
+        result.outputUri_ = outputUri_;
+        result.exportConfigs_ = internalGetExportConfigs();
+        result.exportConfigs_.makeImmutable();
+        if (jobinfoBuilder_ == null) {
+          result.jobinfo_ = jobinfo_;
+        } else {
+          result.jobinfo_ = jobinfoBuilder_.build();
+        }
+        onBuilt();
+        return result;
+      }
+
+      @java.lang.Override
+      public Builder clone() {
+        return super.clone();
+      }
+      @java.lang.Override
+      public Builder setField(
+          com.google.protobuf.Descriptors.FieldDescriptor field,
+          java.lang.Object value) {
+        return super.setField(field, value);
+      }
+      @java.lang.Override
+      public Builder clearField(
+          com.google.protobuf.Descriptors.FieldDescriptor field) {
+        return super.clearField(field);
+      }
+      @java.lang.Override
+      public Builder clearOneof(
+          com.google.protobuf.Descriptors.OneofDescriptor oneof) {
+        return super.clearOneof(oneof);
+      }
+      @java.lang.Override
+      public Builder setRepeatedField(
+          com.google.protobuf.Descriptors.FieldDescriptor field,
+          int index, java.lang.Object value) {
+        return super.setRepeatedField(field, index, value);
+      }
+      @java.lang.Override
+      public Builder addRepeatedField(
+          com.google.protobuf.Descriptors.FieldDescriptor field,
+          java.lang.Object value) {
+        return super.addRepeatedField(field, value);
+      }
+      @java.lang.Override
+      public Builder mergeFrom(com.google.protobuf.Message other) {
+        if (other instanceof com.google.cloud.imf.gzos.pb.GRecvProto.GRecvExportRequest) {
+          return mergeFrom((com.google.cloud.imf.gzos.pb.GRecvProto.GRecvExportRequest)other);
+        } else {
+          super.mergeFrom(other);
+          return this;
+        }
+      }
+
+      public Builder mergeFrom(com.google.cloud.imf.gzos.pb.GRecvProto.GRecvExportRequest other) {
+        if (other == com.google.cloud.imf.gzos.pb.GRecvProto.GRecvExportRequest.getDefaultInstance()) return this;
+        if (!other.getSql().isEmpty()) {
+          sql_ = other.sql_;
+          onChanged();
+        }
+        if (!other.getCopybook().isEmpty()) {
+          copybook_ = other.copybook_;
+          onChanged();
+        }
+        if (!other.getOutputUri().isEmpty()) {
+          outputUri_ = other.outputUri_;
+          onChanged();
+        }
+        internalGetMutableExportConfigs().mergeFrom(
+            other.internalGetExportConfigs());
+        if (other.hasJobinfo()) {
+          mergeJobinfo(other.getJobinfo());
+        }
+        this.mergeUnknownFields(other.unknownFields);
+        onChanged();
+        return this;
+      }
+
+      @java.lang.Override
+      public final boolean isInitialized() {
+        return true;
+      }
+
+      @java.lang.Override
+      public Builder mergeFrom(
+          com.google.protobuf.CodedInputStream input,
+          com.google.protobuf.ExtensionRegistryLite extensionRegistry)
+          throws java.io.IOException {
+        com.google.cloud.imf.gzos.pb.GRecvProto.GRecvExportRequest parsedMessage = null;
+        try {
+          parsedMessage = PARSER.parsePartialFrom(input, extensionRegistry);
+        } catch (com.google.protobuf.InvalidProtocolBufferException e) {
+          parsedMessage = (com.google.cloud.imf.gzos.pb.GRecvProto.GRecvExportRequest) e.getUnfinishedMessage();
+          throw e.unwrapIOException();
+        } finally {
+          if (parsedMessage != null) {
+            mergeFrom(parsedMessage);
+          }
+        }
+        return this;
+      }
+      private int bitField0_;
+
+      private java.lang.Object sql_ = "";
+      /**
+       * <code>string sql = 1;</code>
+       * @return The sql.
+       */
+      public java.lang.String getSql() {
+        java.lang.Object ref = sql_;
+        if (!(ref instanceof java.lang.String)) {
+          com.google.protobuf.ByteString bs =
+              (com.google.protobuf.ByteString) ref;
+          java.lang.String s = bs.toStringUtf8();
+          sql_ = s;
+          return s;
+        } else {
+          return (java.lang.String) ref;
+        }
+      }
+      /**
+       * <code>string sql = 1;</code>
+       * @return The bytes for sql.
+       */
+      public com.google.protobuf.ByteString
+          getSqlBytes() {
+        java.lang.Object ref = sql_;
+        if (ref instanceof String) {
+          com.google.protobuf.ByteString b = 
+              com.google.protobuf.ByteString.copyFromUtf8(
+                  (java.lang.String) ref);
+          sql_ = b;
+          return b;
+        } else {
+          return (com.google.protobuf.ByteString) ref;
+        }
+      }
+      /**
+       * <code>string sql = 1;</code>
+       * @param value The sql to set.
+       * @return This builder for chaining.
+       */
+      public Builder setSql(
+          java.lang.String value) {
+        if (value == null) {
+    throw new NullPointerException();
+  }
+  
+        sql_ = value;
+        onChanged();
+        return this;
+      }
+      /**
+       * <code>string sql = 1;</code>
+       * @return This builder for chaining.
+       */
+      public Builder clearSql() {
+        
+        sql_ = getDefaultInstance().getSql();
+        onChanged();
+        return this;
+      }
+      /**
+       * <code>string sql = 1;</code>
+       * @param value The bytes for sql to set.
+       * @return This builder for chaining.
+       */
+      public Builder setSqlBytes(
+          com.google.protobuf.ByteString value) {
+        if (value == null) {
+    throw new NullPointerException();
+  }
+  checkByteStringIsUtf8(value);
+        
+        sql_ = value;
+        onChanged();
+        return this;
+      }
+
+      private java.lang.Object copybook_ = "";
+      /**
+       * <code>string copybook = 2;</code>
+       * @return The copybook.
+       */
+      public java.lang.String getCopybook() {
+        java.lang.Object ref = copybook_;
+        if (!(ref instanceof java.lang.String)) {
+          com.google.protobuf.ByteString bs =
+              (com.google.protobuf.ByteString) ref;
+          java.lang.String s = bs.toStringUtf8();
+          copybook_ = s;
+          return s;
+        } else {
+          return (java.lang.String) ref;
+        }
+      }
+      /**
+       * <code>string copybook = 2;</code>
+       * @return The bytes for copybook.
+       */
+      public com.google.protobuf.ByteString
+          getCopybookBytes() {
+        java.lang.Object ref = copybook_;
+        if (ref instanceof String) {
+          com.google.protobuf.ByteString b = 
+              com.google.protobuf.ByteString.copyFromUtf8(
+                  (java.lang.String) ref);
+          copybook_ = b;
+          return b;
+        } else {
+          return (com.google.protobuf.ByteString) ref;
+        }
+      }
+      /**
+       * <code>string copybook = 2;</code>
+       * @param value The copybook to set.
+       * @return This builder for chaining.
+       */
+      public Builder setCopybook(
+          java.lang.String value) {
+        if (value == null) {
+    throw new NullPointerException();
+  }
+  
+        copybook_ = value;
+        onChanged();
+        return this;
+      }
+      /**
+       * <code>string copybook = 2;</code>
+       * @return This builder for chaining.
+       */
+      public Builder clearCopybook() {
+        
+        copybook_ = getDefaultInstance().getCopybook();
+        onChanged();
+        return this;
+      }
+      /**
+       * <code>string copybook = 2;</code>
+       * @param value The bytes for copybook to set.
+       * @return This builder for chaining.
+       */
+      public Builder setCopybookBytes(
+          com.google.protobuf.ByteString value) {
+        if (value == null) {
+    throw new NullPointerException();
+  }
+  checkByteStringIsUtf8(value);
+        
+        copybook_ = value;
+        onChanged();
+        return this;
+      }
+
+      private java.lang.Object outputUri_ = "";
+      /**
+       * <code>string output_uri = 3;</code>
+       * @return The outputUri.
+       */
+      public java.lang.String getOutputUri() {
+        java.lang.Object ref = outputUri_;
+        if (!(ref instanceof java.lang.String)) {
+          com.google.protobuf.ByteString bs =
+              (com.google.protobuf.ByteString) ref;
+          java.lang.String s = bs.toStringUtf8();
+          outputUri_ = s;
+          return s;
+        } else {
+          return (java.lang.String) ref;
+        }
+      }
+      /**
+       * <code>string output_uri = 3;</code>
+       * @return The bytes for outputUri.
+       */
+      public com.google.protobuf.ByteString
+          getOutputUriBytes() {
+        java.lang.Object ref = outputUri_;
+        if (ref instanceof String) {
+          com.google.protobuf.ByteString b = 
+              com.google.protobuf.ByteString.copyFromUtf8(
+                  (java.lang.String) ref);
+          outputUri_ = b;
+          return b;
+        } else {
+          return (com.google.protobuf.ByteString) ref;
+        }
+      }
+      /**
+       * <code>string output_uri = 3;</code>
+       * @param value The outputUri to set.
+       * @return This builder for chaining.
+       */
+      public Builder setOutputUri(
+          java.lang.String value) {
+        if (value == null) {
+    throw new NullPointerException();
+  }
+  
+        outputUri_ = value;
+        onChanged();
+        return this;
+      }
+      /**
+       * <code>string output_uri = 3;</code>
+       * @return This builder for chaining.
+       */
+      public Builder clearOutputUri() {
+        
+        outputUri_ = getDefaultInstance().getOutputUri();
+        onChanged();
+        return this;
+      }
+      /**
+       * <code>string output_uri = 3;</code>
+       * @param value The bytes for outputUri to set.
+       * @return This builder for chaining.
+       */
+      public Builder setOutputUriBytes(
+          com.google.protobuf.ByteString value) {
+        if (value == null) {
+    throw new NullPointerException();
+  }
+  checkByteStringIsUtf8(value);
+        
+        outputUri_ = value;
+        onChanged();
+        return this;
+      }
+
+      private com.google.protobuf.MapField<
+          java.lang.String, java.lang.String> exportConfigs_;
+      private com.google.protobuf.MapField<java.lang.String, java.lang.String>
+      internalGetExportConfigs() {
+        if (exportConfigs_ == null) {
+          return com.google.protobuf.MapField.emptyMapField(
+              ExportConfigsDefaultEntryHolder.defaultEntry);
+        }
+        return exportConfigs_;
+      }
+      private com.google.protobuf.MapField<java.lang.String, java.lang.String>
+      internalGetMutableExportConfigs() {
+        onChanged();;
+        if (exportConfigs_ == null) {
+          exportConfigs_ = com.google.protobuf.MapField.newMapField(
+              ExportConfigsDefaultEntryHolder.defaultEntry);
+        }
+        if (!exportConfigs_.isMutable()) {
+          exportConfigs_ = exportConfigs_.copy();
+        }
+        return exportConfigs_;
+      }
+
+      public int getExportConfigsCount() {
+        return internalGetExportConfigs().getMap().size();
+      }
+      /**
+       * <code>map&lt;string, string&gt; export_configs = 4;</code>
+       */
+
+      @java.lang.Override
+      public boolean containsExportConfigs(
+          java.lang.String key) {
+        if (key == null) { throw new java.lang.NullPointerException(); }
+        return internalGetExportConfigs().getMap().containsKey(key);
+      }
+      /**
+       * Use {@link #getExportConfigsMap()} instead.
+       */
+      @java.lang.Override
+      @java.lang.Deprecated
+      public java.util.Map<java.lang.String, java.lang.String> getExportConfigs() {
+        return getExportConfigsMap();
+      }
+      /**
+       * <code>map&lt;string, string&gt; export_configs = 4;</code>
+       */
+      @java.lang.Override
+
+      public java.util.Map<java.lang.String, java.lang.String> getExportConfigsMap() {
+        return internalGetExportConfigs().getMap();
+      }
+      /**
+       * <code>map&lt;string, string&gt; export_configs = 4;</code>
+       */
+      @java.lang.Override
+
+      public java.lang.String getExportConfigsOrDefault(
+          java.lang.String key,
+          java.lang.String defaultValue) {
+        if (key == null) { throw new java.lang.NullPointerException(); }
+        java.util.Map<java.lang.String, java.lang.String> map =
+            internalGetExportConfigs().getMap();
+        return map.containsKey(key) ? map.get(key) : defaultValue;
+      }
+      /**
+       * <code>map&lt;string, string&gt; export_configs = 4;</code>
+       */
+      @java.lang.Override
+
+      public java.lang.String getExportConfigsOrThrow(
+          java.lang.String key) {
+        if (key == null) { throw new java.lang.NullPointerException(); }
+        java.util.Map<java.lang.String, java.lang.String> map =
+            internalGetExportConfigs().getMap();
+        if (!map.containsKey(key)) {
+          throw new java.lang.IllegalArgumentException();
+        }
+        return map.get(key);
+      }
+
+      public Builder clearExportConfigs() {
+        internalGetMutableExportConfigs().getMutableMap()
+            .clear();
+        return this;
+      }
+      /**
+       * <code>map&lt;string, string&gt; export_configs = 4;</code>
+       */
+
+      public Builder removeExportConfigs(
+          java.lang.String key) {
+        if (key == null) { throw new java.lang.NullPointerException(); }
+        internalGetMutableExportConfigs().getMutableMap()
+            .remove(key);
+        return this;
+      }
+      /**
+       * Use alternate mutation accessors instead.
+       */
+      @java.lang.Deprecated
+      public java.util.Map<java.lang.String, java.lang.String>
+      getMutableExportConfigs() {
+        return internalGetMutableExportConfigs().getMutableMap();
+      }
+      /**
+       * <code>map&lt;string, string&gt; export_configs = 4;</code>
+       */
+      public Builder putExportConfigs(
+          java.lang.String key,
+          java.lang.String value) {
+        if (key == null) { throw new java.lang.NullPointerException(); }
+        if (value == null) { throw new java.lang.NullPointerException(); }
+        internalGetMutableExportConfigs().getMutableMap()
+            .put(key, value);
+        return this;
+      }
+      /**
+       * <code>map&lt;string, string&gt; export_configs = 4;</code>
+       */
+
+      public Builder putAllExportConfigs(
+          java.util.Map<java.lang.String, java.lang.String> values) {
+        internalGetMutableExportConfigs().getMutableMap()
+            .putAll(values);
+        return this;
+      }
+
+      private com.google.cloud.imf.gzos.pb.GRecvProto.ZOSJobInfo jobinfo_;
+      private com.google.protobuf.SingleFieldBuilderV3<
+          com.google.cloud.imf.gzos.pb.GRecvProto.ZOSJobInfo, com.google.cloud.imf.gzos.pb.GRecvProto.ZOSJobInfo.Builder, com.google.cloud.imf.gzos.pb.GRecvProto.ZOSJobInfoOrBuilder> jobinfoBuilder_;
+      /**
+       * <code>.com.google.cloud.imf.gzos.ZOSJobInfo jobinfo = 5;</code>
+       * @return Whether the jobinfo field is set.
+       */
+      public boolean hasJobinfo() {
+        return jobinfoBuilder_ != null || jobinfo_ != null;
+      }
+      /**
+       * <code>.com.google.cloud.imf.gzos.ZOSJobInfo jobinfo = 5;</code>
+       * @return The jobinfo.
+       */
+      public com.google.cloud.imf.gzos.pb.GRecvProto.ZOSJobInfo getJobinfo() {
+        if (jobinfoBuilder_ == null) {
+          return jobinfo_ == null ? com.google.cloud.imf.gzos.pb.GRecvProto.ZOSJobInfo.getDefaultInstance() : jobinfo_;
+        } else {
+          return jobinfoBuilder_.getMessage();
+        }
+      }
+      /**
+       * <code>.com.google.cloud.imf.gzos.ZOSJobInfo jobinfo = 5;</code>
+       */
+      public Builder setJobinfo(com.google.cloud.imf.gzos.pb.GRecvProto.ZOSJobInfo value) {
+        if (jobinfoBuilder_ == null) {
+          if (value == null) {
+            throw new NullPointerException();
+          }
+          jobinfo_ = value;
+          onChanged();
+        } else {
+          jobinfoBuilder_.setMessage(value);
+        }
+
+        return this;
+      }
+      /**
+       * <code>.com.google.cloud.imf.gzos.ZOSJobInfo jobinfo = 5;</code>
+       */
+      public Builder setJobinfo(
+          com.google.cloud.imf.gzos.pb.GRecvProto.ZOSJobInfo.Builder builderForValue) {
+        if (jobinfoBuilder_ == null) {
+          jobinfo_ = builderForValue.build();
+          onChanged();
+        } else {
+          jobinfoBuilder_.setMessage(builderForValue.build());
+        }
+
+        return this;
+      }
+      /**
+       * <code>.com.google.cloud.imf.gzos.ZOSJobInfo jobinfo = 5;</code>
+       */
+      public Builder mergeJobinfo(com.google.cloud.imf.gzos.pb.GRecvProto.ZOSJobInfo value) {
+        if (jobinfoBuilder_ == null) {
+          if (jobinfo_ != null) {
+            jobinfo_ =
+              com.google.cloud.imf.gzos.pb.GRecvProto.ZOSJobInfo.newBuilder(jobinfo_).mergeFrom(value).buildPartial();
+          } else {
+            jobinfo_ = value;
+          }
+          onChanged();
+        } else {
+          jobinfoBuilder_.mergeFrom(value);
+        }
+
+        return this;
+      }
+      /**
+       * <code>.com.google.cloud.imf.gzos.ZOSJobInfo jobinfo = 5;</code>
+       */
+      public Builder clearJobinfo() {
+        if (jobinfoBuilder_ == null) {
+          jobinfo_ = null;
+          onChanged();
+        } else {
+          jobinfo_ = null;
+          jobinfoBuilder_ = null;
+        }
+
+        return this;
+      }
+      /**
+       * <code>.com.google.cloud.imf.gzos.ZOSJobInfo jobinfo = 5;</code>
+       */
+      public com.google.cloud.imf.gzos.pb.GRecvProto.ZOSJobInfo.Builder getJobinfoBuilder() {
+        
+        onChanged();
+        return getJobinfoFieldBuilder().getBuilder();
+      }
+      /**
+       * <code>.com.google.cloud.imf.gzos.ZOSJobInfo jobinfo = 5;</code>
+       */
+      public com.google.cloud.imf.gzos.pb.GRecvProto.ZOSJobInfoOrBuilder getJobinfoOrBuilder() {
+        if (jobinfoBuilder_ != null) {
+          return jobinfoBuilder_.getMessageOrBuilder();
+        } else {
+          return jobinfo_ == null ?
+              com.google.cloud.imf.gzos.pb.GRecvProto.ZOSJobInfo.getDefaultInstance() : jobinfo_;
+        }
+      }
+      /**
+       * <code>.com.google.cloud.imf.gzos.ZOSJobInfo jobinfo = 5;</code>
+       */
+      private com.google.protobuf.SingleFieldBuilderV3<
+          com.google.cloud.imf.gzos.pb.GRecvProto.ZOSJobInfo, com.google.cloud.imf.gzos.pb.GRecvProto.ZOSJobInfo.Builder, com.google.cloud.imf.gzos.pb.GRecvProto.ZOSJobInfoOrBuilder> 
+          getJobinfoFieldBuilder() {
+        if (jobinfoBuilder_ == null) {
+          jobinfoBuilder_ = new com.google.protobuf.SingleFieldBuilderV3<
+              com.google.cloud.imf.gzos.pb.GRecvProto.ZOSJobInfo, com.google.cloud.imf.gzos.pb.GRecvProto.ZOSJobInfo.Builder, com.google.cloud.imf.gzos.pb.GRecvProto.ZOSJobInfoOrBuilder>(
+                  getJobinfo(),
+                  getParentForChildren(),
+                  isClean());
+          jobinfo_ = null;
+        }
+        return jobinfoBuilder_;
+      }
+      @java.lang.Override
+      public final Builder setUnknownFields(
+          final com.google.protobuf.UnknownFieldSet unknownFields) {
+        return super.setUnknownFields(unknownFields);
+      }
+
+      @java.lang.Override
+      public final Builder mergeUnknownFields(
+          final com.google.protobuf.UnknownFieldSet unknownFields) {
+        return super.mergeUnknownFields(unknownFields);
+      }
+
+
+      // @@protoc_insertion_point(builder_scope:com.google.cloud.imf.gzos.GRecvExportRequest)
+    }
+
+    // @@protoc_insertion_point(class_scope:com.google.cloud.imf.gzos.GRecvExportRequest)
+    private static final com.google.cloud.imf.gzos.pb.GRecvProto.GRecvExportRequest DEFAULT_INSTANCE;
+    static {
+      DEFAULT_INSTANCE = new com.google.cloud.imf.gzos.pb.GRecvProto.GRecvExportRequest();
+    }
+
+    public static com.google.cloud.imf.gzos.pb.GRecvProto.GRecvExportRequest getDefaultInstance() {
+      return DEFAULT_INSTANCE;
+    }
+
+    private static final com.google.protobuf.Parser<GRecvExportRequest>
+        PARSER = new com.google.protobuf.AbstractParser<GRecvExportRequest>() {
+      @java.lang.Override
+      public GRecvExportRequest parsePartialFrom(
+          com.google.protobuf.CodedInputStream input,
+          com.google.protobuf.ExtensionRegistryLite extensionRegistry)
+          throws com.google.protobuf.InvalidProtocolBufferException {
+        return new GRecvExportRequest(input, extensionRegistry);
+      }
+    };
+
+    public static com.google.protobuf.Parser<GRecvExportRequest> parser() {
+      return PARSER;
+    }
+
+    @java.lang.Override
+    public com.google.protobuf.Parser<GRecvExportRequest> getParserForType() {
+      return PARSER;
+    }
+
+    @java.lang.Override
+    public com.google.cloud.imf.gzos.pb.GRecvProto.GRecvExportRequest getDefaultInstanceForType() {
+      return DEFAULT_INSTANCE;
+    }
+
+  }
+
   public interface GRecvResponseOrBuilder extends
       // @@protoc_insertion_point(interface_extends:com.google.cloud.imf.gzos.GRecvResponse)
       com.google.protobuf.MessageOrBuilder {
@@ -6933,7 +8410,7 @@ public final class GRecvProto {
   /**
    * Protobuf type {@code com.google.cloud.imf.gzos.GRecvResponse}
    */
-  public  static final class GRecvResponse extends
+  public static final class GRecvResponse extends
       com.google.protobuf.GeneratedMessageV3 implements
       // @@protoc_insertion_point(message_implements:com.google.cloud.imf.gzos.GRecvResponse)
       GRecvResponseOrBuilder {
@@ -7040,6 +8517,7 @@ public final class GRecvProto {
      * <code>int32 status = 1;</code>
      * @return The status.
      */
+    @java.lang.Override
     public int getStatus() {
       return status_;
     }
@@ -7050,6 +8528,7 @@ public final class GRecvProto {
      * <code>int64 rowCount = 2;</code>
      * @return The rowCount.
      */
+    @java.lang.Override
     public long getRowCount() {
       return rowCount_;
     }
@@ -7060,6 +8539,7 @@ public final class GRecvProto {
      * <code>int64 msgCount = 3;</code>
      * @return The msgCount.
      */
+    @java.lang.Override
     public long getMsgCount() {
       return msgCount_;
     }
@@ -7070,6 +8550,7 @@ public final class GRecvProto {
      * <code>int64 errCount = 4;</code>
      * @return The errCount.
      */
+    @java.lang.Override
     public long getErrCount() {
       return errCount_;
     }
@@ -7080,6 +8561,7 @@ public final class GRecvProto {
      * <code>string hash = 5;</code>
      * @return The hash.
      */
+    @java.lang.Override
     public java.lang.String getHash() {
       java.lang.Object ref = hash_;
       if (ref instanceof java.lang.String) {
@@ -7096,6 +8578,7 @@ public final class GRecvProto {
      * <code>string hash = 5;</code>
      * @return The bytes for hash.
      */
+    @java.lang.Override
     public com.google.protobuf.ByteString
         getHashBytes() {
       java.lang.Object ref = hash_;
@@ -7488,6 +8971,7 @@ public final class GRecvProto {
        * <code>int32 status = 1;</code>
        * @return The status.
        */
+      @java.lang.Override
       public int getStatus() {
         return status_;
       }
@@ -7518,6 +9002,7 @@ public final class GRecvProto {
        * <code>int64 rowCount = 2;</code>
        * @return The rowCount.
        */
+      @java.lang.Override
       public long getRowCount() {
         return rowCount_;
       }
@@ -7548,6 +9033,7 @@ public final class GRecvProto {
        * <code>int64 msgCount = 3;</code>
        * @return The msgCount.
        */
+      @java.lang.Override
       public long getMsgCount() {
         return msgCount_;
       }
@@ -7578,6 +9064,7 @@ public final class GRecvProto {
        * <code>int64 errCount = 4;</code>
        * @return The errCount.
        */
+      @java.lang.Override
       public long getErrCount() {
         return errCount_;
       }
@@ -7754,7 +9241,7 @@ public final class GRecvProto {
    *
    * Protobuf type {@code com.google.cloud.imf.gzos.HealthCheckRequest}
    */
-  public  static final class HealthCheckRequest extends
+  public static final class HealthCheckRequest extends
       com.google.protobuf.GeneratedMessageV3 implements
       // @@protoc_insertion_point(message_implements:com.google.cloud.imf.gzos.HealthCheckRequest)
       HealthCheckRequestOrBuilder {
@@ -7841,6 +9328,7 @@ public final class GRecvProto {
      * <code>string service = 1;</code>
      * @return The service.
      */
+    @java.lang.Override
     public java.lang.String getService() {
       java.lang.Object ref = service_;
       if (ref instanceof java.lang.String) {
@@ -7857,6 +9345,7 @@ public final class GRecvProto {
      * <code>string service = 1;</code>
      * @return The bytes for service.
      */
+    @java.lang.Override
     public com.google.protobuf.ByteString
         getServiceBytes() {
       java.lang.Object ref = service_;
@@ -8323,7 +9812,7 @@ public final class GRecvProto {
   /**
    * Protobuf type {@code com.google.cloud.imf.gzos.HealthCheckResponse}
    */
-  public  static final class HealthCheckResponse extends
+  public static final class HealthCheckResponse extends
       com.google.protobuf.GeneratedMessageV3 implements
       // @@protoc_insertion_point(message_implements:com.google.cloud.imf.gzos.HealthCheckResponse)
       HealthCheckResponseOrBuilder {
@@ -8483,6 +9972,10 @@ public final class GRecvProto {
 
       public final com.google.protobuf.Descriptors.EnumValueDescriptor
           getValueDescriptor() {
+        if (this == UNRECOGNIZED) {
+          throw new java.lang.IllegalStateException(
+              "Can't get the descriptor of an unrecognized enum value.");
+        }
         return getDescriptor().getValues().get(ordinal());
       }
       public final com.google.protobuf.Descriptors.EnumDescriptor
@@ -8523,14 +10016,14 @@ public final class GRecvProto {
      * <code>.com.google.cloud.imf.gzos.HealthCheckResponse.ServingStatus status = 1;</code>
      * @return The enum numeric value on the wire for status.
      */
-    public int getStatusValue() {
+    @java.lang.Override public int getStatusValue() {
       return status_;
     }
     /**
      * <code>.com.google.cloud.imf.gzos.HealthCheckResponse.ServingStatus status = 1;</code>
      * @return The status.
      */
-    public com.google.cloud.imf.gzos.pb.GRecvProto.HealthCheckResponse.ServingStatus getStatus() {
+    @java.lang.Override public com.google.cloud.imf.gzos.pb.GRecvProto.HealthCheckResponse.ServingStatus getStatus() {
       @SuppressWarnings("deprecation")
       com.google.cloud.imf.gzos.pb.GRecvProto.HealthCheckResponse.ServingStatus result = com.google.cloud.imf.gzos.pb.GRecvProto.HealthCheckResponse.ServingStatus.valueOf(status_);
       return result == null ? com.google.cloud.imf.gzos.pb.GRecvProto.HealthCheckResponse.ServingStatus.UNRECOGNIZED : result;
@@ -8842,7 +10335,7 @@ public final class GRecvProto {
        * <code>.com.google.cloud.imf.gzos.HealthCheckResponse.ServingStatus status = 1;</code>
        * @return The enum numeric value on the wire for status.
        */
-      public int getStatusValue() {
+      @java.lang.Override public int getStatusValue() {
         return status_;
       }
       /**
@@ -8851,6 +10344,7 @@ public final class GRecvProto {
        * @return This builder for chaining.
        */
       public Builder setStatusValue(int value) {
+        
         status_ = value;
         onChanged();
         return this;
@@ -8859,6 +10353,7 @@ public final class GRecvProto {
        * <code>.com.google.cloud.imf.gzos.HealthCheckResponse.ServingStatus status = 1;</code>
        * @return The status.
        */
+      @java.lang.Override
       public com.google.cloud.imf.gzos.pb.GRecvProto.HealthCheckResponse.ServingStatus getStatus() {
         @SuppressWarnings("deprecation")
         com.google.cloud.imf.gzos.pb.GRecvProto.HealthCheckResponse.ServingStatus result = com.google.cloud.imf.gzos.pb.GRecvProto.HealthCheckResponse.ServingStatus.valueOf(status_);
@@ -8967,6 +10462,16 @@ public final class GRecvProto {
     com.google.protobuf.GeneratedMessageV3.FieldAccessorTable
       internal_static_com_google_cloud_imf_gzos_GRecvRequest_fieldAccessorTable;
   private static final com.google.protobuf.Descriptors.Descriptor
+    internal_static_com_google_cloud_imf_gzos_GRecvExportRequest_descriptor;
+  private static final 
+    com.google.protobuf.GeneratedMessageV3.FieldAccessorTable
+      internal_static_com_google_cloud_imf_gzos_GRecvExportRequest_fieldAccessorTable;
+  private static final com.google.protobuf.Descriptors.Descriptor
+    internal_static_com_google_cloud_imf_gzos_GRecvExportRequest_ExportConfigsEntry_descriptor;
+  private static final 
+    com.google.protobuf.GeneratedMessageV3.FieldAccessorTable
+      internal_static_com_google_cloud_imf_gzos_GRecvExportRequest_ExportConfigsEntry_fieldAccessorTable;
+  private static final com.google.protobuf.Descriptors.Descriptor
     internal_static_com_google_cloud_imf_gzos_GRecvResponse_descriptor;
   private static final 
     com.google.protobuf.GeneratedMessageV3.FieldAccessorTable
@@ -9021,21 +10526,30 @@ public final class GRecvProto {
       "ncipal\030\010 \001(\t\0226\n\007jobinfo\030\t \001(\0132%.com.goog" +
       "le.cloud.imf.gzos.ZOSJobInfo\022\021\n\ttimestam" +
       "p\030\n \001(\003\022\017\n\007src_uri\030\013 \001(\t\022\017\n\007no_data\030\014 \001(" +
-      "\010\"c\n\rGRecvResponse\022\016\n\006status\030\001 \001(\005\022\020\n\010ro" +
-      "wCount\030\002 \001(\003\022\020\n\010msgCount\030\003 \001(\003\022\020\n\010errCou" +
-      "nt\030\004 \001(\003\022\014\n\004hash\030\005 \001(\t\"%\n\022HealthCheckReq" +
-      "uest\022\017\n\007service\030\001 \001(\t\"\237\001\n\023HealthCheckRes" +
-      "ponse\022L\n\006status\030\001 \001(\0162<.com.google.cloud" +
-      ".imf.gzos.HealthCheckResponse.ServingSta" +
-      "tus\":\n\rServingStatus\022\013\n\007UNKNOWN\020\000\022\013\n\007SER" +
-      "VING\020\001\022\017\n\013NOT_SERVING\020\0022\313\001\n\005GRecv\022Z\n\005Wri" +
-      "te\022\'.com.google.cloud.imf.gzos.GRecvRequ" +
-      "est\032(.com.google.cloud.imf.gzos.GRecvRes" +
-      "ponse\022f\n\005Check\022-.com.google.cloud.imf.gz" +
-      "os.HealthCheckRequest\032..com.google.cloud" +
-      ".imf.gzos.HealthCheckResponseB,\n\034com.goo" +
-      "gle.cloud.imf.gzos.pbB\nGRecvProtoP\000b\006pro" +
-      "to3"
+      "\010\"\217\002\n\022GRecvExportRequest\022\013\n\003sql\030\001 \001(\t\022\020\n" +
+      "\010copybook\030\002 \001(\t\022\022\n\noutput_uri\030\003 \001(\t\022X\n\016e" +
+      "xport_configs\030\004 \003(\0132@.com.google.cloud.i" +
+      "mf.gzos.GRecvExportRequest.ExportConfigs" +
+      "Entry\0226\n\007jobinfo\030\005 \001(\0132%.com.google.clou" +
+      "d.imf.gzos.ZOSJobInfo\0324\n\022ExportConfigsEn" +
+      "try\022\013\n\003key\030\001 \001(\t\022\r\n\005value\030\002 \001(\t:\0028\001\"c\n\rG" +
+      "RecvResponse\022\016\n\006status\030\001 \001(\005\022\020\n\010rowCount" +
+      "\030\002 \001(\003\022\020\n\010msgCount\030\003 \001(\003\022\020\n\010errCount\030\004 \001" +
+      "(\003\022\014\n\004hash\030\005 \001(\t\"%\n\022HealthCheckRequest\022\017" +
+      "\n\007service\030\001 \001(\t\"\237\001\n\023HealthCheckResponse\022" +
+      "L\n\006status\030\001 \001(\0162<.com.google.cloud.imf.g" +
+      "zos.HealthCheckResponse.ServingStatus\":\n" +
+      "\rServingStatus\022\013\n\007UNKNOWN\020\000\022\013\n\007SERVING\020\001" +
+      "\022\017\n\013NOT_SERVING\020\0022\256\002\n\005GRecv\022Z\n\005Write\022\'.c" +
+      "om.google.cloud.imf.gzos.GRecvRequest\032(." +
+      "com.google.cloud.imf.gzos.GRecvResponse\022" +
+      "a\n\006Export\022-.com.google.cloud.imf.gzos.GR" +
+      "ecvExportRequest\032(.com.google.cloud.imf." +
+      "gzos.GRecvResponse\022f\n\005Check\022-.com.google" +
+      ".cloud.imf.gzos.HealthCheckRequest\032..com" +
+      ".google.cloud.imf.gzos.HealthCheckRespon" +
+      "seB,\n\034com.google.cloud.imf.gzos.pbB\nGRec" +
+      "vProtoP\000b\006proto3"
     };
     descriptor = com.google.protobuf.Descriptors.FileDescriptor
       .internalBuildGeneratedFileFrom(descriptorData,
@@ -9071,20 +10585,32 @@ public final class GRecvProto {
       com.google.protobuf.GeneratedMessageV3.FieldAccessorTable(
         internal_static_com_google_cloud_imf_gzos_GRecvRequest_descriptor,
         new java.lang.String[] { "Schema", "Lrecl", "Blksz", "Basepath", "MaxErrPct", "PublicKey", "Signature", "Principal", "Jobinfo", "Timestamp", "SrcUri", "NoData", });
-    internal_static_com_google_cloud_imf_gzos_GRecvResponse_descriptor =
+    internal_static_com_google_cloud_imf_gzos_GRecvExportRequest_descriptor =
       getDescriptor().getMessageTypes().get(3);
+    internal_static_com_google_cloud_imf_gzos_GRecvExportRequest_fieldAccessorTable = new
+      com.google.protobuf.GeneratedMessageV3.FieldAccessorTable(
+        internal_static_com_google_cloud_imf_gzos_GRecvExportRequest_descriptor,
+        new java.lang.String[] { "Sql", "Copybook", "OutputUri", "ExportConfigs", "Jobinfo", });
+    internal_static_com_google_cloud_imf_gzos_GRecvExportRequest_ExportConfigsEntry_descriptor =
+      internal_static_com_google_cloud_imf_gzos_GRecvExportRequest_descriptor.getNestedTypes().get(0);
+    internal_static_com_google_cloud_imf_gzos_GRecvExportRequest_ExportConfigsEntry_fieldAccessorTable = new
+      com.google.protobuf.GeneratedMessageV3.FieldAccessorTable(
+        internal_static_com_google_cloud_imf_gzos_GRecvExportRequest_ExportConfigsEntry_descriptor,
+        new java.lang.String[] { "Key", "Value", });
+    internal_static_com_google_cloud_imf_gzos_GRecvResponse_descriptor =
+      getDescriptor().getMessageTypes().get(4);
     internal_static_com_google_cloud_imf_gzos_GRecvResponse_fieldAccessorTable = new
       com.google.protobuf.GeneratedMessageV3.FieldAccessorTable(
         internal_static_com_google_cloud_imf_gzos_GRecvResponse_descriptor,
         new java.lang.String[] { "Status", "RowCount", "MsgCount", "ErrCount", "Hash", });
     internal_static_com_google_cloud_imf_gzos_HealthCheckRequest_descriptor =
-      getDescriptor().getMessageTypes().get(4);
+      getDescriptor().getMessageTypes().get(5);
     internal_static_com_google_cloud_imf_gzos_HealthCheckRequest_fieldAccessorTable = new
       com.google.protobuf.GeneratedMessageV3.FieldAccessorTable(
         internal_static_com_google_cloud_imf_gzos_HealthCheckRequest_descriptor,
         new java.lang.String[] { "Service", });
     internal_static_com_google_cloud_imf_gzos_HealthCheckResponse_descriptor =
-      getDescriptor().getMessageTypes().get(5);
+      getDescriptor().getMessageTypes().get(6);
     internal_static_com_google_cloud_imf_gzos_HealthCheckResponse_fieldAccessorTable = new
       com.google.protobuf.GeneratedMessageV3.FieldAccessorTable(
         internal_static_com_google_cloud_imf_gzos_HealthCheckResponse_descriptor,

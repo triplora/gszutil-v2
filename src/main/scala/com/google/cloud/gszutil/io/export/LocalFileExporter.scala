@@ -7,17 +7,17 @@ import com.google.cloud.bqsh.cmd.Result
 import com.google.cloud.gszutil.BinaryEncoder
 import com.google.cloud.gszutil.Encoding.StringToBinaryEncoder
 import com.google.cloud.imf.gzos.Ebcdic
-import com.google.cloud.imf.util.CloudLogging
+import com.google.cloud.imf.util.{CloudLogging, Logging}
 
 import scala.collection.mutable.ListBuffer
 import scala.util.{Failure, Success, Try}
 
-class LocalFileExporter extends FileExporter {
+class LocalFileExporter extends FileExporter with Logging {
   protected var export: FileExport = _
   override def isOpen: Boolean = export != null
   override def currentExport: FileExport = export
   override def newExport(e: FileExport): Unit = export = e
-  override def endIfOpen: Unit = if (export != null) export.close()
+  override def endIfOpen(): Unit = export.close()
   override def exportBQSelectResult(rows: java.lang.Iterable[FieldValueList],
                                     bqSchema: FieldList,
                                     mvsEncoders: Array[BinaryEncoder]): Result = {
@@ -77,6 +77,7 @@ class LocalFileExporter extends FileExporter {
       // export is closed, just not export
       return Result.Success
     }
+
     val nCols = bqSchema.size()
     val nEnc = mvsEncoders.length
     val bqFields = (0 until nCols).map{i => bqSchema.get(i)}
@@ -122,7 +123,7 @@ class LocalFileExporter extends FileExporter {
 
   override def exportPipeDelimitedRows(rows: java.lang.Iterable[FieldValueList], rowsCount: Long): Result = {
     CloudLogging.stdout("Exporting row(s) as pipe-delimited string(s)...")
-    def run(): Unit = {
+    def run(): Int = {
       var processedRows = 0
       val halfOfMili = 500 * 1000
       rows.forEach{
@@ -147,10 +148,11 @@ class LocalFileExporter extends FileExporter {
             CloudLogging.stdout(s"$processedRows Rows exported...")
           }
       }
+      processedRows
     }
 
     Try(run) match {
-      case Success(_) => Result.Success
+      case Success(r) => Result(activityCount = r)
       case Failure(t) => throw t
     }
   }

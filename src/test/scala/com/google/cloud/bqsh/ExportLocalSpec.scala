@@ -6,20 +6,18 @@ import java.nio.file.{Files, Paths}
 import com.google.cloud.RetryOption
 import com.google.cloud.bigquery.{JobId, QueryJobConfiguration}
 import com.google.cloud.bqsh.cmd.Export
-import com.google.cloud.gszutil.RecordSchema
 import com.google.cloud.imf.gzos.{Ebcdic, Linux}
-import com.google.cloud.imf.gzos.pb.GRecvProto.Record
-import com.google.cloud.imf.gzos.pb.GRecvProto.Record.Field
 import com.google.cloud.imf.util.Services
 import org.scalatest.BeforeAndAfterAll
 import org.scalatest.flatspec.AnyFlatSpec
 import org.threeten.bp.Duration
 
-class ExportSpec extends AnyFlatSpec with BeforeAndAfterAll {
+class ExportLocalSpec extends AnyFlatSpec with BeforeAndAfterAll {
 
   /**
     * Provide env variables to execute this test
     * PROJECT_ID
+    * COPYBOOK=absolute path to exportCopybook.txt
     * OUTFILE=path_to_output_file
     * OUTFILE_LRECL=length
     * OUTFILE_BLKSIZE=blkSIze
@@ -48,12 +46,7 @@ class ExportSpec extends AnyFlatSpec with BeforeAndAfterAll {
          |SELECT
          | 1 as a,
          | 'a' as b,
-         | NUMERIC '-3.14'as c,
-         | TIMESTAMP '2014-09-27 12:30:00.45-08'as e,
-         | CAST(TIMESTAMP '2014-09-27 12:30:00.45-08' AS STRING) as e1,
-         | EXTRACT(DATE FROM CURRENT_TIMESTAMP()) as e2,
-         | CURRENT_DATE() as f,
-         | 123.456e-67 as g
+         | NUMERIC '-3.14' as c
          |""".stripMargin
     val id1 = JobId.newBuilder().setProject(sys.env("PROJECT_ID"))
       .setLocation(sys.env.getOrElse("LOCATION", "US")).setRandomJob().build()
@@ -62,7 +55,6 @@ class ExportSpec extends AnyFlatSpec with BeforeAndAfterAll {
     val job1 = bq.getJob(id1)
     job1.waitFor(RetryOption.totalTimeout(Duration.ofMinutes(2)))
   }
-
 
   "Export pipe-delimited file" should "export data to pipe-delimited file" in {
     val cfg = ExportConfig(
@@ -73,9 +65,21 @@ class ExportSpec extends AnyFlatSpec with BeforeAndAfterAll {
     Export.run(cfg, zos, Map.empty)
 
     val values = readStringFromFile().split("\\|")
-    assert(values.length == 8)
+    assert(values.length == 3)
     assert(values(0) == "1")
     assert(values(1) == "a")
+    assert(values(2).trim == "-3.14")
+  }
+
+  "Export binary file" should "export data to binary file" in {
+    val cfg = ExportConfig(
+      sql = sql,
+      projectId = projectId,
+      location = location)
+    val res = Export.run(cfg, zos, Map.empty)
+
+    assert(res.exitCode == 0)
+    assert(res.activityCount == 1)
   }
 
   private def readStringFromFile(): String = {

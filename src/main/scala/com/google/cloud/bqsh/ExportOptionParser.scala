@@ -55,6 +55,31 @@ object ExportOptionParser
     .text("When specified, write pipe-delimited string output.")
     .action((x,c) => c.copy(vartext = true))
 
+  opt[String]("bucket")
+    .optional()
+    .text("(optional) GCS bucket where to write")
+    .action((x,c) => c.copy(bucket = x))
+
+  opt[String]("remoteHost")
+    .optional()
+    .action{(x,c) => c.copy(remoteHost = x)}
+    .text("remote host or ip address")
+
+  opt[Int]("remotePort")
+    .optional()
+    .action{(x,c) => c.copy(remotePort = x)}
+    .text("remote port (default: 51770)")
+
+  opt[Int]("timeOutMinutes")
+    .optional()
+    .action{(x,c) => c.copy(timeoutMinutes = x)}
+    .text("(optional) Timeout in minutes for GRecvExportGrpc call. (default for GCS: 60 minutes)")
+
+  opt[Int]("keepAliveTimeInSeconds")
+    .optional()
+    .action{(x,c) => c.copy(keepAliveTimeInSeconds = x)}
+    .text("(optional) keep alive timeout in seconds for http channel. (default: 480 seconds)")
+
   // Standard Options
 
   opt[Unit]("allow_large_results")

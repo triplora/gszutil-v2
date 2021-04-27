@@ -14,7 +14,7 @@ class BqStorageApiExporter(cfg: ExportConfig,
                            bqStorage: BigQueryReadClient,
                            bq: BigQuery,
                            zos: MVS,
-                           sp: SchemaProvider) extends NativeExporter with Logging {
+                           sp: SchemaProvider) extends NativeExporter(bq, cfg, zos.getInfo) with Logging {
 
   private var exporter: Exporter = _
   override def exportData(job: Job): Result = {

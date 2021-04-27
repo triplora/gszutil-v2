@@ -2,7 +2,6 @@ package com.google.cloud.gszutil.io.`export`
 
 import com.google.cloud.bigquery._
 import com.google.cloud.bqsh.cmd.Result
-import com.google.cloud.gszutil.{Transcoder, Utf8}
 import org.scalatest.flatspec.AnyFlatSpec
 
 import java.util
@@ -14,8 +13,6 @@ class LocalFileExporterSpec extends AnyFlatSpec {
     override def close(): Unit = {}
     override def lRecl: Int = recordLength
     override def recfm: String = recordLength.toString
-    override def ddName: String = this.getClass.getSimpleName
-    override def transcoder: Transcoder = Utf8
     override def rowsWritten(): Long = rowCounter
     override def appendBytes(buf: Array[Byte]): Unit = {
       rowCounter += 1
@@ -45,7 +42,7 @@ class LocalFileExporterSpec extends AnyFlatSpec {
     val rows = util.Arrays.asList(FieldValueList.of(values, schema))
 
     assert(mockFileExport.rowsWritten() == 0)
-    assert(exporter.exportPipeDelimitedRows(rows, 1) == Result.Success)
+    assert(exporter.exportPipeDelimitedRows(rows, 1) == Result(activityCount = 1))
     assert(mockFileExport.rowsWritten() == 1)
   }
 }

@@ -17,8 +17,6 @@
 package com.google.cloud.bqsh
 
 import com.google.cloud.imf.gzos.MVSStorage.{DSN, MVSDataset, MVSPDSMember}
-import com.google.cloud.imf.util.StaticMap
-
 
 case class ExportConfig(
   // Custom Options
@@ -28,6 +26,11 @@ case class ExportConfig(
   cobDsn: String = "",
   timeoutMinutes: Int = 60,
   vartext: Boolean = false,
+
+  bucket: String = "",
+  remoteHost: String = "",
+  remotePort: Int = 51770,
+  keepAliveTimeInSeconds: Int = 480,
 
   // Standard Options
   allowLargeResults: Boolean = false,
@@ -59,17 +62,58 @@ case class ExportConfig(
     } else None
   }
 
-  def toMap: java.util.Map[String,Any] = {
-    val m = StaticMap.builder
-    m.put("type","QueryConfig")
-    m.put("sql",sql)
-    m.put("location",location)
-    m.put("projectId",projectId)
-    m.put("datasetId",datasetId)
-    if (jobId.nonEmpty)
-      m.put("jobId",jobId)
-    if (statsTable.nonEmpty)
-      m.put("statsTable",statsTable)
-    m.build()
+  def toMap: Map[String, String] = {
+    def getConfigParams(cc: Product): Map[String, String] = {
+      val values = cc.productIterator
+      cc.getClass.getDeclaredFields.map( _.getName -> values.next.toString ).toMap
+    }
+    getConfigParams(this)
+  }
+
+  override def toString: String =
+    s"""
+      |sql=$sql,
+      |queryDSN=$queryDSN,
+      |outDD=$outDD,
+      |cobDsn=$cobDsn,
+      |timeoutMinutes=$timeoutMinutes,
+      |vartext=$vartext,
+      |bucket=$bucket,
+      |remoteHost=$remoteHost,
+      |remotePort=$remotePort,
+      |keepAliveTimeInSeconds=$keepAliveTimeInSeconds,
+      |batch=$batch,
+      |dryRun=$dryRun,
+      |maximumBytesBilled=$maximumBytesBilled,
+      |useCache=$useCache,
+      |datasetId=$datasetId,
+      |location=$location,
+      |projectId=$projectId,
+      |statsTable=$statsTable
+      |""".stripMargin
+}
+
+object ExportConfig {
+  def apply(configs: Map[String, String]): ExportConfig = {
+    ExportConfig(
+      sql = configs.getOrElse("sql", ""),
+      queryDSN = configs.getOrElse("queryDSN", ""),
+      outDD = configs.getOrElse("outDD", ""),
+      cobDsn = configs.getOrElse("cobDsn", ""),
+      timeoutMinutes = configs.getOrElse("timeoutMinutes", "").toInt,
+      vartext = configs.getOrElse("vartext", "").toBoolean,
+      bucket = configs.getOrElse("bucket", ""),
+      remoteHost = configs.getOrElse("remoteHost", ""),
+      remotePort = configs.getOrElse("remotePort", "").toInt,
+      keepAliveTimeInSeconds = configs.getOrElse("keepAliveTimeInSeconds", "").toInt,
+      batch = configs.getOrElse("batch", "").toBoolean,
+      dryRun = configs.getOrElse("dryRun", "").toBoolean,
+      maximumBytesBilled =  configs.getOrElse("maximumBytesBilled", "").toLong,
+      useCache = configs.getOrElse("useCache", "").toBoolean,
+      datasetId = configs.getOrElse("datasetId", ""),
+      location = configs.getOrElse("location", ""),
+      projectId = configs.getOrElse("projectId", ""),
+      statsTable = configs.getOrElse("statsTable", "")
+    )
   }
 }

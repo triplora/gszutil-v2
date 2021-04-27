@@ -107,7 +107,7 @@ object Cp extends Command[GsUtilConfig] with Logging {
             c1.copy(remoteHost = env.getOrElse("SRVHOSTNAME", ""),
                     remotePort = env.getOrElse("SRVPORT","51770").toInt)
           else c1
-        GRecvClient.run(c2, zos, in, schemaProvider, GRecvClient)
+        GRecvClient.write(c2, zos, in, schemaProvider, GRecvClient)
       }
       else {
         logger.warn("Not using server for transcoding to ORC - data will be read and transcoded " +

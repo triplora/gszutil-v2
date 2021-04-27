@@ -8,7 +8,7 @@ case class ChannelRecordWriter(channel: WritableByteChannel,
   override val lRecl: Int = lrecl
   override val blkSize: Int = blksize
   private var nRecordsWritten: Int = 0
-  override val recfm: String = "F"
+  override val recfm: String = "FB"
 
   override def write(src: Array[Byte]): Unit = {
     channel.write(ByteBuffer.wrap(src))

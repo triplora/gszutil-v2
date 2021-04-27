@@ -7,11 +7,15 @@ import java.nio.channels.Channels
 import java.util.zip.GZIPInputStream
 
 import com.google.api.services.storage.{Storage => LowLevelStorageApi}
-import com.google.cloud.gszutil.RecordSchema
+import com.google.cloud.bigquery.BigQuery
+import com.google.cloud.bqsh.ExportConfig
+import com.google.cloud.gszutil.{CopyBook, RecordSchema, SchemaProvider}
 import com.google.cloud.gszutil.io.WriterCore
+import com.google.cloud.gszutil.io.`export`.{BqSelectResultExporter, GcsFileExport, LocalFileExporter}
 import com.google.cloud.imf.grecv.GRecvProtocol
+import com.google.cloud.imf.gzos.pb.GRecvProto
 import com.google.cloud.imf.gzos.pb.GRecvProto.{GRecvRequest, GRecvResponse}
-import com.google.cloud.imf.gzos.{CloudDataSet, Util}
+import com.google.cloud.imf.gzos.{CloudDataSet, Ebcdic, Util}
 import com.google.cloud.imf.util.Logging
 import com.google.cloud.storage.{Blob, BlobId, Storage}
 import com.google.common.hash.Hashing
@@ -19,6 +23,8 @@ import com.google.protobuf.util.JsonFormat
 import io.grpc.Status
 import io.grpc.stub.StreamObserver
 import org.apache.hadoop.fs.Path
+
+import scala.util.Try
 
 object GRecvServerListener extends Logging {
   def write(req: GRecvRequest,
@@ -153,6 +159,30 @@ object GRecvServerListener extends Logging {
     responseObserver.onNext(response)
     responseObserver.onCompleted()
   }
+
+  def export(request: GRecvProto.GRecvExportRequest,
+             bq: BigQuery,
+             gcs: Storage,
+             cfg: ExportConfig,
+             responseObserver: StreamObserver[GRecvResponse]) : Unit = {
+
+    val sp = parseCopybook(request.getCopybook)
+    val fileExport = () => GcsFileExport(gcs, request.getOutputUri, sp.LRECL)
+    val result = new BqSelectResultExporter(cfg, bq, request.getJobinfo, sp, fileExport).`export`(request.getSql)
+
+    val resp = GRecvResponse.newBuilder.setStatus(GRecvProtocol.OK).setRowCount(result.activityCount).build
+    responseObserver.onNext(resp)
+    responseObserver.onCompleted()
+  }
+
+  private def parseCopybook(copybook: String): SchemaProvider =
+    Try(CopyBook(copybook, Ebcdic)).toEither match {
+      case Right(sp) => {
+        logger.info(s"Loaded copybook with LRECL=${sp.LRECL}")
+        sp
+      }
+      case Left(e) => throw new RuntimeException("Failed to parse copybook", e)
+    }
 
   def open(gcs: Storage,
            lowLevelStorageApi: LowLevelStorageApi,

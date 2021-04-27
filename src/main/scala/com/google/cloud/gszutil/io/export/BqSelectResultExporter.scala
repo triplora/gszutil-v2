@@ -1,28 +1,30 @@
 package com.google.cloud.gszutil.io.`export`
 
-import com.google.cloud.bigquery.{Job, TableResult}
+import com.google.cloud.bigquery.{BigQuery, Job, TableResult}
 import com.google.cloud.bqsh.ExportConfig
 import com.google.cloud.bqsh.cmd.Result
 import com.google.cloud.gszutil.SchemaProvider
-import com.google.cloud.imf.gzos.MVS
-import com.google.cloud.imf.util.Logging
+import com.google.cloud.imf.gzos.pb.GRecvProto
 
 class BqSelectResultExporter(cfg: ExportConfig,
-                             zos: MVS,
+                             bq: BigQuery,
+                             jobInfo: GRecvProto.ZOSJobInfo,
                              sp: SchemaProvider,
-                             exporter: FileExporter = new LocalFileExporter) extends NativeExporter with Logging {
+                             fileExportFunc: () => FileExport) extends NativeExporter(bq, cfg, jobInfo) {
+
+  val exporter = new LocalFileExporter
 
   override def exportData(job: Job): Result = {
     logger.info("Using BqSelectResultExporter.")
-    exporter.newExport(MVSFileExport(cfg.outDD, zos))
-
+    exporter.newExport(fileExportFunc())
     val bqResults = job.getQueryResults()
     val totalRowsToExport = bqResults.getTotalRows
     var rowsProcessed: Long = 0
 
     if (cfg.vartext) {
       logger.info(s"Using pipe-delimited string for export, totalRows=$totalRowsToExport")
-      exporter.exportPipeDelimitedRows(bqResults.iterateAll(), totalRowsToExport)
+      val res = exporter.exportPipeDelimitedRows(bqResults.iterateAll(), totalRowsToExport)
+      rowsProcessed = res.activityCount
     } else {
       logger.info(s"Using TD schema for export, totalRows=$totalRowsToExport")
       // bqResults.iterateAll() fails with big amount of data

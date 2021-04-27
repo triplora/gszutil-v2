@@ -2,7 +2,6 @@ package com.google.cloud.gszutil.io.`export`
 
 import java.nio.ByteBuffer
 
-import com.google.cloud.gszutil.Transcoder
 import com.google.cloud.gszutil.io.ZRecordWriterT
 import com.google.cloud.imf.gzos.MVS
 import com.google.cloud.imf.util.Logging
@@ -15,7 +14,6 @@ case class MVSFileExport(outDD: String, zos: MVS) extends FileExport with Loggin
   logger.debug(s"Opened DSN: $dsn")
   val lRecl: Int = writer.lRecl
   val recfm: String = writer.recfm
-  override val transcoder: Transcoder = zos.transcoder
   private val buf = ByteBuffer.allocate(lRecl)
   private var bytesWritten = 0L
 

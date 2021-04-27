@@ -4,7 +4,10 @@ import java.time.ZoneId
 import java.time.format.DateTimeFormatter
 
 import com.google.api.services.storage.{Storage => LowLevelStorageApi}
+import com.google.cloud.bigquery.BigQuery
+import com.google.cloud.bqsh.ExportConfig
 import com.google.cloud.imf.gzos.pb.GRecvGrpc.GRecvImplBase
+import com.google.cloud.imf.gzos.pb.GRecvProto
 import com.google.cloud.imf.gzos.pb.GRecvProto.{GRecvRequest, GRecvResponse, HealthCheckRequest, HealthCheckResponse}
 import com.google.cloud.imf.util.Logging
 import com.google.cloud.storage.Storage
@@ -14,7 +17,7 @@ import io.grpc.stub.StreamObserver
 import scala.util.Random
 
 
-class GRecvService(private val gcs: Storage, private val lowLevelStorageApi: LowLevelStorageApi) extends GRecvImplBase with Logging {
+class GRecvService(private val gcs: Storage, private val lowLevelStorageApi: LowLevelStorageApi, bqFunc: (String, String) => BigQuery) extends GRecvImplBase with Logging {
   private val fmt = DateTimeFormatter.ofPattern("yyyyMMddhhMMss")
   private val rng = new Random()
 
@@ -25,6 +28,32 @@ class GRecvService(private val gcs: Storage, private val lowLevelStorageApi: Low
     logger.debug(s"Received GRecvRequest\n```\n$requestJson\n```")
     try {
       GRecvServerListener.write(request, gcs, lowLevelStorageApi, partId, responseObserver, compress = true)
+    } catch {
+      case t: Throwable =>
+        logger.error(t.getMessage, t)
+        val t1 = io.grpc.Status.INTERNAL
+          .withDescription(t.getMessage)
+          .withCause(t)
+          .asRuntimeException()
+        responseObserver.onError(t1)
+    }
+  }
+
+  override def `export`(request: GRecvProto.GRecvExportRequest, responseObserver: StreamObserver[GRecvResponse]): Unit = {
+
+    import scala.jdk.CollectionConverters._
+    val cfg = ExportConfig.apply(request.getExportConfigsMap.asScala.toMap)
+    logger.debug(
+      s"""
+         |Received export request with:
+         |-sql=${request.getSql}
+         |-copybook=${request.getCopybook}
+         |-outputUri=${request.getOutputUri}
+         |-configs=$cfg
+         |""".stripMargin)
+    try {
+      val bq: BigQuery = bqFunc(cfg.projectId, cfg.location)
+      GRecvServerListener.`export`(request, bq, gcs, cfg, responseObserver)
     } catch {
       case t: Throwable =>
         logger.error(t.getMessage, t)

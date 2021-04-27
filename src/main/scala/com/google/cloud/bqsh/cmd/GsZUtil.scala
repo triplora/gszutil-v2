@@ -88,7 +88,7 @@ object GsZUtil extends Command[GsZUtilConfig] with Logging {
     CloudDataSet.readCloudDD(gcs, "INFILE", dsInfo) match {
       case Some(in) =>
         logger.info(s"CloudDataSet found for DSN=${dsInfo.dsn}")
-        GRecvClient.run(cpConfig, zos, in, sp, GRecvClient)
+        GRecvClient.write(cpConfig, zos, in, sp, GRecvClient)
       case None =>
         logger.error(s"CloudDataSet not found for DSN=${dsInfo.dsn}")
         Result.Failure(s"DSN ${dsInfo.dsn} not found")

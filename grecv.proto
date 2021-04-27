@@ -85,8 +85,17 @@ message GRecvRequest {
   bool no_data = 12;
 }
 
+message GRecvExportRequest {
+ string sql = 1;
+ string copybook = 2;
+ string output_uri = 3;
+ map<string, string> export_configs = 4;
+ ZOSJobInfo jobinfo = 5;
+}
+
 service GRecv {
   rpc Write(GRecvRequest) returns (GRecvResponse);
+  rpc Export(GRecvExportRequest) returns (GRecvResponse);
   rpc Check(HealthCheckRequest) returns (HealthCheckResponse);
 }
 

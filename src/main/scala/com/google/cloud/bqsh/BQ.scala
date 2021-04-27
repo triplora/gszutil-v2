@@ -25,6 +25,7 @@ import com.google.auth.Credentials
 import com.google.auth.http.HttpCredentialsAdapter
 import com.google.cloud.bigquery.InsertAllRequest.RowToInsert
 import com.google.cloud.bigquery.{BigQuery, BigQueryError, BigQueryException, CopyJobConfiguration, DatasetId, ExtractJobConfiguration, Field, FieldList, InsertAllRequest, InsertAllResponse, Job, JobConfiguration, JobId, JobInfo, JobStatus, LoadJobConfiguration, QueryJobConfiguration, Schema, StandardSQLTypeName, StandardTableDefinition, TableDefinition, TableId}
+import com.google.cloud.imf.gzos.pb.GRecvProto
 import com.google.cloud.imf.gzos.{MVS, Util}
 import com.google.cloud.imf.util.{CCATransportFactory, Logging, StatsUtil}
 import com.google.common.collect.ImmutableList
@@ -40,6 +41,14 @@ object BQ extends Logging {
     val job = zos.getInfo
     val jobId = Seq(
       job.getJobname,job.getStepName,job.getJobid,jobType,s"${t.getHour}${t.getMinute}${t.getSecond}"
+    ).mkString("_")
+    JobId.newBuilder.setProject(projectId).setLocation(location).setJob(jobId).build
+  }
+
+  def genJobId(projectId: String, location: String, jobInfo: GRecvProto.ZOSJobInfo, jobType: String): JobId = {
+    val t = LocalDateTime.now
+    val jobId = Seq(
+      jobInfo.getJobname,jobInfo.getStepName,jobInfo.getJobid,jobType,s"${t.getHour}${t.getMinute}${t.getSecond}"
     ).mkString("_")
     JobId.newBuilder.setProject(projectId).setLocation(location).setJob(jobId).build
   }

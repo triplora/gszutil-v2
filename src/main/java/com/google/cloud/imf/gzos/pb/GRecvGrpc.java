@@ -58,6 +58,37 @@ public final class GRecvGrpc {
     return getWriteMethod;
   }
 
+  private static volatile io.grpc.MethodDescriptor<com.google.cloud.imf.gzos.pb.GRecvProto.GRecvExportRequest,
+      com.google.cloud.imf.gzos.pb.GRecvProto.GRecvResponse> getExportMethod;
+
+  @io.grpc.stub.annotations.RpcMethod(
+      fullMethodName = SERVICE_NAME + '/' + "Export",
+      requestType = com.google.cloud.imf.gzos.pb.GRecvProto.GRecvExportRequest.class,
+      responseType = com.google.cloud.imf.gzos.pb.GRecvProto.GRecvResponse.class,
+      methodType = io.grpc.MethodDescriptor.MethodType.UNARY)
+  public static io.grpc.MethodDescriptor<com.google.cloud.imf.gzos.pb.GRecvProto.GRecvExportRequest,
+      com.google.cloud.imf.gzos.pb.GRecvProto.GRecvResponse> getExportMethod() {
+    io.grpc.MethodDescriptor<com.google.cloud.imf.gzos.pb.GRecvProto.GRecvExportRequest, com.google.cloud.imf.gzos.pb.GRecvProto.GRecvResponse> getExportMethod;
+    if ((getExportMethod = GRecvGrpc.getExportMethod) == null) {
+      synchronized (GRecvGrpc.class) {
+        if ((getExportMethod = GRecvGrpc.getExportMethod) == null) {
+          GRecvGrpc.getExportMethod = getExportMethod =
+              io.grpc.MethodDescriptor.<com.google.cloud.imf.gzos.pb.GRecvProto.GRecvExportRequest, com.google.cloud.imf.gzos.pb.GRecvProto.GRecvResponse>newBuilder()
+              .setType(io.grpc.MethodDescriptor.MethodType.UNARY)
+              .setFullMethodName(generateFullMethodName(SERVICE_NAME, "Export"))
+              .setSampledToLocalTracing(true)
+              .setRequestMarshaller(io.grpc.protobuf.ProtoUtils.marshaller(
+                  com.google.cloud.imf.gzos.pb.GRecvProto.GRecvExportRequest.getDefaultInstance()))
+              .setResponseMarshaller(io.grpc.protobuf.ProtoUtils.marshaller(
+                  com.google.cloud.imf.gzos.pb.GRecvProto.GRecvResponse.getDefaultInstance()))
+              .setSchemaDescriptor(new GRecvMethodDescriptorSupplier("Export"))
+              .build();
+        }
+      }
+    }
+    return getExportMethod;
+  }
+
   private static volatile io.grpc.MethodDescriptor<com.google.cloud.imf.gzos.pb.GRecvProto.HealthCheckRequest,
       com.google.cloud.imf.gzos.pb.GRecvProto.HealthCheckResponse> getCheckMethod;
 
@@ -125,6 +156,13 @@ public final class GRecvGrpc {
 
     /**
      */
+    public void export(com.google.cloud.imf.gzos.pb.GRecvProto.GRecvExportRequest request,
+        io.grpc.stub.StreamObserver<com.google.cloud.imf.gzos.pb.GRecvProto.GRecvResponse> responseObserver) {
+      asyncUnimplementedUnaryCall(getExportMethod(), responseObserver);
+    }
+
+    /**
+     */
     public void check(com.google.cloud.imf.gzos.pb.GRecvProto.HealthCheckRequest request,
         io.grpc.stub.StreamObserver<com.google.cloud.imf.gzos.pb.GRecvProto.HealthCheckResponse> responseObserver) {
       asyncUnimplementedUnaryCall(getCheckMethod(), responseObserver);
@@ -139,6 +177,13 @@ public final class GRecvGrpc {
                 com.google.cloud.imf.gzos.pb.GRecvProto.GRecvRequest,
                 com.google.cloud.imf.gzos.pb.GRecvProto.GRecvResponse>(
                   this, METHODID_WRITE)))
+          .addMethod(
+            getExportMethod(),
+            asyncUnaryCall(
+              new MethodHandlers<
+                com.google.cloud.imf.gzos.pb.GRecvProto.GRecvExportRequest,
+                com.google.cloud.imf.gzos.pb.GRecvProto.GRecvResponse>(
+                  this, METHODID_EXPORT)))
           .addMethod(
             getCheckMethod(),
             asyncUnaryCall(
@@ -178,6 +223,14 @@ public final class GRecvGrpc {
 
     /**
      */
+    public void export(com.google.cloud.imf.gzos.pb.GRecvProto.GRecvExportRequest request,
+        io.grpc.stub.StreamObserver<com.google.cloud.imf.gzos.pb.GRecvProto.GRecvResponse> responseObserver) {
+      asyncUnaryCall(
+          getChannel().newCall(getExportMethod(), getCallOptions()), request, responseObserver);
+    }
+
+    /**
+     */
     public void check(com.google.cloud.imf.gzos.pb.GRecvProto.HealthCheckRequest request,
         io.grpc.stub.StreamObserver<com.google.cloud.imf.gzos.pb.GRecvProto.HealthCheckResponse> responseObserver) {
       asyncUnaryCall(
@@ -208,6 +261,13 @@ public final class GRecvGrpc {
     public com.google.cloud.imf.gzos.pb.GRecvProto.GRecvResponse write(com.google.cloud.imf.gzos.pb.GRecvProto.GRecvRequest request) {
       return blockingUnaryCall(
           getChannel(), getWriteMethod(), getCallOptions(), request);
+    }
+
+    /**
+     */
+    public com.google.cloud.imf.gzos.pb.GRecvProto.GRecvResponse export(com.google.cloud.imf.gzos.pb.GRecvProto.GRecvExportRequest request) {
+      return blockingUnaryCall(
+          getChannel(), getExportMethod(), getCallOptions(), request);
     }
 
     /**
@@ -246,6 +306,14 @@ public final class GRecvGrpc {
 
     /**
      */
+    public com.google.common.util.concurrent.ListenableFuture<com.google.cloud.imf.gzos.pb.GRecvProto.GRecvResponse> export(
+        com.google.cloud.imf.gzos.pb.GRecvProto.GRecvExportRequest request) {
+      return futureUnaryCall(
+          getChannel().newCall(getExportMethod(), getCallOptions()), request);
+    }
+
+    /**
+     */
     public com.google.common.util.concurrent.ListenableFuture<com.google.cloud.imf.gzos.pb.GRecvProto.HealthCheckResponse> check(
         com.google.cloud.imf.gzos.pb.GRecvProto.HealthCheckRequest request) {
       return futureUnaryCall(
@@ -254,7 +322,8 @@ public final class GRecvGrpc {
   }
 
   private static final int METHODID_WRITE = 0;
-  private static final int METHODID_CHECK = 1;
+  private static final int METHODID_EXPORT = 1;
+  private static final int METHODID_CHECK = 2;
 
   private static final class MethodHandlers<Req, Resp> implements
       io.grpc.stub.ServerCalls.UnaryMethod<Req, Resp>,
@@ -275,6 +344,10 @@ public final class GRecvGrpc {
       switch (methodId) {
         case METHODID_WRITE:
           serviceImpl.write((com.google.cloud.imf.gzos.pb.GRecvProto.GRecvRequest) request,
+              (io.grpc.stub.StreamObserver<com.google.cloud.imf.gzos.pb.GRecvProto.GRecvResponse>) responseObserver);
+          break;
+        case METHODID_EXPORT:
+          serviceImpl.export((com.google.cloud.imf.gzos.pb.GRecvProto.GRecvExportRequest) request,
               (io.grpc.stub.StreamObserver<com.google.cloud.imf.gzos.pb.GRecvProto.GRecvResponse>) responseObserver);
           break;
         case METHODID_CHECK:
@@ -343,6 +416,7 @@ public final class GRecvGrpc {
           serviceDescriptor = result = io.grpc.ServiceDescriptor.newBuilder(SERVICE_NAME)
               .setSchemaDescriptor(new GRecvFileDescriptorSupplier())
               .addMethod(getWriteMethod())
+              .addMethod(getExportMethod())
               .addMethod(getCheckMethod())
               .build();
         }
