@@ -29,7 +29,9 @@ val exAvro = ExclusionRule(organization = "org.apache.avro")
 libraryDependencies ++= Seq(
   "com.google.cloud.imf" %% "mainframe-util" % "2.1.5-SNAPSHOT",
   "com.github.scopt" %% "scopt" % "3.7.1",
-  "org.scalatest" %% "scalatest" % "3.1.1" % Test
+  "org.scalatest" %% "scalatest" % "3.1.1" % Test,
+  "org.powermock" % "powermock-module-junit4" % "2.0.2" % Test,
+  "org.powermock" % "powermock-api-mockito2" % "2.0.2" % Test
 )
 
 // orc and related dependencies
@@ -38,7 +40,7 @@ libraryDependencies ++= Seq(
   "org.apache.hadoop" % "hadoop-hdfs-client" % "2.9.2",
   "org.apache.hive" % "hive-storage-api" % "2.7.1",
   "org.apache.orc" % "orc-core" % "1.6.2"
-).map(_ excludeAll(exGuava,exJetty,exZk,exNs,exGrpc,exAvro))
+).map(_ excludeAll(exGuava, exJetty, exZk, exNs, exGrpc, exAvro))
 
 // Don't run tests during assembly
 test in assembly := Seq()

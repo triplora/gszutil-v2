@@ -38,6 +38,15 @@ case class ExportConfig(
   requirePartitionFilter: Boolean = true,
   useCache: Boolean = true,
 
+  // Configuration for partitioning and concurrency control
+  //partition size in rows per single thread
+  partitionSize: Int = 1000000,
+  //page size in rows for paginate in scope of one partition,
+  //will be automatically limited to 10mb in case set value is to big.
+  //https://cloud.google.com/bigquery/docs/paging-results
+  partitionPageSize: Int = 500000,
+  workerThreads: Int = 1, //size of thread pool
+
   // Global Options
   datasetId: String = "",
   debugMode: Boolean = false,
