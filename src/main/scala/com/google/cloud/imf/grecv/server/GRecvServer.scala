@@ -8,15 +8,19 @@ import com.google.cloud.bigquery.BigQuery
 import com.google.cloud.imf.grecv.GRecvConfig
 import com.google.cloud.imf.util.{GzipCodec, Logging}
 import com.google.cloud.storage.Storage
+import com.google.protobuf.ByteString
 import io.grpc.Server
 import io.grpc.netty.NettyServerBuilder
 
-class GRecvServer(cfg: GRecvConfig, gcs: Storage, lowLevelStorageApi: LowLevelStorageApi, bqFunc: (String, String) => BigQuery) extends Logging {
+class GRecvServer(cfg: GRecvConfig,
+                  storageFunc: ByteString => Storage,
+                  storageApiFunc: ByteString => LowLevelStorageApi,
+                  bqFunc: (String, String, ByteString) => BigQuery) extends Logging {
   private val server: Server = {
     val ex = Executors.newWorkStealingPool()
     val b = NettyServerBuilder
       .forAddress(new InetSocketAddress(cfg.host, cfg.port))
-      .addService(new GRecvService(gcs, lowLevelStorageApi, bqFunc))
+      .addService(new GRecvService(storageFunc, storageApiFunc, bqFunc))
       .compressorRegistry(GzipCodec.compressorRegistry)
       .executor(ex)
     b.build

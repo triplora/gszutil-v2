@@ -38,6 +38,7 @@ trait MVS {
   def readDDString(dd: String, recordSeparator: String): String
   def getPrincipal(): String
   def getCredentialProvider(): CredentialProvider
+  def readKeyfile(): Array[Byte]
   def listPDS(dsn: DSN): Iterator[PDSMemberInfo]
   def loadCopyBook(dd: String): CopyBook
   def jobName: String

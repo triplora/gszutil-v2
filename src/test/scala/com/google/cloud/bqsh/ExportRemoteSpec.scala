@@ -8,6 +8,7 @@ import com.google.cloud.imf.grecv.server.GRecvServer
 import com.google.cloud.imf.gzos.Linux
 import com.google.cloud.imf.util.{CloudLogging, Services}
 import com.google.cloud.storage.BlobId
+import com.google.protobuf.ByteString
 import org.scalatest.BeforeAndAfterAll
 import org.scalatest.flatspec.AnyFlatSpec
 import org.threeten.bp.Duration
@@ -29,9 +30,9 @@ class ExportRemoteSpec extends AnyFlatSpec with BeforeAndAfterAll {
 
   CloudLogging.configureLogging(debugOverride = true, errorLogs = Seq("io.netty","org.apache","io.grpc"))
 
-  val bqFunc = (project: String, location: String) => Services.bigQuery(project, location, Services.bigqueryCredentials())
+  val bqFunc = (project: String, location: String, _ : ByteString) => Services.bigQuery(project, location, Services.bigqueryCredentials())
   def server(cfg: GRecvConfig): Future[GRecvServer] = Future{
-    val s = new GRecvServer(cfg, Services.storage(), Services.storageApi(Services.storageCredentials()), bqFunc)
+    val s = new GRecvServer(cfg, _ => Services.storage(), _ => Services.storageApi(Services.storageCredentials()), bqFunc)
     s.start(block = false)
     s
   }

@@ -93,6 +93,8 @@ object Linux extends MVS with Logging {
 
   override def getCredentialProvider(): CredentialProvider = new DefaultCredentialProvider
 
+  override def readKeyfile(): Array[Byte] = Array.empty
+
   override def loadCopyBook(dd: String): CopyBook = {
     val ddValue = System.getenv(dd)
     require(ddValue != null, s"$dd environment variable not defined")

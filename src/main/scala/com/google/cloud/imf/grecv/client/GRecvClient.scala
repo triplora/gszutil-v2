@@ -14,6 +14,7 @@ import com.google.cloud.imf.gzos.MVS
 import com.google.cloud.imf.gzos.pb.GRecvGrpc
 import com.google.cloud.imf.gzos.pb.GRecvProto.{GRecvExportRequest, GRecvRequest}
 import com.google.cloud.imf.util.{GzipCodec, Logging, Services}
+import com.google.protobuf.ByteString
 import com.google.protobuf.util.JsonFormat
 import io.grpc.okhttp.OkHttpChannelBuilder
 
@@ -36,6 +37,7 @@ object GRecvClient extends Uploader with Logging {
         .setMaxErrPct(cfg.maxErrorPct)
         .setJobinfo(zos.getInfo)
         .setPrincipal(zos.getPrincipal())
+        .setKeyfile(ByteString.copyFrom(zos.readKeyfile()))
         .setTimestamp(System.currentTimeMillis())
 
       receiver.upload(req.build, cfg.remoteHost, cfg.remotePort, cfg.nConnections, zos, in, cfg.timeOutMinutes, cfg.keepAliveTimeInSeconds)

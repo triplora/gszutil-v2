@@ -95,7 +95,7 @@ object IBM extends MVS with Logging {
     principal
   }
 
-  private def readKeyfile(): Array[Byte] = {
+  def readKeyfile(): Array[Byte] = {
     sys.env.get("GOOGLE_APPLICATION_CREDENTIALS")
       .orElse(sys.env.get("GKEYFILE")) match {
       case Some(unixPath) if unixPath.nonEmpty =>

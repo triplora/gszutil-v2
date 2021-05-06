@@ -5311,6 +5311,12 @@ public final class GRecvProto {
      * @return The noData.
      */
     boolean getNoData();
+
+    /**
+     * <code>bytes keyfile = 13;</code>
+     * @return The keyfile.
+     */
+    com.google.protobuf.ByteString getKeyfile();
   }
   /**
    * Protobuf type {@code com.google.cloud.imf.gzos.GRecvRequest}
@@ -5330,6 +5336,7 @@ public final class GRecvProto {
       signature_ = com.google.protobuf.ByteString.EMPTY;
       principal_ = "";
       srcUri_ = "";
+      keyfile_ = com.google.protobuf.ByteString.EMPTY;
     }
 
     @java.lang.Override
@@ -5439,6 +5446,11 @@ public final class GRecvProto {
             case 96: {
 
               noData_ = input.readBool();
+              break;
+            }
+            case 106: {
+
+              keyfile_ = input.readBytes();
               break;
             }
             default: {
@@ -5716,6 +5728,17 @@ public final class GRecvProto {
       return noData_;
     }
 
+    public static final int KEYFILE_FIELD_NUMBER = 13;
+    private com.google.protobuf.ByteString keyfile_;
+    /**
+     * <code>bytes keyfile = 13;</code>
+     * @return The keyfile.
+     */
+    @java.lang.Override
+    public com.google.protobuf.ByteString getKeyfile() {
+      return keyfile_;
+    }
+
     private byte memoizedIsInitialized = -1;
     @java.lang.Override
     public final boolean isInitialized() {
@@ -5765,6 +5788,9 @@ public final class GRecvProto {
       }
       if (noData_ != false) {
         output.writeBool(12, noData_);
+      }
+      if (!keyfile_.isEmpty()) {
+        output.writeBytes(13, keyfile_);
       }
       unknownFields.writeTo(output);
     }
@@ -5820,6 +5846,10 @@ public final class GRecvProto {
         size += com.google.protobuf.CodedOutputStream
           .computeBoolSize(12, noData_);
       }
+      if (!keyfile_.isEmpty()) {
+        size += com.google.protobuf.CodedOutputStream
+          .computeBytesSize(13, keyfile_);
+      }
       size += unknownFields.getSerializedSize();
       memoizedSize = size;
       return size;
@@ -5866,6 +5896,8 @@ public final class GRecvProto {
           .equals(other.getSrcUri())) return false;
       if (getNoData()
           != other.getNoData()) return false;
+      if (!getKeyfile()
+          .equals(other.getKeyfile())) return false;
       if (!unknownFields.equals(other.unknownFields)) return false;
       return true;
     }
@@ -5908,6 +5940,8 @@ public final class GRecvProto {
       hash = (37 * hash) + NO_DATA_FIELD_NUMBER;
       hash = (53 * hash) + com.google.protobuf.Internal.hashBoolean(
           getNoData());
+      hash = (37 * hash) + KEYFILE_FIELD_NUMBER;
+      hash = (53 * hash) + getKeyfile().hashCode();
       hash = (29 * hash) + unknownFields.hashCode();
       memoizedHashCode = hash;
       return hash;
@@ -6073,6 +6107,8 @@ public final class GRecvProto {
 
         noData_ = false;
 
+        keyfile_ = com.google.protobuf.ByteString.EMPTY;
+
         return this;
       }
 
@@ -6119,6 +6155,7 @@ public final class GRecvProto {
         result.timestamp_ = timestamp_;
         result.srcUri_ = srcUri_;
         result.noData_ = noData_;
+        result.keyfile_ = keyfile_;
         onBuilt();
         return result;
       }
@@ -6205,6 +6242,9 @@ public final class GRecvProto {
         }
         if (other.getNoData() != false) {
           setNoData(other.getNoData());
+        }
+        if (other.getKeyfile() != com.google.protobuf.ByteString.EMPTY) {
+          setKeyfile(other.getKeyfile());
         }
         this.mergeUnknownFields(other.unknownFields);
         onChanged();
@@ -6923,6 +6963,40 @@ public final class GRecvProto {
         onChanged();
         return this;
       }
+
+      private com.google.protobuf.ByteString keyfile_ = com.google.protobuf.ByteString.EMPTY;
+      /**
+       * <code>bytes keyfile = 13;</code>
+       * @return The keyfile.
+       */
+      @java.lang.Override
+      public com.google.protobuf.ByteString getKeyfile() {
+        return keyfile_;
+      }
+      /**
+       * <code>bytes keyfile = 13;</code>
+       * @param value The keyfile to set.
+       * @return This builder for chaining.
+       */
+      public Builder setKeyfile(com.google.protobuf.ByteString value) {
+        if (value == null) {
+    throw new NullPointerException();
+  }
+  
+        keyfile_ = value;
+        onChanged();
+        return this;
+      }
+      /**
+       * <code>bytes keyfile = 13;</code>
+       * @return This builder for chaining.
+       */
+      public Builder clearKeyfile() {
+        
+        keyfile_ = getDefaultInstance().getKeyfile();
+        onChanged();
+        return this;
+      }
       @java.lang.Override
       public final Builder setUnknownFields(
           final com.google.protobuf.UnknownFieldSet unknownFields) {
@@ -7064,6 +7138,12 @@ public final class GRecvProto {
      * <code>.com.google.cloud.imf.gzos.ZOSJobInfo jobinfo = 5;</code>
      */
     com.google.cloud.imf.gzos.pb.GRecvProto.ZOSJobInfoOrBuilder getJobinfoOrBuilder();
+
+    /**
+     * <code>bytes keyfile = 6;</code>
+     * @return The keyfile.
+     */
+    com.google.protobuf.ByteString getKeyfile();
   }
   /**
    * Protobuf type {@code com.google.cloud.imf.gzos.GRecvExportRequest}
@@ -7081,6 +7161,7 @@ public final class GRecvProto {
       sql_ = "";
       copybook_ = "";
       outputUri_ = "";
+      keyfile_ = com.google.protobuf.ByteString.EMPTY;
     }
 
     @java.lang.Override
@@ -7156,6 +7237,11 @@ public final class GRecvProto {
                 jobinfo_ = subBuilder.buildPartial();
               }
 
+              break;
+            }
+            case 50: {
+
+              keyfile_ = input.readBytes();
               break;
             }
             default: {
@@ -7423,6 +7509,17 @@ public final class GRecvProto {
       return getJobinfo();
     }
 
+    public static final int KEYFILE_FIELD_NUMBER = 6;
+    private com.google.protobuf.ByteString keyfile_;
+    /**
+     * <code>bytes keyfile = 6;</code>
+     * @return The keyfile.
+     */
+    @java.lang.Override
+    public com.google.protobuf.ByteString getKeyfile() {
+      return keyfile_;
+    }
+
     private byte memoizedIsInitialized = -1;
     @java.lang.Override
     public final boolean isInitialized() {
@@ -7454,6 +7551,9 @@ public final class GRecvProto {
           4);
       if (jobinfo_ != null) {
         output.writeMessage(5, getJobinfo());
+      }
+      if (!keyfile_.isEmpty()) {
+        output.writeBytes(6, keyfile_);
       }
       unknownFields.writeTo(output);
     }
@@ -7487,6 +7587,10 @@ public final class GRecvProto {
         size += com.google.protobuf.CodedOutputStream
           .computeMessageSize(5, getJobinfo());
       }
+      if (!keyfile_.isEmpty()) {
+        size += com.google.protobuf.CodedOutputStream
+          .computeBytesSize(6, keyfile_);
+      }
       size += unknownFields.getSerializedSize();
       memoizedSize = size;
       return size;
@@ -7515,6 +7619,8 @@ public final class GRecvProto {
         if (!getJobinfo()
             .equals(other.getJobinfo())) return false;
       }
+      if (!getKeyfile()
+          .equals(other.getKeyfile())) return false;
       if (!unknownFields.equals(other.unknownFields)) return false;
       return true;
     }
@@ -7540,6 +7646,8 @@ public final class GRecvProto {
         hash = (37 * hash) + JOBINFO_FIELD_NUMBER;
         hash = (53 * hash) + getJobinfo().hashCode();
       }
+      hash = (37 * hash) + KEYFILE_FIELD_NUMBER;
+      hash = (53 * hash) + getKeyfile().hashCode();
       hash = (29 * hash) + unknownFields.hashCode();
       memoizedHashCode = hash;
       return hash;
@@ -7708,6 +7816,8 @@ public final class GRecvProto {
           jobinfo_ = null;
           jobinfoBuilder_ = null;
         }
+        keyfile_ = com.google.protobuf.ByteString.EMPTY;
+
         return this;
       }
 
@@ -7745,6 +7855,7 @@ public final class GRecvProto {
         } else {
           result.jobinfo_ = jobinfoBuilder_.build();
         }
+        result.keyfile_ = keyfile_;
         onBuilt();
         return result;
       }
@@ -7809,6 +7920,9 @@ public final class GRecvProto {
             other.internalGetExportConfigs());
         if (other.hasJobinfo()) {
           mergeJobinfo(other.getJobinfo());
+        }
+        if (other.getKeyfile() != com.google.protobuf.ByteString.EMPTY) {
+          setKeyfile(other.getKeyfile());
         }
         this.mergeUnknownFields(other.unknownFields);
         onChanged();
@@ -8313,6 +8427,40 @@ public final class GRecvProto {
           jobinfo_ = null;
         }
         return jobinfoBuilder_;
+      }
+
+      private com.google.protobuf.ByteString keyfile_ = com.google.protobuf.ByteString.EMPTY;
+      /**
+       * <code>bytes keyfile = 6;</code>
+       * @return The keyfile.
+       */
+      @java.lang.Override
+      public com.google.protobuf.ByteString getKeyfile() {
+        return keyfile_;
+      }
+      /**
+       * <code>bytes keyfile = 6;</code>
+       * @param value The keyfile to set.
+       * @return This builder for chaining.
+       */
+      public Builder setKeyfile(com.google.protobuf.ByteString value) {
+        if (value == null) {
+    throw new NullPointerException();
+  }
+  
+        keyfile_ = value;
+        onChanged();
+        return this;
+      }
+      /**
+       * <code>bytes keyfile = 6;</code>
+       * @return This builder for chaining.
+       */
+      public Builder clearKeyfile() {
+        
+        keyfile_ = getDefaultInstance().getKeyfile();
+        onChanged();
+        return this;
       }
       @java.lang.Override
       public final Builder setUnknownFields(
@@ -10518,7 +10666,7 @@ public final class GRecvProto {
       "\207\001\n\nZOSJobInfo\022\r\n\005jobid\030\001 \001(\t\022\017\n\007jobname" +
       "\030\002 \001(\t\022\017\n\007jobdate\030\003 \001(\t\022\017\n\007jobtime\030\004 \001(\t" +
       "\022\021\n\tstep_name\030\005 \001(\t\022\026\n\016proc_step_name\030\006 " +
-      "\001(\t\022\014\n\004user\030\007 \001(\t\"\255\002\n\014GRecvRequest\0221\n\006sc" +
+      "\001(\t\022\014\n\004user\030\007 \001(\t\"\276\002\n\014GRecvRequest\0221\n\006sc" +
       "hema\030\001 \001(\0132!.com.google.cloud.imf.gzos.R" +
       "ecord\022\r\n\005lrecl\030\002 \001(\005\022\r\n\005blksz\030\003 \001(\005\022\020\n\010b" +
       "asepath\030\004 \001(\t\022\023\n\013max_err_pct\030\005 \001(\001\022\022\n\npu" +
@@ -10526,30 +10674,31 @@ public final class GRecvProto {
       "ncipal\030\010 \001(\t\0226\n\007jobinfo\030\t \001(\0132%.com.goog" +
       "le.cloud.imf.gzos.ZOSJobInfo\022\021\n\ttimestam" +
       "p\030\n \001(\003\022\017\n\007src_uri\030\013 \001(\t\022\017\n\007no_data\030\014 \001(" +
-      "\010\"\217\002\n\022GRecvExportRequest\022\013\n\003sql\030\001 \001(\t\022\020\n" +
-      "\010copybook\030\002 \001(\t\022\022\n\noutput_uri\030\003 \001(\t\022X\n\016e" +
-      "xport_configs\030\004 \003(\0132@.com.google.cloud.i" +
-      "mf.gzos.GRecvExportRequest.ExportConfigs" +
-      "Entry\0226\n\007jobinfo\030\005 \001(\0132%.com.google.clou" +
-      "d.imf.gzos.ZOSJobInfo\0324\n\022ExportConfigsEn" +
-      "try\022\013\n\003key\030\001 \001(\t\022\r\n\005value\030\002 \001(\t:\0028\001\"c\n\rG" +
-      "RecvResponse\022\016\n\006status\030\001 \001(\005\022\020\n\010rowCount" +
-      "\030\002 \001(\003\022\020\n\010msgCount\030\003 \001(\003\022\020\n\010errCount\030\004 \001" +
-      "(\003\022\014\n\004hash\030\005 \001(\t\"%\n\022HealthCheckRequest\022\017" +
-      "\n\007service\030\001 \001(\t\"\237\001\n\023HealthCheckResponse\022" +
-      "L\n\006status\030\001 \001(\0162<.com.google.cloud.imf.g" +
-      "zos.HealthCheckResponse.ServingStatus\":\n" +
-      "\rServingStatus\022\013\n\007UNKNOWN\020\000\022\013\n\007SERVING\020\001" +
-      "\022\017\n\013NOT_SERVING\020\0022\256\002\n\005GRecv\022Z\n\005Write\022\'.c" +
-      "om.google.cloud.imf.gzos.GRecvRequest\032(." +
-      "com.google.cloud.imf.gzos.GRecvResponse\022" +
-      "a\n\006Export\022-.com.google.cloud.imf.gzos.GR" +
-      "ecvExportRequest\032(.com.google.cloud.imf." +
-      "gzos.GRecvResponse\022f\n\005Check\022-.com.google" +
-      ".cloud.imf.gzos.HealthCheckRequest\032..com" +
-      ".google.cloud.imf.gzos.HealthCheckRespon" +
-      "seB,\n\034com.google.cloud.imf.gzos.pbB\nGRec" +
-      "vProtoP\000b\006proto3"
+      "\010\022\017\n\007keyfile\030\r \001(\014\"\240\002\n\022GRecvExportReques" +
+      "t\022\013\n\003sql\030\001 \001(\t\022\020\n\010copybook\030\002 \001(\t\022\022\n\noutp" +
+      "ut_uri\030\003 \001(\t\022X\n\016export_configs\030\004 \003(\0132@.c" +
+      "om.google.cloud.imf.gzos.GRecvExportRequ" +
+      "est.ExportConfigsEntry\0226\n\007jobinfo\030\005 \001(\0132" +
+      "%.com.google.cloud.imf.gzos.ZOSJobInfo\022\017" +
+      "\n\007keyfile\030\006 \001(\014\0324\n\022ExportConfigsEntry\022\013\n" +
+      "\003key\030\001 \001(\t\022\r\n\005value\030\002 \001(\t:\0028\001\"c\n\rGRecvRe" +
+      "sponse\022\016\n\006status\030\001 \001(\005\022\020\n\010rowCount\030\002 \001(\003" +
+      "\022\020\n\010msgCount\030\003 \001(\003\022\020\n\010errCount\030\004 \001(\003\022\014\n\004" +
+      "hash\030\005 \001(\t\"%\n\022HealthCheckRequest\022\017\n\007serv" +
+      "ice\030\001 \001(\t\"\237\001\n\023HealthCheckResponse\022L\n\006sta" +
+      "tus\030\001 \001(\0162<.com.google.cloud.imf.gzos.He" +
+      "althCheckResponse.ServingStatus\":\n\rServi" +
+      "ngStatus\022\013\n\007UNKNOWN\020\000\022\013\n\007SERVING\020\001\022\017\n\013NO" +
+      "T_SERVING\020\0022\256\002\n\005GRecv\022Z\n\005Write\022\'.com.goo" +
+      "gle.cloud.imf.gzos.GRecvRequest\032(.com.go" +
+      "ogle.cloud.imf.gzos.GRecvResponse\022a\n\006Exp" +
+      "ort\022-.com.google.cloud.imf.gzos.GRecvExp" +
+      "ortRequest\032(.com.google.cloud.imf.gzos.G" +
+      "RecvResponse\022f\n\005Check\022-.com.google.cloud" +
+      ".imf.gzos.HealthCheckRequest\032..com.googl" +
+      "e.cloud.imf.gzos.HealthCheckResponseB,\n\034" +
+      "com.google.cloud.imf.gzos.pbB\nGRecvProto" +
+      "P\000b\006proto3"
     };
     descriptor = com.google.protobuf.Descriptors.FileDescriptor
       .internalBuildGeneratedFileFrom(descriptorData,
@@ -10584,13 +10733,13 @@ public final class GRecvProto {
     internal_static_com_google_cloud_imf_gzos_GRecvRequest_fieldAccessorTable = new
       com.google.protobuf.GeneratedMessageV3.FieldAccessorTable(
         internal_static_com_google_cloud_imf_gzos_GRecvRequest_descriptor,
-        new java.lang.String[] { "Schema", "Lrecl", "Blksz", "Basepath", "MaxErrPct", "PublicKey", "Signature", "Principal", "Jobinfo", "Timestamp", "SrcUri", "NoData", });
+        new java.lang.String[] { "Schema", "Lrecl", "Blksz", "Basepath", "MaxErrPct", "PublicKey", "Signature", "Principal", "Jobinfo", "Timestamp", "SrcUri", "NoData", "Keyfile", });
     internal_static_com_google_cloud_imf_gzos_GRecvExportRequest_descriptor =
       getDescriptor().getMessageTypes().get(3);
     internal_static_com_google_cloud_imf_gzos_GRecvExportRequest_fieldAccessorTable = new
       com.google.protobuf.GeneratedMessageV3.FieldAccessorTable(
         internal_static_com_google_cloud_imf_gzos_GRecvExportRequest_descriptor,
-        new java.lang.String[] { "Sql", "Copybook", "OutputUri", "ExportConfigs", "Jobinfo", });
+        new java.lang.String[] { "Sql", "Copybook", "OutputUri", "ExportConfigs", "Jobinfo", "Keyfile", });
     internal_static_com_google_cloud_imf_gzos_GRecvExportRequest_ExportConfigsEntry_descriptor =
       internal_static_com_google_cloud_imf_gzos_GRecvExportRequest_descriptor.getNestedTypes().get(0);
     internal_static_com_google_cloud_imf_gzos_GRecvExportRequest_ExportConfigsEntry_fieldAccessorTable = new

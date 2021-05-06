@@ -83,6 +83,7 @@ message GRecvRequest {
   int64 timestamp = 10;
   string src_uri = 11;
   bool no_data = 12;
+  bytes keyfile = 13;
 }
 
 message GRecvExportRequest {
@@ -91,6 +92,7 @@ message GRecvExportRequest {
  string output_uri = 3;
  map<string, string> export_configs = 4;
  ZOSJobInfo jobinfo = 5;
+ bytes keyfile = 6;
 }
 
 service GRecv {
