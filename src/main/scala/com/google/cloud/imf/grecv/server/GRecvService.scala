@@ -8,22 +8,29 @@ import com.google.cloud.imf.gzos.pb.GRecvGrpc.GRecvImplBase
 import com.google.cloud.imf.gzos.pb.GRecvProto.{GRecvRequest, GRecvResponse, HealthCheckRequest, HealthCheckResponse}
 import com.google.cloud.imf.util.Logging
 import com.google.cloud.storage.Storage
+import com.google.protobuf.ByteString
 import com.google.protobuf.util.JsonFormat
 import io.grpc.stub.StreamObserver
 
 import scala.util.Random
 
-
-class GRecvService(private val gcs: Storage, private val lowLevelStorageApi: LowLevelStorageApi) extends GRecvImplBase with Logging {
+class GRecvService(storageFunc: ByteString => Storage,
+                   storageApiFunc: ByteString => LowLevelStorageApi) extends GRecvImplBase with Logging {
   private val fmt = DateTimeFormatter.ofPattern("yyyyMMddhhMMss")
   private val rng = new Random()
 
   override def write(request: GRecvRequest, responseObserver: StreamObserver[GRecvResponse]): Unit = {
     val partId = fmt.format(java.time.LocalDateTime.now(ZoneId.of("UTC"))) + "-" +
       rng.alphanumeric.take(6).mkString("")
-    val requestJson = JsonFormat.printer().omittingInsignificantWhitespace().print(request)
+    val keyfile = request.getKeyfile
+    //for security purpose we don't want to log keyfile
+    val requestJson = JsonFormat.printer()
+      .omittingInsignificantWhitespace()
+      .print(request.toBuilder.setKeyfile(ByteString.copyFromUtf8("")).build())
     logger.debug(s"Received GRecvRequest\n```\n$requestJson\n```")
     try {
+      val gcs = storageFunc(keyfile)
+      val lowLevelStorageApi = storageApiFunc(keyfile)
       GRecvServerListener.write(request, gcs, lowLevelStorageApi, partId, responseObserver, compress = true)
     } catch {
       case t: Throwable =>

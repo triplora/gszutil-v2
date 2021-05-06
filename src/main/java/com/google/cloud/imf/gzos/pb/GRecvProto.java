@@ -92,7 +92,7 @@ public final class GRecvProto {
   /**
    * Protobuf type {@code com.google.cloud.imf.gzos.Record}
    */
-  public  static final class Record extends
+  public static final class Record extends
       com.google.protobuf.GeneratedMessageV3 implements
       // @@protoc_insertion_point(message_implements:com.google.cloud.imf.gzos.Record)
       RecordOrBuilder {
@@ -291,6 +291,10 @@ public final class GRecvProto {
 
       public final com.google.protobuf.Descriptors.EnumValueDescriptor
           getValueDescriptor() {
+        if (this == UNRECOGNIZED) {
+          throw new java.lang.IllegalStateException(
+              "Can't get the descriptor of an unrecognized enum value.");
+        }
         return getDescriptor().getValues().get(ordinal());
       }
       public final com.google.protobuf.Descriptors.EnumDescriptor
@@ -417,7 +421,7 @@ public final class GRecvProto {
     /**
      * Protobuf type {@code com.google.cloud.imf.gzos.Record.Field}
      */
-    public  static final class Field extends
+    public static final class Field extends
         com.google.protobuf.GeneratedMessageV3 implements
         // @@protoc_insertion_point(message_implements:com.google.cloud.imf.gzos.Record.Field)
         FieldOrBuilder {
@@ -712,6 +716,10 @@ public final class GRecvProto {
 
         public final com.google.protobuf.Descriptors.EnumValueDescriptor
             getValueDescriptor() {
+          if (this == UNRECOGNIZED) {
+            throw new java.lang.IllegalStateException(
+                "Can't get the descriptor of an unrecognized enum value.");
+          }
           return getDescriptor().getValues().get(ordinal());
         }
         public final com.google.protobuf.Descriptors.EnumDescriptor
@@ -771,7 +779,7 @@ public final class GRecvProto {
       /**
        * Protobuf type {@code com.google.cloud.imf.gzos.Record.Field.NullIf}
        */
-      public  static final class NullIf extends
+      public static final class NullIf extends
           com.google.protobuf.GeneratedMessageV3 implements
           // @@protoc_insertion_point(message_implements:com.google.cloud.imf.gzos.Record.Field.NullIf)
           NullIfOrBuilder {
@@ -864,6 +872,7 @@ public final class GRecvProto {
          * <code>string field = 1;</code>
          * @return The field.
          */
+        @java.lang.Override
         public java.lang.String getField() {
           java.lang.Object ref = field_;
           if (ref instanceof java.lang.String) {
@@ -880,6 +889,7 @@ public final class GRecvProto {
          * <code>string field = 1;</code>
          * @return The bytes for field.
          */
+        @java.lang.Override
         public com.google.protobuf.ByteString
             getFieldBytes() {
           java.lang.Object ref = field_;
@@ -900,6 +910,7 @@ public final class GRecvProto {
          * <code>bytes value = 2;</code>
          * @return The value.
          */
+        @java.lang.Override
         public com.google.protobuf.ByteString getValue() {
           return value_;
         }
@@ -1304,6 +1315,7 @@ public final class GRecvProto {
            * <code>bytes value = 2;</code>
            * @return The value.
            */
+          @java.lang.Override
           public com.google.protobuf.ByteString getValue() {
             return value_;
           }
@@ -1390,6 +1402,7 @@ public final class GRecvProto {
        * <code>string name = 1;</code>
        * @return The name.
        */
+      @java.lang.Override
       public java.lang.String getName() {
         java.lang.Object ref = name_;
         if (ref instanceof java.lang.String) {
@@ -1406,6 +1419,7 @@ public final class GRecvProto {
        * <code>string name = 1;</code>
        * @return The bytes for name.
        */
+      @java.lang.Override
       public com.google.protobuf.ByteString
           getNameBytes() {
         java.lang.Object ref = name_;
@@ -1426,14 +1440,14 @@ public final class GRecvProto {
        * <code>.com.google.cloud.imf.gzos.Record.Field.FieldType typ = 2;</code>
        * @return The enum numeric value on the wire for typ.
        */
-      public int getTypValue() {
+      @java.lang.Override public int getTypValue() {
         return typ_;
       }
       /**
        * <code>.com.google.cloud.imf.gzos.Record.Field.FieldType typ = 2;</code>
        * @return The typ.
        */
-      public com.google.cloud.imf.gzos.pb.GRecvProto.Record.Field.FieldType getTyp() {
+      @java.lang.Override public com.google.cloud.imf.gzos.pb.GRecvProto.Record.Field.FieldType getTyp() {
         @SuppressWarnings("deprecation")
         com.google.cloud.imf.gzos.pb.GRecvProto.Record.Field.FieldType result = com.google.cloud.imf.gzos.pb.GRecvProto.Record.Field.FieldType.valueOf(typ_);
         return result == null ? com.google.cloud.imf.gzos.pb.GRecvProto.Record.Field.FieldType.UNRECOGNIZED : result;
@@ -1445,6 +1459,7 @@ public final class GRecvProto {
        * <code>int32 size = 3;</code>
        * @return The size.
        */
+      @java.lang.Override
       public int getSize() {
         return size_;
       }
@@ -1455,6 +1470,7 @@ public final class GRecvProto {
        * <code>int32 precision = 4;</code>
        * @return The precision.
        */
+      @java.lang.Override
       public int getPrecision() {
         return precision_;
       }
@@ -1465,6 +1481,7 @@ public final class GRecvProto {
        * <code>int32 scale = 5;</code>
        * @return The scale.
        */
+      @java.lang.Override
       public int getScale() {
         return scale_;
       }
@@ -1475,6 +1492,7 @@ public final class GRecvProto {
        * <code>bool filler = 6;</code>
        * @return The filler.
        */
+      @java.lang.Override
       public boolean getFiller() {
         return filler_;
       }
@@ -1485,6 +1503,7 @@ public final class GRecvProto {
        * <code>.com.google.cloud.imf.gzos.Record.Field.NullIf nullif = 7;</code>
        * @return Whether the nullif field is set.
        */
+      @java.lang.Override
       public boolean hasNullif() {
         return nullif_ != null;
       }
@@ -1492,12 +1511,14 @@ public final class GRecvProto {
        * <code>.com.google.cloud.imf.gzos.Record.Field.NullIf nullif = 7;</code>
        * @return The nullif.
        */
+      @java.lang.Override
       public com.google.cloud.imf.gzos.pb.GRecvProto.Record.Field.NullIf getNullif() {
         return nullif_ == null ? com.google.cloud.imf.gzos.pb.GRecvProto.Record.Field.NullIf.getDefaultInstance() : nullif_;
       }
       /**
        * <code>.com.google.cloud.imf.gzos.Record.Field.NullIf nullif = 7;</code>
        */
+      @java.lang.Override
       public com.google.cloud.imf.gzos.pb.GRecvProto.Record.Field.NullIfOrBuilder getNullifOrBuilder() {
         return getNullif();
       }
@@ -1508,14 +1529,14 @@ public final class GRecvProto {
        * <code>.com.google.cloud.imf.gzos.Record.Field.FieldType cast = 8;</code>
        * @return The enum numeric value on the wire for cast.
        */
-      public int getCastValue() {
+      @java.lang.Override public int getCastValue() {
         return cast_;
       }
       /**
        * <code>.com.google.cloud.imf.gzos.Record.Field.FieldType cast = 8;</code>
        * @return The cast.
        */
-      public com.google.cloud.imf.gzos.pb.GRecvProto.Record.Field.FieldType getCast() {
+      @java.lang.Override public com.google.cloud.imf.gzos.pb.GRecvProto.Record.Field.FieldType getCast() {
         @SuppressWarnings("deprecation")
         com.google.cloud.imf.gzos.pb.GRecvProto.Record.Field.FieldType result = com.google.cloud.imf.gzos.pb.GRecvProto.Record.Field.FieldType.valueOf(cast_);
         return result == null ? com.google.cloud.imf.gzos.pb.GRecvProto.Record.Field.FieldType.UNRECOGNIZED : result;
@@ -1527,6 +1548,7 @@ public final class GRecvProto {
        * <code>string format = 9;</code>
        * @return The format.
        */
+      @java.lang.Override
       public java.lang.String getFormat() {
         java.lang.Object ref = format_;
         if (ref instanceof java.lang.String) {
@@ -1543,6 +1565,7 @@ public final class GRecvProto {
        * <code>string format = 9;</code>
        * @return The bytes for format.
        */
+      @java.lang.Override
       public com.google.protobuf.ByteString
           getFormatBytes() {
         java.lang.Object ref = format_;
@@ -2088,7 +2111,7 @@ public final class GRecvProto {
          * <code>.com.google.cloud.imf.gzos.Record.Field.FieldType typ = 2;</code>
          * @return The enum numeric value on the wire for typ.
          */
-        public int getTypValue() {
+        @java.lang.Override public int getTypValue() {
           return typ_;
         }
         /**
@@ -2097,6 +2120,7 @@ public final class GRecvProto {
          * @return This builder for chaining.
          */
         public Builder setTypValue(int value) {
+          
           typ_ = value;
           onChanged();
           return this;
@@ -2105,6 +2129,7 @@ public final class GRecvProto {
          * <code>.com.google.cloud.imf.gzos.Record.Field.FieldType typ = 2;</code>
          * @return The typ.
          */
+        @java.lang.Override
         public com.google.cloud.imf.gzos.pb.GRecvProto.Record.Field.FieldType getTyp() {
           @SuppressWarnings("deprecation")
           com.google.cloud.imf.gzos.pb.GRecvProto.Record.Field.FieldType result = com.google.cloud.imf.gzos.pb.GRecvProto.Record.Field.FieldType.valueOf(typ_);
@@ -2140,6 +2165,7 @@ public final class GRecvProto {
          * <code>int32 size = 3;</code>
          * @return The size.
          */
+        @java.lang.Override
         public int getSize() {
           return size_;
         }
@@ -2170,6 +2196,7 @@ public final class GRecvProto {
          * <code>int32 precision = 4;</code>
          * @return The precision.
          */
+        @java.lang.Override
         public int getPrecision() {
           return precision_;
         }
@@ -2200,6 +2227,7 @@ public final class GRecvProto {
          * <code>int32 scale = 5;</code>
          * @return The scale.
          */
+        @java.lang.Override
         public int getScale() {
           return scale_;
         }
@@ -2230,6 +2258,7 @@ public final class GRecvProto {
          * <code>bool filler = 6;</code>
          * @return The filler.
          */
+        @java.lang.Override
         public boolean getFiller() {
           return filler_;
         }
@@ -2379,7 +2408,7 @@ public final class GRecvProto {
          * <code>.com.google.cloud.imf.gzos.Record.Field.FieldType cast = 8;</code>
          * @return The enum numeric value on the wire for cast.
          */
-        public int getCastValue() {
+        @java.lang.Override public int getCastValue() {
           return cast_;
         }
         /**
@@ -2388,6 +2417,7 @@ public final class GRecvProto {
          * @return This builder for chaining.
          */
         public Builder setCastValue(int value) {
+          
           cast_ = value;
           onChanged();
           return this;
@@ -2396,6 +2426,7 @@ public final class GRecvProto {
          * <code>.com.google.cloud.imf.gzos.Record.Field.FieldType cast = 8;</code>
          * @return The cast.
          */
+        @java.lang.Override
         public com.google.cloud.imf.gzos.pb.GRecvProto.Record.Field.FieldType getCast() {
           @SuppressWarnings("deprecation")
           com.google.cloud.imf.gzos.pb.GRecvProto.Record.Field.FieldType result = com.google.cloud.imf.gzos.pb.GRecvProto.Record.Field.FieldType.valueOf(cast_);
@@ -2560,14 +2591,14 @@ public final class GRecvProto {
      * <code>.com.google.cloud.imf.gzos.Record.Source source = 1;</code>
      * @return The enum numeric value on the wire for source.
      */
-    public int getSourceValue() {
+    @java.lang.Override public int getSourceValue() {
       return source_;
     }
     /**
      * <code>.com.google.cloud.imf.gzos.Record.Source source = 1;</code>
      * @return The source.
      */
-    public com.google.cloud.imf.gzos.pb.GRecvProto.Record.Source getSource() {
+    @java.lang.Override public com.google.cloud.imf.gzos.pb.GRecvProto.Record.Source getSource() {
       @SuppressWarnings("deprecation")
       com.google.cloud.imf.gzos.pb.GRecvProto.Record.Source result = com.google.cloud.imf.gzos.pb.GRecvProto.Record.Source.valueOf(source_);
       return result == null ? com.google.cloud.imf.gzos.pb.GRecvProto.Record.Source.UNRECOGNIZED : result;
@@ -2579,6 +2610,7 @@ public final class GRecvProto {
      * <code>string original = 2;</code>
      * @return The original.
      */
+    @java.lang.Override
     public java.lang.String getOriginal() {
       java.lang.Object ref = original_;
       if (ref instanceof java.lang.String) {
@@ -2595,6 +2627,7 @@ public final class GRecvProto {
      * <code>string original = 2;</code>
      * @return The bytes for original.
      */
+    @java.lang.Override
     public com.google.protobuf.ByteString
         getOriginalBytes() {
       java.lang.Object ref = original_;
@@ -2614,12 +2647,14 @@ public final class GRecvProto {
     /**
      * <code>repeated .com.google.cloud.imf.gzos.Record.Field field = 3;</code>
      */
+    @java.lang.Override
     public java.util.List<com.google.cloud.imf.gzos.pb.GRecvProto.Record.Field> getFieldList() {
       return field_;
     }
     /**
      * <code>repeated .com.google.cloud.imf.gzos.Record.Field field = 3;</code>
      */
+    @java.lang.Override
     public java.util.List<? extends com.google.cloud.imf.gzos.pb.GRecvProto.Record.FieldOrBuilder> 
         getFieldOrBuilderList() {
       return field_;
@@ -2627,18 +2662,21 @@ public final class GRecvProto {
     /**
      * <code>repeated .com.google.cloud.imf.gzos.Record.Field field = 3;</code>
      */
+    @java.lang.Override
     public int getFieldCount() {
       return field_.size();
     }
     /**
      * <code>repeated .com.google.cloud.imf.gzos.Record.Field field = 3;</code>
      */
+    @java.lang.Override
     public com.google.cloud.imf.gzos.pb.GRecvProto.Record.Field getField(int index) {
       return field_.get(index);
     }
     /**
      * <code>repeated .com.google.cloud.imf.gzos.Record.Field field = 3;</code>
      */
+    @java.lang.Override
     public com.google.cloud.imf.gzos.pb.GRecvProto.Record.FieldOrBuilder getFieldOrBuilder(
         int index) {
       return field_.get(index);
@@ -2650,6 +2688,7 @@ public final class GRecvProto {
      * <code>string encoding = 4;</code>
      * @return The encoding.
      */
+    @java.lang.Override
     public java.lang.String getEncoding() {
       java.lang.Object ref = encoding_;
       if (ref instanceof java.lang.String) {
@@ -2666,6 +2705,7 @@ public final class GRecvProto {
      * <code>string encoding = 4;</code>
      * @return The bytes for encoding.
      */
+    @java.lang.Override
     public com.google.protobuf.ByteString
         getEncodingBytes() {
       java.lang.Object ref = encoding_;
@@ -2686,6 +2726,7 @@ public final class GRecvProto {
      * <code>bool vartext = 5;</code>
      * @return The vartext.
      */
+    @java.lang.Override
     public boolean getVartext() {
       return vartext_;
     }
@@ -2696,6 +2737,7 @@ public final class GRecvProto {
      * <code>bytes delimiter = 6;</code>
      * @return The delimiter.
      */
+    @java.lang.Override
     public com.google.protobuf.ByteString getDelimiter() {
       return delimiter_;
     }
@@ -3132,7 +3174,7 @@ public final class GRecvProto {
        * <code>.com.google.cloud.imf.gzos.Record.Source source = 1;</code>
        * @return The enum numeric value on the wire for source.
        */
-      public int getSourceValue() {
+      @java.lang.Override public int getSourceValue() {
         return source_;
       }
       /**
@@ -3141,6 +3183,7 @@ public final class GRecvProto {
        * @return This builder for chaining.
        */
       public Builder setSourceValue(int value) {
+        
         source_ = value;
         onChanged();
         return this;
@@ -3149,6 +3192,7 @@ public final class GRecvProto {
        * <code>.com.google.cloud.imf.gzos.Record.Source source = 1;</code>
        * @return The source.
        */
+      @java.lang.Override
       public com.google.cloud.imf.gzos.pb.GRecvProto.Record.Source getSource() {
         @SuppressWarnings("deprecation")
         com.google.cloud.imf.gzos.pb.GRecvProto.Record.Source result = com.google.cloud.imf.gzos.pb.GRecvProto.Record.Source.valueOf(source_);
@@ -3576,6 +3620,7 @@ public final class GRecvProto {
        * <code>bool vartext = 5;</code>
        * @return The vartext.
        */
+      @java.lang.Override
       public boolean getVartext() {
         return vartext_;
       }
@@ -3606,6 +3651,7 @@ public final class GRecvProto {
        * <code>bytes delimiter = 6;</code>
        * @return The delimiter.
        */
+      @java.lang.Override
       public com.google.protobuf.ByteString getDelimiter() {
         return delimiter_;
       }
@@ -3777,7 +3823,7 @@ public final class GRecvProto {
   /**
    * Protobuf type {@code com.google.cloud.imf.gzos.ZOSJobInfo}
    */
-  public  static final class ZOSJobInfo extends
+  public static final class ZOSJobInfo extends
       com.google.protobuf.GeneratedMessageV3 implements
       // @@protoc_insertion_point(message_implements:com.google.cloud.imf.gzos.ZOSJobInfo)
       ZOSJobInfoOrBuilder {
@@ -3906,6 +3952,7 @@ public final class GRecvProto {
      * <code>string jobid = 1;</code>
      * @return The jobid.
      */
+    @java.lang.Override
     public java.lang.String getJobid() {
       java.lang.Object ref = jobid_;
       if (ref instanceof java.lang.String) {
@@ -3922,6 +3969,7 @@ public final class GRecvProto {
      * <code>string jobid = 1;</code>
      * @return The bytes for jobid.
      */
+    @java.lang.Override
     public com.google.protobuf.ByteString
         getJobidBytes() {
       java.lang.Object ref = jobid_;
@@ -3942,6 +3990,7 @@ public final class GRecvProto {
      * <code>string jobname = 2;</code>
      * @return The jobname.
      */
+    @java.lang.Override
     public java.lang.String getJobname() {
       java.lang.Object ref = jobname_;
       if (ref instanceof java.lang.String) {
@@ -3958,6 +4007,7 @@ public final class GRecvProto {
      * <code>string jobname = 2;</code>
      * @return The bytes for jobname.
      */
+    @java.lang.Override
     public com.google.protobuf.ByteString
         getJobnameBytes() {
       java.lang.Object ref = jobname_;
@@ -3978,6 +4028,7 @@ public final class GRecvProto {
      * <code>string jobdate = 3;</code>
      * @return The jobdate.
      */
+    @java.lang.Override
     public java.lang.String getJobdate() {
       java.lang.Object ref = jobdate_;
       if (ref instanceof java.lang.String) {
@@ -3994,6 +4045,7 @@ public final class GRecvProto {
      * <code>string jobdate = 3;</code>
      * @return The bytes for jobdate.
      */
+    @java.lang.Override
     public com.google.protobuf.ByteString
         getJobdateBytes() {
       java.lang.Object ref = jobdate_;
@@ -4014,6 +4066,7 @@ public final class GRecvProto {
      * <code>string jobtime = 4;</code>
      * @return The jobtime.
      */
+    @java.lang.Override
     public java.lang.String getJobtime() {
       java.lang.Object ref = jobtime_;
       if (ref instanceof java.lang.String) {
@@ -4030,6 +4083,7 @@ public final class GRecvProto {
      * <code>string jobtime = 4;</code>
      * @return The bytes for jobtime.
      */
+    @java.lang.Override
     public com.google.protobuf.ByteString
         getJobtimeBytes() {
       java.lang.Object ref = jobtime_;
@@ -4050,6 +4104,7 @@ public final class GRecvProto {
      * <code>string step_name = 5;</code>
      * @return The stepName.
      */
+    @java.lang.Override
     public java.lang.String getStepName() {
       java.lang.Object ref = stepName_;
       if (ref instanceof java.lang.String) {
@@ -4066,6 +4121,7 @@ public final class GRecvProto {
      * <code>string step_name = 5;</code>
      * @return The bytes for stepName.
      */
+    @java.lang.Override
     public com.google.protobuf.ByteString
         getStepNameBytes() {
       java.lang.Object ref = stepName_;
@@ -4086,6 +4142,7 @@ public final class GRecvProto {
      * <code>string proc_step_name = 6;</code>
      * @return The procStepName.
      */
+    @java.lang.Override
     public java.lang.String getProcStepName() {
       java.lang.Object ref = procStepName_;
       if (ref instanceof java.lang.String) {
@@ -4102,6 +4159,7 @@ public final class GRecvProto {
      * <code>string proc_step_name = 6;</code>
      * @return The bytes for procStepName.
      */
+    @java.lang.Override
     public com.google.protobuf.ByteString
         getProcStepNameBytes() {
       java.lang.Object ref = procStepName_;
@@ -4122,6 +4180,7 @@ public final class GRecvProto {
      * <code>string user = 7;</code>
      * @return The user.
      */
+    @java.lang.Override
     public java.lang.String getUser() {
       java.lang.Object ref = user_;
       if (ref instanceof java.lang.String) {
@@ -4138,6 +4197,7 @@ public final class GRecvProto {
      * <code>string user = 7;</code>
      * @return The bytes for user.
      */
+    @java.lang.Override
     public com.google.protobuf.ByteString
         getUserBytes() {
       java.lang.Object ref = user_;
@@ -5251,11 +5311,17 @@ public final class GRecvProto {
      * @return The noData.
      */
     boolean getNoData();
+
+    /**
+     * <code>bytes keyfile = 13;</code>
+     * @return The keyfile.
+     */
+    com.google.protobuf.ByteString getKeyfile();
   }
   /**
    * Protobuf type {@code com.google.cloud.imf.gzos.GRecvRequest}
    */
-  public  static final class GRecvRequest extends
+  public static final class GRecvRequest extends
       com.google.protobuf.GeneratedMessageV3 implements
       // @@protoc_insertion_point(message_implements:com.google.cloud.imf.gzos.GRecvRequest)
       GRecvRequestOrBuilder {
@@ -5270,6 +5336,7 @@ public final class GRecvProto {
       signature_ = com.google.protobuf.ByteString.EMPTY;
       principal_ = "";
       srcUri_ = "";
+      keyfile_ = com.google.protobuf.ByteString.EMPTY;
     }
 
     @java.lang.Override
@@ -5381,6 +5448,11 @@ public final class GRecvProto {
               noData_ = input.readBool();
               break;
             }
+            case 106: {
+
+              keyfile_ = input.readBytes();
+              break;
+            }
             default: {
               if (!parseUnknownField(
                   input, unknownFields, extensionRegistry, tag)) {
@@ -5419,6 +5491,7 @@ public final class GRecvProto {
      * <code>.com.google.cloud.imf.gzos.Record schema = 1;</code>
      * @return Whether the schema field is set.
      */
+    @java.lang.Override
     public boolean hasSchema() {
       return schema_ != null;
     }
@@ -5426,12 +5499,14 @@ public final class GRecvProto {
      * <code>.com.google.cloud.imf.gzos.Record schema = 1;</code>
      * @return The schema.
      */
+    @java.lang.Override
     public com.google.cloud.imf.gzos.pb.GRecvProto.Record getSchema() {
       return schema_ == null ? com.google.cloud.imf.gzos.pb.GRecvProto.Record.getDefaultInstance() : schema_;
     }
     /**
      * <code>.com.google.cloud.imf.gzos.Record schema = 1;</code>
      */
+    @java.lang.Override
     public com.google.cloud.imf.gzos.pb.GRecvProto.RecordOrBuilder getSchemaOrBuilder() {
       return getSchema();
     }
@@ -5442,6 +5517,7 @@ public final class GRecvProto {
      * <code>int32 lrecl = 2;</code>
      * @return The lrecl.
      */
+    @java.lang.Override
     public int getLrecl() {
       return lrecl_;
     }
@@ -5452,6 +5528,7 @@ public final class GRecvProto {
      * <code>int32 blksz = 3;</code>
      * @return The blksz.
      */
+    @java.lang.Override
     public int getBlksz() {
       return blksz_;
     }
@@ -5462,6 +5539,7 @@ public final class GRecvProto {
      * <code>string basepath = 4;</code>
      * @return The basepath.
      */
+    @java.lang.Override
     public java.lang.String getBasepath() {
       java.lang.Object ref = basepath_;
       if (ref instanceof java.lang.String) {
@@ -5478,6 +5556,7 @@ public final class GRecvProto {
      * <code>string basepath = 4;</code>
      * @return The bytes for basepath.
      */
+    @java.lang.Override
     public com.google.protobuf.ByteString
         getBasepathBytes() {
       java.lang.Object ref = basepath_;
@@ -5498,6 +5577,7 @@ public final class GRecvProto {
      * <code>double max_err_pct = 5;</code>
      * @return The maxErrPct.
      */
+    @java.lang.Override
     public double getMaxErrPct() {
       return maxErrPct_;
     }
@@ -5508,6 +5588,7 @@ public final class GRecvProto {
      * <code>bytes public_key = 6;</code>
      * @return The publicKey.
      */
+    @java.lang.Override
     public com.google.protobuf.ByteString getPublicKey() {
       return publicKey_;
     }
@@ -5518,6 +5599,7 @@ public final class GRecvProto {
      * <code>bytes signature = 7;</code>
      * @return The signature.
      */
+    @java.lang.Override
     public com.google.protobuf.ByteString getSignature() {
       return signature_;
     }
@@ -5528,6 +5610,7 @@ public final class GRecvProto {
      * <code>string principal = 8;</code>
      * @return The principal.
      */
+    @java.lang.Override
     public java.lang.String getPrincipal() {
       java.lang.Object ref = principal_;
       if (ref instanceof java.lang.String) {
@@ -5544,6 +5627,7 @@ public final class GRecvProto {
      * <code>string principal = 8;</code>
      * @return The bytes for principal.
      */
+    @java.lang.Override
     public com.google.protobuf.ByteString
         getPrincipalBytes() {
       java.lang.Object ref = principal_;
@@ -5564,6 +5648,7 @@ public final class GRecvProto {
      * <code>.com.google.cloud.imf.gzos.ZOSJobInfo jobinfo = 9;</code>
      * @return Whether the jobinfo field is set.
      */
+    @java.lang.Override
     public boolean hasJobinfo() {
       return jobinfo_ != null;
     }
@@ -5571,12 +5656,14 @@ public final class GRecvProto {
      * <code>.com.google.cloud.imf.gzos.ZOSJobInfo jobinfo = 9;</code>
      * @return The jobinfo.
      */
+    @java.lang.Override
     public com.google.cloud.imf.gzos.pb.GRecvProto.ZOSJobInfo getJobinfo() {
       return jobinfo_ == null ? com.google.cloud.imf.gzos.pb.GRecvProto.ZOSJobInfo.getDefaultInstance() : jobinfo_;
     }
     /**
      * <code>.com.google.cloud.imf.gzos.ZOSJobInfo jobinfo = 9;</code>
      */
+    @java.lang.Override
     public com.google.cloud.imf.gzos.pb.GRecvProto.ZOSJobInfoOrBuilder getJobinfoOrBuilder() {
       return getJobinfo();
     }
@@ -5587,6 +5674,7 @@ public final class GRecvProto {
      * <code>int64 timestamp = 10;</code>
      * @return The timestamp.
      */
+    @java.lang.Override
     public long getTimestamp() {
       return timestamp_;
     }
@@ -5597,6 +5685,7 @@ public final class GRecvProto {
      * <code>string src_uri = 11;</code>
      * @return The srcUri.
      */
+    @java.lang.Override
     public java.lang.String getSrcUri() {
       java.lang.Object ref = srcUri_;
       if (ref instanceof java.lang.String) {
@@ -5613,6 +5702,7 @@ public final class GRecvProto {
      * <code>string src_uri = 11;</code>
      * @return The bytes for srcUri.
      */
+    @java.lang.Override
     public com.google.protobuf.ByteString
         getSrcUriBytes() {
       java.lang.Object ref = srcUri_;
@@ -5633,8 +5723,20 @@ public final class GRecvProto {
      * <code>bool no_data = 12;</code>
      * @return The noData.
      */
+    @java.lang.Override
     public boolean getNoData() {
       return noData_;
+    }
+
+    public static final int KEYFILE_FIELD_NUMBER = 13;
+    private com.google.protobuf.ByteString keyfile_;
+    /**
+     * <code>bytes keyfile = 13;</code>
+     * @return The keyfile.
+     */
+    @java.lang.Override
+    public com.google.protobuf.ByteString getKeyfile() {
+      return keyfile_;
     }
 
     private byte memoizedIsInitialized = -1;
@@ -5686,6 +5788,9 @@ public final class GRecvProto {
       }
       if (noData_ != false) {
         output.writeBool(12, noData_);
+      }
+      if (!keyfile_.isEmpty()) {
+        output.writeBytes(13, keyfile_);
       }
       unknownFields.writeTo(output);
     }
@@ -5741,6 +5846,10 @@ public final class GRecvProto {
         size += com.google.protobuf.CodedOutputStream
           .computeBoolSize(12, noData_);
       }
+      if (!keyfile_.isEmpty()) {
+        size += com.google.protobuf.CodedOutputStream
+          .computeBytesSize(13, keyfile_);
+      }
       size += unknownFields.getSerializedSize();
       memoizedSize = size;
       return size;
@@ -5787,6 +5896,8 @@ public final class GRecvProto {
           .equals(other.getSrcUri())) return false;
       if (getNoData()
           != other.getNoData()) return false;
+      if (!getKeyfile()
+          .equals(other.getKeyfile())) return false;
       if (!unknownFields.equals(other.unknownFields)) return false;
       return true;
     }
@@ -5829,6 +5940,8 @@ public final class GRecvProto {
       hash = (37 * hash) + NO_DATA_FIELD_NUMBER;
       hash = (53 * hash) + com.google.protobuf.Internal.hashBoolean(
           getNoData());
+      hash = (37 * hash) + KEYFILE_FIELD_NUMBER;
+      hash = (53 * hash) + getKeyfile().hashCode();
       hash = (29 * hash) + unknownFields.hashCode();
       memoizedHashCode = hash;
       return hash;
@@ -5994,6 +6107,8 @@ public final class GRecvProto {
 
         noData_ = false;
 
+        keyfile_ = com.google.protobuf.ByteString.EMPTY;
+
         return this;
       }
 
@@ -6040,6 +6155,7 @@ public final class GRecvProto {
         result.timestamp_ = timestamp_;
         result.srcUri_ = srcUri_;
         result.noData_ = noData_;
+        result.keyfile_ = keyfile_;
         onBuilt();
         return result;
       }
@@ -6126,6 +6242,9 @@ public final class GRecvProto {
         }
         if (other.getNoData() != false) {
           setNoData(other.getNoData());
+        }
+        if (other.getKeyfile() != com.google.protobuf.ByteString.EMPTY) {
+          setKeyfile(other.getKeyfile());
         }
         this.mergeUnknownFields(other.unknownFields);
         onChanged();
@@ -6280,6 +6399,7 @@ public final class GRecvProto {
        * <code>int32 lrecl = 2;</code>
        * @return The lrecl.
        */
+      @java.lang.Override
       public int getLrecl() {
         return lrecl_;
       }
@@ -6310,6 +6430,7 @@ public final class GRecvProto {
        * <code>int32 blksz = 3;</code>
        * @return The blksz.
        */
+      @java.lang.Override
       public int getBlksz() {
         return blksz_;
       }
@@ -6416,6 +6537,7 @@ public final class GRecvProto {
        * <code>double max_err_pct = 5;</code>
        * @return The maxErrPct.
        */
+      @java.lang.Override
       public double getMaxErrPct() {
         return maxErrPct_;
       }
@@ -6446,6 +6568,7 @@ public final class GRecvProto {
        * <code>bytes public_key = 6;</code>
        * @return The publicKey.
        */
+      @java.lang.Override
       public com.google.protobuf.ByteString getPublicKey() {
         return publicKey_;
       }
@@ -6479,6 +6602,7 @@ public final class GRecvProto {
        * <code>bytes signature = 7;</code>
        * @return The signature.
        */
+      @java.lang.Override
       public com.google.protobuf.ByteString getSignature() {
         return signature_;
       }
@@ -6707,6 +6831,7 @@ public final class GRecvProto {
        * <code>int64 timestamp = 10;</code>
        * @return The timestamp.
        */
+      @java.lang.Override
       public long getTimestamp() {
         return timestamp_;
       }
@@ -6813,6 +6938,7 @@ public final class GRecvProto {
        * <code>bool no_data = 12;</code>
        * @return The noData.
        */
+      @java.lang.Override
       public boolean getNoData() {
         return noData_;
       }
@@ -6834,6 +6960,40 @@ public final class GRecvProto {
       public Builder clearNoData() {
         
         noData_ = false;
+        onChanged();
+        return this;
+      }
+
+      private com.google.protobuf.ByteString keyfile_ = com.google.protobuf.ByteString.EMPTY;
+      /**
+       * <code>bytes keyfile = 13;</code>
+       * @return The keyfile.
+       */
+      @java.lang.Override
+      public com.google.protobuf.ByteString getKeyfile() {
+        return keyfile_;
+      }
+      /**
+       * <code>bytes keyfile = 13;</code>
+       * @param value The keyfile to set.
+       * @return This builder for chaining.
+       */
+      public Builder setKeyfile(com.google.protobuf.ByteString value) {
+        if (value == null) {
+    throw new NullPointerException();
+  }
+  
+        keyfile_ = value;
+        onChanged();
+        return this;
+      }
+      /**
+       * <code>bytes keyfile = 13;</code>
+       * @return This builder for chaining.
+       */
+      public Builder clearKeyfile() {
+        
+        keyfile_ = getDefaultInstance().getKeyfile();
         onChanged();
         return this;
       }
@@ -6933,7 +7093,7 @@ public final class GRecvProto {
   /**
    * Protobuf type {@code com.google.cloud.imf.gzos.GRecvResponse}
    */
-  public  static final class GRecvResponse extends
+  public static final class GRecvResponse extends
       com.google.protobuf.GeneratedMessageV3 implements
       // @@protoc_insertion_point(message_implements:com.google.cloud.imf.gzos.GRecvResponse)
       GRecvResponseOrBuilder {
@@ -7040,6 +7200,7 @@ public final class GRecvProto {
      * <code>int32 status = 1;</code>
      * @return The status.
      */
+    @java.lang.Override
     public int getStatus() {
       return status_;
     }
@@ -7050,6 +7211,7 @@ public final class GRecvProto {
      * <code>int64 rowCount = 2;</code>
      * @return The rowCount.
      */
+    @java.lang.Override
     public long getRowCount() {
       return rowCount_;
     }
@@ -7060,6 +7222,7 @@ public final class GRecvProto {
      * <code>int64 msgCount = 3;</code>
      * @return The msgCount.
      */
+    @java.lang.Override
     public long getMsgCount() {
       return msgCount_;
     }
@@ -7070,6 +7233,7 @@ public final class GRecvProto {
      * <code>int64 errCount = 4;</code>
      * @return The errCount.
      */
+    @java.lang.Override
     public long getErrCount() {
       return errCount_;
     }
@@ -7080,6 +7244,7 @@ public final class GRecvProto {
      * <code>string hash = 5;</code>
      * @return The hash.
      */
+    @java.lang.Override
     public java.lang.String getHash() {
       java.lang.Object ref = hash_;
       if (ref instanceof java.lang.String) {
@@ -7096,6 +7261,7 @@ public final class GRecvProto {
      * <code>string hash = 5;</code>
      * @return The bytes for hash.
      */
+    @java.lang.Override
     public com.google.protobuf.ByteString
         getHashBytes() {
       java.lang.Object ref = hash_;
@@ -7488,6 +7654,7 @@ public final class GRecvProto {
        * <code>int32 status = 1;</code>
        * @return The status.
        */
+      @java.lang.Override
       public int getStatus() {
         return status_;
       }
@@ -7518,6 +7685,7 @@ public final class GRecvProto {
        * <code>int64 rowCount = 2;</code>
        * @return The rowCount.
        */
+      @java.lang.Override
       public long getRowCount() {
         return rowCount_;
       }
@@ -7548,6 +7716,7 @@ public final class GRecvProto {
        * <code>int64 msgCount = 3;</code>
        * @return The msgCount.
        */
+      @java.lang.Override
       public long getMsgCount() {
         return msgCount_;
       }
@@ -7578,6 +7747,7 @@ public final class GRecvProto {
        * <code>int64 errCount = 4;</code>
        * @return The errCount.
        */
+      @java.lang.Override
       public long getErrCount() {
         return errCount_;
       }
@@ -7754,7 +7924,7 @@ public final class GRecvProto {
    *
    * Protobuf type {@code com.google.cloud.imf.gzos.HealthCheckRequest}
    */
-  public  static final class HealthCheckRequest extends
+  public static final class HealthCheckRequest extends
       com.google.protobuf.GeneratedMessageV3 implements
       // @@protoc_insertion_point(message_implements:com.google.cloud.imf.gzos.HealthCheckRequest)
       HealthCheckRequestOrBuilder {
@@ -7841,6 +8011,7 @@ public final class GRecvProto {
      * <code>string service = 1;</code>
      * @return The service.
      */
+    @java.lang.Override
     public java.lang.String getService() {
       java.lang.Object ref = service_;
       if (ref instanceof java.lang.String) {
@@ -7857,6 +8028,7 @@ public final class GRecvProto {
      * <code>string service = 1;</code>
      * @return The bytes for service.
      */
+    @java.lang.Override
     public com.google.protobuf.ByteString
         getServiceBytes() {
       java.lang.Object ref = service_;
@@ -8323,7 +8495,7 @@ public final class GRecvProto {
   /**
    * Protobuf type {@code com.google.cloud.imf.gzos.HealthCheckResponse}
    */
-  public  static final class HealthCheckResponse extends
+  public static final class HealthCheckResponse extends
       com.google.protobuf.GeneratedMessageV3 implements
       // @@protoc_insertion_point(message_implements:com.google.cloud.imf.gzos.HealthCheckResponse)
       HealthCheckResponseOrBuilder {
@@ -8483,6 +8655,10 @@ public final class GRecvProto {
 
       public final com.google.protobuf.Descriptors.EnumValueDescriptor
           getValueDescriptor() {
+        if (this == UNRECOGNIZED) {
+          throw new java.lang.IllegalStateException(
+              "Can't get the descriptor of an unrecognized enum value.");
+        }
         return getDescriptor().getValues().get(ordinal());
       }
       public final com.google.protobuf.Descriptors.EnumDescriptor
@@ -8523,14 +8699,14 @@ public final class GRecvProto {
      * <code>.com.google.cloud.imf.gzos.HealthCheckResponse.ServingStatus status = 1;</code>
      * @return The enum numeric value on the wire for status.
      */
-    public int getStatusValue() {
+    @java.lang.Override public int getStatusValue() {
       return status_;
     }
     /**
      * <code>.com.google.cloud.imf.gzos.HealthCheckResponse.ServingStatus status = 1;</code>
      * @return The status.
      */
-    public com.google.cloud.imf.gzos.pb.GRecvProto.HealthCheckResponse.ServingStatus getStatus() {
+    @java.lang.Override public com.google.cloud.imf.gzos.pb.GRecvProto.HealthCheckResponse.ServingStatus getStatus() {
       @SuppressWarnings("deprecation")
       com.google.cloud.imf.gzos.pb.GRecvProto.HealthCheckResponse.ServingStatus result = com.google.cloud.imf.gzos.pb.GRecvProto.HealthCheckResponse.ServingStatus.valueOf(status_);
       return result == null ? com.google.cloud.imf.gzos.pb.GRecvProto.HealthCheckResponse.ServingStatus.UNRECOGNIZED : result;
@@ -8842,7 +9018,7 @@ public final class GRecvProto {
        * <code>.com.google.cloud.imf.gzos.HealthCheckResponse.ServingStatus status = 1;</code>
        * @return The enum numeric value on the wire for status.
        */
-      public int getStatusValue() {
+      @java.lang.Override public int getStatusValue() {
         return status_;
       }
       /**
@@ -8851,6 +9027,7 @@ public final class GRecvProto {
        * @return This builder for chaining.
        */
       public Builder setStatusValue(int value) {
+        
         status_ = value;
         onChanged();
         return this;
@@ -8859,6 +9036,7 @@ public final class GRecvProto {
        * <code>.com.google.cloud.imf.gzos.HealthCheckResponse.ServingStatus status = 1;</code>
        * @return The status.
        */
+      @java.lang.Override
       public com.google.cloud.imf.gzos.pb.GRecvProto.HealthCheckResponse.ServingStatus getStatus() {
         @SuppressWarnings("deprecation")
         com.google.cloud.imf.gzos.pb.GRecvProto.HealthCheckResponse.ServingStatus result = com.google.cloud.imf.gzos.pb.GRecvProto.HealthCheckResponse.ServingStatus.valueOf(status_);
@@ -9013,7 +9191,7 @@ public final class GRecvProto {
       "\207\001\n\nZOSJobInfo\022\r\n\005jobid\030\001 \001(\t\022\017\n\007jobname" +
       "\030\002 \001(\t\022\017\n\007jobdate\030\003 \001(\t\022\017\n\007jobtime\030\004 \001(\t" +
       "\022\021\n\tstep_name\030\005 \001(\t\022\026\n\016proc_step_name\030\006 " +
-      "\001(\t\022\014\n\004user\030\007 \001(\t\"\255\002\n\014GRecvRequest\0221\n\006sc" +
+      "\001(\t\022\014\n\004user\030\007 \001(\t\"\276\002\n\014GRecvRequest\0221\n\006sc" +
       "hema\030\001 \001(\0132!.com.google.cloud.imf.gzos.R" +
       "ecord\022\r\n\005lrecl\030\002 \001(\005\022\r\n\005blksz\030\003 \001(\005\022\020\n\010b" +
       "asepath\030\004 \001(\t\022\023\n\013max_err_pct\030\005 \001(\001\022\022\n\npu" +
@@ -9021,21 +9199,21 @@ public final class GRecvProto {
       "ncipal\030\010 \001(\t\0226\n\007jobinfo\030\t \001(\0132%.com.goog" +
       "le.cloud.imf.gzos.ZOSJobInfo\022\021\n\ttimestam" +
       "p\030\n \001(\003\022\017\n\007src_uri\030\013 \001(\t\022\017\n\007no_data\030\014 \001(" +
-      "\010\"c\n\rGRecvResponse\022\016\n\006status\030\001 \001(\005\022\020\n\010ro" +
-      "wCount\030\002 \001(\003\022\020\n\010msgCount\030\003 \001(\003\022\020\n\010errCou" +
-      "nt\030\004 \001(\003\022\014\n\004hash\030\005 \001(\t\"%\n\022HealthCheckReq" +
-      "uest\022\017\n\007service\030\001 \001(\t\"\237\001\n\023HealthCheckRes" +
-      "ponse\022L\n\006status\030\001 \001(\0162<.com.google.cloud" +
-      ".imf.gzos.HealthCheckResponse.ServingSta" +
-      "tus\":\n\rServingStatus\022\013\n\007UNKNOWN\020\000\022\013\n\007SER" +
-      "VING\020\001\022\017\n\013NOT_SERVING\020\0022\313\001\n\005GRecv\022Z\n\005Wri" +
-      "te\022\'.com.google.cloud.imf.gzos.GRecvRequ" +
-      "est\032(.com.google.cloud.imf.gzos.GRecvRes" +
-      "ponse\022f\n\005Check\022-.com.google.cloud.imf.gz" +
-      "os.HealthCheckRequest\032..com.google.cloud" +
-      ".imf.gzos.HealthCheckResponseB,\n\034com.goo" +
-      "gle.cloud.imf.gzos.pbB\nGRecvProtoP\000b\006pro" +
-      "to3"
+      "\010\022\017\n\007keyfile\030\r \001(\014\"c\n\rGRecvResponse\022\016\n\006s" +
+      "tatus\030\001 \001(\005\022\020\n\010rowCount\030\002 \001(\003\022\020\n\010msgCoun" +
+      "t\030\003 \001(\003\022\020\n\010errCount\030\004 \001(\003\022\014\n\004hash\030\005 \001(\t\"" +
+      "%\n\022HealthCheckRequest\022\017\n\007service\030\001 \001(\t\"\237" +
+      "\001\n\023HealthCheckResponse\022L\n\006status\030\001 \001(\0162<" +
+      ".com.google.cloud.imf.gzos.HealthCheckRe" +
+      "sponse.ServingStatus\":\n\rServingStatus\022\013\n" +
+      "\007UNKNOWN\020\000\022\013\n\007SERVING\020\001\022\017\n\013NOT_SERVING\020\002" +
+      "2\313\001\n\005GRecv\022Z\n\005Write\022\'.com.google.cloud.i" +
+      "mf.gzos.GRecvRequest\032(.com.google.cloud." +
+      "imf.gzos.GRecvResponse\022f\n\005Check\022-.com.go" +
+      "ogle.cloud.imf.gzos.HealthCheckRequest\032." +
+      ".com.google.cloud.imf.gzos.HealthCheckRe" +
+      "sponseB,\n\034com.google.cloud.imf.gzos.pbB\n" +
+      "GRecvProtoP\000b\006proto3"
     };
     descriptor = com.google.protobuf.Descriptors.FileDescriptor
       .internalBuildGeneratedFileFrom(descriptorData,
@@ -9070,7 +9248,7 @@ public final class GRecvProto {
     internal_static_com_google_cloud_imf_gzos_GRecvRequest_fieldAccessorTable = new
       com.google.protobuf.GeneratedMessageV3.FieldAccessorTable(
         internal_static_com_google_cloud_imf_gzos_GRecvRequest_descriptor,
-        new java.lang.String[] { "Schema", "Lrecl", "Blksz", "Basepath", "MaxErrPct", "PublicKey", "Signature", "Principal", "Jobinfo", "Timestamp", "SrcUri", "NoData", });
+        new java.lang.String[] { "Schema", "Lrecl", "Blksz", "Basepath", "MaxErrPct", "PublicKey", "Signature", "Principal", "Jobinfo", "Timestamp", "SrcUri", "NoData", "Keyfile", });
     internal_static_com_google_cloud_imf_gzos_GRecvResponse_descriptor =
       getDescriptor().getMessageTypes().get(3);
     internal_static_com_google_cloud_imf_gzos_GRecvResponse_fieldAccessorTable = new

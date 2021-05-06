@@ -16,13 +16,18 @@
 
 package com.google.cloud.imf
 
+import java.io.ByteArrayInputStream
+
 import com.google.api.services.logging.v2.LoggingScopes
+import com.google.api.services.storage.{Storage => LowLevelStorageApi}
 import com.google.api.services.storage.StorageScopes
 import com.google.auth.oauth2.GoogleCredentials
 import com.google.cloud.imf.grecv.GRecvConfigParser
 import com.google.cloud.imf.grecv.server.GRecvServer
 import com.google.cloud.imf.gzos.Util
 import com.google.cloud.imf.util.{CloudLogging, Logging, Services}
+import com.google.cloud.storage.Storage
+import com.google.protobuf.ByteString
 
 /** The server side of the mainframe connector
   * Receives requests to transcode to ORC
@@ -43,13 +48,26 @@ object GRecv extends Logging {
           errorLogs = Seq("org.apache.orc","io.grpc","io.netty","org.apache.http"),
           credentials = creds.createScoped(LoggingScopes.LOGGING_WRITE))
         logger.info(s"Starting GRecvServer\n$buildInfo")
-        val credentials = creds.createScoped(StorageScopes.DEVSTORAGE_READ_WRITE)
-        val gcs = Services.storage(credentials)
-        val lowLevelClient = Services.storageApi(credentials)
-        new GRecvServer(cfg, gcs, lowLevelClient).start()
+        new GRecvServer(cfg, storage, storageApi).start()
       case _ =>
         Console.err.println(s"Unabled to parse args '${args.mkString(" ")}'")
         System.exit(1)
     }
   }
+
+  def storage: ByteString => Storage =
+    keyfile => Services.storage(credentials(keyfile).createScoped(StorageScopes.DEVSTORAGE_READ_WRITE))
+
+  def storageApi: ByteString => LowLevelStorageApi =
+    keyfile => Services.storageApi(credentials(keyfile).createScoped(StorageScopes.DEVSTORAGE_READ_WRITE))
+
+  private def credentials(keyfile: ByteString): GoogleCredentials =
+    if(keyfile == null || keyfile.isEmpty) {
+      logger.debug("Using default application credentials")
+      GoogleCredentials.getApplicationDefault
+    } else {
+      logger.debug("Using credentials from grpc request")
+      GoogleCredentials
+        .fromStream(new ByteArrayInputStream(keyfile.toByteArray))
+    }
 }

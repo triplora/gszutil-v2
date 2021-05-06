@@ -14,6 +14,7 @@ import com.google.cloud.imf.gzos.pb.GRecvProto.Record.Field
 import com.google.cloud.imf.gzos.pb.GRecvProto.{GRecvRequest, Record}
 import com.google.cloud.imf.gzos.{Linux, PackedDecimal, Util}
 import com.google.cloud.imf.util.{CloudLogging, Services}
+import com.google.protobuf.ByteString
 import com.google.protobuf.util.JsonFormat
 import org.scalatest.BeforeAndAfterAll
 import org.scalatest.flatspec.AnyFlatSpec
@@ -27,7 +28,7 @@ class CpSpec2 extends AnyFlatSpec with BeforeAndAfterAll {
   val TestProject = sys.env("PROJECT")
 
   def server(cfg: GRecvConfig): Future[GRecvServer] = Future{
-    val s = new GRecvServer(cfg, Services.storage(), Services.storageApi(Services.storageCredentials()))
+    val s = new GRecvServer(cfg, _ => Services.storage(), _ => Services.storageApi(Services.storageCredentials()))
     s.start(block = false)
     s
   }
@@ -94,6 +95,7 @@ class CpSpec2 extends AnyFlatSpec with BeforeAndAfterAll {
       .setLrecl(in.lRecl)
       .setBlksz(in.blkSize)
       .setBasepath(s"gs://$TestBucket/prefix")
+      .setKeyfile(ByteString.EMPTY)
       .build
 
     val sendResult = GRecvClient.upload(request, serverCfg.host, serverCfg.port, 1, Util.zProvider, in, None, None)
