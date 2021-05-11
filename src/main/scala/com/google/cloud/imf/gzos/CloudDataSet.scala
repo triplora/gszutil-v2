@@ -80,9 +80,10 @@ object CloudDataSet extends Logging {
 
   def getLrecl(blob: Blob): Int = {
     val uri = toUri(blob)
-    if (!blob.getMetadata.containsKey(LreclMeta)) {
+    val maybeMetadata = Option(blob.getMetadata)
+    if (!maybeMetadata.exists(m => m.containsKey(LreclMeta))) {
       import scala.jdk.CollectionConverters.MapHasAsScala
-      val meta = blob.getMetadata.asScala.map{x => s"${x._1}=${x._2}"}.mkString("\n")
+      val meta = maybeMetadata.map(_.asScala.map{x => s"${x._1}=${x._2}"}.mkString("\n"))
       val msg = s"$LreclMeta not set for $uri\n$meta"
       logger.error(msg)
       throw new RuntimeException(msg)
@@ -118,7 +119,7 @@ object CloudDataSet extends Logging {
                      baseUri: URI): Option[CloudRecordReader] = {
     val bucket = baseUri.getAuthority
     val name = buildObjectName(baseUri, ds)
-    logger.debug(s"Searching for object with name=$name, in bucket=$bucket")
+    logger.info(s"Searching for object with name=$name in bucket=$bucket")
     // check if DSN exists in GCS
     val blob: Blob = gcs.get(BlobId.of(bucket, name))
     if (blob != null) {
@@ -151,22 +152,21 @@ object CloudDataSet extends Logging {
     val bucket = baseUri.getAuthority
     val name = buildObjectName(baseUri, ds)
     val uri = s"gs://$bucket/$name"
-    logger.debug(s"Searching for object with name=$name, in bucket=$bucket")
+    logger.debug(s"Searching for object(s) with name=$name, in bucket=$bucket, gdg=${ds.gdg}, baseGDG=${ds.isBaseGDG}, generation=${ds.generation}")
     // check if DSN exists in GCS
     import scala.jdk.CollectionConverters.IterableHasAsScala
     val versions: IndexedSeq[Blob] = gcs.list(bucket,
-      Storage.BlobListOption.prefix(name),
-      Storage.BlobListOption.versions(true))
-      .iterateAll.asScala.toIndexedSeq.sortBy(_.getGeneration)
+      Storage.BlobListOption.prefix(name))
+      .iterateAll.asScala.toIndexedSeq.sortBy(_.getName)
 
     if (versions.nonEmpty) {
       val sb = new StringBuilder
-      sb.append(s"$uri has ${versions.length} generations\n")
+      sb.append(s"Total versions found: ${versions.length} for $uri\n")
       sb.append("generation\tlrecl\tsize\tcreated\n")
       versions.foreach{b =>
         sb.append(b.getGeneration)
         sb.append(" ")
-        sb.append(b.getMetadata.getOrDefault(LreclMeta,"?"))
+        sb.append(Option(b.getMetadata).getOrElse(LreclMeta,"?"))
         sb.append(" ")
         sb.append(b.getSize)
         sb.append(" ")

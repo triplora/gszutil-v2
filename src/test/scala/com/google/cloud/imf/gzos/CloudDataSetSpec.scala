@@ -28,7 +28,14 @@ class CloudDataSetSpec extends AnyFlatSpec {
     assert(name == "prefix/HLQ.DATASET")
   }
 
-  it should "gdg object name" in {
+  it should "pds object name" in {
+    val uri = new URI("gs://bucket/prefix")
+    val ds = DataSetInfo("HLQ.DATASET(MBR)")
+    val name = CloudDataSet.buildObjectName(uri, ds)
+    assert(name == "prefix/HLQ.DATASET/MBR")
+  }
+
+  it should "gdg object name for base GDG" in {
     val uri = new URI("gs://bucket/prefix")
     val ds = DataSetInfo("HLQ.DATASET.G0001V00")
     val name = CloudDataSet.buildObjectName(uri, ds)
@@ -36,10 +43,11 @@ class CloudDataSetSpec extends AnyFlatSpec {
     assert(name == "prefix/HLQ.DATASET")
   }
 
-  it should "pds object name" in {
+  it should "gdg object name for individual GDG" in {
     val uri = new URI("gs://bucket/prefix")
-    val ds = DataSetInfo("HLQ.DATASET(MBR)")
+    val ds = DataSetInfo("HLQ.DATASET.G0001V00(+0)")
     val name = CloudDataSet.buildObjectName(uri, ds)
-    assert(name == "prefix/HLQ.DATASET/MBR")
+    assert(ds.gdg)
+    assert(name == "prefix/HLQ.DATASET.G0001V00")
   }
 }
