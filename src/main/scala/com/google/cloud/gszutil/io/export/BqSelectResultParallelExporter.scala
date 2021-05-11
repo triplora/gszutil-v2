@@ -6,6 +6,7 @@ import com.google.cloud.bqsh.ExportConfig
 import com.google.cloud.bqsh.cmd.Result
 import com.google.cloud.gszutil.SchemaProvider
 import com.google.cloud.gszutil.io.`export`.{NativeExporter, PartialPageIterator, SimpleFileExporter}
+import com.google.cloud.imf.gzos.pb.GRecvProto
 import com.google.cloud.imf.util.Logging
 
 import java.util.concurrent.{Executors, TimeUnit}
@@ -15,8 +16,9 @@ import scala.jdk.CollectionConverters._
 
 class BqSelectResultParallelExporter(cfg: ExportConfig,
                                      bq: BigQuery,
+                                     jobInfo: GRecvProto.ZOSJobInfo,
                                      sp: SchemaProvider,
-                                     exporterFactory: (String, ExportConfig) => SimpleFileExporter) extends NativeExporter with Logging {
+                                     exporterFactory: (String, ExportConfig) => SimpleFileExporter) extends NativeExporter(bq, cfg, jobInfo) with Logging {
 
   private implicit val ec: ExecutionContextExecutor = ExecutionContext.fromExecutor(Executors.newFixedThreadPool(cfg.workerThreads))
 

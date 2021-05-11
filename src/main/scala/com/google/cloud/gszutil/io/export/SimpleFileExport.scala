@@ -24,10 +24,6 @@ class SimpleFileExport(filepath: String, recordLength: Int) extends FileExport {
     rowCounter += 1
   }
 
-  override def ddName: String = filepath
-
-  override def transcoder: Transcoder = Utf8
-
   override def rowsWritten(): Long = rowCounter
 
   override def lRecl: Int = recordLength

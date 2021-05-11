@@ -78,11 +78,12 @@ class BqSelectResultParallelExporterRealBQSpec extends AnyFlatSpec{
     //cleanup
     cleanUpTmpFiles()
 
-    val multiThreadExporter = new BqSelectResultParallelExporter(cfg, bigQuery, schema, exporterFactory)
+    val multiThreadExporter = new BqSelectResultParallelExporter(cfg, bigQuery, zos.getInfo, schema, exporterFactory)
     multiThreadExporter.exportData(completedJob)
     multiThreadExporter.close()
 
-    val singleThreadExporter = new BqSelectResultExporter(cfg, zos, schema, new TestLocalFileExporter(defaultRecordLength))
+    val singleThreadExporter = new BqSelectResultExporter(cfg, bigQuery, zos.getInfo, schema,
+      () => new SimpleFileExport("st_outfile_all", defaultRecordLength))
     singleThreadExporter.exportData(completedJob)
     singleThreadExporter.close()
 

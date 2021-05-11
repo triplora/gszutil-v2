@@ -7,6 +7,7 @@ import com.google.cloud.bqsh.ExportConfig
 import com.google.cloud.bqsh.cmd.Result
 import com.google.cloud.gszutil.io.`export`.{BqSelectResultParallelExporter, SimpleFileExporter}
 import com.google.cloud.gszutil.{BinaryEncoder, CopyBook, SchemaProvider}
+import com.google.cloud.imf.gzos.Linux
 import org.mockito.{ArgumentMatchers, Mockito}
 import org.scalatest.flatspec.AnyFlatSpec
 
@@ -16,6 +17,7 @@ import scala.jdk.CollectionConverters._
 
 class BqSelectResultParallelExporterSpec extends AnyFlatSpec {
   private val tableId: TableId = TableId.of("a", "b", "c")
+  private val zos = Linux
   private val alphabet = List("A", "B", "C", "D", "E", "F", "G", "H", "I", "J", "K",
     "L", "M", "N", "O", "P", "Q", "R", "S", "T", "U", "V", "W", "X", "Y", "Z")
   private val exportCfg = ExportConfig(
@@ -32,7 +34,7 @@ class BqSelectResultParallelExporterSpec extends AnyFlatSpec {
     var fileExporters = Set[SimpleFileExporter]()
 
     val exporter = new BqSelectResultParallelExporter(
-      exportCfg, buildBQMock, schema,
+      exportCfg, buildBQMock, zos.getInfo, schema,
       (_, _) => {
         val fileExporter = new NoOutputExporter()
         fileExporters += fileExporter
@@ -47,7 +49,7 @@ class BqSelectResultParallelExporterSpec extends AnyFlatSpec {
 
   it should "export should fail when size of exported records > real records" in {
     val exporter = new BqSelectResultParallelExporter(
-      exportCfg, buildBQMock, schema,
+      exportCfg, buildBQMock, zos.getInfo, schema,
       (_, _) => new BrokenExporterSizeLarger()
     )
     assertThrows[IllegalStateException](
@@ -57,7 +59,7 @@ class BqSelectResultParallelExporterSpec extends AnyFlatSpec {
 
   it should "export should fail when size of exported records < real records" in {
     val exporter = new BqSelectResultParallelExporter(
-      exportCfg, buildBQMock, schema,
+      exportCfg, buildBQMock, zos.getInfo, schema,
       (_, _) => new BrokenExporterSizeSmaller()
     )
     assertThrows[IllegalArgumentException](
@@ -69,6 +71,7 @@ class BqSelectResultParallelExporterSpec extends AnyFlatSpec {
     val exporter = new BqSelectResultParallelExporter(
       exportCfg,
       buildBQMock,
+      zos.getInfo,
       schema,
       (_, _) => new BrokenResponseExporter()
     )
@@ -84,6 +87,7 @@ class BqSelectResultParallelExporterSpec extends AnyFlatSpec {
     val exporter = new BqSelectResultParallelExporter(
       ExportConfig(),
       Mockito.mock(classOf[BigQuery]),
+      zos.getInfo,
       Mockito.mock(classOf[SchemaProvider]),
       (_, _) => Mockito.mock(classOf[SimpleFileExporter])
     )
