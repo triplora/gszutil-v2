@@ -61,6 +61,7 @@ object GRecvClient extends Uploader with Logging {
       .setOutputUri(outputUri)
       .putAllExportConfigs(cfg.toMap.asJava)
       .setJobinfo(zos.getInfo)
+      .setKeyfile(ByteString.copyFrom(zos.readKeyfile()))
       .build()
 
     val client =
