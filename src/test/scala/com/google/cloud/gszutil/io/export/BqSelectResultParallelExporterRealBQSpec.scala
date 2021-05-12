@@ -83,6 +83,7 @@ class BqSelectResultParallelExporterRealBQSpec extends AnyFlatSpec{
     //cleanup
     cleanUpTmpFiles()
 
+    // local parallel export
     val multiThreadExporter = new BqSelectResultParallelExporter(cfg, bigQuery, zos.getInfo, schema, exporterFactory)
     multiThreadExporter.exportData(completedJob)
     multiThreadExporter.close()
@@ -94,10 +95,11 @@ class BqSelectResultParallelExporterRealBQSpec extends AnyFlatSpec{
     def gcsExporterFactory(fileName: String, cfg: ExportConfig): SimpleFileExporter = {
       val result = new LocalFileExporter
       fileNames = fileNames :+ fileName
-      result.newExport(GcsFileExport(gcs, bucket + "/" + fileName, defaultRecordLength))
+      result.newExport(GcsFileExport(gcs, "gs://" + bucket + "/" + fileName, defaultRecordLength))
       new SimpleFileExporterAdapter(result, cfg)
     }
 
+    // GCS parallel export
     val gcsMultiThreadExporter = new BqSelectResultParallelExporter(cfg, bigQuery, zos.getInfo, schema, gcsExporterFactory)
     gcsMultiThreadExporter.exportData(completedJob)
     gcsMultiThreadExporter.close()
@@ -107,6 +109,7 @@ class BqSelectResultParallelExporterRealBQSpec extends AnyFlatSpec{
       .setTarget(BlobInfo.newBuilder(bucket, "composed-file").build()).build()
     gcs.compose(comReq)
 
+    // local single threded export
     val singleThreadExporter = new BqSelectResultExporter(cfg, bigQuery, zos.getInfo, schema,
       () => new SimpleFileExport("st_outfile_all", defaultRecordLength))
     singleThreadExporter.exportData(completedJob)
