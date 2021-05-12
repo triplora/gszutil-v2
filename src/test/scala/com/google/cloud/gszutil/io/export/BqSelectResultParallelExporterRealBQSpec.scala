@@ -1,26 +1,31 @@
 package com.google.cloud.gszutil.io.`export`
 
+import com.google.api.services.storage.StorageScopes
 import com.google.cloud.bigquery.{JobId, QueryJobConfiguration}
 import com.google.cloud.bqsh.{BQ, ExportConfig}
 import com.google.cloud.gszutil.{CopyBook, SchemaProvider}
+import com.google.cloud.imf.GRecv.credentials
 import com.google.cloud.imf.gzos.Linux
 import com.google.cloud.imf.util.Services
+import com.google.cloud.storage.BlobInfo
+import com.google.cloud.storage.Storage.ComposeRequest
 import org.scalatest.flatspec.AnyFlatSpec
 
 import java.io.{File, FileOutputStream}
 import java.nio.file.{Files, Paths}
+import scala.jdk.CollectionConverters.IterableHasAsJava
 
 class BqSelectResultParallelExporterRealBQSpec extends AnyFlatSpec{
   // test was done for debugging of real BQ api with BqSelectResultParallelExporter
   // for performance reasons it is ignored
-  ignore should "read in parallel data from BigQuery" in {
+  it should "read in parallel data from BigQuery" in {
     //some env variables should be set
     assert(sys.env.contains("OUTFILE")) // = OUTFILE
     assert(sys.env.contains("OUTFILE_LRECL")) // = 80
     assert(sys.env.contains("OUTFILE_BLKSIZE")) // = 512
 
     val zos = Linux
-    val projectId = "dummy-project-id"
+    val projectId = "pso-wmt-td2bq"
     val location = "US"
     val defaultRecordLength = 80
 
@@ -81,6 +86,26 @@ class BqSelectResultParallelExporterRealBQSpec extends AnyFlatSpec{
     val multiThreadExporter = new BqSelectResultParallelExporter(cfg, bigQuery, zos.getInfo, schema, exporterFactory)
     multiThreadExporter.exportData(completedJob)
     multiThreadExporter.close()
+
+    var fileNames = Seq.empty[String]
+    val gcs = Services.storage(Services.bigqueryCredentials())
+    val bucket = "vn51e5b_luminex_multiple-file-write-test"
+
+    def gcsExporterFactory(fileName: String, cfg: ExportConfig): SimpleFileExporter = {
+      val result = new LocalFileExporter
+      fileNames = fileNames :+ fileName
+      result.newExport(GcsFileExport(gcs, bucket + "/" + fileName, defaultRecordLength))
+      new SimpleFileExporterAdapter(result, cfg)
+    }
+
+    val gcsMultiThreadExporter = new BqSelectResultParallelExporter(cfg, bigQuery, zos.getInfo, schema, gcsExporterFactory)
+    gcsMultiThreadExporter.exportData(completedJob)
+    gcsMultiThreadExporter.close()
+
+    val comReq = ComposeRequest.newBuilder()
+      .addSource(fileNames.asJava)
+      .setTarget(BlobInfo.newBuilder(bucket, "composed-file").build()).build()
+    gcs.compose(comReq)
 
     val singleThreadExporter = new BqSelectResultExporter(cfg, bigQuery, zos.getInfo, schema,
       () => new SimpleFileExport("st_outfile_all", defaultRecordLength))
