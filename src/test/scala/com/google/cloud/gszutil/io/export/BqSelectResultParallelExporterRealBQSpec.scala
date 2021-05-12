@@ -1,10 +1,8 @@
 package com.google.cloud.gszutil.io.`export`
 
-import com.google.api.services.storage.StorageScopes
 import com.google.cloud.bigquery.{JobId, QueryJobConfiguration}
 import com.google.cloud.bqsh.{BQ, ExportConfig}
 import com.google.cloud.gszutil.{CopyBook, SchemaProvider}
-import com.google.cloud.imf.GRecv.credentials
 import com.google.cloud.imf.gzos.Linux
 import com.google.cloud.imf.util.Services
 import com.google.cloud.storage.BlobInfo
@@ -12,6 +10,7 @@ import com.google.cloud.storage.Storage.ComposeRequest
 import org.scalatest.flatspec.AnyFlatSpec
 
 import java.io.{File, FileOutputStream}
+import java.net.URI
 import java.nio.file.{Files, Paths}
 import scala.jdk.CollectionConverters.IterableHasAsJava
 
@@ -88,14 +87,15 @@ class BqSelectResultParallelExporterRealBQSpec extends AnyFlatSpec{
     multiThreadExporter.exportData(completedJob)
     multiThreadExporter.close()
 
-    var fileNames = Seq.empty[String]
+    var filesToCompose = Seq.empty[String]
     val gcs = Services.storage(Services.bigqueryCredentials())
-    val bucket = "vn51e5b_luminex_multiple-file-write-test"
+    val uri = "gs://vn51e5b_luminex_multiple-file-write-test/EXPORT/r1.on.o1"
+    val bucketName = new URI(uri)
 
     def gcsExporterFactory(fileName: String, cfg: ExportConfig): SimpleFileExporter = {
       val result = new LocalFileExporter
-      fileNames = fileNames :+ fileName
-      result.newExport(GcsFileExport(gcs, "gs://" + bucket + "/" + fileName, defaultRecordLength))
+      filesToCompose = filesToCompose :+ (bucketName.getPath.substring(1) + "_tmp/" + fileName)
+      result.newExport(GcsFileExport(gcs, uri + "_tmp/" + fileName, defaultRecordLength))
       new SimpleFileExporterAdapter(result, cfg)
     }
 
@@ -104,10 +104,20 @@ class BqSelectResultParallelExporterRealBQSpec extends AnyFlatSpec{
     gcsMultiThreadExporter.exportData(completedJob)
     gcsMultiThreadExporter.close()
 
-    val comReq = ComposeRequest.newBuilder()
-      .addSource(fileNames.asJava)
-      .setTarget(BlobInfo.newBuilder(bucket, "composed-file").build()).build()
-    gcs.compose(comReq)
+    // merge parallel files
+//    val composeRequest = ComposeRequest.newBuilder()
+//      .addSource(filesToCompose.asJava)
+//      .setTarget(BlobInfo.newBuilder(bucketName.getAuthority, bucketName.getPath.substring(1)).build()).build()
+//    gcs.compose(composeRequest)
+
+    // GSC cleanup
+//    val batch =  gcs.batch()
+//    val files = gcs.list(bucketName.getAuthority,
+//      Storage.BlobListOption.prefix(bucketName.getPath.substring(1) + "_tmp"))
+//
+//    files.iterateAll().forEach(file => batch.delete(file.getBlobId))
+//    batch.submit()
+
 
     // local single threded export
     val singleThreadExporter = new BqSelectResultExporter(cfg, bigQuery, zos.getInfo, schema,

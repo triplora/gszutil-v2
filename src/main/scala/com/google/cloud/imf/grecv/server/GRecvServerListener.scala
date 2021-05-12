@@ -172,10 +172,11 @@ object GRecvServerListener extends Logging {
     val resp = if(cfg.runMode.toLowerCase == "parallel") {
       logger.info(s"Export mode - multiple threads")
       var filesToCompose = Seq.empty[String]
+      val bucketURI = new URI(request.getOutputUri)
       def exporterFactory(fileName: String, cfg: ExportConfig): SimpleFileExporter = {
         val result = new LocalFileExporter
-        filesToCompose = filesToCompose :+ request.getOutputUri + "_" + fileName
-        result.newExport(GcsFileExport(gcs, request.getOutputUri + "_" + fileName, sp.LRECL))
+        filesToCompose = filesToCompose :+ (bucketURI.getPath.substring(1) + "_tmp/" + fileName)
+        result.newExport(GcsFileExport(gcs, request.getOutputUri + "_tmp/" + fileName, sp.LRECL))
         new SimpleFileExporterAdapter(result, cfg)
       }
 
@@ -185,10 +186,18 @@ object GRecvServerListener extends Logging {
       val composeStartTime = System.currentTimeMillis()
       val composeRequest = ComposeRequest.newBuilder()
         .addSource(filesToCompose.asJava)
-        .setTarget(BlobInfo.newBuilder(request.getOutputUri, "composed-file").build()).build()
+        .setTarget(BlobInfo.newBuilder(bucketURI.getAuthority, bucketURI.getPath.substring(1)).build()).build()
       gcs.compose(composeRequest)
       logger.info(s"Composing completed, " +
         s"time took: ${(System.currentTimeMillis() - composeStartTime) / 1000} seconds.")
+
+      // delete multiple files after compose
+      val batch =  gcs.batch()
+      val filesToDelete = gcs.list(bucketURI.getAuthority,
+        Storage.BlobListOption.prefix(bucketURI.getPath.substring(1) + "_tmp"))
+
+      filesToDelete.iterateAll().forEach(file => batch.delete(file.getBlobId))
+      batch.submit()
       GRecvResponse.newBuilder.setStatus(GRecvProtocol.OK).setRowCount(result.activityCount).build
     } else {
       logger.info(s"Export mode - single thread")
