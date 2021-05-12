@@ -26,6 +26,7 @@ case class ExportConfig(
   cobDsn: String = "",
   timeoutMinutes: Int = 60,
   vartext: Boolean = false,
+  runMode: String = "",
 
   bucket: String = "",
   remoteHost: String = "",
@@ -89,13 +90,15 @@ case class ExportConfig(
       |datasetId=$datasetId,
       |location=$location,
       |projectId=$projectId,
-      |statsTable=$statsTable
+      |statsTable=$statsTable,
+      |runMode=$runMode
       |""".stripMargin
 }
 
 object ExportConfig {
   def apply(configs: Map[String, String]): ExportConfig = {
     ExportConfig(
+      runMode = configs.getOrElse("runMode", ""),//TODO:remove when testing finished
       sql = configs.getOrElse("sql", ""),
       queryDSN = configs.getOrElse("queryDSN", ""),
       outDD = configs.getOrElse("outDD", ""),

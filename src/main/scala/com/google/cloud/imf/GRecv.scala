@@ -59,7 +59,7 @@ object GRecv extends Logging {
 
   def bq: (String, String, ByteString) => BigQuery =
     (project, location, keyfile) =>
-      Services.bigQuery(project, location, credentials(keyfile).createScoped(BigqueryScopes.BIGQUERY_READONLY))
+      Services.bigQuery(project, location, credentials(keyfile).createScoped(BigqueryScopes.all()))//TODO: find correct scopes
 
   def storage: ByteString => Storage =
     keyfile => Services.storage(credentials(keyfile).createScoped(StorageScopes.DEVSTORAGE_READ_WRITE))

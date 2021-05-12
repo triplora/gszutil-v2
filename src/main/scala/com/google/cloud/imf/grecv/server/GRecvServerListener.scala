@@ -167,10 +167,16 @@ object GRecvServerListener extends Logging {
              responseObserver: StreamObserver[GRecvResponse]) : Unit = {
 
     val sp = parseCopybook(request.getCopybook)
-    val fileExport = () => GcsFileExport(gcs, request.getOutputUri, sp.LRECL)
-    val result = new BqSelectResultExporter(cfg, bq, request.getJobinfo, sp, fileExport).`export`(request.getSql)
+    val resp = if(cfg.runMode.toLowerCase == "parallel") {
+      logger.info(s"Export mode - multiple threads")
+      throw new NotImplementedError()
+    } else {
+      logger.info(s"Export mode - single thread")
+      val fileExport = () => GcsFileExport(gcs, request.getOutputUri, sp.LRECL)
+      val result = new BqSelectResultExporter(cfg, bq, request.getJobinfo, sp, fileExport).`export`(request.getSql)
+      GRecvResponse.newBuilder.setStatus(GRecvProtocol.OK).setRowCount(result.activityCount).build
+    }
 
-    val resp = GRecvResponse.newBuilder.setStatus(GRecvProtocol.OK).setRowCount(result.activityCount).build
     responseObserver.onNext(resp)
     responseObserver.onCompleted()
   }
