@@ -8,6 +8,7 @@ import java.util.zip.GZIPInputStream
 import com.google.api.services.storage.{Storage => LowLevelStorageApi}
 import com.google.cloud.bigquery.BigQuery
 import com.google.cloud.bqsh.ExportConfig
+import com.google.cloud.bqsh.cmd.Export.logger
 import com.google.cloud.gszutil.{CopyBook, RecordSchema, SchemaProvider}
 import com.google.cloud.gszutil.io.WriterCore
 import com.google.cloud.gszutil.io.`export`.{BqSelectResultExporter, BqSelectResultParallelExporter, GcsFileExport, LocalFileExporter, SimpleFileExport, SimpleFileExporter, SimpleFileExporterAdapter}
@@ -178,10 +179,14 @@ object GRecvServerListener extends Logging {
 
     val result = new BqSelectResultParallelExporter(cfg, bq, request.getJobinfo, sp, exporterFactory).`export`(request.getSql)
 
+    logger.info(s"Starting composing files: \n${filesToCompose.size} files")
+    val composeStartTime = System.currentTimeMillis()
     val composeRequest = ComposeRequest.newBuilder()
       .addSource(filesToCompose.asJava)
       .setTarget(BlobInfo.newBuilder(request.getOutputUri, "composed-file").build()).build()
     gcs.compose(composeRequest)
+    logger.info(s"Composing completed, " +
+      s"time took: ${(System.currentTimeMillis() - composeStartTime) / 1000} seconds.")
 
     val resp = GRecvResponse.newBuilder.setStatus(GRecvProtocol.OK).setRowCount(result.activityCount).build
     responseObserver.onNext(resp)
