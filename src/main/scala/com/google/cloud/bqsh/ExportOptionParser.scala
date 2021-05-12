@@ -35,6 +35,11 @@ object ExportOptionParser
     .text("(optional) DSN to read query from in format HLQ.MEMBER or HLQ.PDS(MEMBER)")
     .action((x,c) => c.copy(queryDSN = x))
 
+  opt[String]("run_mode")//TODO: remove when not needed
+    .optional
+    .text("runMode, possible values single, parallel")
+    .action((x,c) => c.copy(runMode = x))
+
   opt[String]("sql")
     .optional
     .text("(optional) SQL BQ query")

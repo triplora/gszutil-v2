@@ -169,26 +169,34 @@ object GRecvServerListener extends Logging {
              responseObserver: StreamObserver[GRecvResponse]) : Unit = {
 
     val sp = parseCopybook(request.getCopybook)
-    var filesToCompose = Seq.empty[String]
-    def exporterFactory(fileName: String, cfg: ExportConfig): SimpleFileExporter = {
-      val result = new LocalFileExporter
-      filesToCompose = filesToCompose :+ request.getOutputUri + "_" + fileName
-      result.newExport(GcsFileExport(gcs, request.getOutputUri + "_" + fileName, sp.LRECL))
-      new SimpleFileExporterAdapter(result, cfg)
+    val resp = if(cfg.runMode.toLowerCase == "parallel") {
+      logger.info(s"Export mode - multiple threads")
+      var filesToCompose = Seq.empty[String]
+      def exporterFactory(fileName: String, cfg: ExportConfig): SimpleFileExporter = {
+        val result = new LocalFileExporter
+        filesToCompose = filesToCompose :+ request.getOutputUri + "_" + fileName
+        result.newExport(GcsFileExport(gcs, request.getOutputUri + "_" + fileName, sp.LRECL))
+        new SimpleFileExporterAdapter(result, cfg)
+      }
+
+      val result = new BqSelectResultParallelExporter(cfg, bq, request.getJobinfo, sp, exporterFactory).`export`(request.getSql)
+
+      logger.info(s"Starting composing files: \n${filesToCompose.size} files")
+      val composeStartTime = System.currentTimeMillis()
+      val composeRequest = ComposeRequest.newBuilder()
+        .addSource(filesToCompose.asJava)
+        .setTarget(BlobInfo.newBuilder(request.getOutputUri, "composed-file").build()).build()
+      gcs.compose(composeRequest)
+      logger.info(s"Composing completed, " +
+        s"time took: ${(System.currentTimeMillis() - composeStartTime) / 1000} seconds.")
+      GRecvResponse.newBuilder.setStatus(GRecvProtocol.OK).setRowCount(result.activityCount).build
+    } else {
+      logger.info(s"Export mode - single thread")
+      val fileExport = () => GcsFileExport(gcs, request.getOutputUri, sp.LRECL)
+      val result = new BqSelectResultExporter(cfg, bq, request.getJobinfo, sp, fileExport).`export`(request.getSql)
+      GRecvResponse.newBuilder.setStatus(GRecvProtocol.OK).setRowCount(result.activityCount).build
     }
 
-    val result = new BqSelectResultParallelExporter(cfg, bq, request.getJobinfo, sp, exporterFactory).`export`(request.getSql)
-
-    logger.info(s"Starting composing files: \n${filesToCompose.size} files")
-    val composeStartTime = System.currentTimeMillis()
-    val composeRequest = ComposeRequest.newBuilder()
-      .addSource(filesToCompose.asJava)
-      .setTarget(BlobInfo.newBuilder(request.getOutputUri, "composed-file").build()).build()
-    gcs.compose(composeRequest)
-    logger.info(s"Composing completed, " +
-      s"time took: ${(System.currentTimeMillis() - composeStartTime) / 1000} seconds.")
-
-    val resp = GRecvResponse.newBuilder.setStatus(GRecvProtocol.OK).setRowCount(result.activityCount).build
     responseObserver.onNext(resp)
     responseObserver.onCompleted()
   }
