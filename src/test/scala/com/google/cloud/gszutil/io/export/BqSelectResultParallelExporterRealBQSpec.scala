@@ -45,7 +45,7 @@ class BqSelectResultParallelExporterRealBQSpec extends AnyFlatSpec{
           vartext = false,
           partitionSize = 50000,
           partitionPageSize = 10000,
-          workerThreads = 2
+          workerThreads = 4
         )
 
     /*//~9m records, partitionSize to large value for this
@@ -82,15 +82,16 @@ class BqSelectResultParallelExporterRealBQSpec extends AnyFlatSpec{
     //cleanup
     cleanUpTmpFiles()
 
-    // local parallel export
-    val multiThreadExporter = new BqSelectResultParallelExporter(cfg, bigQuery, zos.getInfo, schema, exporterFactory)
-    multiThreadExporter.exportData(completedJob)
-    multiThreadExporter.close()
-
     var filesToCompose = Seq.empty[String]
     val gcs = Services.storage(Services.bigqueryCredentials())
     val uri = "gs://vn51e5b_luminex_multiple-file-write-test/EXPORT/r1.on.o1"
     val bucketName = new URI(uri)
+
+    // local parallel export
+    val multiThreadExporter = new BqSelectResultParallelExporter(cfg, bigQuery, gcs, bucketName,
+      zos.getInfo, schema, exporterFactory)
+    multiThreadExporter.exportData(completedJob)
+    multiThreadExporter.close()
 
     def gcsExporterFactory(fileName: String, cfg: ExportConfig): SimpleFileExporter = {
       val result = new LocalFileExporter
@@ -100,7 +101,8 @@ class BqSelectResultParallelExporterRealBQSpec extends AnyFlatSpec{
     }
 
     // GCS parallel export
-    val gcsMultiThreadExporter = new BqSelectResultParallelExporter(cfg, bigQuery, zos.getInfo, schema, gcsExporterFactory)
+    val gcsMultiThreadExporter = new BqSelectResultParallelExporter(cfg, bigQuery, gcs, bucketName,
+      zos.getInfo, schema, gcsExporterFactory)
     gcsMultiThreadExporter.exportData(completedJob)
     gcsMultiThreadExporter.close()
 

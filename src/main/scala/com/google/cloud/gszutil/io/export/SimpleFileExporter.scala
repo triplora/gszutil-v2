@@ -16,4 +16,6 @@ trait SimpleFileExporter {
   def exportData(rows: Iterable[FieldValueList], schema: FieldList, encoders: Array[BinaryEncoder]): Result
 
   def endIfOpen(): Unit
+
+  def getCurrentExporter: FileExport
 }

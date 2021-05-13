@@ -8,10 +8,13 @@ import com.google.cloud.bqsh.cmd.Result
 import com.google.cloud.gszutil.io.`export`.{BqSelectResultParallelExporter, SimpleFileExporter}
 import com.google.cloud.gszutil.{BinaryEncoder, CopyBook, SchemaProvider}
 import com.google.cloud.imf.gzos.Linux
+import com.google.cloud.storage.{BlobId, Storage}
+import com.google.cloud.storage.Storage.ComposeRequest
 import org.mockito.{ArgumentMatchers, Mockito}
 import org.scalatest.flatspec.AnyFlatSpec
 
 import java.math.BigInteger
+import java.net.URI
 import java.util
 import scala.jdk.CollectionConverters._
 
@@ -34,7 +37,8 @@ class BqSelectResultParallelExporterSpec extends AnyFlatSpec {
     var fileExporters = Set[SimpleFileExporter]()
 
     val exporter = new BqSelectResultParallelExporter(
-      exportCfg, buildBQMock, zos.getInfo, schema,
+      exportCfg, buildBQMock, buildGCSMock, new URI("test-uri"),
+      zos.getInfo, schema,
       (_, _) => {
         val fileExporter = new NoOutputExporter()
         fileExporters += fileExporter
@@ -49,7 +53,8 @@ class BqSelectResultParallelExporterSpec extends AnyFlatSpec {
 
   it should "export should fail when size of exported records > real records" in {
     val exporter = new BqSelectResultParallelExporter(
-      exportCfg, buildBQMock, zos.getInfo, schema,
+      exportCfg, buildBQMock, buildGCSMock, new URI("test-uri"),
+      zos.getInfo, schema,
       (_, _) => new BrokenExporterSizeLarger()
     )
     assertThrows[IllegalStateException](
@@ -59,7 +64,8 @@ class BqSelectResultParallelExporterSpec extends AnyFlatSpec {
 
   it should "export should fail when size of exported records < real records" in {
     val exporter = new BqSelectResultParallelExporter(
-      exportCfg, buildBQMock, zos.getInfo, schema,
+      exportCfg, buildBQMock, buildGCSMock, new URI("test-uri"),
+      zos.getInfo, schema,
       (_, _) => new BrokenExporterSizeSmaller()
     )
     assertThrows[IllegalArgumentException](
@@ -69,8 +75,7 @@ class BqSelectResultParallelExporterSpec extends AnyFlatSpec {
 
   it should "export should fail when file exporter return failed result" in {
     val exporter = new BqSelectResultParallelExporter(
-      exportCfg,
-      buildBQMock,
+      exportCfg, buildBQMock, buildGCSMock, new URI("test-uri"),
       zos.getInfo,
       schema,
       (_, _) => new BrokenResponseExporter()
@@ -87,6 +92,7 @@ class BqSelectResultParallelExporterSpec extends AnyFlatSpec {
     val exporter = new BqSelectResultParallelExporter(
       ExportConfig(),
       Mockito.mock(classOf[BigQuery]),
+      buildGCSMock, new URI("test-uri"),
       zos.getInfo,
       Mockito.mock(classOf[SchemaProvider]),
       (_, _) => Mockito.mock(classOf[SimpleFileExporter])
@@ -110,6 +116,10 @@ class BqSelectResultParallelExporterSpec extends AnyFlatSpec {
       Result.Success.copy(activityCount = rows.size)
     }
 
+    override def getCurrentExporter(): FileExport = {
+      Mockito.mock(classOf[SimpleFileExport])
+    }
+
     override def endIfOpen(): Unit = {
     }
   }
@@ -120,6 +130,10 @@ class BqSelectResultParallelExporterSpec extends AnyFlatSpec {
 
     override def exportData(rows: Iterable[FieldValueList], schema: FieldList, encoders: Array[BinaryEncoder]): Result = {
       Result.Success.copy(activityCount = rows.size + 1)
+    }
+
+    override def getCurrentExporter: FileExport = {
+      Mockito.mock(classOf[SimpleFileExport])
     }
 
     override def endIfOpen(): Unit = {}
@@ -133,6 +147,10 @@ class BqSelectResultParallelExporterSpec extends AnyFlatSpec {
       Result.Success.copy(activityCount = rows.size - 1)
     }
 
+    override def getCurrentExporter: FileExport = {
+      Mockito.mock(classOf[SimpleFileExport])
+    }
+
     override def endIfOpen(): Unit = {}
   }
 
@@ -142,6 +160,10 @@ class BqSelectResultParallelExporterSpec extends AnyFlatSpec {
 
     override def exportData(rows: Iterable[FieldValueList], schema: FieldList, encoders: Array[BinaryEncoder]): Result = {
       Result.Failure("error")
+    }
+
+    override def getCurrentExporter: FileExport = {
+      Mockito.mock(classOf[SimpleFileExport])
     }
 
     override def endIfOpen(): Unit = {}
@@ -171,6 +193,13 @@ class BqSelectResultParallelExporterSpec extends AnyFlatSpec {
         result
       })
     bqMock
+  }
+
+  private def buildGCSMock: Storage = {
+    val gcsMock = Mockito.mock(classOf[Storage])
+    Mockito.when(gcsMock.compose(ArgumentMatchers.any[ComposeRequest])).thenAnswer(_ => null)
+    Mockito.when(gcsMock.delete(ArgumentMatchers.any[BlobId])).thenAnswer(_ => null)
+    gcsMock
   }
 
   private def buildJobMock: Job = {

@@ -27,6 +27,10 @@ class SimpleFileExporterAdapter(fe: FileExporter, cfg: ExportConfig) extends Sim
     }
   }
 
+  def getCurrentExporter: FileExport = {
+    fe.currentExport
+  }
+
   def endIfOpen(): Unit = fe.endIfOpen()
 
 }
