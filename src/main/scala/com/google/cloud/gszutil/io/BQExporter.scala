@@ -21,6 +21,7 @@ import java.nio.{ByteBuffer, CharBuffer}
 
 import com.google.cloud.bigquery.storage.v1.AvroRows
 import com.google.cloud.gszutil.Transcoder
+import com.google.cloud.gszutil.io.`export`.FileExport
 import com.google.cloud.imf.util.Logging
 import org.apache.avro.Schema
 import org.apache.avro.generic.{GenericDatumReader, GenericRecord}
@@ -28,7 +29,7 @@ import org.apache.avro.io.{BinaryDecoder, DecoderFactory}
 
 import scala.jdk.CollectionConverters.ListHasAsScala
 
-class BQExporter(schema: Schema, id: Int, writer: ZRecordWriterT, transcoder: Transcoder)
+class BQExporter(schema: Schema, id: Int, writer: FileExport, transcoder: Transcoder)
   extends Logging with Exporter {
   private val fields: IndexedSeq[AvroField] =
     schema.getFields.asScala.toArray.toIndexedSeq.map(AvroField)
@@ -88,7 +89,7 @@ class BQExporter(schema: Schema, id: Int, writer: ZRecordWriterT, transcoder: Tr
         buf.put(transcoder.SP)
 
       buf.flip()
-      writer.write(buf)
+      writer.appendBytes(buf.array())
       rowCount += 1
       batchRowCount += 1
     }

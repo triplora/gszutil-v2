@@ -28,8 +28,9 @@ class CpSpec2 extends AnyFlatSpec with BeforeAndAfterAll {
   val TestProject = sys.env("PROJECT")
 
   val bqFunc = (x: String, y: String, _: ByteString) => Services.bigQuery(x, y, Services.storageCredentials())
+  val bqStorageFunc = (_: ByteString) => Services.bigQueryStorage(Services.storageCredentials())
   def server(cfg: GRecvConfig): Future[GRecvServer] = Future{
-    val s = new GRecvServer(cfg, _ => Services.storage(), _ => Services.storageApi(Services.storageCredentials()), bqFunc)
+    val s = new GRecvServer(cfg, _ => Services.storage(), bqStorageFunc, _ => Services.storageApi(Services.storageCredentials()), bqFunc)
     s.start(block = false)
     s
   }

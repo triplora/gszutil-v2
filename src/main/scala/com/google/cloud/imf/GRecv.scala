@@ -24,6 +24,7 @@ import com.google.api.services.storage.{Storage => LowLevelStorageApi}
 import com.google.api.services.storage.StorageScopes
 import com.google.auth.oauth2.GoogleCredentials
 import com.google.cloud.bigquery.BigQuery
+import com.google.cloud.bigquery.storage.v1.BigQueryReadClient
 import com.google.cloud.imf.grecv.GRecvConfigParser
 import com.google.cloud.imf.grecv.server.GRecvServer
 import com.google.cloud.imf.gzos.Util
@@ -50,7 +51,7 @@ object GRecv extends Logging {
           errorLogs = Seq("org.apache.orc","io.grpc","io.netty","org.apache.http"),
           credentials = creds.createScoped(LoggingScopes.LOGGING_WRITE))
         logger.info(s"Starting GRecvServer\n$buildInfo")
-        new GRecvServer(cfg, storage, storageApi, bq).start()
+        new GRecvServer(cfg, storage, bqStorageApi, storageApi, bq).start()
       case _ =>
         Console.err.println(s"Unabled to parse args '${args.mkString(" ")}'")
         System.exit(1)
@@ -59,7 +60,10 @@ object GRecv extends Logging {
 
   def bq: (String, String, ByteString) => BigQuery =
     (project, location, keyfile) =>
-      Services.bigQuery(project, location, credentials(keyfile).createScoped(BigqueryScopes.all()))//TODO: find correct scopes
+      Services.bigQuery(project, location, credentials(keyfile).createScoped(BigqueryScopes.all()))
+
+  def bqStorageApi: ByteString => BigQueryReadClient =
+    keyfile => Services.bigQueryStorage(credentials(keyfile).createScoped(BigqueryScopes.all()))
 
   def storage: ByteString => Storage =
     keyfile => Services.storage(credentials(keyfile).createScoped(StorageScopes.DEVSTORAGE_READ_WRITE))

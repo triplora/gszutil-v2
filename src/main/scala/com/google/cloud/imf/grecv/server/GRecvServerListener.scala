@@ -5,27 +5,26 @@ import java.net.URI
 import java.nio.ByteBuffer
 import java.nio.channels.Channels
 import java.util.zip.GZIPInputStream
+
 import com.google.api.services.storage.{Storage => LowLevelStorageApi}
 import com.google.cloud.bigquery.BigQuery
+import com.google.cloud.bigquery.storage.v1.BigQueryReadClient
 import com.google.cloud.bqsh.ExportConfig
-import com.google.cloud.bqsh.cmd.Export.logger
 import com.google.cloud.gszutil.{CopyBook, RecordSchema, SchemaProvider}
 import com.google.cloud.gszutil.io.WriterCore
-import com.google.cloud.gszutil.io.`export`.{BqSelectResultExporter, BqSelectResultParallelExporter, GcsFileExport, LocalFileExporter, SimpleFileExport, SimpleFileExporter, SimpleFileExporterAdapter}
+import com.google.cloud.gszutil.io.`export`.{BqSelectResultExporter, BqSelectResultParallelExporter, BqStorageApiExporter, GcsFileExport, LocalFileExporter, SimpleFileExport, SimpleFileExporter, SimpleFileExporterAdapter, StorageFileCompose}
 import com.google.cloud.imf.grecv.GRecvProtocol
 import com.google.cloud.imf.gzos.pb.GRecvProto
 import com.google.cloud.imf.gzos.pb.GRecvProto.{GRecvRequest, GRecvResponse}
 import com.google.cloud.imf.gzos.{CloudDataSet, Ebcdic, Util}
 import com.google.cloud.imf.util.Logging
-import com.google.cloud.storage.Storage.ComposeRequest
-import com.google.cloud.storage.{Blob, BlobId, BlobInfo, Storage}
+import com.google.cloud.storage.{Blob, BlobId, Storage}
 import com.google.common.hash.Hashing
 import com.google.protobuf.util.JsonFormat
 import io.grpc.Status
 import io.grpc.stub.StreamObserver
 import org.apache.hadoop.fs.Path
 
-import scala.jdk.CollectionConverters.IterableHasAsJava
 import scala.util.Try
 
 object GRecvServerListener extends Logging {
@@ -164,30 +163,33 @@ object GRecvServerListener extends Logging {
 
   def export(request: GRecvProto.GRecvExportRequest,
              bq: BigQuery,
+             storageApi: BigQueryReadClient,
              gcs: Storage,
              cfg: ExportConfig,
              responseObserver: StreamObserver[GRecvResponse]) : Unit = {
 
     val sp = parseCopybook(request.getCopybook)
-    val resp = if(cfg.runMode.toLowerCase == "parallel") {
+    val result = if(cfg.runMode.toLowerCase == "parallel") {
       logger.info(s"Export mode - multiple threads")
-      val bucketURI = new URI(request.getOutputUri)
-
-      def exporterFactory(fileName: String, cfg: ExportConfig): SimpleFileExporter = {
+      def exporterFactory(fileSuffix: String, cfg: ExportConfig): SimpleFileExporter = {
         val result = new LocalFileExporter
-        result.newExport(GcsFileExport(gcs, request.getOutputUri + "_tmp/" + fileName, sp.LRECL))
+        result.newExport(GcsFileExport(gcs, s"${request.getOutputUri.stripSuffix("/")}/tmp_$fileSuffix" , sp.LRECL))
         new SimpleFileExporterAdapter(result, cfg)
       }
-
-      val result = new BqSelectResultParallelExporter(cfg, bq, gcs, bucketURI, request.getJobinfo, sp, exporterFactory).`export`(request.getSql)
-      GRecvResponse.newBuilder.setStatus(GRecvProtocol.OK).setRowCount(result.activityCount).build
+      val startTime = System.currentTimeMillis()
+      val r = new BqSelectResultParallelExporter(cfg, bq, request.getJobinfo, sp, exporterFactory).`export`(request.getSql)
+      new StorageFileCompose(gcs).composeAll(request.getOutputUri, s"${request.getOutputUri.stripSuffix("/")}/", true)
+      logger.info(s"File compose completed, took=${System.currentTimeMillis() - startTime} millis.")
+      r
+    } else if("storage_api" == cfg.runMode.toLowerCase) {
+      logger.info(s"Export mode - storage API")
+      new BqStorageApiExporter(cfg, storageApi, bq, GcsFileExport(gcs, request.getOutputUri, sp.LRECL), request.getJobinfo, sp).`export`(request.getSql)
     } else {
       logger.info(s"Export mode - single thread")
-      val fileExport = () => GcsFileExport(gcs, request.getOutputUri, sp.LRECL)
-      val result = new BqSelectResultExporter(cfg, bq, request.getJobinfo, sp, fileExport).`export`(request.getSql)
-      GRecvResponse.newBuilder.setStatus(GRecvProtocol.OK).setRowCount(result.activityCount).build
+      new BqSelectResultExporter(cfg, bq, request.getJobinfo, sp, GcsFileExport(gcs, request.getOutputUri, sp.LRECL)).`export`(request.getSql)
     }
 
+    val resp = GRecvResponse.newBuilder.setStatus(GRecvProtocol.OK).setRowCount(result.activityCount).build
     responseObserver.onNext(resp)
     responseObserver.onCompleted()
   }

@@ -14,7 +14,7 @@ import scala.jdk.CollectionConverters._
 class SimpleFileExporterAdapter(fe: FileExporter, cfg: ExportConfig) extends SimpleFileExporter {
   def validateData(schema: FieldList, encoders: Array[BinaryEncoder]): Unit = {
     if (!cfg.vartext) {
-      fe.validateExport(schema, encoders)
+      fe.validateExport(schema, encoders)//TODO: currently validation is performed for each file, we actually need to run it only once
     }
   }
 

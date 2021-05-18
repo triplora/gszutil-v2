@@ -10,13 +10,13 @@ class BqSelectResultExporter(cfg: ExportConfig,
                              bq: BigQuery,
                              jobInfo: GRecvProto.ZOSJobInfo,
                              sp: SchemaProvider,
-                             fileExportFunc: () => FileExport) extends NativeExporter(bq, cfg, jobInfo) {
+                             fileExportFunc: => FileExport) extends NativeExporter(bq, cfg, jobInfo) {
 
   val exporter = new LocalFileExporter
 
   override def exportData(job: Job): Result = {
     logger.info("Using BqSelectResultExporter.")
-    exporter.newExport(fileExportFunc())
+    exporter.newExport(fileExportFunc)
     val bqResults = job.getQueryResults()
     val totalRowsToExport = bqResults.getTotalRows
     var rowsProcessed: Long = 0

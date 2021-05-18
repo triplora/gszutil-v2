@@ -49,7 +49,7 @@ case class ExportConfig(
   //will be automatically limited to 10mb in case set value is to big.
   //https://cloud.google.com/bigquery/docs/paging-results
   partitionPageSize: Int = 500000,
-  workerThreads: Int = 1, //size of thread pool
+  workerThreads: Int = 4, //size of thread pool
 
   // Global Options
   datasetId: String = "",
@@ -125,6 +125,7 @@ object ExportConfig {
       datasetId = configs.getOrElse("datasetId", ""),
       location = configs.getOrElse("location", ""),
       projectId = configs.getOrElse("projectId", ""),
+      workerThreads = configs.getOrElse("workerThreads", "").toInt,
       statsTable = configs.getOrElse("statsTable", "")
     )
   }

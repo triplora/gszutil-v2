@@ -5,6 +5,7 @@ import java.util.concurrent.Executors
 
 import com.google.api.services.storage.{Storage => LowLevelStorageApi}
 import com.google.cloud.bigquery.BigQuery
+import com.google.cloud.bigquery.storage.v1.BigQueryReadClient
 import com.google.cloud.imf.grecv.GRecvConfig
 import com.google.cloud.imf.util.{GzipCodec, Logging}
 import com.google.cloud.storage.Storage
@@ -14,13 +15,14 @@ import io.grpc.netty.NettyServerBuilder
 
 class GRecvServer(cfg: GRecvConfig,
                   storageFunc: ByteString => Storage,
+                  bqStorageFunc: ByteString => BigQueryReadClient,
                   storageApiFunc: ByteString => LowLevelStorageApi,
                   bqFunc: (String, String, ByteString) => BigQuery) extends Logging {
   private val server: Server = {
     val ex = Executors.newWorkStealingPool()
     val b = NettyServerBuilder
       .forAddress(new InetSocketAddress(cfg.host, cfg.port))
-      .addService(new GRecvService(storageFunc, storageApiFunc, bqFunc))
+      .addService(new GRecvService(storageFunc, bqStorageFunc, storageApiFunc, bqFunc))
       .compressorRegistry(GzipCodec.compressorRegistry)
       .executor(ex)
     b.build

@@ -88,7 +88,7 @@ class BqSelectResultParallelExporterRealBQSpec extends AnyFlatSpec{
     val bucketName = new URI(uri)
 
     // local parallel export
-    val multiThreadExporter = new BqSelectResultParallelExporter(cfg, bigQuery, gcs, bucketName,
+    val multiThreadExporter = new BqSelectResultParallelExporter(cfg, bigQuery,
       zos.getInfo, schema, exporterFactory)
     multiThreadExporter.exportData(completedJob)
     multiThreadExporter.close()
@@ -101,7 +101,7 @@ class BqSelectResultParallelExporterRealBQSpec extends AnyFlatSpec{
     }
 
     // GCS parallel export
-    val gcsMultiThreadExporter = new BqSelectResultParallelExporter(cfg, bigQuery, gcs, bucketName,
+    val gcsMultiThreadExporter = new BqSelectResultParallelExporter(cfg, bigQuery,
       zos.getInfo, schema, gcsExporterFactory)
     gcsMultiThreadExporter.exportData(completedJob)
     gcsMultiThreadExporter.close()
@@ -123,7 +123,7 @@ class BqSelectResultParallelExporterRealBQSpec extends AnyFlatSpec{
 
     // local single threded export
     val singleThreadExporter = new BqSelectResultExporter(cfg, bigQuery, zos.getInfo, schema,
-      () => new SimpleFileExport("st_outfile_all", defaultRecordLength))
+        new SimpleFileExport("st_outfile_all", defaultRecordLength))
     singleThreadExporter.exportData(completedJob)
     singleThreadExporter.close()
 

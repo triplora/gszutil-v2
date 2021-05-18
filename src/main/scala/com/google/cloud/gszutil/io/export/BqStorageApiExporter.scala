@@ -1,26 +1,28 @@
 package com.google.cloud.gszutil.io.`export`
+
 import com.google.cloud.bigquery.{BigQuery, Job, QueryJobConfiguration}
-import com.google.cloud.bigquery.storage.v1.{BigQueryReadClient, CreateReadSessionRequest, DataFormat, ReadRowsRequest, ReadSession}
+import com.google.cloud.bigquery.storage.v1.{BigQueryReadClient, CreateReadSessionRequest, DataFormat, ReadRowsRequest, ReadSession, ReadStream}
 import com.google.cloud.bigquery.storage.v1.ReadSession.TableReadOptions
 import com.google.cloud.bqsh.cmd.Result
 import com.google.cloud.bqsh.{BQ, ExportConfig}
 import com.google.cloud.gszutil.SchemaProvider
 import com.google.cloud.gszutil.io.{BQBinaryExporter, BQExporter, Exporter, ZRecordWriterT}
-import com.google.cloud.imf.gzos.{Ebcdic, MVS}
-import com.google.cloud.imf.util.Logging
+import com.google.cloud.imf.gzos.pb.GRecvProto
+import com.google.cloud.imf.gzos.Ebcdic
 import org.apache.avro.Schema
 
 class BqStorageApiExporter(cfg: ExportConfig,
                            bqStorage: BigQueryReadClient,
                            bq: BigQuery,
-                           zos: MVS,
-                           sp: SchemaProvider) extends NativeExporter(bq, cfg, zos.getInfo) with Logging {
+                           fileExportFunc: => FileExport,
+                           jobInfo: GRecvProto.ZOSJobInfo,
+                           sp: SchemaProvider) extends NativeExporter(bq, cfg, jobInfo) {
 
   private var exporter: Exporter = _
   override def exportData(job: Job): Result = {
     logger.info("Using BqStorageApiExporter.")
     val conf = job.getConfiguration[QueryJobConfiguration]
-    val jobId = BQ.genJobId(cfg.projectId, cfg.location, zos, "query")
+    val jobId = BQ.genJobId(cfg.projectId, cfg.location, jobInfo, "query")
 
     val destTable = Option(bq.getTable(conf.getDestinationTable)) match {
       case Some(t) =>
@@ -39,6 +41,7 @@ class BqStorageApiExporter(cfg: ExportConfig,
     val projectPath = s"projects/${cfg.projectId}"
     val tablePath = s"projects/${cfg.projectId}/datasets/" +
       s"${conf.getDestinationTable.getDataset}/tables/${conf.getDestinationTable.getTable}"
+    logger.debug("before readSession")
     val session: ReadSession = bqStorage.createReadSession(
       CreateReadSessionRequest.newBuilder
         .setParent(projectPath)
@@ -47,28 +50,32 @@ class BqStorageApiExporter(cfg: ExportConfig,
           .setTable(tablePath)
           .setDataFormat(DataFormat.AVRO)
           .setReadOptions(TableReadOptions.newBuilder.build)
-          .build).build)
+          .build)
+        .build)
 
+    logger.info(s"before parse avro schema, streams count = ${session.getStreamsCount}, $projectPath, $tablePath")
     val schema = new Schema.Parser().parse(session.getAvroSchema.getSchema)
     val readRowsRequest = ReadRowsRequest.newBuilder
       .setReadStream(session.getStreams(0).getName)
       .build
 
-    var rowsReceived: Long = 0
-    val recordWriter: ZRecordWriterT = zos.writeDD(cfg.outDD)
+    logger.debug(s"Used ${session.getStreamsCount} streams.")
+    val recordWriter = fileExportFunc
     exporter = if (cfg.vartext)
       new BQExporter(schema, 0, recordWriter, Ebcdic)
     else {
       BQBinaryExporter(schema, sp, 0, recordWriter, Ebcdic)
     }
 
+    var rowsReceived: Long = 0
     bqStorage.readRowsCallable.call(readRowsRequest).forEach { res =>
       if (res.hasAvroRows)
         rowsReceived += exporter.processRows(res.getAvroRows)
     }
     logger.info(s"Received $rowsReceived rows from BigQuery Storage API ReadStream")
+    val rowsWritten = recordWriter.rowsWritten
     exporter.close()
-    val rowsWritten = recordWriter.count()
+
     logger.info(s"Finished writing $rowsWritten rows from BigQuery Storage API ReadStream")
 
     require(rowsReceived == rowsWritten, s"BigQuery Storage API sent $rowsReceived rows but " +
