@@ -17,7 +17,7 @@ import scala.jdk.CollectionConverters.IterableHasAsJava
 class BqSelectResultParallelExporterRealBQSpec extends AnyFlatSpec{
   // test was done for debugging of real BQ api with BqSelectResultParallelExporter
   // for performance reasons it is ignored
-  it should "read in parallel data from BigQuery" in {
+  ignore should "read in parallel data from BigQuery" in {
     //some env variables should be set
     assert(sys.env.contains("OUTFILE")) // = OUTFILE
     assert(sys.env.contains("OUTFILE_LRECL")) // = 80
