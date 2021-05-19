@@ -17,8 +17,8 @@
 package com.google.cloud.bqsh.cmd
 
 import com.google.cloud.bigquery.{BigQuery, BigQueryException}
-import com.google.cloud.bqsh.{ArgParser, BQ, Command, ExportConfig, ExportOptionParser}
-import com.google.cloud.gszutil.io.`export`.{BqSelectResultExporter, LocalFileExporter, MVSFileExport}
+import com.google.cloud.bqsh._
+import com.google.cloud.gszutil.io.exports.{BqSelectResultExporter, MVSFileExport}
 import com.google.cloud.gszutil.{CopyBook, SchemaProvider}
 import com.google.cloud.imf.grecv.client.GRecvClient
 import com.google.cloud.imf.gzos.{MVS, MVSStorage}
@@ -28,7 +28,7 @@ object Export extends Command[ExportConfig] with Logging {
   override val name: String = "bq export"
   override val parser: ArgParser[ExportConfig] = ExportOptionParser
 
-  override def run(cfg: ExportConfig, zos: MVS, env: Map[String,String]): Result = {
+  override def run(cfg: ExportConfig, zos: MVS, env: Map[String, String]): Result = {
     val startTime = System.currentTimeMillis()
     val creds = zos.getCredentialProvider().getCredentials
     logger.info(s"Starting bq export\n$cfg")
@@ -64,7 +64,7 @@ object Export extends Command[ExportConfig] with Logging {
       }
 
     try {
-      val result = if(cfg.bucket.isEmpty)
+      val result = if (cfg.bucket.isEmpty)
         localExport(query, bq, cfg, zos, sp)
       else
         remoteExport(query, sp.raw, cfg, zos, env)
@@ -89,10 +89,10 @@ object Export extends Command[ExportConfig] with Logging {
     }
   }
 
-  private def remoteExport(sql: String, copybook: String, cfg: ExportConfig, zos: MVS, env: Map[String,String]): Result = {
+  private def remoteExport(sql: String, copybook: String, cfg: ExportConfig, zos: MVS, env: Map[String, String]): Result = {
     logger.debug(s"Using remote export, bucket=${cfg.bucket}")
     val (host, port) = if (cfg.remoteHost.isEmpty) {
-      (env.getOrElse("SRVHOSTNAME", ""), env.getOrElse("SRVPORT","51770").toInt)
+      (env.getOrElse("SRVHOSTNAME", ""), env.getOrElse("SRVPORT", "51770").toInt)
     } else (cfg.remoteHost, cfg.remotePort)
     val cfg1 = cfg.copy(remoteHost = host, remotePort = port)
 
@@ -103,7 +103,6 @@ object Export extends Command[ExportConfig] with Logging {
 
   private def localExport(sql: String, bq: BigQuery, cfg: ExportConfig, zos: MVS, sp: SchemaProvider): Result = {
     logger.debug(s"Using local export")
-    val fileExporter = () => MVSFileExport(cfg.outDD, zos)
-    new BqSelectResultExporter(cfg, bq, zos.getInfo, sp, fileExporter).`export`(sql)
+    new BqSelectResultExporter(cfg, bq, zos.getInfo, sp, MVSFileExport(cfg.outDD, zos)).doExport(sql)
   }
 }

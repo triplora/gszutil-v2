@@ -1,9 +1,9 @@
-package com.google.cloud.gszutil.io.`export`
+package com.google.cloud.gszutil.io.exports
 
-import com.google.cloud.bigquery.{BigQuery, BigQueryException, Job, JobId, JobInfo, QueryJobConfiguration}
+import com.google.cloud.bigquery._
 import com.google.cloud.bqsh.BQ.resolveDataset
-import com.google.cloud.bqsh.{BQ, ExportConfig}
 import com.google.cloud.bqsh.cmd.Result
+import com.google.cloud.bqsh.{BQ, ExportConfig}
 import com.google.cloud.imf.gzos.pb.GRecvProto
 import com.google.cloud.imf.util.Logging
 
@@ -14,7 +14,7 @@ abstract class NativeExporter(bq: BigQuery,
   def close(): Unit
   def exportData(job: Job): Result
 
-  def export(query: String): Result = {
+  def doExport(query: String): Result = {
     val configuration = configureExportQueryJob(query, cfg)
     val jobId = getJobId(jobInfo, cfg)
     val job = submitExportJob(bq, configuration, jobId, cfg)

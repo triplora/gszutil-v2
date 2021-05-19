@@ -1,4 +1,4 @@
-package com.google.cloud.gszutil.io.`export`
+package com.google.cloud.gszutil.io.exports
 
 import com.google.cloud.bigquery.{FieldList, FieldValueList}
 import com.google.cloud.bqsh.ExportConfig
@@ -9,6 +9,7 @@ import scala.jdk.CollectionConverters._
 
 /**
   * Wrapper for FileExporter
+  *
   * @todo remove it after FileExporter API refactoring.
   */
 class SimpleFileExporterAdapter(fe: FileExporter, cfg: ExportConfig) extends SimpleFileExporter {

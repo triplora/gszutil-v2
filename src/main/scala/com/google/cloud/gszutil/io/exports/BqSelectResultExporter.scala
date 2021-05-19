@@ -1,4 +1,4 @@
-package com.google.cloud.gszutil.io.`export`
+package com.google.cloud.gszutil.io.exports
 
 import com.google.cloud.bigquery.{BigQuery, Job, TableResult}
 import com.google.cloud.bqsh.ExportConfig

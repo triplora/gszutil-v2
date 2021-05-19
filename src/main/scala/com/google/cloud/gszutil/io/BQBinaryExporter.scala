@@ -15,16 +15,15 @@
  */
 
 package com.google.cloud.gszutil.io
-import java.nio.ByteBuffer
-
 import com.google.cloud.bigquery.storage.v1.AvroRows
-import com.google.cloud.gszutil.io.`export`.FileExport
+import com.google.cloud.gszutil.io.exports.FileExport
 import com.google.cloud.gszutil.{SchemaProvider, Transcoder}
 import com.google.cloud.imf.util.Logging
 import org.apache.avro.Schema
 import org.apache.avro.generic.{GenericDatumReader, GenericRecord}
 import org.apache.avro.io.{BinaryDecoder, DecoderFactory}
 
+import java.nio.ByteBuffer
 import scala.jdk.CollectionConverters.ListHasAsScala
 
 case class BQBinaryExporter(schema: Schema,

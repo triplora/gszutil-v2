@@ -1,18 +1,15 @@
-package com.google.cloud.gszutil.io.`export`
+package com.google.cloud.gszutil.io.exports
 
 import com.google.cloud.bigquery.{JobId, QueryJobConfiguration}
 import com.google.cloud.bqsh.{BQ, ExportConfig}
 import com.google.cloud.gszutil.{CopyBook, SchemaProvider}
 import com.google.cloud.imf.gzos.Linux
 import com.google.cloud.imf.util.Services
-import com.google.cloud.storage.BlobInfo
-import com.google.cloud.storage.Storage.ComposeRequest
 import org.scalatest.flatspec.AnyFlatSpec
 
 import java.io.{File, FileOutputStream}
 import java.net.URI
 import java.nio.file.{Files, Paths}
-import scala.jdk.CollectionConverters.IterableHasAsJava
 
 class BqSelectResultParallelExporterRealBQSpec extends AnyFlatSpec{
   // test was done for debugging of real BQ api with BqSelectResultParallelExporter

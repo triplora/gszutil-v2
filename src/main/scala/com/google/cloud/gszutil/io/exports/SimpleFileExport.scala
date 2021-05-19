@@ -1,6 +1,4 @@
-package com.google.cloud.gszutil.io.`export`
-
-import com.google.cloud.gszutil.{Transcoder, Utf8}
+package com.google.cloud.gszutil.io.exports
 
 import java.io.{File, FileOutputStream}
 import java.nio.ByteBuffer

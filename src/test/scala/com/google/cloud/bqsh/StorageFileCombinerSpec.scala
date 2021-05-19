@@ -1,12 +1,12 @@
 package com.google.cloud.bqsh
 
-import java.net.URI
-
-import com.google.cloud.gszutil.io.`export`.StorageFileCompose
+import com.google.cloud.gszutil.io.exports.StorageFileCompose
 import com.google.cloud.imf.util.Services
 import com.google.cloud.storage.{Blob, BlobId, BlobInfo, Storage}
 import org.scalatest.BeforeAndAfterEach
 import org.scalatest.flatspec.AnyFlatSpec
+
+import java.net.URI
 
 class StorageFileCombinerSpec extends AnyFlatSpec with BeforeAndAfterEach {
 

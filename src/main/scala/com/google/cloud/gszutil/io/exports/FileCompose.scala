@@ -1,13 +1,14 @@
-package com.google.cloud.gszutil.io.`export`
-
-import java.net.URI
+package com.google.cloud.gszutil.io.exports
 
 import com.google.cloud.imf.util.Logging
 import com.google.cloud.storage.Storage.ComposeRequest
 import com.google.cloud.storage.{Blob, BlobInfo, Storage}
 
+import java.net.URI
+
 trait FileCompose[T, R] {
   def compose(target: T, source: Seq[T]): R
+
   def composeAll(target: T, sourceDir: T, removeSource: Boolean): R
 }
 

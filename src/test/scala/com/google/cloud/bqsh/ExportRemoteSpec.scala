@@ -1,34 +1,30 @@
 package com.google.cloud.bqsh
 
-import java.net.URI
-import java.util.concurrent.{Executors, TimeUnit}
-
-import org.threeten.bp.Duration
 import com.google.cloud.RetryOption
 import com.google.cloud.bigquery.InsertAllRequest.RowToInsert
 import com.google.cloud.bigquery.{InsertAllRequest, JobId, QueryJobConfiguration, TableId}
 import com.google.cloud.bqsh.cmd.Export
 import com.google.cloud.gszutil.CopyBook
-import com.google.cloud.gszutil.io.`export`.{BqSelectResultExporter, BqSelectResultParallelExporter, BqStorageApiExporter, GcsFileExport, LocalFileExporter, SimpleFileExporter, SimpleFileExporterAdapter, StorageFileCompose}
+import com.google.cloud.gszutil.io.exports._
 import com.google.cloud.imf.grecv.GRecvConfig
-import com.google.cloud.imf.grecv.client.GRecvClient
 import com.google.cloud.imf.grecv.server.GRecvServer
 import com.google.cloud.imf.gzos.{Ebcdic, Linux}
 import com.google.cloud.imf.util.{CloudLogging, Services}
 import com.google.cloud.storage.BlobId
 import com.google.protobuf.ByteString
-import org.scalatest.{BeforeAndAfterAll, BeforeAndAfterEach}
 import org.scalatest.flatspec.AnyFlatSpec
+import org.scalatest.{BeforeAndAfterAll, BeforeAndAfterEach}
+import org.threeten.bp.Duration
 
+import java.util.concurrent.{Executors, TimeUnit}
 import scala.concurrent.ExecutionContext.Implicits.global
 import scala.concurrent.Future
-import scala.io.Source
 
 class ExportRemoteSpec extends AnyFlatSpec with BeforeAndAfterAll with BeforeAndAfterEach {
 
   /**
-   * For this test required following ENV variables:
-   * BUCKET=GCS bucket
+    * For this test required following ENV variables:
+    * BUCKET=GCS bucket
    * PROJECT=GCS project
    * COPYBOOK=absolute path to exportCopybook.txt
    */
@@ -133,7 +129,7 @@ class ExportRemoteSpec extends AnyFlatSpec with BeforeAndAfterAll with BeforeAnd
     val gcsUri = s"gs://$TestBucket/EXPORT/$outFile"
     val sp = CopyBook(TestCopybook, Ebcdic)
     val startT = System.currentTimeMillis()
-    val res = new BqSelectResultExporter(cfg, bq, zos.getInfo, sp, GcsFileExport(gcs, gcsUri, sp.LRECL)).`export`(sql)
+    val res = new BqSelectResultExporter(cfg, bq, zos.getInfo, sp, GcsFileExport(gcs, gcsUri, sp.LRECL)).doExport(sql)
     println(s"Single thread took : ${System.currentTimeMillis() - startT} millis.")
 
     assert(res.exitCode == 0)
@@ -158,8 +154,9 @@ class ExportRemoteSpec extends AnyFlatSpec with BeforeAndAfterAll with BeforeAnd
       result.newExport(GcsFileExport(gcs, s"${gcsUri}/tmp_$fileSuffix" , sp.LRECL))
       new SimpleFileExporterAdapter(result, cfg)
     }
+
     val startT = System.currentTimeMillis()
-    val res = new BqSelectResultParallelExporter(cfg, bq, zos.getInfo, sp, exporterFactory).`export`(sql)
+    val res = new BqSelectResultParallelExporter(cfg, bq, zos.getInfo, sp, exporterFactory).doExport(sql)
     new StorageFileCompose(gcs).composeAll(gcsUri, gcsUri + "/", true)
     println(s"Multi thread took : ${System.currentTimeMillis() - startT} millis.")
 
@@ -187,7 +184,7 @@ class ExportRemoteSpec extends AnyFlatSpec with BeforeAndAfterAll with BeforeAnd
     val sp = CopyBook(TestCopybook, Ebcdic)
 
     val startT = System.currentTimeMillis()
-    val res = new BqStorageApiExporter(cfg, storageApi, bq, GcsFileExport(gcs, gcsUri, sp.LRECL), zos.getInfo, sp).`export`(sql)
+    val res = new BqStorageApiExporter(cfg, storageApi, bq, GcsFileExport(gcs, gcsUri, sp.LRECL), zos.getInfo, sp).doExport(sql)
     println(s"StorageApi took : ${System.currentTimeMillis() - startT} millis.")
 
     assert(res.exitCode == 0)

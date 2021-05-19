@@ -1,10 +1,10 @@
-package com.google.cloud.gszutil.io.`export`
-
-import java.nio.ByteBuffer
+package com.google.cloud.gszutil.io.exports
 
 import com.google.cloud.gszutil.io.ZRecordWriterT
 import com.google.cloud.imf.gzos.MVS
 import com.google.cloud.imf.util.Logging
+
+import java.nio.ByteBuffer
 
 case class MVSFileExport(outDD: String, zos: MVS) extends FileExport with Logging {
   val ddName: String = outDD

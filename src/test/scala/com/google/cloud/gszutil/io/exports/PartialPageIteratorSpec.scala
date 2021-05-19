@@ -1,4 +1,4 @@
-package com.google.cloud.gszutil.io.`export`
+package com.google.cloud.gszutil.io.exports
 
 import org.scalatest.flatspec.AnyFlatSpec
 
@@ -8,9 +8,6 @@ class PartialPageIteratorSpec extends AnyFlatSpec {
   def boundPageFetcher(offset: Long, pageSize: Long): Page[(Long, Long)] = Page((offset, pageSize), pageSize)
 
   it should "Produce exception on wrong bounds setup" in {
-    assertThrows[IllegalArgumentException] {
-      new PartialPageIterator[Unit](5, 5, 2, dummyPageFetcher)
-    }
     assertThrows[IllegalArgumentException] {
       new PartialPageIterator[Unit](5, 4, 2, dummyPageFetcher)
     }
@@ -55,5 +52,10 @@ class PartialPageIteratorSpec extends AnyFlatSpec {
     while (iterator.hasNext()) {
       println(iterator.next())
     }
+  }
+
+  it should "not crash at construction of an empty iterator" in {
+    val iterator = new PartialPageIterator[Unit](0, 0, 1, dummyPageFetcher)
+    assert(!iterator.hasNext())
   }
 }

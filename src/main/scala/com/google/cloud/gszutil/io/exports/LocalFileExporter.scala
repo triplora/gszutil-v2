@@ -1,6 +1,4 @@
-package com.google.cloud.gszutil.io.`export`
-
-import java.nio.ByteBuffer
+package com.google.cloud.gszutil.io.exports
 
 import com.google.cloud.bigquery._
 import com.google.cloud.bqsh.cmd.Result
@@ -9,6 +7,7 @@ import com.google.cloud.gszutil.Encoding.StringToBinaryEncoder
 import com.google.cloud.imf.gzos.Ebcdic
 import com.google.cloud.imf.util.{CloudLogging, Logging}
 
+import java.nio.ByteBuffer
 import scala.collection.mutable.ListBuffer
 import scala.util.{Failure, Success, Try}
 

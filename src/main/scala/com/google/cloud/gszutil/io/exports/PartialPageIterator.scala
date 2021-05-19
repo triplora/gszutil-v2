@@ -1,4 +1,4 @@
-package com.google.cloud.gszutil.io.`export`
+package com.google.cloud.gszutil.io.exports
 
 import scala.collection.AbstractIterator
 
@@ -19,8 +19,8 @@ trait PageFetcher[T] {
   * @tparam T - page type
   */
 class PartialPageIterator[T](val startIndex: Long, val endIndex: Long, val pageSize: Long, pageFetcher: PageFetcher[T]) extends AbstractIterator[T] {
-  if (startIndex < 0 || endIndex < 1 || pageSize < 1 || startIndex >= endIndex)
-    throw new IllegalArgumentException("Bounds are wrong, values should be: startIndex >=0, endIndex > 0, pageSize > 0 and startIndex < endIndex!!")
+  if (startIndex < 0 || endIndex < 0 || pageSize < 1 || startIndex > endIndex)
+    throw new IllegalArgumentException(s"Iterator bounds check failed, check bounds values [startIndex=$startIndex, endIndex=$endIndex, pageSize=$pageSize]")
   private var currentIndex = startIndex
 
   override def hasNext(): Boolean = {

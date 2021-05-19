@@ -1,11 +1,10 @@
-package com.google.cloud.gszutil.io.`export`
+package com.google.cloud.gszutil.io.exports
 
 import com.google.cloud.bigquery.BigQuery.TableDataListOption
 import com.google.cloud.bigquery._
 import com.google.cloud.bqsh.ExportConfig
 import com.google.cloud.bqsh.cmd.Result
 import com.google.cloud.gszutil.SchemaProvider
-import com.google.cloud.gszutil.io.`export`.{NativeExporter, PartialPageIterator, SimpleFileExporter}
 import com.google.cloud.imf.gzos.pb.GRecvProto
 
 import java.util.concurrent.{Executors, TimeUnit}

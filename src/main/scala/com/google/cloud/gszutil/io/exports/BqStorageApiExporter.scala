@@ -1,14 +1,14 @@
-package com.google.cloud.gszutil.io.`export`
+package com.google.cloud.gszutil.io.exports
 
-import com.google.cloud.bigquery.{BigQuery, Job, QueryJobConfiguration}
-import com.google.cloud.bigquery.storage.v1.{BigQueryReadClient, CreateReadSessionRequest, DataFormat, ReadRowsRequest, ReadSession, ReadStream}
 import com.google.cloud.bigquery.storage.v1.ReadSession.TableReadOptions
+import com.google.cloud.bigquery.storage.v1._
+import com.google.cloud.bigquery.{BigQuery, Job, QueryJobConfiguration}
 import com.google.cloud.bqsh.cmd.Result
 import com.google.cloud.bqsh.{BQ, ExportConfig}
 import com.google.cloud.gszutil.SchemaProvider
-import com.google.cloud.gszutil.io.{BQBinaryExporter, BQExporter, Exporter, ZRecordWriterT}
-import com.google.cloud.imf.gzos.pb.GRecvProto
+import com.google.cloud.gszutil.io.{BQBinaryExporter, BQExporter, Exporter}
 import com.google.cloud.imf.gzos.Ebcdic
+import com.google.cloud.imf.gzos.pb.GRecvProto
 import org.apache.avro.Schema
 
 class BqStorageApiExporter(cfg: ExportConfig,

@@ -1,13 +1,13 @@
-package com.google.cloud.gszutil.io.`export`
+package com.google.cloud.gszutil.io.exports
 
-
-import java.io.{BufferedOutputStream, OutputStream}
-import java.nio.channels.Channels
 
 import com.google.cloud.bqsh.cmd.Scp.blobId
 import com.google.cloud.imf.util.Logging
 import com.google.cloud.storage.{BlobInfo, Storage}
 import com.google.common.io.CountingOutputStream
+
+import java.io.{BufferedOutputStream, OutputStream}
+import java.nio.channels.Channels
 
 case class GcsFileExport(gcs: Storage, gcsOutUri: String, lrecl: Int) extends FileExport with Logging {
 
