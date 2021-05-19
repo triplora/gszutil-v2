@@ -176,8 +176,8 @@ object GRecvServerListener extends Logging {
         new SimpleFileExporterAdapter(result, cfg)
       }
 
-      val startTime = System.currentTimeMillis()
       val r = new BqSelectResultParallelExporter(cfg, bq, request.getJobinfo, sp, exporterFactory).doExport(request.getSql)
+      val startTime = System.currentTimeMillis()
       new StorageFileCompose(gcs).composeAll(request.getOutputUri, s"${request.getOutputUri.stripSuffix("/")}/", true)
       logger.info(s"File compose completed, took=${System.currentTimeMillis() - startTime} millis.")
       r
