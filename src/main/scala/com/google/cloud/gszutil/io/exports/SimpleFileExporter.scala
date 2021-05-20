@@ -13,7 +13,7 @@ trait SimpleFileExporter {
 
   def validateData(schema: FieldList, encoders: Array[BinaryEncoder]): Unit
 
-  def exportData(rows: Iterable[FieldValueList], schema: FieldList, encoders: Array[BinaryEncoder]): Result
+  def exportData(rows: java.lang.Iterable[FieldValueList], schema: FieldList, encoders: Array[BinaryEncoder]): Result
 
   def endIfOpen(): Unit
 

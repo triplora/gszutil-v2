@@ -5,23 +5,26 @@ import com.google.cloud.bqsh.{BQ, ExportConfig}
 import com.google.cloud.gszutil.{CopyBook, SchemaProvider}
 import com.google.cloud.imf.gzos.Linux
 import com.google.cloud.imf.util.Services
+import com.google.cloud.storage.Storage.ComposeRequest
+import com.google.cloud.storage.{BlobId, BlobInfo, Storage}
 import org.scalatest.flatspec.AnyFlatSpec
 
-import java.io.{File, FileOutputStream}
-import java.net.URI
+import java.io.{BufferedOutputStream, File, FileOutputStream}
 import java.nio.file.{Files, Paths}
+import scala.jdk.CollectionConverters.IterableHasAsJava
 
-class BqSelectResultParallelExporterRealBQSpec extends AnyFlatSpec{
+class BqSelectResultParallelExporterRealBQSpec extends AnyFlatSpec {
   // test was done for debugging of real BQ api with BqSelectResultParallelExporter
   // for performance reasons it is ignored
-  ignore should "read in parallel data from BigQuery" in {
-    //some env variables should be set
+  ignore should "read in parallel data from BigQuery local export" in {
+    //some env variables is required
+    assert(sys.env.contains("GCP_PROJECT_ID")) // = boxwood-sector-246122
     assert(sys.env.contains("OUTFILE")) // = OUTFILE
     assert(sys.env.contains("OUTFILE_LRECL")) // = 80
     assert(sys.env.contains("OUTFILE_BLKSIZE")) // = 512
 
     val zos = Linux
-    val projectId = "pso-wmt-td2bq"
+    val projectId = System.getenv().get("GCP_PROJECT_ID")
     val location = "US"
     val defaultRecordLength = 80
 
@@ -33,17 +36,17 @@ class BqSelectResultParallelExporterRealBQSpec extends AnyFlatSpec{
       .setRandomJob()
       .build()
 
-        //~160k records
-        val jobCfg = QueryJobConfiguration.newBuilder("SELECT word FROM `bigquery-public-data.samples.shakespeare`")
-          .setMaxResults(1)
-          .setUseLegacySql(false)
-          .build()
-        val cfg = ExportConfig(
-          vartext = false,
-          partitionSize = 50000,
-          partitionPageSize = 10000,
-          workerThreads = 4
-        )
+    //~160k records
+    val jobCfg = QueryJobConfiguration.newBuilder("SELECT word FROM `bigquery-public-data.samples.shakespeare`")
+      .setMaxResults(1)
+      .setUseLegacySql(false)
+      .build()
+    val cfg = ExportConfig(
+      vartext = false,
+      partitionSize = 2000,
+      partitionPageSize = 10001,
+      workerThreads = 4
+    )
 
     /*//~9m records, partitionSize to large value for this
     val jobCfg = QueryJobConfiguration.newBuilder("SELECT image_id FROM `bigquery-public-data.open_images.images`")
@@ -77,12 +80,7 @@ class BqSelectResultParallelExporterRealBQSpec extends AnyFlatSpec{
     }
 
     //cleanup
-    cleanUpTmpFiles()
-
-    var filesToCompose = Seq.empty[String]
-    val gcs = Services.storage(Services.bigqueryCredentials())
-    val uri = "gs://vn51e5b_luminex_multiple-file-write-test/EXPORT/r1.on.o1"
-    val bucketName = new URI(uri)
+    cleanUpLocalTmpFiles("mt_outfile", "st_outfile", "OUTFILE")
 
     // local parallel export
     val multiThreadExporter = new BqSelectResultParallelExporter(cfg, bigQuery,
@@ -90,37 +88,9 @@ class BqSelectResultParallelExporterRealBQSpec extends AnyFlatSpec{
     multiThreadExporter.exportData(completedJob)
     multiThreadExporter.close()
 
-    def gcsExporterFactory(fileName: String, cfg: ExportConfig): SimpleFileExporter = {
-      val result = new LocalFileExporter
-      filesToCompose = filesToCompose :+ (bucketName.getPath.substring(1) + "_tmp/" + fileName)
-      result.newExport(GcsFileExport(gcs, uri + "_tmp/" + fileName, defaultRecordLength))
-      new SimpleFileExporterAdapter(result, cfg)
-    }
-
-    // GCS parallel export
-    val gcsMultiThreadExporter = new BqSelectResultParallelExporter(cfg, bigQuery,
-      zos.getInfo, schema, gcsExporterFactory)
-    gcsMultiThreadExporter.exportData(completedJob)
-    gcsMultiThreadExporter.close()
-
-    // merge parallel files
-//    val composeRequest = ComposeRequest.newBuilder()
-//      .addSource(filesToCompose.asJava)
-//      .setTarget(BlobInfo.newBuilder(bucketName.getAuthority, bucketName.getPath.substring(1)).build()).build()
-//    gcs.compose(composeRequest)
-
-    // GSC cleanup
-//    val batch =  gcs.batch()
-//    val files = gcs.list(bucketName.getAuthority,
-//      Storage.BlobListOption.prefix(bucketName.getPath.substring(1) + "_tmp"))
-//
-//    files.iterateAll().forEach(file => batch.delete(file.getBlobId))
-//    batch.submit()
-
-
     // local single threded export
     val singleThreadExporter = new BqSelectResultExporter(cfg, bigQuery, zos.getInfo, schema,
-        new SimpleFileExport("st_outfile_all", defaultRecordLength))
+      new SimpleFileExport("st_outfile_all", defaultRecordLength))
     singleThreadExporter.exportData(completedJob)
     singleThreadExporter.close()
 
@@ -140,14 +110,116 @@ class BqSelectResultParallelExporterRealBQSpec extends AnyFlatSpec{
 
     assert(com.google.common.io.Files.equal(new File("mt_outfile_all"), new File("st_outfile_all")))
 
-    cleanUpTmpFiles()
+    cleanUpLocalTmpFiles("mt_outfile", "st_outfile", "OUTFILE")
   }
 
-  private def cleanUpTmpFiles(): Unit = {
+  // test was done for debugging of real BQ api with BqSelectResultParallelExporter
+  // for performance reasons it is ignored
+  ignore should "read in parallel data from BigQuery to GCS bucket" in {
+    //some env variables should be set
+    assert(sys.env.contains("GCP_PROJECT_ID")) // = boxwood-sector-246122
+    assert(sys.env.contains("OUTFILE")) // = OUTFILE
+    assert(sys.env.contains("OUTFILE_LRECL")) // = 80
+    assert(sys.env.contains("OUTFILE_BLKSIZE")) // = 512
+
+    val zos = Linux
+    val projectId = System.getenv().get("GCP_PROJECT_ID")
+    val location = "US"
+    val defaultRecordLength = 80
+
+    val bigQuery = Services.bigQuery(projectId, location, Services.bigqueryCredentials())
+
+    val jobId = JobId.newBuilder()
+      .setProject(projectId)
+      .setLocation(location)
+      .setRandomJob()
+      .build()
+
+    //~160k records
+    val jobCfg = QueryJobConfiguration.newBuilder("SELECT word FROM `bigquery-public-data.samples.shakespeare`")
+      .setMaxResults(1)
+      .setUseLegacySql(false)
+      .build()
+    val cfg = ExportConfig(
+      vartext = false,
+      partitionSize = 2000,
+      partitionPageSize = 10000,
+      workerThreads = 4
+    )
+
+    val completedJob = BQ.runJob(
+      bigQuery, jobCfg, jobId,
+      timeoutSeconds = 10 * 60,
+      sync = true)
+
+    val schema: SchemaProvider = CopyBook(
+      """ 01  TEST-LAYOUT-FIVE.
+        |   02  COL-D   PIC X(50).
+        |""".stripMargin)
+
+    var filesToCompose = Seq.empty[String]
+    val gcs = Services.storage(Services.storageCredentials())
+    val targetFile = BlobId.of("boxwood-sector-246122-test-storage", "EXPORT/r1.on.o1")
+
+    //cleanup
+    cleanUpLocalTmpFiles("mt_outfile", "st_outfile", "OUTFILE")
+    cleanUpRemoteTmpFiles(gcs, targetFile.getBucket, targetFile.getName)
+
+    def gcsExporterFactory(fileName: String, cfg: ExportConfig): SimpleFileExporter = {
+      val result = new LocalFileExporter
+      val tmpId = BlobId.of(targetFile.getBucket, targetFile.getName + "_tmp/" + fileName)
+      filesToCompose = filesToCompose :+ tmpId.getName
+      result.newExport(GcsFileExport(gcs, toStringUrl(tmpId), defaultRecordLength))
+      new SimpleFileExporterAdapter(result, cfg)
+    }
+
+    // GCS parallel export
+    val gcsMultiThreadExporter = new BqSelectResultParallelExporter(cfg, bigQuery,
+      zos.getInfo, schema, gcsExporterFactory)
+    gcsMultiThreadExporter.exportData(completedJob)
+    gcsMultiThreadExporter.close()
+
+    //merge parallel files
+    val composeRequest = ComposeRequest.newBuilder()
+      .addSource(filesToCompose.asJava)
+      .setTarget(BlobInfo.newBuilder(targetFile).build()).build()
+    gcs.compose(composeRequest)
+    writeBytes(gcs.readAllBytes(targetFile), new File("mt_outfile_all"))
+
+
+    // local single threaded export
+    val singleThreadExporter = new BqSelectResultExporter(cfg, bigQuery, zos.getInfo, schema,
+      new SimpleFileExport("st_outfile_all", defaultRecordLength))
+    singleThreadExporter.exportData(completedJob)
+    singleThreadExporter.close()
+
+    assert(com.google.common.io.Files.equal(new File("mt_outfile_all"), new File("st_outfile_all")))
+
+    //cleanup
+    cleanUpLocalTmpFiles("mt_outfile", "st_outfile", "OUTFILE")
+    cleanUpRemoteTmpFiles(gcs, targetFile.getBucket, targetFile.getName)
+  }
+
+  private def writeBytes(data: Array[Byte], file: File): Unit = {
+    val target = new BufferedOutputStream(new FileOutputStream(file));
+    try target.write(data) finally target.close()
+  }
+
+  private def cleanUpLocalTmpFiles(prefix: String*): Unit = {
+    require(prefix.nonEmpty)
     Files.list(Paths.get("./"))
       .map(_.toFile)
-      .filter(s => s.getName.startsWith("mt_outfile") || s.getName.startsWith("st_outfile") || s.getName.equals("OUTFILE"))
+      .filter(s => prefix.exists(s.getName.startsWith(_)))
       .forEach(s => s.delete())
+  }
+
+  private def cleanUpRemoteTmpFiles(gcs: Storage, bucket: String, prefix: String): Unit = {
+    val files = gcs.list(bucket, Storage.BlobListOption.prefix(prefix))
+    files.iterateAll().forEach(file => gcs.delete(file.getBlobId))
+  }
+
+  private def toStringUrl(blob: BlobId): String = {
+    s"gs://${blob.getBucket}/${blob.getName.replaceAll("^\\+", "")}"
   }
 
   class TestLocalFileExporter(lRecl: Int) extends LocalFileExporter {
@@ -156,4 +228,5 @@ class BqSelectResultParallelExporterRealBQSpec extends AnyFlatSpec{
       super.newExport(new SimpleFileExport("st_outfile_all", lRecl))
     }
   }
+
 }

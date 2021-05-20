@@ -6,11 +6,11 @@ import com.google.cloud.bqsh.ExportConfig
 import com.google.cloud.bqsh.cmd.Result
 import com.google.cloud.gszutil.SchemaProvider
 import com.google.cloud.imf.gzos.pb.GRecvProto
+import com.google.common.collect.Iterators
 
 import java.util.concurrent.{Executors, TimeUnit}
 import scala.concurrent.duration.Duration
 import scala.concurrent.{Await, ExecutionContext, ExecutionContextExecutor, Future}
-import scala.jdk.CollectionConverters._
 
 class BqSelectResultParallelExporter(cfg: ExportConfig,
                                      bq: BigQuery,
@@ -33,19 +33,23 @@ class BqSelectResultParallelExporter(cfg: ExportConfig,
     val tableWithResults = bq.getTable(job.getConfiguration.asInstanceOf[QueryJobConfiguration].getDestinationTable)
     val tableSchema = tableWithResults.getDefinition[TableDefinition].getSchema.getFields
     val totalRowsToExport = tableWithResults.getNumRows.intValue()
-    val partitionSizePerThread = cfg.partitionSize
+    val partitionSizePerThread = math.max(cfg.partitionSize, totalRowsToExport / cfg.maxPartitionCount + 1)
+
+    if (partitionSizePerThread != cfg.partitionSize) {
+      logger.info(s"$jobName Partition size changed from ${cfg.partitionSize} to ${partitionSizePerThread} records to match max partition count ${cfg.maxPartitionCount}")
+    }
 
     val pageFetcher = (startIndex: Long, pageSize: Long) => {
-      val data = bq.listTableData(
+      val result = bq.listTableData(
         tableWithResults.getTableId,
         TableDataListOption.startIndex(startIndex),
         TableDataListOption.pageSize(pageSize)
-      ).getValues.asScala
-      Page(data, data.size)
+      )
+      Page(result.getValues, Iterators.size(result.getValues.iterator()))
     }
     val partitions = for (leftBound <- 0 to totalRowsToExport by partitionSizePerThread) yield leftBound
     val iterators = partitions.map(leftBound =>
-      new PartialPageIterator[Iterable[FieldValueList]](
+      new PartialPageIterator[java.lang.Iterable[FieldValueList]](
         startIndex = leftBound,
         endIndex = Math.min(leftBound + partitionSizePerThread, totalRowsToExport),
         pageSize = cfg.partitionPageSize,

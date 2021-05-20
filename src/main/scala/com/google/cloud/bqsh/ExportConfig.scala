@@ -19,49 +19,53 @@ package com.google.cloud.bqsh
 import com.google.cloud.imf.gzos.MVSStorage.{DSN, MVSDataset, MVSPDSMember}
 
 case class ExportConfig(
-  // Custom Options
-  sql: String = "",
-  queryDSN: String = "",
-  outDD: String = "OUTFILE",
-  cobDsn: String = "",
-  timeoutMinutes: Int = 60,
-  vartext: Boolean = false,
-  runMode: String = "",
+                         // Custom Options
+                         sql: String = "",
+                         queryDSN: String = "",
+                         outDD: String = "OUTFILE",
+                         cobDsn: String = "",
+                         timeoutMinutes: Int = 60,
+                         vartext: Boolean = false,
+                         runMode: String = "",
 
-  bucket: String = "",
-  remoteHost: String = "",
-  remotePort: Int = 51770,
-  keepAliveTimeInSeconds: Int = 480,
+                         bucket: String = "",
+                         remoteHost: String = "",
+                         remotePort: Int = 51770,
+                         keepAliveTimeInSeconds: Int = 480,
 
-  // Standard Options
-  allowLargeResults: Boolean = false,
-  batch: Boolean = false,
-  dryRun: Boolean = false,
-  maximumBytesBilled: Long = -1,
-  requireCache: Boolean = false,
-  requirePartitionFilter: Boolean = true,
-  useCache: Boolean = true,
+                         // Standard Options
+                         allowLargeResults: Boolean = false,
+                         batch: Boolean = false,
+                         dryRun: Boolean = false,
+                         maximumBytesBilled: Long = -1,
+                         requireCache: Boolean = false,
+                         requirePartitionFilter: Boolean = true,
+                         useCache: Boolean = true,
 
-  // Configuration for partitioning and concurrency control
-  //partition size in rows per single thread
-  partitionSize: Int = 1000000,
-  //page size in rows for paginate in scope of one partition,
-  //will be automatically limited to 10mb in case set value is to big.
-  //https://cloud.google.com/bigquery/docs/paging-results
-  partitionPageSize: Int = 500000,
-  workerThreads: Int = 4, //size of thread pool
+                         // Configuration for partitioning and concurrency control
+                         //partition size in rows per single thread
+                         partitionSize: Int = 1000000,
+                         //maximum allowed partitions to create
+                         //currently there is a limit how much files could be joined by GCS Api
+                         //See https://cloud.google.com/storage/docs/composite-objects
+                         maxPartitionCount: Int = 32,
+                         //page size in rows for paginate in scope of one partition,
+                         //will be automatically limited to 10mb in case set value is to big.
+                         //https://cloud.google.com/bigquery/docs/paging-results
+                         partitionPageSize: Int = 500000,
+                         workerThreads: Int = 4, //size of thread pool
 
-  // Global Options
-  datasetId: String = "",
-  debugMode: Boolean = false,
-  jobId: String = "",
-  jobProperties: Map[String,String] = Map.empty,
-  location: String = "",
-  projectId: String = "",
-  sync: Boolean = true,
+                         // Global Options
+                         datasetId: String = "",
+                         debugMode: Boolean = false,
+                         jobId: String = "",
+                         jobProperties: Map[String, String] = Map.empty,
+                         location: String = "",
+                         projectId: String = "",
+                         sync: Boolean = true,
 
-  statsTable: String = ""
-) {
+                         statsTable: String = ""
+                       ) {
   def dsn: Option[DSN] = {
     val i = queryDSN.indexOf('(')
     val j = queryDSN.indexOf(')')
