@@ -56,11 +56,12 @@ class BqSelectResultParallelExporter(cfg: ExportConfig,
       exporterFactory((leftBound / partitionSizePerThread).toString, cfg)
     })
 
+    exporters.headOption.foreach(_.validateData(tableSchema, sp.encoders))
+
     val results = iterators.zip(exporters).map {
       case (iterator, exporter) =>
         Future {
           val partitionName = s"$jobName Batch[${iterator.startIndex}:${iterator.endIndex}]"
-          exporter.validateData(tableSchema, sp.encoders)
 
           var rowsProcessed: Long = 0
           val totalPartitionRows = iterator.endIndex - iterator.startIndex
@@ -75,6 +76,7 @@ class BqSelectResultParallelExporter(cfg: ExportConfig,
               case Result(_, 1, _, msg) => throw new IllegalStateException(s"$partitionName Failed when encoding values to file: $msg")
             }
           }
+          exporter.endIfOpen()
           Result(activityCount = rowsProcessed)
         }
     }.map(Await.result(_, Duration.create(60, TimeUnit.MINUTES)))
