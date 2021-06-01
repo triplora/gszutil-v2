@@ -49,10 +49,7 @@ case class ExportConfig(
                          //currently there is a limit how much files could be joined by GCS Api
                          //See https://cloud.google.com/storage/docs/composite-objects
                          maxPartitionCount: Int = 32,
-                         //page size in rows for paginate in scope of one partition,
-                         //will be automatically limited to 10mb in case set value is to big.
-                         //https://cloud.google.com/bigquery/docs/paging-results
-                         partitionPageSize: Int = 500000,
+
                          workerThreads: Int = 4, //size of thread pool
 
                          // Global Options
@@ -111,7 +108,7 @@ case class ExportConfig(
 object ExportConfig {
   def apply(configs: Map[String, String]): ExportConfig = {
     ExportConfig(
-      runMode = configs.getOrElse("runMode", ""),//TODO:remove when testing finished
+      runMode = configs.getOrElse("runMode", ""),
       sql = configs.getOrElse("sql", ""),
       queryDSN = configs.getOrElse("queryDSN", ""),
       outDD = configs.getOrElse("outDD", ""),

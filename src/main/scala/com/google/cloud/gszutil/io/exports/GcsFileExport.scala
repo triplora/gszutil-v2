@@ -35,6 +35,6 @@ case class GcsFileExport(gcs: Storage, gcsOutUri: String, lrecl: Int) extends Fi
 
   def openGcsBlob(gcs: Storage, blobInfo: BlobInfo): OutputStream = {
     logger.info(s"opening Cloud Storage Writer:\n$blobInfo")
-    new BufferedOutputStream(Channels.newOutputStream(gcs.writer(blobInfo)), 256 * 1024)
+    new BufferedOutputStream(Channels.newOutputStream(gcs.writer(blobInfo)), 1 * 1024 * 1024)
   }
 }
