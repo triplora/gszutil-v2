@@ -17,14 +17,8 @@ class BqSelectResultParallelExporter(cfg: ExportConfig,
                                      jobInfo: GRecvProto.ZOSJobInfo,
                                      sp: SchemaProvider,
                                      exporterFactory: (String, ExportConfig) => SimpleFileExporter) extends NativeExporter(bq, cfg, jobInfo) {
-  private val defaultMinPartitionSize = 1_000_000
-  //currently there is a limit how much files could be joined by GCS Api, which is 32
-  //See https://cloud.google.com/storage/docs/composite-objects
-  //we keep this value as big as possible to evenly distribute load between threads
-  private val partitionsCount = 32
   private implicit val ec: ExecutionContextExecutor = ExecutionContext.fromExecutor(Executors.newWorkStealingPool(cfg.exporterThreadCount))
   private var exporters: Seq[SimpleFileExporter] = List()
-
   override def exportData(job: Job): Result = {
     val jobName = s"Job[id=${job.getJobId.getJob}]"
     if (!job.isDone)
@@ -36,7 +30,8 @@ class BqSelectResultParallelExporter(cfg: ExportConfig,
     val tableWithResults = bq.getTable(job.getConfiguration.asInstanceOf[QueryJobConfiguration].getDestinationTable)
     val tableSchema = tableWithResults.getDefinition[TableDefinition].getSchema.getFields
     val totalRowsToExport = tableWithResults.getNumRows.intValue()
-    val partitionSizePerThread = math.max(defaultMinPartitionSize, totalRowsToExport / partitionsCount + 1)
+    val minPartitionSize = 10 * 1024 * 1024 / sp.LRECL //about 10 mb or records
+    val partitionSizePerThread = math.max(minPartitionSize, totalRowsToExport / cfg.exporterThreadCount + 1)
     //page size in rows for paginate in scope of one partition,
     //will be automatically limited to 10mb in case set value is to big.
     //https://cloud.google.com/bigquery/docs/paging-results
