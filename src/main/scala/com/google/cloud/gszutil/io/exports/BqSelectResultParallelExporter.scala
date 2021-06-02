@@ -18,7 +18,7 @@ class BqSelectResultParallelExporter(cfg: ExportConfig,
                                      sp: SchemaProvider,
                                      exporterFactory: (String, ExportConfig) => SimpleFileExporter) extends NativeExporter(bq, cfg, jobInfo) {
 
-  private implicit val ec: ExecutionContextExecutor = ExecutionContext.fromExecutor(Executors.newFixedThreadPool(cfg.workerThreads))
+  private implicit val ec: ExecutionContextExecutor = ExecutionContext.fromExecutor(Executors.newWorkStealingPool(parallelism()))
 
   private var exporters: Seq[SimpleFileExporter] = List()
 
@@ -69,23 +69,26 @@ class BqSelectResultParallelExporter(cfg: ExportConfig,
     val results = iterators.zip(exporters).map {
       case (iterator, exporter) =>
         Future {
-          val partitionName = s"$jobName Batch[${iterator.startIndex}:${iterator.endIndex}]"
+          try {
+            val partitionName = s"$jobName Batch[${iterator.startIndex}:${iterator.endIndex}]"
 
-          var rowsProcessed: Long = 0
-          val totalPartitionRows = iterator.endIndex - iterator.startIndex
+            var rowsProcessed: Long = 0
+            val totalPartitionRows = iterator.endIndex - iterator.startIndex
 
-          while (iterator.hasNext()) {
-            exporter.exportData(iterator.next(), tableSchema, sp.encoders) match {
-              case Result(_, 0, rowsWritten, _) =>
-                rowsProcessed = rowsProcessed + rowsWritten
-                logger.info(s"$partitionName $rowsProcessed rows of $totalPartitionRows already exported by thread ${Thread.currentThread().getName}")
-                if (rowsProcessed > totalPartitionRows)
-                  throw new IllegalStateException(s"$partitionName Internal issue, to many rows exported!!!")
-              case Result(_, 1, _, msg) => throw new IllegalStateException(s"$partitionName Failed when encoding values to file: $msg")
+            while (iterator.hasNext()) {
+              exporter.exportData(iterator.next(), tableSchema, sp.encoders) match {
+                case Result(_, 0, rowsWritten, _) =>
+                  rowsProcessed = rowsProcessed + rowsWritten
+                  logger.info(s"$partitionName $rowsProcessed rows of $totalPartitionRows already exported by thread ${Thread.currentThread().getName}")
+                  if (rowsProcessed > totalPartitionRows)
+                    throw new IllegalStateException(s"$partitionName Internal issue, to many rows exported!!!")
+                case Result(_, 1, _, msg) => throw new IllegalStateException(s"$partitionName Failed when encoding values to file: $msg")
+              }
             }
+            Result(activityCount = rowsProcessed)
+          } finally {
+            exporter.endIfOpen()
           }
-          exporter.endIfOpen()
-          Result(activityCount = rowsProcessed)
         }
     }.map(Await.result(_, Duration.create(60, TimeUnit.MINUTES)))
 
@@ -94,6 +97,13 @@ class BqSelectResultParallelExporter(cfg: ExportConfig,
     require(totalRowsToExport == rowsProcessed, s"$jobName BigQuery API sent $totalRowsToExport rows but " +
       s"writer wrote $rowsProcessed")
     Result(activityCount = rowsProcessed)
+  }
+
+  def parallelism(): Int = {
+    val availableCores = Runtime.getRuntime.availableProcessors
+    val coresUsed = Math.min(32, availableCores)
+    logger.debug(s"Parallel export with threadPool=$coresUsed")
+    coresUsed
   }
 
   override def close(): Unit = exporters.foreach(_.endIfOpen())

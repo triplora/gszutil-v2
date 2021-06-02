@@ -43,9 +43,7 @@ class BqSelectResultParallelExporterRealBQSpec extends AnyFlatSpec {
       .build()
     val cfg = ExportConfig(
       vartext = false,
-      partitionSize = 2000,
-      partitionPageSize = 10001,
-      workerThreads = 4
+      partitionSize = 2000
     )
 
     /*//~9m records, partitionSize to large value for this
@@ -142,9 +140,7 @@ class BqSelectResultParallelExporterRealBQSpec extends AnyFlatSpec {
       .build()
     val cfg = ExportConfig(
       vartext = false,
-      partitionSize = 2000,
-      partitionPageSize = 10000,
-      workerThreads = 4
+      partitionSize = 2000
     )
 
     val completedJob = BQ.runJob(

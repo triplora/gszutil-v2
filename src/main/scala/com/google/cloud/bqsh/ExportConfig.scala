@@ -50,8 +50,6 @@ case class ExportConfig(
                          //See https://cloud.google.com/storage/docs/composite-objects
                          maxPartitionCount: Int = 32,
 
-                         workerThreads: Int = 4, //size of thread pool
-
                          // Global Options
                          datasetId: String = "",
                          debugMode: Boolean = false,
@@ -126,7 +124,6 @@ object ExportConfig {
       datasetId = configs.getOrElse("datasetId", ""),
       location = configs.getOrElse("location", ""),
       projectId = configs.getOrElse("projectId", ""),
-      workerThreads = configs.getOrElse("workerThreads", "").toInt,
       statsTable = configs.getOrElse("statsTable", "")
     )
   }
