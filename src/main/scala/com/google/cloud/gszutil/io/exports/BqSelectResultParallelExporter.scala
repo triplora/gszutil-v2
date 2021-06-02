@@ -17,9 +17,8 @@ class BqSelectResultParallelExporter(cfg: ExportConfig,
                                      jobInfo: GRecvProto.ZOSJobInfo,
                                      sp: SchemaProvider,
                                      exporterFactory: (String, ExportConfig) => SimpleFileExporter) extends NativeExporter(bq, cfg, jobInfo) {
-
-  private implicit val ec: ExecutionContextExecutor = ExecutionContext.fromExecutor(Executors.newWorkStealingPool(parallelism()))
-
+  private val defaultMinPartitionSize = 1_000_000
+  private implicit val ec: ExecutionContextExecutor = ExecutionContext.fromExecutor(Executors.newWorkStealingPool(cfg.exporterThreadCount))
   private var exporters: Seq[SimpleFileExporter] = List()
 
   override def exportData(job: Job): Result = {
@@ -33,12 +32,8 @@ class BqSelectResultParallelExporter(cfg: ExportConfig,
     val tableWithResults = bq.getTable(job.getConfiguration.asInstanceOf[QueryJobConfiguration].getDestinationTable)
     val tableSchema = tableWithResults.getDefinition[TableDefinition].getSchema.getFields
     val totalRowsToExport = tableWithResults.getNumRows.intValue()
-    val partitionSizePerThread = math.max(cfg.partitionSize, totalRowsToExport / cfg.maxPartitionCount + 1)
-
-    if (partitionSizePerThread != cfg.partitionSize) {
-      logger.info(s"$jobName Partition size changed from ${cfg.partitionSize} to ${partitionSizePerThread} records to match max partition count ${cfg.maxPartitionCount}")
-    }
-
+    val partitionSizePerThread = math.max(defaultMinPartitionSize, totalRowsToExport / cfg.exporterThreadCount + 1)
+    logger.info(s"$jobName Multithreading settings(partitionCount=${cfg.exporterThreadCount}, partitionSize=$partitionSizePerThread)")
     val pageFetcher = (startIndex: Long, pageSize: Long) => {
       val result = bq.listTableData(
         tableWithResults.getTableId,
@@ -50,7 +45,7 @@ class BqSelectResultParallelExporter(cfg: ExportConfig,
     //page size in rows for paginate in scope of one partition,
     //will be automatically limited to 10mb in case set value is to big.
     //https://cloud.google.com/bigquery/docs/paging-results
-    val pageSize = (10 * 1024 * 1024) / sp.LRECL * 1.2// + 20% to be sure that page size bigger then 10 MB
+    val pageSize = (10 * 1024 * 1024) / sp.LRECL * 1.2 // + 20% to be sure that page size bigger then 10 MB
     val partitions = for (leftBound <- 0 to totalRowsToExport by partitionSizePerThread) yield leftBound
     val iterators = partitions.map(leftBound =>
       new PartialPageIterator[java.lang.Iterable[FieldValueList]](
@@ -97,13 +92,6 @@ class BqSelectResultParallelExporter(cfg: ExportConfig,
     require(totalRowsToExport == rowsProcessed, s"$jobName BigQuery API sent $totalRowsToExport rows but " +
       s"writer wrote $rowsProcessed")
     Result(activityCount = rowsProcessed)
-  }
-
-  def parallelism(): Int = {
-    val availableCores = Runtime.getRuntime.availableProcessors
-    val coresUsed = Math.min(32, availableCores)
-    logger.debug(s"Parallel export with threadPool=$coresUsed")
-    coresUsed
   }
 
   override def close(): Unit = exporters.foreach(_.endIfOpen())

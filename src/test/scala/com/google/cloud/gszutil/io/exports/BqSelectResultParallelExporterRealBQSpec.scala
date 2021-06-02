@@ -43,23 +43,18 @@ class BqSelectResultParallelExporterRealBQSpec extends AnyFlatSpec {
       .build()
     val cfg = ExportConfig(
       vartext = false,
-      partitionSize = 2000
+      exporterThreadCount = 8
     )
 
-    /*//~9m records, partitionSize to large value for this
-    val jobCfg = QueryJobConfiguration.newBuilder("SELECT image_id FROM `bigquery-public-data.open_images.images`")
-      .setMaxResults(1)
-      .setUseLegacySql(false)
-      .build()
+    /*    //~9m records, partitionSize to large value for this
+        val jobCfg = QueryJobConfiguration.newBuilder("SELECT image_id FROM `bigquery-public-data.open_images.images`")
+          .setMaxResults(1)
+          .setUseLegacySql(false)
+          .build()
 
-    val cfg = ExportConfig(
-      // target is ~250mb file
-      partitionSize = 250 * 1024 * 1024 / defaultRecordLength,
-      // next one will not work as will be limited by 10 mb
-      // target is ~75mb memory usage per thread
-      partitionPageSize = 75 * 1024 * 1024 / defaultRecordLength,
-      workerThreads = 4
-    )*/
+        val cfg = ExportConfig(
+          exporterThreadCount = 8
+        )*/
 
     val completedJob = BQ.runJob(
       bigQuery, jobCfg, jobId,
@@ -140,7 +135,7 @@ class BqSelectResultParallelExporterRealBQSpec extends AnyFlatSpec {
       .build()
     val cfg = ExportConfig(
       vartext = false,
-      partitionSize = 2000
+      exporterThreadCount = 4
     )
 
     val completedJob = BQ.runJob(

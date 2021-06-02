@@ -42,13 +42,8 @@ case class ExportConfig(
                          requirePartitionFilter: Boolean = true,
                          useCache: Boolean = true,
 
-                         // Configuration for partitioning and concurrency control
-                         //partition size in rows per single thread
-                         partitionSize: Int = 1000000,
-                         //maximum allowed partitions to create
-                         //currently there is a limit how much files could be joined by GCS Api
-                         //See https://cloud.google.com/storage/docs/composite-objects
-                         maxPartitionCount: Int = 32,
+                         //size of thread pool used by parallel export
+                         exporterThreadCount: Int = 4,
 
                          // Global Options
                          datasetId: String = "",
