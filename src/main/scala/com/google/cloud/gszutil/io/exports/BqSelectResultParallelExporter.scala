@@ -18,6 +18,10 @@ class BqSelectResultParallelExporter(cfg: ExportConfig,
                                      sp: SchemaProvider,
                                      exporterFactory: (String, ExportConfig) => SimpleFileExporter) extends NativeExporter(bq, cfg, jobInfo) {
   private val defaultMinPartitionSize = 1_000_000
+  //currently there is a limit how much files could be joined by GCS Api, which is 32
+  //See https://cloud.google.com/storage/docs/composite-objects
+  //we keep this value as big as possible to evenly distribute load between threads
+  private val partitionsCount = 32
   private implicit val ec: ExecutionContextExecutor = ExecutionContext.fromExecutor(Executors.newWorkStealingPool(cfg.exporterThreadCount))
   private var exporters: Seq[SimpleFileExporter] = List()
 
@@ -32,8 +36,19 @@ class BqSelectResultParallelExporter(cfg: ExportConfig,
     val tableWithResults = bq.getTable(job.getConfiguration.asInstanceOf[QueryJobConfiguration].getDestinationTable)
     val tableSchema = tableWithResults.getDefinition[TableDefinition].getSchema.getFields
     val totalRowsToExport = tableWithResults.getNumRows.intValue()
-    val partitionSizePerThread = math.max(defaultMinPartitionSize, totalRowsToExport / cfg.exporterThreadCount + 1)
-    logger.info(s"$jobName Multithreading settings(partitionCount=${cfg.exporterThreadCount}, partitionSize=$partitionSizePerThread)")
+    val partitionSizePerThread = math.max(defaultMinPartitionSize, totalRowsToExport / partitionsCount + 1)
+    //page size in rows for paginate in scope of one partition,
+    //will be automatically limited to 10mb in case set value is to big.
+    //https://cloud.google.com/bigquery/docs/paging-results
+    val partitionPageSize = ((10 * 1024 * 1024) / sp.LRECL * 1.2).toLong // + 20% to be sure that page size bigger then 10 MB
+    val partitions = for (leftBound <- 0 to totalRowsToExport by partitionSizePerThread) yield leftBound
+    logger.info(
+      s"""$jobName Multithreading settings(
+         |  threadsCount=${cfg.exporterThreadCount},
+         |  partitionCount=${partitions.size},
+         |  partitionSize=$partitionSizePerThread,
+         |  partitionPageSize=$partitionPageSize)""".stripMargin)
+
     val pageFetcher = (startIndex: Long, pageSize: Long) => {
       val result = bq.listTableData(
         tableWithResults.getTableId,
@@ -42,16 +57,11 @@ class BqSelectResultParallelExporter(cfg: ExportConfig,
       )
       Page(result.getValues, Iterators.size(result.getValues.iterator()))
     }
-    //page size in rows for paginate in scope of one partition,
-    //will be automatically limited to 10mb in case set value is to big.
-    //https://cloud.google.com/bigquery/docs/paging-results
-    val pageSize = (10 * 1024 * 1024) / sp.LRECL * 1.2 // + 20% to be sure that page size bigger then 10 MB
-    val partitions = for (leftBound <- 0 to totalRowsToExport by partitionSizePerThread) yield leftBound
     val iterators = partitions.map(leftBound =>
       new PartialPageIterator[java.lang.Iterable[FieldValueList]](
         startIndex = leftBound,
         endIndex = Math.min(leftBound + partitionSizePerThread, totalRowsToExport),
-        pageSize = pageSize.toLong,
+        pageSize = partitionPageSize,
         pageFetcher = pageFetcher(_, _))
     )
 
