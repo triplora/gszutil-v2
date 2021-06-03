@@ -168,7 +168,13 @@ object GRecvServerListener extends Logging {
              responseObserver: StreamObserver[GRecvResponse]) : Unit = {
 
     val sp = parseCopybook(request.getCopybook)
-    val result = if(cfg.runMode.toLowerCase == "parallel") {
+    val result = if(cfg.runMode.toLowerCase == "single") {
+      logger.info(s"Export mode - single thread")
+      new BqSelectResultExporter(cfg, bq, request.getJobinfo, sp, GcsFileExport(gcs, request.getOutputUri, sp.LRECL)).doExport(request.getSql)
+    } else if("storage_api" == cfg.runMode.toLowerCase) {
+      logger.info(s"Export mode - storage API")
+      new BqStorageApiExporter(cfg, storageApi, bq, GcsFileExport(gcs, request.getOutputUri, sp.LRECL), request.getJobinfo, sp).doExport(request.getSql)
+    } else {
       logger.info(s"Export mode - multiple threads")
 
       def exporterFactory(fileSuffix: String, cfg: ExportConfig): SimpleFileExporter = {
@@ -185,12 +191,6 @@ object GRecvServerListener extends Logging {
       new StorageFileCompose(gcs).composeAll(request.getOutputUri, s"${request.getOutputUri.stripSuffix("/")}/", true)
       logger.info(s"File compose completed, took=${System.currentTimeMillis() - startTime} millis.")
       r
-    } else if("storage_api" == cfg.runMode.toLowerCase) {
-      logger.info(s"Export mode - storage API")
-      new BqStorageApiExporter(cfg, storageApi, bq, GcsFileExport(gcs, request.getOutputUri, sp.LRECL), request.getJobinfo, sp).doExport(request.getSql)
-    } else {
-      logger.info(s"Export mode - single thread")
-      new BqSelectResultExporter(cfg, bq, request.getJobinfo, sp, GcsFileExport(gcs, request.getOutputUri, sp.LRECL)).doExport(request.getSql)
     }
 
     val resp = GRecvResponse.newBuilder.setStatus(GRecvProtocol.OK).setRowCount(result.activityCount).build
