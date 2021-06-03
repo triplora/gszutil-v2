@@ -52,7 +52,7 @@ assemblyMergeStrategy in assembly := {
 
 // Exclude IBM jars from assembly jar since they will be provided
 assemblyExcludedJars in assembly := {
-  val IBMJars = Set("ibmjzos.jar", "ibmjcecca.jar", "dataaccess.jar", "isfjcall.jar")
+  val IBMJars = Set("ibmjzos.jar", "ibmjcecca.jar", "isfjcall.jar")
   (fullClasspath in assembly).value
     .filter(file => IBMJars.contains(file.data.getName))
 }
