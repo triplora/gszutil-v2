@@ -79,18 +79,19 @@ class BqSelectResultParallelExporter(cfg: ExportConfig,
               exporter.exportData(iterator.next(), tableSchema, sp.encoders) match {
                 case Result(_, 0, rowsWritten, _) =>
                   rowsProcessed = rowsProcessed + rowsWritten
-                  logger.info(s"$partitionName $rowsProcessed rows of $totalPartitionRows already exported by thread ${Thread.currentThread().getName}")
+                  logger.debug(s"$partitionName $rowsProcessed rows of $totalPartitionRows already exported by thread=[${Thread.currentThread().getName}].")
                   if (rowsProcessed > totalPartitionRows)
                     throw new IllegalStateException(s"$partitionName Internal issue, to many rows exported!!!")
                 case Result(_, 1, _, msg) => throw new IllegalStateException(s"$partitionName Failed when encoding values to file: $msg")
               }
             }
+            logger.info(s"$jobName batch completed by thread=[${Thread.currentThread().getName}] exported $rowsProcessed rows.")
             Result(activityCount = rowsProcessed)
           } finally {
             exporter.endIfOpen()
           }
         }
-    }.map(Await.result(_, Duration.create(60, TimeUnit.MINUTES)))
+    }.map(Await.result(_, Duration.create(cfg.timeoutMinutes, TimeUnit.MINUTES)))
 
     val rowsProcessed = results.map(_.activityCount).sum
     logger.info(s"$jobName Received $totalRowsToExport rows from BigQuery API, written $rowsProcessed rows.")

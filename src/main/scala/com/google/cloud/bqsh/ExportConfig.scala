@@ -24,7 +24,7 @@ case class ExportConfig(
                          queryDSN: String = "",
                          outDD: String = "OUTFILE",
                          cobDsn: String = "",
-                         timeoutMinutes: Int = 60,
+                         timeoutMinutes: Int = 90,
                          vartext: Boolean = false,
                          runMode: String = "",
 
