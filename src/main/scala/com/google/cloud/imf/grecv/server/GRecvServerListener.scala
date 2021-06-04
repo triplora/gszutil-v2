@@ -183,10 +183,7 @@ object GRecvServerListener extends Logging {
         new SimpleFileExporterAdapter(result, cfg)
       }
 
-      //currently there is a limit how much files could be joined by GCS Api, which is 32
-      //See https://cloud.google.com/storage/docs/composite-objects
-      val exporterThreadCount = math.min(32, Runtime.getRuntime.availableProcessors)
-      new BqSelectResultParallelExporter(cfg.copy(exporterThreadCount = exporterThreadCount), bq, request.getJobinfo, sp, exporterFactory).doExport(request.getSql)
+      new BqSelectResultParallelExporter(cfg.copy(exporterThreadCount = Runtime.getRuntime.availableProcessors), bq, request.getJobinfo, sp, exporterFactory).doExport(request.getSql)
     }
 
     val resp = GRecvResponse.newBuilder.setStatus(GRecvProtocol.OK).setRowCount(result.activityCount).build

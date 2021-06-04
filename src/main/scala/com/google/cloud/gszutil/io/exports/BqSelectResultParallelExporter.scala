@@ -1,7 +1,5 @@
 package com.google.cloud.gszutil.io.exports
 
-import java.util.concurrent.atomic.AtomicLong
-
 import com.google.cloud.bigquery.BigQuery.TableDataListOption
 import com.google.cloud.bigquery._
 import com.google.cloud.bqsh.ExportConfig
@@ -9,8 +7,9 @@ import com.google.cloud.bqsh.cmd.Result
 import com.google.cloud.gszutil.SchemaProvider
 import com.google.cloud.imf.gzos.pb.GRecvProto
 import com.google.common.collect.Iterators
-import java.util.concurrent.{Executors, TimeUnit}
 
+import java.util.concurrent.atomic.AtomicLong
+import java.util.concurrent.{Executors, TimeUnit}
 import scala.concurrent.duration.Duration
 import scala.concurrent.{Await, ExecutionContext, ExecutionContextExecutor, Future}
 
@@ -19,8 +18,13 @@ class BqSelectResultParallelExporter(cfg: ExportConfig,
                                      jobInfo: GRecvProto.ZOSJobInfo,
                                      sp: SchemaProvider,
                                      exporterFactory: (String, ExportConfig) => SimpleFileExporter) extends NativeExporter(bq, cfg, jobInfo) {
+  //currently there is a limit how much files could be joined by GCS Api, which is 32
+  //See https://cloud.google.com/storage/docs/composite-objects
+  //also it is more memory efficient to have a lot of small partitions due to releasing of memory on .close()
+  private val partitionCount = 32
   private implicit val ec: ExecutionContextExecutor = ExecutionContext.fromExecutor(Executors.newWorkStealingPool(cfg.exporterThreadCount))
   private var exporters: Seq[SimpleFileExporter] = List()
+
   override def exportData(job: Job): Result = {
     val jobName = s"Job[id=${job.getJobId.getJob}]"
     if (!job.isDone)
@@ -33,7 +37,7 @@ class BqSelectResultParallelExporter(cfg: ExportConfig,
     val tableSchema = tableWithResults.getDefinition[TableDefinition].getSchema.getFields
     val totalRowsToExport = tableWithResults.getNumRows.intValue()
     val minPartitionSize = 10 * 1024 * 1024 / sp.LRECL //about 10 mb or records
-    val partitionSizePerThread = math.max(minPartitionSize, totalRowsToExport / cfg.exporterThreadCount + 1)
+    val partitionSizePerThread = math.max(minPartitionSize, totalRowsToExport / partitionCount + 1)
     //page size in rows for paginate in scope of one partition,
     //will be automatically limited to 10mb in case set value is to big.
     //https://cloud.google.com/bigquery/docs/paging-results
