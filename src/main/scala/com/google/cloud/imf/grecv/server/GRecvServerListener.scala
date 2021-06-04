@@ -179,18 +179,14 @@ object GRecvServerListener extends Logging {
 
       def exporterFactory(fileSuffix: String, cfg: ExportConfig): SimpleFileExporter = {
         val result = new LocalFileExporter
-        result.newExport(GcsFileExport(gcs, s"${request.getOutputUri.stripSuffix("/")}/tmp_$fileSuffix", sp.LRECL))
+        result.newExport(GcsFileExport(gcs, s"${request.getOutputUri.stripSuffix("/")}/${request.getJobinfo.getJobid}/tmp_$fileSuffix", sp.LRECL))
         new SimpleFileExporterAdapter(result, cfg)
       }
 
       //currently there is a limit how much files could be joined by GCS Api, which is 32
       //See https://cloud.google.com/storage/docs/composite-objects
       val exporterThreadCount = math.min(32, Runtime.getRuntime.availableProcessors)
-      val r = new BqSelectResultParallelExporter(cfg.copy(exporterThreadCount = exporterThreadCount), bq, request.getJobinfo, sp, exporterFactory).doExport(request.getSql)
-      val startTime = System.currentTimeMillis()
-      new StorageFileCompose(gcs).composeAll(request.getOutputUri, s"${request.getOutputUri.stripSuffix("/")}/", true)
-      logger.info(s"File compose completed, took=${System.currentTimeMillis() - startTime} millis.")
-      r
+      new BqSelectResultParallelExporter(cfg.copy(exporterThreadCount = exporterThreadCount), bq, request.getJobinfo, sp, exporterFactory).doExport(request.getSql)
     }
 
     val resp = GRecvResponse.newBuilder.setStatus(GRecvProtocol.OK).setRowCount(result.activityCount).build

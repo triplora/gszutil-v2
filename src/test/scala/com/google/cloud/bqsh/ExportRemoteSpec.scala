@@ -157,7 +157,7 @@ class ExportRemoteSpec extends AnyFlatSpec with BeforeAndAfterAll with BeforeAnd
 
     val startT = System.currentTimeMillis()
     val res = new BqSelectResultParallelExporter(cfg, bq, zos.getInfo, sp, exporterFactory).doExport(sql)
-    new StorageFileCompose(gcs).composeAll(gcsUri, gcsUri + "/", true)
+    new StorageFileCompose(gcs).composeAll(gcsUri, s"$gcsUri/${zos.getInfo.getJobid}/", true)
     println(s"Multi thread took : ${System.currentTimeMillis() - startT} millis.")
 
     assert(res.exitCode == 0)

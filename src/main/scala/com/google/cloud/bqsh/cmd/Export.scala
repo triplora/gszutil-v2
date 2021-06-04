@@ -18,11 +18,12 @@ package com.google.cloud.bqsh.cmd
 
 import com.google.cloud.bigquery.{BigQuery, BigQueryException}
 import com.google.cloud.bqsh._
-import com.google.cloud.gszutil.io.exports.{BqSelectResultExporter, MVSFileExport}
+import com.google.cloud.gszutil.io.exports.{BqSelectResultExporter, MVSFileExport, StorageFileCompose}
 import com.google.cloud.gszutil.{CopyBook, SchemaProvider}
 import com.google.cloud.imf.grecv.client.GRecvClient
 import com.google.cloud.imf.gzos.{MVS, MVSStorage}
 import com.google.cloud.imf.util.{Logging, Services, StatsUtil}
+import com.google.cloud.storage.Storage
 
 object Export extends Command[ExportConfig] with Logging {
   override val name: String = "bq export"
@@ -67,7 +68,7 @@ object Export extends Command[ExportConfig] with Logging {
       val result = if (cfg.bucket.isEmpty)
         localExport(query, bq, cfg, zos, sp)
       else
-        remoteExport(query, sp.raw, cfg, zos, env)
+        remoteExport(query, sp.raw, Services.storage(creds), cfg, zos, env)
 
       // Publish results
       if (cfg.statsTable.nonEmpty) {
@@ -89,7 +90,7 @@ object Export extends Command[ExportConfig] with Logging {
     }
   }
 
-  private def remoteExport(sql: String, copybook: String, cfg: ExportConfig, zos: MVS, env: Map[String, String]): Result = {
+  private def remoteExport(sql: String, copybook: String, gcs: => Storage, cfg: ExportConfig, zos: MVS, env: Map[String, String]): Result = {
     logger.debug(s"Using remote export, bucket=${cfg.bucket}")
     val (host, port) = if (cfg.remoteHost.isEmpty) {
       (env.getOrElse("SRVHOSTNAME", ""), env.getOrElse("SRVPORT", "51770").toInt)
@@ -98,7 +99,13 @@ object Export extends Command[ExportConfig] with Logging {
 
     val dsn = zos.getDSN(cfg.outDD)
     val gcsUri = s"gs://${cfg.bucket}/EXPORT/$dsn"
-    GRecvClient.export(sql, copybook, gcsUri, cfg1, zos)
+    val r = GRecvClient.export(sql, copybook, gcsUri, cfg1, zos)
+    if(cfg.runMode.toLowerCase != "single") {
+      val startTime = System.currentTimeMillis()
+      new StorageFileCompose(gcs).composeAll(gcsUri, s"$gcsUri/${zos.getInfo.getJobid}/", true)
+      logger.info(s"File compose completed, took=${System.currentTimeMillis() - startTime} millis.")
+    }
+    r
   }
 
   private def localExport(sql: String, bq: BigQuery, cfg: ExportConfig, zos: MVS, sp: SchemaProvider): Result = {

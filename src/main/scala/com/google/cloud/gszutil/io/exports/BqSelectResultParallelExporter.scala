@@ -1,5 +1,7 @@
 package com.google.cloud.gszutil.io.exports
 
+import java.util.concurrent.atomic.AtomicLong
+
 import com.google.cloud.bigquery.BigQuery.TableDataListOption
 import com.google.cloud.bigquery._
 import com.google.cloud.bqsh.ExportConfig
@@ -7,8 +9,8 @@ import com.google.cloud.bqsh.cmd.Result
 import com.google.cloud.gszutil.SchemaProvider
 import com.google.cloud.imf.gzos.pb.GRecvProto
 import com.google.common.collect.Iterators
-
 import java.util.concurrent.{Executors, TimeUnit}
+
 import scala.concurrent.duration.Duration
 import scala.concurrent.{Await, ExecutionContext, ExecutionContextExecutor, Future}
 
@@ -66,6 +68,7 @@ class BqSelectResultParallelExporter(cfg: ExportConfig,
 
     exporters.headOption.foreach(_.validateData(tableSchema, sp.encoders))
 
+    val exportedRows = new AtomicLong(0)
     val results = iterators.zip(exporters).map {
       case (iterator, exporter) =>
         Future {
@@ -79,13 +82,13 @@ class BqSelectResultParallelExporter(cfg: ExportConfig,
               exporter.exportData(iterator.next(), tableSchema, sp.encoders) match {
                 case Result(_, 0, rowsWritten, _) =>
                   rowsProcessed = rowsProcessed + rowsWritten
-                  logger.debug(s"$partitionName $rowsProcessed rows of $totalPartitionRows already exported by thread=[${Thread.currentThread().getName}].")
+                  logger.debug(s"$partitionName, exported by thread=[${Thread.currentThread().getName}]: [$rowsProcessed / $totalPartitionRows], " +
+                    s"total exported: [${exportedRows.addAndGet(rowsWritten)} / $totalRowsToExport]")
                   if (rowsProcessed > totalPartitionRows)
                     throw new IllegalStateException(s"$partitionName Internal issue, to many rows exported!!!")
                 case Result(_, 1, _, msg) => throw new IllegalStateException(s"$partitionName Failed when encoding values to file: $msg")
               }
             }
-            logger.info(s"$jobName batch completed by thread=[${Thread.currentThread().getName}] exported $rowsProcessed rows.")
             Result(activityCount = rowsProcessed)
           } finally {
             exporter.endIfOpen()
