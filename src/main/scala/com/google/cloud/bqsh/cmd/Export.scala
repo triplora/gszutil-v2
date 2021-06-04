@@ -16,6 +16,8 @@
 
 package com.google.cloud.bqsh.cmd
 
+import java.net.URI
+
 import com.google.cloud.bigquery.{BigQuery, BigQueryException}
 import com.google.cloud.bqsh._
 import com.google.cloud.gszutil.io.exports.{BqSelectResultExporter, MVSFileExport, StorageFileCompose}
@@ -90,7 +92,7 @@ object Export extends Command[ExportConfig] with Logging {
     }
   }
 
-  private def remoteExport(sql: String, copybook: String, gcs: => Storage, cfg: ExportConfig, zos: MVS, env: Map[String, String]): Result = {
+  private def remoteExport(sql: String, copybook: String, gcs: Storage, cfg: ExportConfig, zos: MVS, env: Map[String, String]): Result = {
     logger.debug(s"Using remote export, bucket=${cfg.bucket}")
     val (host, port) = if (cfg.remoteHost.isEmpty) {
       (env.getOrElse("SRVHOSTNAME", ""), env.getOrElse("SRVPORT", "51770").toInt)
@@ -102,7 +104,8 @@ object Export extends Command[ExportConfig] with Logging {
     val r = GRecvClient.export(sql, copybook, gcsUri, cfg1, zos)
     if(cfg.runMode.toLowerCase != "single") {
       val startTime = System.currentTimeMillis()
-      new StorageFileCompose(gcs).composeAll(gcsUri, s"$gcsUri/${zos.getInfo.getJobid}/", true)
+      new StorageFileCompose(gcs).composeAll(gcsUri, s"$gcsUri/${zos.getInfo.getJobid}/")
+      deleteGcsFolder(gcs, gcsUri + "/")
       logger.info(s"File compose completed, took=${System.currentTimeMillis() - startTime} millis.")
     }
     r
@@ -111,5 +114,16 @@ object Export extends Command[ExportConfig] with Logging {
   private def localExport(sql: String, bq: BigQuery, cfg: ExportConfig, zos: MVS, sp: SchemaProvider): Result = {
     logger.debug(s"Using local export")
     new BqSelectResultExporter(cfg, bq, zos.getInfo, sp, MVSFileExport(cfg.outDD, zos)).doExport(sql)
+  }
+
+  private def deleteGcsFolder(gcs: Storage, dirToRemove: String): Unit = {
+    import scala.jdk.CollectionConverters._
+    val sourceUri = new URI(dirToRemove)
+    val sourceFiles = gcs.list(sourceUri.getAuthority, Storage.BlobListOption.prefix(sourceUri.getPath.stripPrefix("/")))
+      .iterateAll.asScala.toSeq
+    val batch = gcs.batch()
+    sourceFiles.foreach(file => batch.delete(file.getBlobId))
+    batch.submit()
+    logger.info(s"GCS $dirToRemove folder with ${sourceFiles.size} files have been removed.")
   }
 }

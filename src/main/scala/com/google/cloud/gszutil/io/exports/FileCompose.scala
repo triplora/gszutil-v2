@@ -9,7 +9,7 @@ import java.net.URI
 trait FileCompose[T, R] {
   def compose(target: T, source: Seq[T]): R
 
-  def composeAll(target: T, sourceDir: T, removeSource: Boolean): R
+  def composeAll(target: T, sourceDir: T): R
 }
 
 class StorageFileCompose(gcs: Storage) extends FileCompose[String, Blob] with Logging {
@@ -25,18 +25,11 @@ class StorageFileCompose(gcs: Storage) extends FileCompose[String, Blob] with Lo
     res
   }
 
-  override def composeAll(target: String, sourceDir: String, removeSource: Boolean): Blob = {
+  override def composeAll(target: String, sourceDir: String): Blob = {
     import scala.jdk.CollectionConverters._
     val sourceUri = new URI(sourceDir)
     val sourceFiles = gcs.list(sourceUri.getAuthority, Storage.BlobListOption.prefix(sourceUri.getPath.stripPrefix("/")))
       .iterateAll.asScala.toSeq
-    val targetBlob = compose(target, sourceFiles.map(_.getName))
-    if(removeSource) {
-      val batch = gcs.batch()
-      sourceFiles.foreach(file => batch.delete(file.getBlobId))
-      batch.submit()
-      logger.info(s"GCS $sourceDir folder with ${sourceFiles.size} files have been removed.")
-    }
-    targetBlob
+    compose(target, sourceFiles.map(_.getName))
   }
 }

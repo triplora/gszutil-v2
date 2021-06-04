@@ -30,20 +30,11 @@ class StorageFileCombinerSpec extends AnyFlatSpec with BeforeAndAfterEach {
 
   "GCS file combiner" should "merge all files in folder" in {
     val sources = prepareData()
-    val combined = service.composeAll(TargetUrl, SourceUrl, false)
+    val combined = service.composeAll(TargetUrl, SourceUrl)
 
     assert(combined.exists())
     assert(new String(combined.getContent()) == "Hello World")
     sources.map(s => assert(s.exists()))
-  }
-
-  "GCS file combiner" should "merge all files in folder and remove source folder" in {
-    val sources = prepareData()
-    val combined = service.composeAll(TargetUrl, SourceUrl, true)
-
-    assert(combined.exists())
-    assert(new String(combined.getContent()) == "Hello World")
-    sources.map(s => assert(!s.exists()))
   }
 
   private def prepareData(): Seq[Blob] = {

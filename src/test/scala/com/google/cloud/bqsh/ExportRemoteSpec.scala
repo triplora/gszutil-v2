@@ -100,13 +100,14 @@ class ExportRemoteSpec extends AnyFlatSpec with BeforeAndAfterAll with BeforeAnd
    */
   "Full flow remote export" should "export data to binary file to GCS" in {
     val cfg = ExportConfig(
-      sql = sql.concat(" LIMIT 1"),
+      sql = sql,
       projectId = TestProject,
       outDD = outFile,
       location = Location,
       bucket = TestBucket,
       remoteHost = serverCfg.host,
-      remotePort = serverCfg.port
+      remotePort = serverCfg.port,
+      runMode = "parallel"
     )
     val res = Export.run(cfg, zos, Map.empty)
 
@@ -151,13 +152,13 @@ class ExportRemoteSpec extends AnyFlatSpec with BeforeAndAfterAll with BeforeAnd
     val sp = CopyBook(TestCopybook, Ebcdic)
     def exporterFactory(fileSuffix: String, cfg: ExportConfig): SimpleFileExporter = {
       val result = new LocalFileExporter
-      result.newExport(GcsFileExport(gcs, s"${gcsUri}/tmp_$fileSuffix" , sp.LRECL))
+      result.newExport(GcsFileExport(gcs, s"${gcsUri}/${zos.getInfo.getJobid}/tmp_$fileSuffix" , sp.LRECL))
       new SimpleFileExporterAdapter(result, cfg)
     }
 
     val startT = System.currentTimeMillis()
     val res = new BqSelectResultParallelExporter(cfg, bq, zos.getInfo, sp, exporterFactory).doExport(sql)
-    new StorageFileCompose(gcs).composeAll(gcsUri, s"$gcsUri/${zos.getInfo.getJobid}/", true)
+    new StorageFileCompose(gcs).composeAll(gcsUri, s"$gcsUri/${zos.getInfo.getJobid}/")
     println(s"Multi thread took : ${System.currentTimeMillis() - startT} millis.")
 
     assert(res.exitCode == 0)

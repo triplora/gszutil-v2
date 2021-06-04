@@ -122,11 +122,11 @@ object Linux extends MVS with Logging {
     new ChannelRecordReader(FileChannel.open(ddPath, StandardOpenOption.READ), lRecl, blkSize)
   }
 
-  override def jobName: String = sys.env.getOrElse("JOBNAME","JOBNAME")
+  override val jobName: String = sys.env.getOrElse("JOBNAME","JOBNAME")
 
-  override def jobDate: String = StatsUtil.JobDateFormat.format(new Date())
+  override val jobDate: String = StatsUtil.JobDateFormat.format(new Date())
 
-  override def jobTime: String = StatsUtil.JobTimeFormat.format(new Date())
+  override val jobTime: String = StatsUtil.JobTimeFormat.format(new Date())
 
   override def getInfo: ZOSJobInfo = ZOSJobInfo.newBuilder
     .setJobid(jobId)
