@@ -26,7 +26,7 @@ case class ExportConfig(
                          cobDsn: String = "",
                          timeoutMinutes: Int = 90,
                          vartext: Boolean = false,
-                         runMode: String = "",
+                         runMode: String = "parallel",
 
                          bucket: String = "",
                          remoteHost: String = "",

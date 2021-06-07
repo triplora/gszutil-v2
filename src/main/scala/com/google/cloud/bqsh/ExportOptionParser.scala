@@ -35,11 +35,6 @@ object ExportOptionParser
     .text("(optional) DSN to read query from in format HLQ.MEMBER or HLQ.PDS(MEMBER)")
     .action((x,c) => c.copy(queryDSN = x))
 
-  opt[String]("run_mode")
-    .optional
-    .text("runMode, possible values single, parallel")
-    .action((x,c) => c.copy(runMode = x))
-
   opt[String]("sql")
     .optional
     .text("(optional) SQL BQ query")
@@ -78,12 +73,18 @@ object ExportOptionParser
   opt[Int]("timeOutMinutes")
     .optional()
     .action{(x,c) => c.copy(timeoutMinutes = x)}
-    .text("(optional) Timeout in minutes for GRecvExportGrpc call. (default for GCS: 60 minutes)")
+    .text("(optional) Timeout in minutes for GRecvExportGrpc call. (default for GCS: 90 minutes)")
 
   opt[Int]("keepAliveTimeInSeconds")
     .optional()
     .action{(x,c) => c.copy(keepAliveTimeInSeconds = x)}
     .text("(optional) keep alive timeout in seconds for http channel. (default: 480 seconds)")
+
+  opt[String]("run_mode")
+    .optional
+    .text("(optional) Switches between export implementations, currently supported: parallel, single thread exports. Possible values single, parallel, default is parallel")
+    .action((x,c) => c.copy(runMode = x))
+
 
   // Standard Options
 

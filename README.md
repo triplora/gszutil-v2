@@ -283,6 +283,41 @@ Usage: rm [options] tablespec
   --sync <value>           If set to true, wait for the command to complete before returning, and use the job completion status as the error code. If set to false, the job is created, and successful completion status is used for the error code. The default value is true.
 ```
 
+#### bq export
+
+```
+export (gszutil-1.0.0)
+Usage: export [options]
+
+  --help                          prints this usage text
+  --query_dsn<value>              DSN to read query from in format HLQ.MEMBER or HLQ.PDS(MEMBER)
+  --sql<value>                    SQL BQ query
+  --outDD<value>                  DD to write output records to (default: OUTFILE)
+  --cobDsn<value>                 DSN to read copybook from. If not provided, copybook will be read from DD:COPYBOOK
+  --vartext                       When specified, write pipe-delimited string output.
+  --bucket<value>                 GCS bucket where to write
+  --remoteHost<value>             Remote host or ip address
+  --remotePort<value>             Remote port (default: 51770)
+  --timeOutMinutes<value>         Timeout in minutes for GRecvExportGrpc call. (default for GCS: 90 minutes)
+  --keepAliveTimeInSeconds<value> Keep alive timeout in seconds for http channel. (default: 480 seconds)
+  --keepAliveTimeInSeconds<value> Keep alive timeout in seconds for http channel. (default: 480 seconds)
+  --run_mode<value>               Switches between export implementations, currently supported: parallel, single thread exports. Possible values single, parallel, default is parallel.
+  --allow_large_results           When specified, enables large destination table sizes for legacy SQL queries.
+  --batch                         When specified, run the query in batch mode. The default value is false.
+  --dry_run                       When specified, the query is validated but not run.
+  --maximum_bytes_billed<value>   An integer that limits the bytes billed for the query. If the query goes beyond the limit, it fails (without incurring a charge). If not specified, the bytes billed is set to the project default.
+  --require_cache                 If specified, run the query only if results can be retrieved from the cache.
+  --require_partition_filter      If specified, a partition filter is required for queries over the supplied table. This flag can only be used with a partitioned table.
+  --use_cache                     When specified, caches the query results. The default value is true.
+  --dataset_id<value>             The default dataset to use for requests.
+  --debug_mode<value>             Set logging level to debug. The default value is false.
+  --job_id<value>                 The unique job ID to use for the request. If not specified in a job creation request, a job ID is generated. This flag applies only to commands that create jobs: cp, extract, load, export, and query.
+  --location<value>               The unique job ID to use for the request. If not specified in a job creation request, a job ID is generated. This flag applies only to commands that create jobs: cp, extract, load, export, and query.
+  --project_id<value>             The project ID to use for requests. The default value is ''.
+  --sync <value>                  If set to true, wait for the command to complete before returning, and use the job completion status as the error code. If set to false, the job is created, and successful completion status is used for the error code. The default value is true.
+  --stats_table<value>            tablespec of table to insert stats
+```
+
 
 ## Environment variables
 
@@ -321,6 +356,7 @@ _BPX_SPAWN_SCRIPT|no| Controls execution in shell. [More details here](https://w
 |'bq export'| [Export](./src/main/scala/com/google/cloud/bqsh/cmd/Export.scala)
 |'bq load'| [Load](./src/main/scala/com/google/cloud/bqsh/cmd/Load.scala)
 |'bq rm'| [Rm](./src/main/scala/com/google/cloud/bqsh/cmd/Rm.scala)
+|'bq export'| [Export](./src/main/scala/com/google/cloud/bqsh/cmd/Export.scala)
 |'gsutil| [Cp](./src/main/scala/com/google/cloud/bqsh/cmd/Cp.scala)
 |'gsutil rm'| [GsUtilRm](./src/main/scala/com/google/cloud/bqsh/cmd/GsUtilRm.scala)
 |'gszutil'| [GsZUtil](./src/main/scala/com/google/cloud/bqsh/cmd/GsZUtil.scala)
