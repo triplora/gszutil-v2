@@ -20,14 +20,14 @@ import java.util.concurrent.{Executors, TimeUnit}
 import scala.concurrent.ExecutionContext.Implicits.global
 import scala.concurrent.Future
 
-class ExportRemoteSpec extends AnyFlatSpec with BeforeAndAfterAll with BeforeAndAfterEach {
+class ExportRemoteITSpec extends AnyFlatSpec with BeforeAndAfterAll with BeforeAndAfterEach {
 
   /**
     * For this test required following ENV variables:
     * BUCKET=GCS bucket
-   * PROJECT=GCS project
-   * COPYBOOK=absolute path to exportCopybook.txt
-   */
+    * PROJECT=GCS project
+    * COPYBOOK=absolute path to exportCopybook.txt
+    */
   val TestBucket = sys.env("BUCKET")
   val TestProject = sys.env("PROJECT")
   val Location = sys.env.getOrElse("LOCATION", "US")

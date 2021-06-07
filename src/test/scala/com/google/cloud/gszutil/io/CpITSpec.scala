@@ -10,7 +10,7 @@ import com.google.cloud.imf.util.CloudLogging
 import com.google.protobuf.ByteString
 import org.scalatest.flatspec.AnyFlatSpec
 
-object CpSpec {
+object CpITSpec {
   val mload1Schema: RecordSchema = {
     val b = Record.newBuilder
       .setVartext(true)
@@ -66,21 +66,21 @@ object CpSpec {
   }
 }
 
-class CpSpec extends AnyFlatSpec {
-  CloudLogging.configureLogging(debugOverride = true, errorLogs = "org.apache"::"io.grpc"::"io.netty"::Nil)
+class CpITSpec extends AnyFlatSpec {
+  CloudLogging.configureLogging(debugOverride = true, errorLogs = "org.apache" :: "io.grpc" :: "io.netty" :: Nil)
   val TestBucket = sys.env("BUCKET")
   val TestProject = sys.env("PROJECT")
 
   "Cp" should "copy vartext" in {
-    val input = new ZDataSet(TestUtil.resource("mload1.dat"),111, 1110)
-    val sp = CpSpec.mload1Schema
+    val input = new ZDataSet(TestUtil.resource("mload1.dat"), 111, 1110)
+    val sp = CpITSpec.mload1Schema
     val cfg = GsUtilConfig(schemaProvider = Option(sp),
-                           gcsUri = s"gs://$TestBucket/mload1.dat",
-                           projectId = TestProject,
-                           datasetId = "dataset",
-                           testInput = Option(input),
-                           parallelism = 1,
-                           replace = true)
+      gcsUri = s"gs://$TestBucket/mload1.dat",
+      projectId = TestProject,
+      datasetId = "dataset",
+      testInput = Option(input),
+      parallelism = 1,
+      replace = true)
     val res = Cp.run(cfg, Linux, Map.empty)
     assert(res.exitCode == 0)
   }

@@ -1,8 +1,5 @@
 package com.google.cloud.bqsh
 
-import java.nio.{ByteBuffer, CharBuffer}
-import java.nio.file.{Files, Paths}
-
 import com.google.cloud.RetryOption
 import com.google.cloud.bigquery.{JobId, QueryJobConfiguration}
 import com.google.cloud.bqsh.cmd.Export
@@ -12,7 +9,10 @@ import org.scalatest.BeforeAndAfterAll
 import org.scalatest.flatspec.AnyFlatSpec
 import org.threeten.bp.Duration
 
-class ExportLocalSpec extends AnyFlatSpec with BeforeAndAfterAll {
+import java.nio.ByteBuffer
+import java.nio.file.{Files, Paths}
+
+class ExportLocalITSpec extends AnyFlatSpec with BeforeAndAfterAll {
 
   /**
     * Provide env variables to execute this test

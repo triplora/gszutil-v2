@@ -47,13 +47,6 @@ class PartialPageIteratorSpec extends AnyFlatSpec {
     assert(!iterator.hasNext())
   }
 
-  it should "return correct page bounds on next() call with only one page2" in {
-    val iterator = new PartialPageIterator[(Long, Long)](0, 3276800, 983040, boundPageFetcher)
-    while (iterator.hasNext()) {
-      println(iterator.next())
-    }
-  }
-
   it should "not crash at construction of an empty iterator" in {
     val iterator = new PartialPageIterator[Unit](0, 0, 1, dummyPageFetcher)
     assert(!iterator.hasNext())

@@ -65,6 +65,8 @@ resourceGenerators in Compile += Def.task {
   Seq(file)
 }.taskValue
 
+Test / testOptions := Seq(Tests.Filter(!_.endsWith("ITSpec")))
+
 scalacOptions ++= Seq(
   "-opt:l:inline",
   "-opt-inline-from:**",
