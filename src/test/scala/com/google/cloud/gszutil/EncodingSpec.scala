@@ -132,9 +132,9 @@ class EncodingSpec extends AnyFlatSpec {
       "00000.001" -> asByteArray(0x00, 0x00, 0x00, 0x0C),
       "0000.01" -> asByteArray(0x00, 0x00, 0x00, 0x1C),
       "0.01" -> asByteArray(0x00, 0x00, 0x00, 0x1C),
-      //"99999.99" -> asByteArray(0x09, 0x99, 0x99, 0x9C),
-      //"99999.999" -> asByteArray(0x09, 0x99, 0x99, 0x9C),
-      //"99999" -> asByteArray(0x09, 0x99, 0x90, 0x0C),
+      "99999.99" -> asByteArray(0x99, 0x99, 0x99, 0x9C),
+      "99999.999" -> asByteArray(0x99, 0x99, 0x99, 0x9C),
+      "99999" -> asByteArray(0x99, 0x99, 0x90, 0x0C),
       "00001" -> asByteArray(0x00, 0x00, 0x10, 0x0C),
       "001" -> asByteArray(0x00, 0x00, 0x10, 0x0C),
       "1" -> asByteArray(0x00, 0x00, 0x10, 0x0C),
@@ -142,8 +142,8 @@ class EncodingSpec extends AnyFlatSpec {
       "000.99" -> asByteArray(0x00, 0x00, 0x09, 0x9C),
       "0.99" -> asByteArray(0x00, 0x00, 0x09, 0x9C),
       "123.4" -> asByteArray(0x00, 0x12, 0x34, 0x0C),
-      //"12345.67" -> asByteArray(0x01, 0x23, 0x45, 0x6C),
-      //"12345.60" -> asByteArray(0x01, 0x23, 0x45, 0x0C),
+      "12345.67" -> asByteArray(0x12, 0x34, 0x56, 0x7C),
+      "12345.60" -> asByteArray(0x12, 0x34, 0x56, 0x0C),
       "0" -> asByteArray(0x00, 0x00, 0x00, 0x0C),
       "0.0" -> asByteArray(0x00, 0x00, 0x00, 0x0C),
       "00000.00" -> asByteArray(0x00, 0x00, 0x00, 0x0C),
@@ -154,9 +154,9 @@ class EncodingSpec extends AnyFlatSpec {
       "-00000.001" -> asByteArray(0x00, 0x00, 0x00, 0x0C),
       "-0000.01" -> asByteArray(0x00, 0x00, 0x00, 0x1D),
       "-0.01" -> asByteArray(0x00, 0x00, 0x00, 0x1D),
-      //"-99999.99" -> asByteArray(0x09, 0x99, 0x99, 0x9D),
-      //"-99999.999" -> asByteArray(0x09, 0x99, 0x99, 0x9D),
-      //"-99999" -> asByteArray(0x09, 0x99, 0x90, 0x0D),
+      "-99999.99" -> asByteArray(0x99, 0x99, 0x99, 0x9D),
+      "-99999.999" -> asByteArray(0x99, 0x99, 0x99, 0x9D),
+      "-99999" -> asByteArray(0x99, 0x99, 0x90, 0x0D),
       "-00001" -> asByteArray(0x00, 0x00, 0x10, 0x0D),
       "-001" -> asByteArray(0x00, 0x00, 0x10, 0x0D),
       "-1" -> asByteArray(0x00, 0x00, 0x10, 0x0D),
@@ -164,28 +164,17 @@ class EncodingSpec extends AnyFlatSpec {
       "-000.99" -> asByteArray(0x00, 0x00, 0x09, 0x9D),
       "-0.99" -> asByteArray(0x00, 0x00, 0x09, 0x9D),
       "-123.4" -> asByteArray(0x00, 0x12, 0x34, 0x0D),
-      //"12345.67" -> asByteArray(0x01, 0x23, 0x45, 0x6D),
-      //"12345.60" -> asByteArray(0x01, 0x23, 0x45, 0x0D),
+      "-12345.67" -> asByteArray(0x12, 0x34, 0x56, 0x7D),
+      "-12345.60" -> asByteArray(0x12, 0x34, 0x56, 0x0D),
       "-0" -> asByteArray(0x00, 0x00, 0x00, 0x0C),
       "-0.0" -> asByteArray(0x00, 0x00, 0x00, 0x0C),
       "-00000.00" -> asByteArray(0x00, 0x00, 0x00, 0x0C),
       null.asInstanceOf[String] -> asByteArray(0x00, 0x00, 0x00, 0x00),
     )
 
-
-    (values ++ negativeValues).map {
-      case (strValue, bytes) => FieldValue.of(Attribute.PRIMITIVE, strValue) -> bytes
-    }.foreach {
-      case (fieldValue, expected) =>
-        val actual = e.encodeValue(fieldValue)
-        if (!expected.sameElements(actual)) {
-          val expectedMessage = expected.map("%02X" format _).mkString("Array(", ", ", ")")
-          val actualMessage = actual.map("%02X" format _).mkString("Array(", ", ", ")")
-          print(s"Expected $expectedMessage, actual $actualMessage")
-        }
-        assertResult(expected)(actual)
-    }
+    assertEncodedValues(e, values ++ negativeValues)
   }
+
   it should "encode decimal (odd size, case 2)" in {
     val e = DecimalToBinaryEncoder(4, 3)
     val values = Map(
@@ -193,9 +182,9 @@ class EncodingSpec extends AnyFlatSpec {
       "0000.001" -> asByteArray(0x00, 0x00, 0x00, 0x1C), //precision loss
       "000.01" -> asByteArray(0x00, 0x00, 0x01, 0x0C),
       "0.01" -> asByteArray(0x00, 0x00, 0x01, 0x0C),
-      //"9999.99" -> asByteArray(0x99, 0x99, 0x99, 0x0C),
-      //"9999.999" -> asByteArray(0x99, 0x99, 0x99, 0x9C), //precision loss
-      //"9999" -> asByteArray(0x99, 0x99, 0x00, 0x0C),
+      "9999.99" -> asByteArray(0x99, 0x99, 0x99, 0x0C),
+      "9999.999" -> asByteArray(0x99, 0x99, 0x99, 0x9C), //precision loss
+      "9999" -> asByteArray(0x99, 0x99, 0x00, 0x0C),
       "0001" -> asByteArray(0x00, 0x01, 0x00, 0x0C),
       "001" -> asByteArray(0x00, 0x01, 0x00, 0x0C),
       "1" -> asByteArray(0x00, 0x01, 0x00, 0x0C),
@@ -203,8 +192,8 @@ class EncodingSpec extends AnyFlatSpec {
       "00.99" -> asByteArray(0x00, 0x00, 0x99, 0x0C),
       "0.99" -> asByteArray(0x00, 0x00, 0x99, 0x0C),
       "123.4" -> asByteArray(0x01, 0x23, 0x40, 0x0C),
-      //"1234.567" -> asByteArray(0x12, 0x34, 0x56, 0x7C),
-      //"1234.560" -> asByteArray(0x12, 0x34, 0x56, 0x0C),
+      "1234.567" -> asByteArray(0x12, 0x34, 0x56, 0x7C),
+      "1234.560" -> asByteArray(0x12, 0x34, 0x56, 0x0C),
       "0" -> asByteArray(0x00, 0x00, 0x00, 0x0C),
       "0.0" -> asByteArray(0x00, 0x00, 0x00, 0x0C),
       "0000.00" -> asByteArray(0x00, 0x00, 0x00, 0x0C),
@@ -215,9 +204,9 @@ class EncodingSpec extends AnyFlatSpec {
       "-0000.001" -> asByteArray(0x00, 0x00, 0x00, 0x1D), //precision loss
       "-000.01" -> asByteArray(0x00, 0x00, 0x01, 0x0D),
       "-0.01" -> asByteArray(0x00, 0x00, 0x01, 0x0D),
-      //"-9999.99" -> asByteArray(0x99, 0x99, 0x99, 0x0D),
-      //"-9999.999" -> asByteArray(0x99, 0x99, 0x99, 0x9D), //precision loss
-      //"-9999" -> asByteArray(0x99, 0x99, 0x00, 0x0D),
+      "-9999.99" -> asByteArray(0x99, 0x99, 0x99, 0x0D),
+      "-9999.999" -> asByteArray(0x99, 0x99, 0x99, 0x9D), //precision loss
+      "-9999" -> asByteArray(0x99, 0x99, 0x00, 0x0D),
       "-0001" -> asByteArray(0x00, 0x01, 0x00, 0x0D),
       "-001" -> asByteArray(0x00, 0x01, 0x00, 0x0D),
       "-1" -> asByteArray(0x00, 0x01, 0x00, 0x0D),
@@ -225,26 +214,14 @@ class EncodingSpec extends AnyFlatSpec {
       "-00.99" -> asByteArray(0x00, 0x00, 0x99, 0x0D),
       "-0.99" -> asByteArray(0x00, 0x00, 0x99, 0x0D),
       "-123.4" -> asByteArray(0x01, 0x23, 0x40, 0x0D),
-      //"-1234.567" -> asByteArray(0x12, 0x34, 0x56, 0x7D),
-      //"-1234.560" -> asByteArray(0x12, 0x34, 0x56, 0x0D),
+      "-1234.567" -> asByteArray(0x12, 0x34, 0x56, 0x7D),
+      "-1234.560" -> asByteArray(0x12, 0x34, 0x56, 0x0D),
       "-0" -> asByteArray(0x00, 0x00, 0x00, 0x0C),
       "-0.0" -> asByteArray(0x00, 0x00, 0x00, 0x0C),
       "-0000.00" -> asByteArray(0x00, 0x00, 0x00, 0x0C),
       null.asInstanceOf[String] -> asByteArray(0x00, 0x00, 0x00, 0x00),
     )
-
-    (values ++ negativeValues).map {
-      case (strValue, bytes) => FieldValue.of(Attribute.PRIMITIVE, strValue) -> bytes
-    }.foreach {
-      case (fieldValue, expected) =>
-        val actual = e.encodeValue(fieldValue)
-        if (!expected.sameElements(actual)) {
-          val expectedMessage = expected.map("%02X" format _).mkString("Array(", ", ", ")")
-          val actualMessage = actual.map("%02X" format _).mkString("Array(", ", ", ")")
-          print(s"Expected $expectedMessage, actual $actualMessage")
-        }
-        assertResult(expected)(actual)
-    }
+    assertEncodedValues(e, values ++ negativeValues)
   }
 
   it should "encode decimal for zero scale (odd size)" in {
@@ -254,9 +231,9 @@ class EncodingSpec extends AnyFlatSpec {
       "00000.001" -> asByteArray(0x00, 0x00, 0x0C), //precision loss
       "0000.01" -> asByteArray(0x00, 0x00, 0x0C), //precision loss
       "0.01" -> asByteArray(0x00, 0x00, 0x0C), //precision loss
-      //"99999.99" -> asByteArray(0x99, 0x99, 0x9C),//precision loss
-      //"99999.999" -> asByteArray(0x99, 0x99, 0x9C), //precision loss
-      //"99999" -> asByteArray(0x99, 0x99, 0x9C),//precision loss
+      "99999.99" -> asByteArray(0x99, 0x99, 0x9C), //precision loss
+      "99999.999" -> asByteArray(0x99, 0x99, 0x9C), //precision loss
+      "99999" -> asByteArray(0x99, 0x99, 0x9C), //precision loss
       "00001" -> asByteArray(0x00, 0x00, 0x1C),
       "001" -> asByteArray(0x00, 0x00, 0x1C),
       "1" -> asByteArray(0x00, 0x00, 0x1C),
@@ -264,8 +241,8 @@ class EncodingSpec extends AnyFlatSpec {
       "000.99" -> asByteArray(0x00, 0x00, 0x0C), //precision loss
       "0.99" -> asByteArray(0x00, 0x00, 0x0C), //precision loss
       "123.4" -> asByteArray(0x00, 0x12, 0x3C), //precision loss
-      //"12345.67" -> asByteArray(0x12, 0x34, 0x5C),
-      //"12345.60" -> asByteArray(0x12, 0x34, 0x5C),
+      "12345.67" -> asByteArray(0x12, 0x34, 0x5C),
+      "12345.60" -> asByteArray(0x12, 0x34, 0x5C),
       "0" -> asByteArray(0x00, 0x00, 0x0C),
       "0.0" -> asByteArray(0x00, 0x00, 0x0C),
       "00000.00" -> asByteArray(0x00, 0x00, 0x0C),
@@ -276,9 +253,9 @@ class EncodingSpec extends AnyFlatSpec {
       "-00000.001" -> asByteArray(0x00, 0x00, 0x0C), //precision loss
       "-0000.01" -> asByteArray(0x00, 0x00, 0x0C), //precision loss
       "-0.01" -> asByteArray(0x00, 0x00, 0x0C), //precision loss
-      //"-99999.99" -> asByteArray(0x99, 0x99, 0x9D),//precision loss
-      //"-99999.999" -> asByteArray(0x99, 0x99, 0x9D), //precision loss
-      //"-99999" -> asByteArray(0x99, 0x99, 0x9D),//precision loss
+      "-99999.99" -> asByteArray(0x99, 0x99, 0x9D), //precision loss
+      "-99999.999" -> asByteArray(0x99, 0x99, 0x9D), //precision loss
+      "-99999" -> asByteArray(0x99, 0x99, 0x9D), //precision loss
       "-00001" -> asByteArray(0x00, 0x00, 0x1D),
       "-001" -> asByteArray(0x00, 0x00, 0x1D),
       "-1" -> asByteArray(0x00, 0x00, 0x1D),
@@ -286,26 +263,14 @@ class EncodingSpec extends AnyFlatSpec {
       "-000.99" -> asByteArray(0x00, 0x00, 0x0C), //precision loss
       "-0.99" -> asByteArray(0x00, 0x00, 0x0C), //precision loss
       "-123.4" -> asByteArray(0x00, 0x12, 0x3D), //precision loss
-      //"-12345.67" -> asByteArray(0x12, 0x34, 0x5D),
-      //"-12345.60" -> asByteArray(0x12, 0x34, 0x5D),
+      "-12345.67" -> asByteArray(0x12, 0x34, 0x5D),
+      "-12345.60" -> asByteArray(0x12, 0x34, 0x5D),
       "-0" -> asByteArray(0x00, 0x00, 0x0C),
       "-0.0" -> asByteArray(0x00, 0x00, 0x0C),
       "-00000.00" -> asByteArray(0x00, 0x00, 0x0C),
       null.asInstanceOf[String] -> asByteArray(0x00, 0x00, 0x00),
     )
-
-    (values ++ negativeNumbers).map {
-      case (strValue, bytes) => FieldValue.of(Attribute.PRIMITIVE, strValue) -> bytes
-    }.foreach {
-      case (fieldValue, expected) =>
-        val actual = e.encodeValue(fieldValue)
-        if (!expected.sameElements(actual)) {
-          val expectedMessage = expected.map("%02X" format _).mkString("Array(", ", ", ")")
-          val actualMessage = actual.map("%02X" format _).mkString("Array(", ", ", ")")
-          print(s"Expected $expectedMessage, actual $actualMessage")
-        }
-        assertResult(expected)(actual)
-    }
+    assertEncodedValues(e, values ++ negativeNumbers)
   }
 
   it should "encode decimal (even size)" in {
@@ -353,26 +318,13 @@ class EncodingSpec extends AnyFlatSpec {
       "-0000.00" -> asByteArray(0x00, 0x00, 0x00, 0x0C),
       null.asInstanceOf[String] -> asByteArray(0x00, 0x00, 0x00, 0x00),
     )
-
-
-    (values ++ negativeValues).map {
-      case (strValue, bytes) => FieldValue.of(Attribute.PRIMITIVE, strValue) -> bytes
-    }.foreach {
-      case (fieldValue, expected) =>
-        val actual = e.encodeValue(fieldValue)
-        if (!expected.sameElements(actual)) {
-          val expectedMessage = expected.map("%02X" format _).mkString("Array(", ", ", ")")
-          val actualMessage = actual.map("%02X" format _).mkString("Array(", ", ", ")")
-          print(s"Expected $expectedMessage, actual $actualMessage")
-        }
-        assertResult(expected)(actual)
-    }
-
+    assertEncodedValues(e, values ++ negativeValues)
     //Illegal values
     assertThrows[IllegalArgumentException](e.encodeValue(FieldValue.of(Attribute.PRIMITIVE, "11111.11")))
     assertThrows[IllegalArgumentException](e.encodeValue(FieldValue.of(Attribute.PRIMITIVE, "11111.111")))
     assertThrows[IllegalArgumentException](e.encodeValue(FieldValue.of(Attribute.PRIMITIVE, "11111")))
   }
+
   it should "encode decimal for zero scale (even size)" in {
     val e = DecimalToBinaryEncoder(4, 0)
     val values = Map(
@@ -416,8 +368,18 @@ class EncodingSpec extends AnyFlatSpec {
       "0000.00" -> asByteArray(0x00, 0x00, 0x0C),
       null.asInstanceOf[String] -> asByteArray(0x00, 0x00, 0x00),
     )
+    assertEncodedValues(e, values ++ negativeValues)
+    //illegal values
+    assertThrows[IllegalArgumentException](e.encodeValue(FieldValue.of(Attribute.PRIMITIVE, "11111.11")))
+    assertThrows[IllegalArgumentException](e.encodeValue(FieldValue.of(Attribute.PRIMITIVE, "11111")))
+  }
 
-    (values ++ negativeValues).map {
+  def asByteArray(bytes: Int*): Array[Byte] = {
+    bytes.map(_.toByte).toArray
+  }
+
+  private def assertEncodedValues(e: BinaryEncoder, valueToBinaryValue: Map[String, Array[Byte]]): Unit = {
+    valueToBinaryValue.map {
       case (strValue, bytes) => FieldValue.of(Attribute.PRIMITIVE, strValue) -> bytes
     }.foreach {
       case (fieldValue, expected) =>
@@ -429,12 +391,6 @@ class EncodingSpec extends AnyFlatSpec {
         }
         assertResult(expected)(actual)
     }
-    //illegal values
-    assertThrows[IllegalArgumentException](e.encodeValue(FieldValue.of(Attribute.PRIMITIVE, "11111.11")))
-    assertThrows[IllegalArgumentException](e.encodeValue(FieldValue.of(Attribute.PRIMITIVE, "11111")))
   }
 
-  def asByteArray(bytes: Int*): Array[Byte] = {
-    bytes.map(_.toByte).toArray
-  }
 }

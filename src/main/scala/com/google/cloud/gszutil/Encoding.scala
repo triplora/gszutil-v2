@@ -136,8 +136,7 @@ object Encoding extends Logging {
       if (x == null)
         Array.fill(size)(0x00)
       else {
-        if (s == 0) PackedDecimal.packScale0(x, size)
-        else PackedDecimal.pack(x, size)
+        PackedDecimal.pack(x, size)
       }
     }
 

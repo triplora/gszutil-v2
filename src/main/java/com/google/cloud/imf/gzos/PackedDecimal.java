@@ -16,20 +16,19 @@
 
 package com.google.cloud.imf.gzos;
 
+import com.ibm.dataaccess.DecimalData;
+
 import java.nio.ByteBuffer;
 
 public class PackedDecimal {
+    private static final int SIGN_SIZE = 1;
+
     public static int sizeOf(int p, int s) {
-        return ((p + s) / 2) + 1;
+        return (p + s) / 2 + 1;
     }
 
-    // doesnt work when scale 0
-    public static int precisionOf(int size, boolean isScale0) {
-        int p = (size - 1) * 2;
-        if (isScale0) {
-            p = p + 1;
-        }
-        return p;
+    public static int precisionOf(int size) {
+        return size * 2 - SIGN_SIZE;
     }
 
     public static long unpack(ByteBuffer buf, int len) {
@@ -85,17 +84,12 @@ public class PackedDecimal {
         return x;
     }
 
-    public static byte[] pack(long x, int len){
-        return pack(x,len,new byte[len],0,false);
+    public static byte[] pack(long x, int len) {
+        return pack(x, len, new byte[len], 0);
     }
 
-    public static byte[] packScale0(long x, int len) {
-        return pack(x,len,new byte[len], 0, true);
-    }
-
-    public static byte[] pack(long x, int len, byte[] buf, int off, boolean isScale0){
-        com.ibm.dataaccess.DecimalData.convertLongToPackedDecimal(x, buf, off,
-                precisionOf(len, isScale0), true);
+    public static byte[] pack(long x, int len, byte[] buf, int off) {
+        DecimalData.convertLongToPackedDecimal(x, buf, off, precisionOf(len), true);
         return buf;
     }
 }
