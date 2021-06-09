@@ -43,8 +43,8 @@ class DecodingSpec extends AnyFlatSpec {
     val minTwoByteInt = -32768
     val maxTwoByteInt = 32767
     val testValues = Seq(minTwoByteInt, -1, 0, 1, 5260, maxTwoByteInt)
-    for (testValue <- testValues){
-      field.putInt(testValue, exampleData,0)
+    for (testValue <- testValues) {
+      field.putInt(testValue, exampleData, 0)
       buf.clear()
       decoder.get(buf, col, 0)
       assert(col.asInstanceOf[LongColumnVector].vector(0) == testValue)
@@ -119,9 +119,9 @@ class DecodingSpec extends AnyFlatSpec {
 
   it should "unpack 4 byte decimal" in {
     val field = new daa.PackedSignedIntP7Field(0)
-    val exampleData = Array[Byte](0x00.toByte,0x00.toByte,0x17.toByte, 0x4D.toByte)
+    val exampleData = Array[Byte](0x00.toByte, 0x00.toByte, 0x17.toByte, 0x4D.toByte)
     val buf = ByteBuffer.wrap(exampleData)
-    val decoder = Decimal64Decoder(7,0)
+    val decoder = Decimal64Decoder(7, 0)
     val col = decoder.columnVector(1)
     // 4 bytes contains 8 half-bytes, with 1 reserved for sign
     // so this field type supports a maximum of 7 digits
@@ -140,7 +140,7 @@ class DecodingSpec extends AnyFlatSpec {
     val field = new daa.PackedSignedLongP11Field(0)
     val exampleData = new Array[Byte](6)
     val buf = ByteBuffer.wrap(exampleData)
-    val decoder = Decimal64Decoder(9,2)
+    val decoder = Decimal64Decoder(9, 2)
     val col = decoder.columnVector(1)
     val w = new HiveDecimalWritable()
     // 6 bytes contains 12 half-bytes, with 1 reserved for sign
@@ -164,7 +164,7 @@ class DecodingSpec extends AnyFlatSpec {
     val field = new daa.PackedSignedLongP18Field(0)
     val exampleData = new Array[Byte](10)
     val buf = ByteBuffer.wrap(exampleData)
-    val decoder = Decimal64Decoder(16,2)
+    val decoder = Decimal64Decoder(16, 2)
     val col = decoder.columnVector(1)
     // 10 bytes contains 20 half-bytes, with 1 reserved for sign
     // but the first half-byte is not usable
@@ -188,15 +188,15 @@ class DecodingSpec extends AnyFlatSpec {
   }
 
   it should "unpack 18 digit decimal" in {
-    val len = PackedDecimal.sizeOf(16,2)
+    val len = PackedDecimal.sizeOf(16, 2)
     val exampleData = Array.fill[Byte](len)(0x00.toByte)
     exampleData(0) = 0x01.toByte
-    exampleData(len-1) = 0x1C.toByte
+    exampleData(len - 1) = 0x1C.toByte
     val buf = ByteBuffer.wrap(exampleData)
     val unpackedLong = PackedDecimal.unpack(ByteBuffer.wrap(exampleData), exampleData.length)
     val expected = 100000000000000001L
     assert(unpackedLong == expected)
-    val decoder = Decimal64Decoder(16,2)
+    val decoder = Decimal64Decoder(16, 2)
     val col = decoder.columnVector(1)
     decoder.get(buf, col, 0)
     val got = col.asInstanceOf[Decimal64ColumnVector].vector(0)
@@ -231,6 +231,85 @@ class DecodingSpec extends AnyFlatSpec {
     //assertThrows[IllegalArgumentException](PackedDecimal.unpack(buf, len))
   }
 
+  it should "decode values" in {
+    val decoder = Decimal64Decoder(5, 2)
+    val values = List(
+      0 -> asByteArray(0x00, 0x00, 0x00, 0x00),
+      0 -> asByteArray(0x00, 0x00, 0x00, 0x0C),
+      0.01 -> asByteArray(0x00, 0x00, 0x00, 0x1C),
+      1 -> asByteArray(0x00, 0x00, 0x10, 0x0C),
+      12345.67 -> asByteArray(0x12, 0x34, 0x56, 0x7C),
+      99999.99 -> asByteArray(0x99, 0x99, 0x99, 0x9C),
+      166666.65 -> asByteArray(0xFF, 0xFF, 0xFF, 0xFF), //no validation here
+
+      //negative values
+      -0 -> asByteArray(0x00, 0x00, 0x00, 0x0D),
+      -0.01 -> asByteArray(0x00, 0x00, 0x00, 0x1D),
+      -1 -> asByteArray(0x00, 0x00, 0x10, 0x0D),
+      -12345.67 -> asByteArray(0x12, 0x34, 0x56, 0x7D),
+      -99999.99 -> asByteArray(0x99, 0x99, 0x99, 0x9D),
+      -166666.65 -> asByteArray(0xFF, 0xFF, 0xFF, 0xFD), //no validation here
+
+      -0 -> asByteArray(0x00, 0x00, 0x00, 0x0B),
+      -0.01 -> asByteArray(0x00, 0x00, 0x00, 0x1B),
+      -1 -> asByteArray(0x00, 0x00, 0x10, 0x0B),
+      -12345.67 -> asByteArray(0x12, 0x34, 0x56, 0x7B),
+      -99999.99 -> asByteArray(0x99, 0x99, 0x99, 0x9B),
+      -166666.65 -> asByteArray(0xFF, 0xFF, 0xFF, 0xFB), //no validation here
+    )
+
+    values.foreach {
+      case (expected, bytes) =>
+        val v = decoder.columnVector(1).asInstanceOf[Decimal64ColumnVector]
+        decoder.get(ByteBuffer.wrap(bytes), v, 0)
+        val actual = v.vector(0) / math.pow(10, v.scale)
+        if (expected != actual)
+          println("Bytes : " + bytes.map("%02X" format _).mkString("Array(", ", ", ")"))
+        assertResult(expected)(actual)
+    }
+  }
+
+  it should "decode values zero scale" in {
+    val decoder = Decimal64Decoder(4, 0)
+    val values = List(
+      0 -> asByteArray(0x00, 0x00, 0x00),
+      0 -> asByteArray(0x00, 0x00, 0x0C),
+      1 -> asByteArray(0x00, 0x00, 0x1C),
+      12 -> asByteArray(0x00, 0x01, 0x2C),
+      1234 -> asByteArray(0x01, 0x23, 0x4C),
+      9999 -> asByteArray(0x09, 0x99, 0x9C),
+      12345 -> asByteArray(0x12, 0x34, 0x5C), //overflow, number of digits should be 4
+      166665 -> asByteArray(0xFF, 0xFF, 0xFF), //no validation here
+
+      //negative values
+      -0 -> asByteArray(0x00, 0x00, 0x0D),
+      -1 -> asByteArray(0x00, 0x00, 0x1D),
+      -12 -> asByteArray(0x00, 0x01, 0x2D),
+      -1234 -> asByteArray(0x01, 0x23, 0x4D),
+      -9999 -> asByteArray(0x09, 0x99, 0x9D),
+      -12345 -> asByteArray(0x12, 0x34, 0x5D), //overflow, number of digits should be 4
+      -166665 -> asByteArray(0xFF, 0xFF, 0xFD), //no validation here
+
+      -0 -> asByteArray(0x00, 0x00, 0x0B),
+      -1 -> asByteArray(0x00, 0x00, 0x1B),
+      -12 -> asByteArray(0x00, 0x01, 0x2B),
+      -1234 -> asByteArray(0x01, 0x23, 0x4B),
+      -9999 -> asByteArray(0x09, 0x99, 0x9B),
+      -12345 -> asByteArray(0x12, 0x34, 0x5B), //overflow, number of digits should be 4
+      -166665 -> asByteArray(0xFF, 0xFF, 0xFB), //no validation here
+    )
+
+    values.foreach {
+      case (expected, bytes) =>
+        val v = decoder.columnVector(1).asInstanceOf[Decimal64ColumnVector]
+        decoder.get(ByteBuffer.wrap(bytes), v, 0)
+        val actual = v.vector(0) / math.pow(10, v.scale)
+        if (expected != actual)
+          println("Bytes : " + bytes.map("%02X" format _).mkString("Array(", ", ", ")"))
+        assertResult(expected)(actual)
+    }
+  }
+
   it should "invalid packed decimal digit" in {
     val len = PackedDecimal.sizeOf(16, 2)
     val exampleData = Array.fill[Byte](len)(0x00.toByte)
@@ -258,8 +337,8 @@ class DecodingSpec extends AnyFlatSpec {
   }
 
   it should "decode string" in {
-    val buf = ByteBuffer.wrap(Array[Byte](228.toByte,201.toByte))
-    val decoder = new StringDecoder(Ebcdic,2)
+    val buf = ByteBuffer.wrap(Array[Byte](228.toByte, 201.toByte))
+    val decoder = new StringDecoder(Ebcdic, 2)
     val col = decoder.columnVector(1)
     decoder.get(buf, col, 0)
     val vec = col.asInstanceOf[BytesColumnVector].vector
@@ -267,16 +346,16 @@ class DecodingSpec extends AnyFlatSpec {
     val x = vec(0)
     val defaultBufferSize = 16384
     assert(x.length == defaultBufferSize)
-    val chars = x.slice(0,2).toSeq
+    val chars = x.slice(0, 2).toSeq
     val expected = "UI".getBytes(Charsets.UTF_8).toSeq
     assert(chars == expected)
   }
 
   it should "decode string as int" in {
-    val examples = Seq((" 0", 0), ("00", 0), ("08",8), ("42",42))
-    val decoder = new StringAsIntDecoder(Ebcdic,2)
+    val examples = Seq((" 0", 0), ("00", 0), ("08", 8), ("42", 42))
+    val decoder = new StringAsIntDecoder(Ebcdic, 2)
     val col = decoder.columnVector(1)
-    for ((a,b) <- examples){
+    for ((a, b) <- examples) {
       val buf = Ebcdic.charset.encode(a)
       decoder.get(buf, col, 0)
       val vec: Array[Long] = col.asInstanceOf[LongColumnVector].vector
@@ -292,12 +371,12 @@ class DecodingSpec extends AnyFlatSpec {
       (exampleDate, ld.toEpochDay, false),
       ("00/00/0000", -1L, true)
     )
-    val decoder = new StringAsDateDecoder(Ebcdic,10, "MM/DD/YYYY")
+    val decoder = new StringAsDateDecoder(Ebcdic, 10, "MM/DD/YYYY")
     val col = decoder.columnVector(examples.length)
     val vec: Array[Long] = col.asInstanceOf[DateColumnVector].vector
     val isNull: Array[Boolean] = col.asInstanceOf[DateColumnVector].isNull
-    for (i <- examples.indices){
-      val (a,b,c) = examples(i)
+    for (i <- examples.indices) {
+      val (a, b, c) = examples(i)
       decoder.get(Ebcdic.charset.encode(a), col, i)
       assert(vec(i) == b)
       assert(isNull(i) == c)
@@ -315,8 +394,8 @@ class DecodingSpec extends AnyFlatSpec {
     val col = decoder.columnVector(examples.length)
     val vec: Array[Long] = col.asInstanceOf[DateColumnVector].vector
     val isNull: Array[Boolean] = col.asInstanceOf[DateColumnVector].isNull
-    for (i <- examples.indices){
-      val (a,b,c) = examples(i)
+    for (i <- examples.indices) {
+      val (a, b, c) = examples(i)
       decoder.get(Ebcdic.charset.encode(a), col, i)
       assert(vec(i) == b)
       assert(isNull(i) == c)
@@ -325,9 +404,9 @@ class DecodingSpec extends AnyFlatSpec {
 
   it should "decode string as decimal" in {
     val examples = Seq(("0000004.82", 482))
-    val decoder = new StringAsDecimalDecoder(Ebcdic,10,9,2)
+    val decoder = new StringAsDecimalDecoder(Ebcdic, 10, 9, 2)
     val col = decoder.columnVector(1)
-    for ((a,b) <- examples){
+    for ((a, b) <- examples) {
       val buf = Ebcdic.charset.encode(a)
       decoder.get(buf, col, 0)
       val vec: Array[Long] = col.asInstanceOf[LongColumnVector].vector
@@ -336,7 +415,7 @@ class DecodingSpec extends AnyFlatSpec {
   }
 
   it should "read dataset as string" in {
-    val data = Seq("SELECT    ","1         ","FROM DUAL ")
+    val data = Seq("SELECT    ", "1         ", "FROM DUAL ")
       .mkString("")
       .getBytes(Charsets.UTF_8)
     val result = Util.records2string(data, 10, Charsets.UTF_8, "\n ")
@@ -352,25 +431,25 @@ class DecodingSpec extends AnyFlatSpec {
       "US.000000001.000100003.07.02/01/2020.02/09/2020.0000002.10.WK. .02/07/2020"
 
     val decoders = Array[Decoder](
-      new StringDecoder(Ebcdic,2),
-      new StringDecoder(Ebcdic,1,filler = true),
-      new StringAsIntDecoder(Ebcdic,9),
-      new StringDecoder(Ebcdic,1,filler = true),
-      new StringAsIntDecoder(Ebcdic,9),
-      new StringDecoder(Ebcdic,1,filler = true),
-      new StringAsIntDecoder(Ebcdic,2),
-      new StringDecoder(Ebcdic,1,filler = true),
-      new StringAsDateDecoder(Ebcdic,10, "MM/DD/YYYY"),
-      new StringDecoder(Ebcdic,1,filler = true),
-      new StringAsDateDecoder(Ebcdic,10, "MM/DD/YYYY"),
-      new StringDecoder(Ebcdic,1,filler = true),
-      new StringAsDecimalDecoder(Ebcdic,10,9,2),
-      new StringDecoder(Ebcdic,1,filler = true),
-      new StringDecoder(Ebcdic,2),
-      new StringDecoder(Ebcdic,1,filler = true),
-      new StringDecoder(Ebcdic,1),
-      new StringDecoder(Ebcdic,1,filler = true),
-      new StringAsDateDecoder(Ebcdic,10, "MM/DD/YYYY")
+      new StringDecoder(Ebcdic, 2),
+      new StringDecoder(Ebcdic, 1, filler = true),
+      new StringAsIntDecoder(Ebcdic, 9),
+      new StringDecoder(Ebcdic, 1, filler = true),
+      new StringAsIntDecoder(Ebcdic, 9),
+      new StringDecoder(Ebcdic, 1, filler = true),
+      new StringAsIntDecoder(Ebcdic, 2),
+      new StringDecoder(Ebcdic, 1, filler = true),
+      new StringAsDateDecoder(Ebcdic, 10, "MM/DD/YYYY"),
+      new StringDecoder(Ebcdic, 1, filler = true),
+      new StringAsDateDecoder(Ebcdic, 10, "MM/DD/YYYY"),
+      new StringDecoder(Ebcdic, 1, filler = true),
+      new StringAsDecimalDecoder(Ebcdic, 10, 9, 2),
+      new StringDecoder(Ebcdic, 1, filler = true),
+      new StringDecoder(Ebcdic, 2),
+      new StringDecoder(Ebcdic, 1, filler = true),
+      new StringDecoder(Ebcdic, 1),
+      new StringDecoder(Ebcdic, 1, filler = true),
+      new StringAsDateDecoder(Ebcdic, 10, "MM/DD/YYYY")
     )
 
     val cols = decoders.map(_.columnVector(8))
@@ -378,7 +457,7 @@ class DecodingSpec extends AnyFlatSpec {
 
     var i = 0
     var pos = 0
-    while (i < decoders.length){
+    while (i < decoders.length) {
       val d = decoders(i)
       val col = cols(i)
 
@@ -400,25 +479,25 @@ class DecodingSpec extends AnyFlatSpec {
 
   it should "decode bigger example with cast" in {
     val decoders = Array[Decoder](
-      new StringDecoder(Ebcdic,2),
-      new StringDecoder(Ebcdic,1,filler = true),
-      new StringAsIntDecoder(Ebcdic,9),
-      new StringDecoder(Ebcdic,1,filler = true),
-      new StringAsIntDecoder(Ebcdic,9),
-      new StringDecoder(Ebcdic,1,filler = true),
-      new StringAsIntDecoder(Ebcdic,2),
-      new StringDecoder(Ebcdic,1,filler = true),
-      new StringAsDateDecoder(Ebcdic,10, "MM/DD/YYYY"),
-      new StringDecoder(Ebcdic,1,filler = true),
-      new StringAsDateDecoder(Ebcdic,10, "MM/DD/YYYY"),
-      new StringDecoder(Ebcdic,1,filler = true),
-      new StringAsDecimalDecoder(Ebcdic,10,9,2),
-      new StringDecoder(Ebcdic,1,filler = true),
-      new StringDecoder(Ebcdic,2),
-      new StringDecoder(Ebcdic,1,filler = true),
-      new StringDecoder(Ebcdic,1),
-      new StringDecoder(Ebcdic,1,filler = true),
-      new StringAsDateDecoder(Ebcdic,10, "MM/DD/YYYY")
+      new StringDecoder(Ebcdic, 2),
+      new StringDecoder(Ebcdic, 1, filler = true),
+      new StringAsIntDecoder(Ebcdic, 9),
+      new StringDecoder(Ebcdic, 1, filler = true),
+      new StringAsIntDecoder(Ebcdic, 9),
+      new StringDecoder(Ebcdic, 1, filler = true),
+      new StringAsIntDecoder(Ebcdic, 2),
+      new StringDecoder(Ebcdic, 1, filler = true),
+      new StringAsDateDecoder(Ebcdic, 10, "MM/DD/YYYY"),
+      new StringDecoder(Ebcdic, 1, filler = true),
+      new StringAsDateDecoder(Ebcdic, 10, "MM/DD/YYYY"),
+      new StringDecoder(Ebcdic, 1, filler = true),
+      new StringAsDecimalDecoder(Ebcdic, 10, 9, 2),
+      new StringDecoder(Ebcdic, 1, filler = true),
+      new StringDecoder(Ebcdic, 2),
+      new StringDecoder(Ebcdic, 1, filler = true),
+      new StringDecoder(Ebcdic, 1),
+      new StringDecoder(Ebcdic, 1, filler = true),
+      new StringAsDateDecoder(Ebcdic, 10, "MM/DD/YYYY")
     )
 
     val batchSize = 8
@@ -427,7 +506,7 @@ class DecodingSpec extends AnyFlatSpec {
     val lrecl = buf.array.length / batchSize
     val rBuf = ByteBuffer.allocate(lrecl)
     val errBuf = ByteBuffer.allocate(lrecl)
-    val (rowId,errCt) = ZReader.readBatch(buf, decoders, cols, batchSize, lrecl, rBuf, errBuf)
+    val (rowId, errCt) = ZReader.readBatch(buf, decoders, cols, batchSize, lrecl, rBuf, errBuf)
     assert(rowId == batchSize)
     assert(errCt == 0)
 
@@ -435,7 +514,7 @@ class DecodingSpec extends AnyFlatSpec {
     buf.clear
     var i = 0
     var pos = 0
-    while (i < decoders.length){
+    while (i < decoders.length) {
       val d = decoders(i)
       val col = cols(i)
 
@@ -457,17 +536,17 @@ class DecodingSpec extends AnyFlatSpec {
     val strCol = cols.head.asInstanceOf[BytesColumnVector]
     val strCol2 = cols(14).asInstanceOf[BytesColumnVector]
     var j = 0
-    while (j < batchSize){
+    while (j < batchSize) {
       val a = strCol.vector(j)
       val start = strCol.start(j)
       val len = strCol.length(j)
-      val s = new String(a,start,len,Charsets.UTF_8)
+      val s = new String(a, start, len, Charsets.UTF_8)
       assert(s == "US", s"row $j")
 
       val a2 = strCol2.vector(j)
       val start2 = strCol2.start(j)
       val len2 = strCol2.length(j)
-      val s2 = new String(a2,start2,len2,Charsets.UTF_8)
+      val s2 = new String(a2, start2, len2, Charsets.UTF_8)
       assert(s2 == "WK", s"row $j")
       j += 1
     }
@@ -485,16 +564,16 @@ class DecodingSpec extends AnyFlatSpec {
 
   it should "nullif" in {
     val examples = Seq(
-      (Array[Byte](0x5b,0x5b,0x4a,0x4a,0,1,2,3),true),
-      (Array[Byte](0x5b,0x5b,0,0,0,1,2,3),false)
+      (Array[Byte](0x5b, 0x5b, 0x4a, 0x4a, 0, 1, 2, 3), true),
+      (Array[Byte](0x5b, 0x5b, 0, 0, 0, 1, 2, 3), false)
     )
 
-    val nullIf = Array[Byte](0x5b,0x5b,0x4a,0x4a)
+    val nullIf = Array[Byte](0x5b, 0x5b, 0x4a, 0x4a)
     Ebcdic.decodeBytes(nullIf)
 
-    for ((example,expected) <- examples) {
+    for ((example, expected) <- examples) {
       val buf = ByteBuffer.wrap(example)
-      val decoder = new NullableStringDecoder(Ebcdic,4, nullIf)
+      val decoder = new NullableStringDecoder(Ebcdic, 4, nullIf)
       val bcv = decoder.columnVector(1)
       decoder.get(buf, bcv, 0)
       assert(bcv.isNull(0) == expected, "should be null")
@@ -517,7 +596,7 @@ class DecodingSpec extends AnyFlatSpec {
     val a = col.vector(0)
     val start = col.start(0)
     val len = col.length(0)
-    val s = new String(a,start,len, Utf8.charset)
+    val s = new String(a, start, len, Utf8.charset)
     assert(s == "0.03")
   }
 
@@ -531,7 +610,7 @@ class DecodingSpec extends AnyFlatSpec {
     val a = col.vector(0)
     val start = col.start(0)
     val len = col.length(0)
-    val s = new String(a,start,len, Utf8.charset)
+    val s = new String(a, start, len, Utf8.charset)
     assert(s == "1234567")
   }
 
@@ -557,4 +636,7 @@ class DecodingSpec extends AnyFlatSpec {
     }
   }
 
+  private def asByteArray(bytes: Int*): Array[Byte] = {
+    bytes.map(_.toByte).toArray
+  }
 }

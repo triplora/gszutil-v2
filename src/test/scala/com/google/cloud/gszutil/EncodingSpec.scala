@@ -127,7 +127,7 @@ class EncodingSpec extends AnyFlatSpec {
 
   it should "encode decimal (odd size)" in {
     val e = DecimalToBinaryEncoder(5, 2)
-    val values = Map(
+    val values = List(
       "00000.01" -> asByteArray(0x00, 0x00, 0x00, 0x1C),
       "00000.001" -> asByteArray(0x00, 0x00, 0x00, 0x0C),
       "0000.01" -> asByteArray(0x00, 0x00, 0x00, 0x1C),
@@ -149,7 +149,7 @@ class EncodingSpec extends AnyFlatSpec {
       "00000.00" -> asByteArray(0x00, 0x00, 0x00, 0x0C),
       null.asInstanceOf[String] -> asByteArray(0x00, 0x00, 0x00, 0x00),
     )
-    val negativeValues = Map(
+    val negativeValues = List(
       "-00000.01" -> asByteArray(0x00, 0x00, 0x00, 0x1D),
       "-00000.001" -> asByteArray(0x00, 0x00, 0x00, 0x0C),
       "-0000.01" -> asByteArray(0x00, 0x00, 0x00, 0x1D),
@@ -177,7 +177,7 @@ class EncodingSpec extends AnyFlatSpec {
 
   it should "encode decimal (odd size, case 2)" in {
     val e = DecimalToBinaryEncoder(4, 3)
-    val values = Map(
+    val values = List(
       "0000.01" -> asByteArray(0x00, 0x00, 0x01, 0x0C),
       "0000.001" -> asByteArray(0x00, 0x00, 0x00, 0x1C), //precision loss
       "000.01" -> asByteArray(0x00, 0x00, 0x01, 0x0C),
@@ -199,7 +199,7 @@ class EncodingSpec extends AnyFlatSpec {
       "0000.00" -> asByteArray(0x00, 0x00, 0x00, 0x0C),
       null.asInstanceOf[String] -> asByteArray(0x00, 0x00, 0x00, 0x00),
     )
-    val negativeValues = Map(
+    val negativeValues = List(
       "-0000.01" -> asByteArray(0x00, 0x00, 0x01, 0x0D),
       "-0000.001" -> asByteArray(0x00, 0x00, 0x00, 0x1D), //precision loss
       "-000.01" -> asByteArray(0x00, 0x00, 0x01, 0x0D),
@@ -226,7 +226,7 @@ class EncodingSpec extends AnyFlatSpec {
 
   it should "encode decimal for zero scale (odd size)" in {
     val e = DecimalToBinaryEncoder(5, 0)
-    val values = Map(
+    val values = List(
       "00000.01" -> asByteArray(0x00, 0x00, 0x0C), //precision loss
       "00000.001" -> asByteArray(0x00, 0x00, 0x0C), //precision loss
       "0000.01" -> asByteArray(0x00, 0x00, 0x0C), //precision loss
@@ -248,7 +248,7 @@ class EncodingSpec extends AnyFlatSpec {
       "00000.00" -> asByteArray(0x00, 0x00, 0x0C),
       null.asInstanceOf[String] -> asByteArray(0x00, 0x00, 0x00),
     )
-    val negativeNumbers = Map(
+    val negativeNumbers = List(
       "-00000.01" -> asByteArray(0x00, 0x00, 0x0C), //precision loss
       "-00000.001" -> asByteArray(0x00, 0x00, 0x0C), //precision loss
       "-0000.01" -> asByteArray(0x00, 0x00, 0x0C), //precision loss
@@ -275,7 +275,7 @@ class EncodingSpec extends AnyFlatSpec {
 
   it should "encode decimal (even size)" in {
     val e = DecimalToBinaryEncoder(4, 2)
-    val values = Map(
+    val values = List(
       "0000.01" -> asByteArray(0x00, 0x00, 0x00, 0x1C),
       "0000.001" -> asByteArray(0x00, 0x00, 0x00, 0x0C), //precision loss
       "000.01" -> asByteArray(0x00, 0x00, 0x00, 0x1C),
@@ -297,7 +297,7 @@ class EncodingSpec extends AnyFlatSpec {
       null.asInstanceOf[String] -> asByteArray(0x00, 0x00, 0x00, 0x00),
     )
 
-    val negativeValues = Map(
+    val negativeValues = List(
       "-0000.01" -> asByteArray(0x00, 0x00, 0x00, 0x1D),
       "-0000.001" -> asByteArray(0x00, 0x00, 0x00, 0x0C), //precision loss
       "-000.01" -> asByteArray(0x00, 0x00, 0x00, 0x1D),
@@ -327,7 +327,7 @@ class EncodingSpec extends AnyFlatSpec {
 
   it should "encode decimal for zero scale (even size)" in {
     val e = DecimalToBinaryEncoder(4, 0)
-    val values = Map(
+    val values = List(
       "0000.01" -> asByteArray(0x00, 0x00, 0x0C), //precision loss
       "000.01" -> asByteArray(0x00, 0x00, 0x0C), //precision loss
       "0.01" -> asByteArray(0x00, 0x00, 0x0C), //precision loss
@@ -348,7 +348,7 @@ class EncodingSpec extends AnyFlatSpec {
       null.asInstanceOf[String] -> asByteArray(0x00, 0x00, 0x00),
     )
 
-    val negativeValues = Map(
+    val negativeValues = List(
       "-0000.01" -> asByteArray(0x00, 0x00, 0x0C), //precision loss
       "-000.01" -> asByteArray(0x00, 0x00, 0x0C), //precision loss
       "-0.01" -> asByteArray(0x00, 0x00, 0x0C), //precision loss
@@ -374,11 +374,11 @@ class EncodingSpec extends AnyFlatSpec {
     assertThrows[IllegalArgumentException](e.encodeValue(FieldValue.of(Attribute.PRIMITIVE, "11111")))
   }
 
-  def asByteArray(bytes: Int*): Array[Byte] = {
+  private def asByteArray(bytes: Int*): Array[Byte] = {
     bytes.map(_.toByte).toArray
   }
 
-  private def assertEncodedValues(e: BinaryEncoder, valueToBinaryValue: Map[String, Array[Byte]]): Unit = {
+  private def assertEncodedValues(e: BinaryEncoder, valueToBinaryValue: List[(String, Array[Byte])]): Unit = {
     valueToBinaryValue.map {
       case (strValue, bytes) => FieldValue.of(Attribute.PRIMITIVE, strValue) -> bytes
     }.foreach {

@@ -38,50 +38,7 @@ public class PackedDecimal {
     }
 
     public static long unpack(byte[] buf, int pos, int len) {
-        long x = 0;
-        int k;
-        int a; // first half-byte nibble
-        int b; // second half-byte nibble
-        int i = pos;
-        int limit = pos + len - 1;
-        while (i < limit) {
-            // get byte as unsigned integer
-            k = buf[i];
-            if (k < 0) k += 256;
-
-            // get hex digit values
-            a = k >>> 4;
-            b = k & 0x0F;
-
-            // validate hex digit values
-            //if (a > 9 || b > 9)
-            //    throw new IllegalArgumentException("Invalid hex digit value " + a + " " + b);
-
-            // add to result
-            x += a;
-            x *= 10L;
-            x += b;
-            x *= 10L;
-            i += 1;
-        }
-
-        // get last byte as unsigned integer
-        k = buf[i];
-        if (k < 0) k += 256;
-
-        // get hex digit values
-        a = k >>> 4;
-        b = k & 0x0F;
-        //if (a > 9)
-        //    throw new IllegalArgumentException("Invalid hex digit value " + a);
-
-        // add digit from first nibble
-        x += a;
-
-        // get sign from second nibble - See PackedDecimal.sign and CommonData.getSign
-        int sign = (b != 0x0D && b != 0x0B) ? 1 : -1;
-        x *= sign;
-        return x;
+        return DecimalData.convertPackedDecimalToLong(buf, pos, precisionOf(len), true);
     }
 
     public static byte[] pack(long x, int len) {
