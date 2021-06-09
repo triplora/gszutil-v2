@@ -12,7 +12,7 @@ import org.threeten.bp.Duration
 import java.nio.ByteBuffer
 import java.nio.file.{Files, Paths}
 
-class ExportLocalITSpec extends AnyFlatSpec with BeforeAndAfterAll {
+class ExportLocalSpec extends AnyFlatSpec with BeforeAndAfterAll {
 
   /**
     * Provide env variables to execute this test

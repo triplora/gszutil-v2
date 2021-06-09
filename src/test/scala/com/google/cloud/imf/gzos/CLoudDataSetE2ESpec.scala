@@ -8,7 +8,7 @@ import org.scalatest.flatspec.AnyFlatSpec
 import java.net.URI
 import scala.util.Try
 
-class CLoudDataSetE2EITSpec extends AnyFlatSpec with BeforeAndAfter {
+class CLoudDataSetE2ESpec extends AnyFlatSpec with BeforeAndAfter {
 
   val gcs = Services.storage(Services.storageCredentials())
 

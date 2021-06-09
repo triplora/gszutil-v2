@@ -67,7 +67,6 @@ object Encoding extends Logging {
   case class StringToBinaryEncoder(transcoder: Transcoder, size: Int) extends BinaryEncoder {
     override type T = String
     override val bqSupportedType: StandardSQLTypeName = StandardSQLTypeName.STRING
-
     override def encode(x: String): Array[Byte] = {
       if (x == null)
         return Array.fill(size)(0x00)
@@ -105,7 +104,6 @@ object Encoding extends Logging {
   case class LongToBinaryEncoder(size: Int) extends BinaryEncoder {
     override type T = java.lang.Long
     override val bqSupportedType: StandardSQLTypeName = StandardSQLTypeName.INT64
-
     override def encode(x: T): Array[Byte] = {
       if (x == null) Array.fill(size)(0x00)
       else Binary.encode(x, size)
@@ -129,14 +127,13 @@ object Encoding extends Logging {
   case class DecimalToBinaryEncoder(p: Int, s: Int) extends BinaryEncoder {
     override type T = java.lang.Long
     override val bqSupportedType: StandardSQLTypeName = StandardSQLTypeName.NUMERIC
-    private val maxValue: BigDecimal = calcMaxValue(p, s)
     override val size: Int = PackedDecimal.sizeOf(p, s)
-
     override def encode(x: T): Array[Byte] = {
       if (x == null)
         Array.fill(size)(0x00)
       else {
-        PackedDecimal.pack(x, size)
+        if (s == 0) PackedDecimal.packScale0(x, size)
+        else PackedDecimal.pack(x, size)
       }
     }
 
@@ -145,10 +142,7 @@ object Encoding extends Logging {
       else {
         value.getValue match {
           case s0: String =>
-            var v1 = BigDecimal(s0)
-            if (maxValue.toLong < v1.toLong) {
-              throw new IllegalArgumentException(s"Decimal overflow '$s0' is larger than $maxValue")
-            }
+            var v1 = s0.toDouble
             var scale = 0
             while (scale < s) {
               v1 *= 10d
@@ -160,19 +154,12 @@ object Encoding extends Logging {
         }
       }
     }
-
-    def calcMaxValue(p: Int, s: Int): BigDecimal = {
-      val left = if (p == 0) "0" else "9" * p
-      val right = if (s == 0) "" else "." + ("9" * p)
-      BigDecimal(left + right)
-    }
   }
 
   case class DateStringToBinaryEncoder() extends BinaryEncoder {
     override type T = String
     override val bqSupportedType: StandardSQLTypeName = StandardSQLTypeName.DATE
     override val size = 4
-
     override def encode(x: String): Array[Byte] = {
       if (x == null)
         Array.fill(size)(0x00)
@@ -214,16 +201,11 @@ object Encoding extends Logging {
 
   case object UnknownTypeEncoder extends BinaryEncoder {
     override type T = Object
-
     override def size = 0
-
     override val bqSupportedType: StandardSQLTypeName = null
-
     override def encode(elem: Object): Array[Byte] =
       throw new UnsupportedOperationException()
-
     override def encodeValue(value: FieldValue): Array[Byte] =
       throw new UnsupportedOperationException()
   }
-
 }

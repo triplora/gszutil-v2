@@ -15,7 +15,7 @@
  */
 organization := "com.google.cloud.imf"
 name := "mainframe-connector"
-version := "5.5.11"
+version := "5.5.10"
 
 scalaVersion := "2.13.1"
 
@@ -64,8 +64,6 @@ resourceGenerators in Compile += Def.task {
   IO.write(file, new java.text.SimpleDateFormat("yyyy/MM/dd HH:mm:ss").format(new java.util.Date))
   Seq(file)
 }.taskValue
-
-Test / testOptions := Seq(Tests.Filter(!_.endsWith("ITSpec")))
 
 scalacOptions ++= Seq(
   "-opt:l:inline",

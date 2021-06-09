@@ -20,7 +20,7 @@ import java.nio.charset.StandardCharsets
 import scala.concurrent.ExecutionContext.Implicits.global
 import scala.concurrent.Future
 
-class CpSpec2ITSpec extends AnyFlatSpec with BeforeAndAfterAll {
+class CpSpec2 extends AnyFlatSpec with BeforeAndAfterAll {
   CloudLogging.configureLogging(debugOverride = true, errorLogs = Seq("io.netty", "org.apache", "io.grpc"))
   val TestBucket = sys.env("BUCKET")
   val TestProject = sys.env("PROJECT")

@@ -211,8 +211,7 @@ class DecodingSpec extends AnyFlatSpec {
     val len = PackedDecimal.sizeOf(16, 2)
     val exampleData = Array.fill[Byte](len)(0x00.toByte)
     val buf = ByteBuffer.wrap(exampleData)
-    assert(0 == PackedDecimal.unpack(ByteBuffer.wrap(exampleData), exampleData.length))
-    //assertThrows[IllegalArgumentException](PackedDecimal.unpack(ByteBuffer.wrap(exampleData), exampleData.length))
+    assertThrows[IllegalArgumentException](PackedDecimal.unpack(ByteBuffer.wrap(exampleData), exampleData.length))
     val decoder = Decimal64Decoder(16, 2)
     val col = decoder.columnVector(1)
     decoder.get(buf, col, 0)
@@ -225,89 +224,9 @@ class DecodingSpec extends AnyFlatSpec {
     val len = PackedDecimal.sizeOf(16, 2)
     val exampleData = Array.fill[Byte](len)(0x00.toByte)
     exampleData.update(len - 2, 0x12)
-    exampleData.update(len - 1, 0x18)
+    exampleData.update(len - 1, 0x10)
     val buf = ByteBuffer.wrap(exampleData)
-    assert(121 == PackedDecimal.unpack(buf, len))
-    //assertThrows[IllegalArgumentException](PackedDecimal.unpack(buf, len))
-  }
-
-  it should "decode values" in {
-    val decoder = Decimal64Decoder(5, 2)
-    val values = List(
-      0 -> asByteArray(0x00, 0x00, 0x00, 0x00),
-      0 -> asByteArray(0x00, 0x00, 0x00, 0x0C),
-      0.01 -> asByteArray(0x00, 0x00, 0x00, 0x1C),
-      1 -> asByteArray(0x00, 0x00, 0x10, 0x0C),
-      12345.67 -> asByteArray(0x12, 0x34, 0x56, 0x7C),
-      99999.99 -> asByteArray(0x99, 0x99, 0x99, 0x9C),
-      166666.65 -> asByteArray(0xFF, 0xFF, 0xFF, 0xFF), //no validation here
-
-      //negative values
-      -0 -> asByteArray(0x00, 0x00, 0x00, 0x0D),
-      -0.01 -> asByteArray(0x00, 0x00, 0x00, 0x1D),
-      -1 -> asByteArray(0x00, 0x00, 0x10, 0x0D),
-      -12345.67 -> asByteArray(0x12, 0x34, 0x56, 0x7D),
-      -99999.99 -> asByteArray(0x99, 0x99, 0x99, 0x9D),
-      -166666.65 -> asByteArray(0xFF, 0xFF, 0xFF, 0xFD), //no validation here
-
-      -0 -> asByteArray(0x00, 0x00, 0x00, 0x0B),
-      -0.01 -> asByteArray(0x00, 0x00, 0x00, 0x1B),
-      -1 -> asByteArray(0x00, 0x00, 0x10, 0x0B),
-      -12345.67 -> asByteArray(0x12, 0x34, 0x56, 0x7B),
-      -99999.99 -> asByteArray(0x99, 0x99, 0x99, 0x9B),
-      -166666.65 -> asByteArray(0xFF, 0xFF, 0xFF, 0xFB), //no validation here
-    )
-
-    values.foreach {
-      case (expected, bytes) =>
-        val v = decoder.columnVector(1).asInstanceOf[Decimal64ColumnVector]
-        decoder.get(ByteBuffer.wrap(bytes), v, 0)
-        val actual = v.vector(0) / math.pow(10, v.scale)
-        if (expected != actual)
-          println("Bytes : " + bytes.map("%02X" format _).mkString("Array(", ", ", ")"))
-        assertResult(expected)(actual)
-    }
-  }
-
-  it should "decode values zero scale" in {
-    val decoder = Decimal64Decoder(4, 0)
-    val values = List(
-      0 -> asByteArray(0x00, 0x00, 0x00),
-      0 -> asByteArray(0x00, 0x00, 0x0C),
-      1 -> asByteArray(0x00, 0x00, 0x1C),
-      12 -> asByteArray(0x00, 0x01, 0x2C),
-      1234 -> asByteArray(0x01, 0x23, 0x4C),
-      9999 -> asByteArray(0x09, 0x99, 0x9C),
-      12345 -> asByteArray(0x12, 0x34, 0x5C), //overflow, number of digits should be 4
-      166665 -> asByteArray(0xFF, 0xFF, 0xFF), //no validation here
-
-      //negative values
-      -0 -> asByteArray(0x00, 0x00, 0x0D),
-      -1 -> asByteArray(0x00, 0x00, 0x1D),
-      -12 -> asByteArray(0x00, 0x01, 0x2D),
-      -1234 -> asByteArray(0x01, 0x23, 0x4D),
-      -9999 -> asByteArray(0x09, 0x99, 0x9D),
-      -12345 -> asByteArray(0x12, 0x34, 0x5D), //overflow, number of digits should be 4
-      -166665 -> asByteArray(0xFF, 0xFF, 0xFD), //no validation here
-
-      -0 -> asByteArray(0x00, 0x00, 0x0B),
-      -1 -> asByteArray(0x00, 0x00, 0x1B),
-      -12 -> asByteArray(0x00, 0x01, 0x2B),
-      -1234 -> asByteArray(0x01, 0x23, 0x4B),
-      -9999 -> asByteArray(0x09, 0x99, 0x9B),
-      -12345 -> asByteArray(0x12, 0x34, 0x5B), //overflow, number of digits should be 4
-      -166665 -> asByteArray(0xFF, 0xFF, 0xFB), //no validation here
-    )
-
-    values.foreach {
-      case (expected, bytes) =>
-        val v = decoder.columnVector(1).asInstanceOf[Decimal64ColumnVector]
-        decoder.get(ByteBuffer.wrap(bytes), v, 0)
-        val actual = v.vector(0) / math.pow(10, v.scale)
-        if (expected != actual)
-          println("Bytes : " + bytes.map("%02X" format _).mkString("Array(", ", ", ")"))
-        assertResult(expected)(actual)
-    }
+    assertThrows[IllegalArgumentException](PackedDecimal.unpack(buf, len))
   }
 
   it should "invalid packed decimal digit" in {
@@ -316,8 +235,7 @@ class DecodingSpec extends AnyFlatSpec {
     exampleData.update(len - 2, 0xFF.toByte)
     exampleData.update(len - 1, 0xFC.toByte)
     val buf = ByteBuffer.wrap(exampleData)
-    println(PackedDecimal.unpack(buf, len))
-    //assertThrows[IllegalArgumentException](PackedDecimal.unpack(buf, len))
+    assertThrows[IllegalArgumentException](PackedDecimal.unpack(buf, len))
   }
 
   it should "transcode EBCDIC" in {
@@ -636,7 +554,4 @@ class DecodingSpec extends AnyFlatSpec {
     }
   }
 
-  private def asByteArray(bytes: Int*): Array[Byte] = {
-    bytes.map(_.toByte).toArray
-  }
 }

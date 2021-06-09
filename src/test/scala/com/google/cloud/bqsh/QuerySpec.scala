@@ -9,7 +9,7 @@ import com.google.cloud.imf.util.{CloudLogging, Services}
 import org.scalatest.flatspec.AnyFlatSpec
 import org.threeten.bp.Duration
 
-class QueryITSpec extends AnyFlatSpec {
+class QuerySpec extends AnyFlatSpec {
   CloudLogging.configureLogging(debugOverride = false)
   "Query" should "parse stats table" in {
     val example = "test-project-id:TEST_DATASET_A.TABLE_NAME"
