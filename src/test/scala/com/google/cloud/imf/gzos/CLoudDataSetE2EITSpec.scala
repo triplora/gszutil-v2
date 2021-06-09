@@ -1,15 +1,14 @@
 package com.google.cloud.imf.gzos
 
-import java.net.URI
-
 import com.google.cloud.imf.util.Services
 import com.google.cloud.storage.{BlobId, BlobInfo, Storage}
-import org.scalatest.{BeforeAndAfter}
+import org.scalatest.BeforeAndAfter
 import org.scalatest.flatspec.AnyFlatSpec
 
+import java.net.URI
 import scala.util.Try
 
-class CLoudDataSetE2ESpec extends AnyFlatSpec with BeforeAndAfter {
+class CLoudDataSetE2EITSpec extends AnyFlatSpec with BeforeAndAfter {
 
   val gcs = Services.storage(Services.storageCredentials())
 

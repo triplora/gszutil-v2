@@ -4,10 +4,10 @@ import com.google.cloud.bqsh.cmd.Load
 import com.google.cloud.gszutil.TestUtil
 import com.google.cloud.imf.gzos.Linux
 import com.google.cloud.imf.util.Services
-import com.google.cloud.storage.{BlobId, BlobInfo, Storage}
+import com.google.cloud.storage.{BlobId, BlobInfo}
 import org.scalatest.flatspec.AnyFlatSpec
 
-class LoadSpec extends AnyFlatSpec {
+class LoadITSpec extends AnyFlatSpec {
 
   val projectId = sys.env("PROJECT_ID")
   val location = sys.env.getOrElse("LOCATION", "US")

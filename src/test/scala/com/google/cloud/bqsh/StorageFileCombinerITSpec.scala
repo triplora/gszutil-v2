@@ -8,7 +8,7 @@ import org.scalatest.flatspec.AnyFlatSpec
 
 import java.net.URI
 
-class StorageFileCombinerSpec extends AnyFlatSpec with BeforeAndAfterEach {
+class StorageFileCombinerITSpec extends AnyFlatSpec with BeforeAndAfterEach {
 
   val TestBucket = sys.env("BUCKET")
 

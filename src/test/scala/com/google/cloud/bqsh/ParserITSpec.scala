@@ -18,7 +18,7 @@ package com.google.cloud.bqsh
 
 import org.scalatest.flatspec.AnyFlatSpec
 
-class ParserSpec extends AnyFlatSpec {
+class ParserITSpec extends AnyFlatSpec {
   "MkOptionParser" should "parse" in {
     val args = Seq(
       "bq",

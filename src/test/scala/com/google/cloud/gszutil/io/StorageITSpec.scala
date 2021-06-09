@@ -16,18 +16,17 @@
 
 package com.google.cloud.gszutil.io
 
-import java.io.InputStream
-import java.nio.charset.StandardCharsets
-
 import com.google.cloud.bqsh.cmd.Scp
 import com.google.cloud.imf.grecv.server.GRecvServerListener
 import com.google.cloud.imf.util.Services
 import com.google.cloud.storage.BlobId
 import org.scalatest.flatspec.AnyFlatSpec
 
+import java.io.InputStream
+import java.nio.charset.StandardCharsets
 import scala.util.Random
 
-class StorageSpec extends AnyFlatSpec {
+class StorageITSpec extends AnyFlatSpec {
 
   "gcs" should "serve gzip" in {
     val gcs = Services.storage()

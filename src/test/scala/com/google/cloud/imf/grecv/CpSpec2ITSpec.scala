@@ -1,12 +1,9 @@
 package com.google.cloud.imf.grecv
 
-import java.nio.charset.StandardCharsets
-
 import com.google.cloud.bqsh.GsUtilConfig
 import com.google.cloud.bqsh.cmd.Cp
 import com.google.cloud.gszutil.io.ZDataSet
-import com.google.cloud.gszutil.{SchemaProvider, TestUtil}
-import com.google.cloud.gszutil.{CopyBook, RecordSchema}
+import com.google.cloud.gszutil.{CopyBook, RecordSchema, SchemaProvider, TestUtil}
 import com.google.cloud.imf.grecv.client.GRecvClient
 import com.google.cloud.imf.grecv.server.GRecvServer
 import com.google.cloud.imf.gzos.gen.DataGenUtil
@@ -19,17 +16,19 @@ import com.google.protobuf.util.JsonFormat
 import org.scalatest.BeforeAndAfterAll
 import org.scalatest.flatspec.AnyFlatSpec
 
+import java.nio.charset.StandardCharsets
 import scala.concurrent.ExecutionContext.Implicits.global
 import scala.concurrent.Future
 
-class CpSpec2 extends AnyFlatSpec with BeforeAndAfterAll {
-  CloudLogging.configureLogging(debugOverride = true, errorLogs = Seq("io.netty","org.apache","io.grpc"))
+class CpSpec2ITSpec extends AnyFlatSpec with BeforeAndAfterAll {
+  CloudLogging.configureLogging(debugOverride = true, errorLogs = Seq("io.netty", "org.apache", "io.grpc"))
   val TestBucket = sys.env("BUCKET")
   val TestProject = sys.env("PROJECT")
 
   val bqFunc = (x: String, y: String, _: ByteString) => Services.bigQuery(x, y, Services.storageCredentials())
   val bqStorageFunc = (_: ByteString) => Services.bigQueryStorage(Services.storageCredentials())
-  def server(cfg: GRecvConfig): Future[GRecvServer] = Future{
+
+  def server(cfg: GRecvConfig): Future[GRecvServer] = Future {
     val s = new GRecvServer(cfg, _ => Services.storage(), bqStorageFunc, _ => Services.storageApi(Services.storageCredentials()), bqFunc)
     s.start(block = false)
     s

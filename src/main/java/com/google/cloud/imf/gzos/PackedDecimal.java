@@ -16,20 +16,19 @@
 
 package com.google.cloud.imf.gzos;
 
+import com.ibm.dataaccess.DecimalData;
+
 import java.nio.ByteBuffer;
 
 public class PackedDecimal {
+    private static final int SIGN_SIZE = 1;
+
     public static int sizeOf(int p, int s) {
-        return ((p + s) / 2) + 1;
+        return (p + s) / 2 + 1;
     }
 
-    // doesnt work when scale 0
-    public static int precisionOf(int size, boolean isScale0) {
-        int p = (size - 1) * 2;
-        if (isScale0) {
-            p = p + 1;
-        }
-        return p;
+    public static int precisionOf(int size) {
+        return size * 2 - SIGN_SIZE;
     }
 
     public static long unpack(ByteBuffer buf, int len) {
@@ -39,63 +38,15 @@ public class PackedDecimal {
     }
 
     public static long unpack(byte[] buf, int pos, int len) {
-        long x = 0;
-        int k;
-        int a; // first half-byte nibble
-        int b; // second half-byte nibble
-        int i = pos;
-        int limit = pos + len - 1;
-        while (i < limit) {
-            // get byte as unsigned integer
-            k = buf[i];
-            if (k < 0) k += 256;
-
-            // get hex digit values
-            a = k >>> 4;
-            b = k & 0x0F;
-
-            // validate hex digit values
-            //if (a > 9 || b > 9)
-            //    throw new IllegalArgumentException("Invalid hex digit value " + a + " " + b);
-
-            // add to result
-            x += a;
-            x *= 10L;
-            x += b;
-            x *= 10L;
-            i += 1;
-        }
-
-        // get last byte as unsigned integer
-        k = buf[i];
-        if (k < 0) k += 256;
-
-        // get hex digit values
-        a = k >>> 4;
-        b = k & 0x0F;
-        //if (a > 9)
-        //    throw new IllegalArgumentException("Invalid hex digit value " + a);
-
-        // add digit from first nibble
-        x += a;
-
-        // get sign from second nibble - See PackedDecimal.sign and CommonData.getSign
-        int sign = (b != 0x0D && b != 0x0B) ? 1 : -1;
-        x *= sign;
-        return x;
+        return DecimalData.convertPackedDecimalToLong(buf, pos, precisionOf(len), true);
     }
 
-    public static byte[] pack(long x, int len){
-        return pack(x,len,new byte[len],0,false);
+    public static byte[] pack(long x, int len) {
+        return pack(x, len, new byte[len], 0);
     }
 
-    public static byte[] packScale0(long x, int len) {
-        return pack(x,len,new byte[len], 0, true);
-    }
-
-    public static byte[] pack(long x, int len, byte[] buf, int off, boolean isScale0){
-        com.ibm.dataaccess.DecimalData.convertLongToPackedDecimal(x, buf, off,
-                precisionOf(len, isScale0), true);
+    public static byte[] pack(long x, int len, byte[] buf, int off) {
+        DecimalData.convertLongToPackedDecimal(x, buf, off, precisionOf(len), true);
         return buf;
     }
 }
