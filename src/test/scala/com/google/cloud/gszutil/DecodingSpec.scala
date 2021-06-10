@@ -234,7 +234,6 @@ class DecodingSpec extends AnyFlatSpec {
   it should "decode values" in {
     val decoder = Decimal64Decoder(5, 2)
     val values = List(
-      0 -> asByteArray(0x00, 0x00, 0x00, 0x00),
       0 -> asByteArray(0x00, 0x00, 0x00, 0x0C),
       0.01 -> asByteArray(0x00, 0x00, 0x00, 0x1C),
       1 -> asByteArray(0x00, 0x00, 0x10, 0x0C),
@@ -265,14 +264,20 @@ class DecodingSpec extends AnyFlatSpec {
         val actual = v.vector(0) / math.pow(10, v.scale)
         if (expected != actual)
           println("Bytes : " + bytes.map("%02X" format _).mkString("Array(", ", ", ")"))
+        assert(!v.isNull(0))
         assertResult(expected)(actual)
     }
+
+    //nulls
+    val v = decoder.columnVector(1).asInstanceOf[Decimal64ColumnVector]
+    decoder.get(ByteBuffer.wrap(asByteArray(0x00, 0x00, 0x00, 0x00)), v, 0)
+    assertResult(0)(v.vector(0))
+    assert(v.isNull(0))
   }
 
   it should "decode values zero scale" in {
     val decoder = Decimal64Decoder(4, 0)
     val values = List(
-      0 -> asByteArray(0x00, 0x00, 0x00),
       0 -> asByteArray(0x00, 0x00, 0x0C),
       1 -> asByteArray(0x00, 0x00, 0x1C),
       12 -> asByteArray(0x00, 0x01, 0x2C),
@@ -306,8 +311,15 @@ class DecodingSpec extends AnyFlatSpec {
         val actual = v.vector(0) / math.pow(10, v.scale)
         if (expected != actual)
           println("Bytes : " + bytes.map("%02X" format _).mkString("Array(", ", ", ")"))
+        assert(!v.isNull(0))
         assertResult(expected)(actual)
     }
+
+    //nulls
+    val v = decoder.columnVector(1).asInstanceOf[Decimal64ColumnVector]
+    decoder.get(ByteBuffer.wrap(asByteArray(0x00, 0x00, 0x00)), v, 0)
+    assertResult(0)(v.vector(0))
+    assert(v.isNull(0))
   }
 
   it should "invalid packed decimal digit" in {
