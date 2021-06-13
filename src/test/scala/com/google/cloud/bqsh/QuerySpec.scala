@@ -5,12 +5,11 @@ import com.google.cloud.bigquery.JobStatistics.QueryStatistics
 import com.google.cloud.bigquery.{FieldValueList, JobId, QueryJobConfiguration}
 import com.google.cloud.bqsh.cmd.Query
 import com.google.cloud.imf.gzos.Util
-import com.google.cloud.imf.util.{CloudLogging, Services}
+import com.google.cloud.imf.util.Services
 import org.scalatest.flatspec.AnyFlatSpec
 import org.threeten.bp.Duration
 
 class QuerySpec extends AnyFlatSpec {
-  CloudLogging.configureLogging(debugOverride = false)
   "Query" should "parse stats table" in {
     val example = "test-project-id:TEST_DATASET_A.TABLE_NAME"
     val resolved = BQ.resolveTableSpec(example, "", "")

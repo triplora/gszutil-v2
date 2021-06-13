@@ -86,7 +86,7 @@ class BqSelectResultParallelExporter(cfg: ExportConfig,
               exporter.exportData(iterator.next(), tableSchema, sp.encoders) match {
                 case Result(_, 0, rowsWritten, _) =>
                   rowsProcessed = rowsProcessed + rowsWritten
-                  logger.debug(s"$partitionName, exported by thread=[${Thread.currentThread().getName}]: [$rowsProcessed / $totalPartitionRows], " +
+                  logger.info(s"$partitionName, exported by thread=[${Thread.currentThread().getName}]: [$rowsProcessed / $totalPartitionRows], " +
                     s"total exported: [${exportedRows.addAndGet(rowsWritten)} / $totalRowsToExport]")
                   if (rowsProcessed > totalPartitionRows)
                     throw new IllegalStateException(s"$partitionName Internal issue, to many rows exported!!!")

@@ -4,7 +4,6 @@ import com.google.cloud.bigquery._
 import com.google.cloud.bqsh.cmd.Result
 import com.google.cloud.gszutil.Encoding._
 import com.google.cloud.gszutil.{BinaryEncoder, Transcoder}
-import com.google.cloud.imf.util.CloudLogging
 
 import java.nio.ByteBuffer
 
@@ -39,13 +38,12 @@ object MVSBinaryRowEncoder {
                               value: FieldValue,
                               transcoder: Transcoder,
                               buf: ByteBuffer): Unit = {
-    CloudLogging.stdout(s"MVSBinaryRowEncoder Encoding ${value.getValue} of BQ type: $typ.")
     typ match {
       case StandardSQLTypeName.STRING =>
         if (!value.isNull) {
           val str = value.getStringValue
-          val payLoad = StringToBinaryEncoder(transcoder, str.size).encode(str)
-          buf.put(payLoad, buf.position(), str.size)
+          val payLoad = StringToBinaryEncoder(transcoder, str.length).encode(str)
+          buf.put(payLoad, buf.position(), str.length)
         } else {
           buf.put(StringToBinaryEncoder(transcoder, 1).encode(null))
         }
@@ -56,7 +54,7 @@ object MVSBinaryRowEncoder {
           buf.put(DecimalToBinaryEncoder(typedVal.precision(), typedVal.scale()).encode(long))
         } else {
           val encoder = DecimalToBinaryEncoder(5, 0).encode(null)
-          buf.put(encoder, buf.position(), encoder.size)
+          buf.put(encoder, buf.position(), encoder.length)
         }
       case StandardSQLTypeName.INT64 =>
         val encoder = LongToBinaryEncoder(4)

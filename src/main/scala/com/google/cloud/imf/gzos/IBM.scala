@@ -16,8 +16,6 @@
 
 package com.google.cloud.imf.gzos
 
-import java.nio.file.{Files, Paths}
-
 import com.google.cloud.gszutil
 import com.google.cloud.gszutil.CopyBook
 import com.google.cloud.gszutil.io.{ZRecordReaderT, ZRecordWriterT}
@@ -25,17 +23,20 @@ import com.google.cloud.imf.gzos.MVSStorage.DSN
 import com.google.cloud.imf.gzos.Util.GoogleCredentialsProvider
 import com.google.cloud.imf.gzos.ZOS.{PDSIterator, RecordIterator}
 import com.google.cloud.imf.gzos.pb.GRecvProto.ZOSJobInfo
-import com.google.cloud.imf.util.{CloudLogging, Logging, Services}
+import com.google.cloud.imf.util.{Logging, Services}
 import com.google.common.base.Charsets
 import com.google.common.io.ByteStreams
+
+import java.nio.file.{Files, Paths}
 
 
 object IBM extends MVS with Logging {
   override def isIBM: Boolean = true
+
   override def init(): Unit = {
     ZOS.addCCAProvider()
     System.setProperty("java.net.preferIPv4Stack", "true")
-    CloudLogging.stdout("Mainframe Connector Build Info: " + Util.readS("build.txt"))
+    logger.info("Mainframe Connector Build Info: " + Util.readS("build.txt"))
 
     ZOS.listDDs
   }

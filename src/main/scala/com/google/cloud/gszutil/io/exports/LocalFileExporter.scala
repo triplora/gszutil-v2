@@ -5,7 +5,7 @@ import com.google.cloud.bqsh.cmd.Result
 import com.google.cloud.gszutil.BinaryEncoder
 import com.google.cloud.gszutil.Encoding.StringToBinaryEncoder
 import com.google.cloud.imf.gzos.Ebcdic
-import com.google.cloud.imf.util.{CloudLogging, Logging}
+import com.google.cloud.imf.util.Logging
 
 import java.nio.ByteBuffer
 import scala.collection.mutable.ListBuffer
@@ -37,7 +37,7 @@ class LocalFileExporter extends FileExporter with Logging {
           val sb = new StringBuilder
           sb.append("Export failed to encode row:\n")
           sb.append("Field Name\tBQ Type\tEncoder\tValue\n")
-          (0 until math.max(bqFields.length,row.size())).foreach{i =>
+          (0 until math.max(bqFields.length, row.size())).foreach { i =>
             val field = bqFields.lift(i)
             val name = field.map(_.getName).getOrElse("None")
             val bqType = field.map(_.getType.getStandardType.toString).getOrElse("None")
@@ -46,9 +46,8 @@ class LocalFileExporter extends FileExporter with Logging {
             sb.append(s"$name\t$bqType\t$encoder\t$value\n")
           }
           val msg = sb.result()
-          CloudLogging.stdout(msg)
-          CloudLogging.stderr(msg)
-          CloudLogging.stderr(s"\n${err.message}")
+          logger.error(msg)
+          logger.error(s"\n${err.message}")
           return err
       }
     }
@@ -57,8 +56,8 @@ class LocalFileExporter extends FileExporter with Logging {
 
   override def validateExport(bqSchema: FieldList, mvsEncoders: Array[BinaryEncoder]): Unit = {
 
-    val queryLRECL = mvsEncoders.map(_.size).foldLeft(0)(_ + _)
-    CloudLogging.stdout(
+    val queryLRECL = mvsEncoders.map(_.size).sum
+    logger.info(
       s"""BINARY EXPORT
          |OUTPUT FILE LRECL = ${export.lRecl}
          |OUTPUT FILE RECFM = ${export.recfm}
@@ -88,7 +87,7 @@ class LocalFileExporter extends FileExporter with Logging {
       val e = mvsEncoders.lift(i).map{x =>s"${x.bqSupportedType}\t$x"}.getOrElse("\t")
       s"$i\t$f\t$e"
     }.mkString("\n")
-    CloudLogging.stdout(s"LocalFileExporter Starting BigQuery Export:\n" +
+    logger.info(s"LocalFileExporter Starting BigQuery Export:\n" +
       s"Field Name\tBQ Type\tEnc Type\tEncoder\n$tbl")
 
     val bqTypes: Array[StandardSQLTypeName] =
@@ -100,8 +99,7 @@ class LocalFileExporter extends FileExporter with Logging {
     if (nCols != nEnc) {
       val msg = s"InterpreterContext ERROR Export schema mismatch:\nBigQuery field count $nCols " +
         s"!= $nEnc encoders"
-      CloudLogging.stdout(msg)
-      CloudLogging.stderr(msg)
+      logger.error(msg)
       throw new RuntimeException(s"Export validation failure: $msg")
     }
 
@@ -113,15 +111,14 @@ class LocalFileExporter extends FileExporter with Logging {
         val fields =
           x.map(i => s"$i\t${bqFields(i).getName}\t${bqTypes(i)}\t${encTypes(i)}").mkString("\n")
         val msg = s"LocalFileExporter ERROR Export field type mismatch:\n$fields"
-        CloudLogging.stdout(msg)
-        CloudLogging.stderr(msg)
+        logger.error(msg)
         throw new RuntimeException(s"Export validation failure:  $msg")
       case _ =>
     }
   }
 
   override def exportPipeDelimitedRows(rows: java.lang.Iterable[FieldValueList], rowsCount: Long): Result = {
-    CloudLogging.stdout("Exporting row(s) as pipe-delimited string(s)...")
+    logger.info("Exporting row(s) as pipe-delimited string(s)...")
     def run(): Int = {
       var processedRows = 0
       val halfOfMili = 500 * 1000
@@ -144,13 +141,13 @@ class LocalFileExporter extends FileExporter with Logging {
           processedRows += 1
 
           if (rowsCount > halfOfMili  && processedRows % halfOfMili == 0) {
-            CloudLogging.stdout(s"$processedRows Rows exported...")
+            logger.info(s"$processedRows Rows exported...")
           }
       }
       processedRows
     }
 
-    Try(run) match {
+    Try(run()) match {
       case Success(r) => Result(activityCount = r)
       case Failure(t) => throw t
     }

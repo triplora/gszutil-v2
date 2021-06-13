@@ -6,7 +6,6 @@ import com.google.cloud.gszutil.{RecordSchema, TestUtil}
 import com.google.cloud.imf.gzos.pb.GRecvProto.Record
 import com.google.cloud.imf.gzos.pb.GRecvProto.Record.Field
 import com.google.cloud.imf.gzos.{Ebcdic, Linux}
-import com.google.cloud.imf.util.CloudLogging
 import com.google.protobuf.ByteString
 import org.scalatest.flatspec.AnyFlatSpec
 
@@ -67,7 +66,6 @@ object CpSpec {
 }
 
 class CpSpec extends AnyFlatSpec {
-  CloudLogging.configureLogging(debugOverride = true, errorLogs = "org.apache" :: "io.grpc" :: "io.netty" :: Nil)
   val TestBucket = sys.env("BUCKET")
   val TestProject = sys.env("PROJECT")
 
