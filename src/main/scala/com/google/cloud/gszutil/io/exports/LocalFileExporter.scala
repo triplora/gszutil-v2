@@ -16,17 +16,19 @@ class LocalFileExporter extends FileExporter with Logging {
   override def isOpen: Boolean = export != null
   override def currentExport: FileExport = export
   override def newExport(e: FileExport): Unit = export = e
-  override def endIfOpen(): Unit = export.close()
+
+  override def endIfOpen(): Unit = if (isOpen) export.close()
+
   override def exportBQSelectResult(rows: java.lang.Iterable[FieldValueList],
                                     bqSchema: FieldList,
                                     mvsEncoders: Array[BinaryEncoder]): Result = {
 
     val nCols = bqSchema.size()
-    val bqFields = (0 until nCols).map{i => bqSchema.get(i)}
+    val bqFields = (0 until nCols).map { i => bqSchema.get(i) }
     var rowsCounter = 0
 
     val buf = ByteBuffer.allocate(export.lRecl)
-    rows.forEach{row =>
+    rows.forEach { row =>
       buf.clear()
       MVSBinaryRowEncoder.toBinary(row, mvsEncoders, buf) match {
         case result if result.exitCode == 0 =>
