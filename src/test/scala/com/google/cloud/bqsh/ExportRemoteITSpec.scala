@@ -9,7 +9,7 @@ import com.google.cloud.gszutil.io.exports._
 import com.google.cloud.imf.grecv.GRecvConfig
 import com.google.cloud.imf.grecv.server.GRecvServer
 import com.google.cloud.imf.gzos.{Ebcdic, Linux}
-import com.google.cloud.imf.util.{CloudLogging, Services}
+import com.google.cloud.imf.util.Services
 import com.google.cloud.storage.BlobId
 import com.google.protobuf.ByteString
 import org.scalatest.flatspec.AnyFlatSpec
@@ -31,8 +31,6 @@ class ExportRemoteITSpec extends AnyFlatSpec with BeforeAndAfterAll with BeforeA
   val TestBucket = sys.env("BUCKET")
   val TestProject = sys.env("PROJECT")
   val Location = sys.env.getOrElse("LOCATION", "US")
-
-  CloudLogging.configureLogging(debugOverride = true, errorLogs = Seq("io.netty","org.apache","io.grpc"))
 
   val bqFunc = (project: String, location: String, _ : ByteString) => Services.bigQuery(project, location, Services.bigqueryCredentials())
   val bqStorageFunc = (_ : ByteString) => Services.bigQueryStorage(Services.bigqueryCredentials())

@@ -67,7 +67,6 @@ object CpITSpec {
 }
 
 class CpITSpec extends AnyFlatSpec {
-  CloudLogging.configureLogging(debugOverride = true, errorLogs = "org.apache" :: "io.grpc" :: "io.netty" :: Nil)
   val TestBucket = sys.env("BUCKET")
   val TestProject = sys.env("PROJECT")
 

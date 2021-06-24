@@ -10,7 +10,7 @@ import com.google.cloud.imf.gzos.gen.DataGenUtil
 import com.google.cloud.imf.gzos.pb.GRecvProto.Record.Field
 import com.google.cloud.imf.gzos.pb.GRecvProto.{GRecvRequest, Record}
 import com.google.cloud.imf.gzos.{Linux, PackedDecimal, Util}
-import com.google.cloud.imf.util.{CloudLogging, Services}
+import com.google.cloud.imf.util.Services
 import com.google.protobuf.ByteString
 import com.google.protobuf.util.JsonFormat
 import org.scalatest.BeforeAndAfterAll
@@ -21,7 +21,6 @@ import scala.concurrent.ExecutionContext.Implicits.global
 import scala.concurrent.Future
 
 class CpSpec2ITSpec extends AnyFlatSpec with BeforeAndAfterAll {
-  CloudLogging.configureLogging(debugOverride = true, errorLogs = Seq("io.netty", "org.apache", "io.grpc"))
   val TestBucket = sys.env("BUCKET")
   val TestProject = sys.env("PROJECT")
 

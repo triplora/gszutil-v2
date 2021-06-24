@@ -16,10 +16,9 @@
 
 package com.google.cloud.bqsh
 
-import com.google.api.services.logging.v2.LoggingScopes
-import com.google.cloud.bqsh.cmd.{Cp, Export, GsUtilRm, GsZUtil, JCLUtil, Load, Mk, Query, Result, Rm, Scp, SdsfUtil}
+import com.google.cloud.bqsh.cmd._
 import com.google.cloud.imf.gzos.{MVS, Util}
-import com.google.cloud.imf.util.{CloudLogging, Logging, Services}
+import com.google.cloud.imf.util.{Logging, Services}
 
 import scala.collection.mutable
 import scala.collection.mutable.ListBuffer
@@ -31,22 +30,18 @@ object Bqsh extends Logging {
     val zos = Util.zProvider
     zos.init()
     val script = zos.readStdin()
-    CloudLogging.configureLogging(debugOverride = false, sys.env,
-      errorLogs = Seq("org.apache.orc","io.grpc","io.netty","org.apache.http"),
-      credentials = zos.getCredentialProvider().getCredentials.createScoped(LoggingScopes.LOGGING_WRITE))
 
     logger.info(s"Passed args: ${args.length}")
     logger.info("-------------------------------------------------")
 
     val jobInfoMap = Util.toMap(zos.getInfo)
-    val cloudLogger = CloudLogging.getLogger("bqsh")
-    cloudLogger.setData(jobInfoMap)
     jobInfoMap.put("script", script)
-    cloudLogger.log("Started BQSH", jobInfoMap, CloudLogging.Info)
+    logger.info("Started BQSH")
+    logger.info(jobInfoMap)
 
     // TODO collect job-specific environment variables from parm file
-    val jobEnv: Map[String,String] = sys.env
-    val interpreter = new Interpreter(zos, jobEnv,true, true)
+    val jobEnv: Map[String, String] = sys.env
+    val interpreter = new Interpreter(zos, jobEnv, true, true)
     val result = interpreter.runScript(script)
     if (result.exitCode == 0) Util.exit
     else System.exit(result.exitCode)
@@ -113,7 +108,7 @@ object Bqsh extends Logging {
   def exec(args: Seq[String], zos: MVS, env: Map[String,String]): Result = {
     BqshParser.parse(args, env) match {
       case Some(cmd) =>
-        CloudLogging.stdout(s"+ ${cmd.name} ${cmd.args.mkString(" ")}")
+        logger.info(s"+ ${cmd.name} ${cmd.args.mkString(" ")}")
         val sub = cmd.args.headOption.getOrElse("")
         val subArgs = cmd.args.drop(1)
         if (cmd.name == "bq"){
@@ -421,7 +416,7 @@ object Bqsh extends Logging {
 
   def eval(cmd: ShCmd): Result = {
     if (cmd.name == "echo") {
-      CloudLogging.stdout(cmd.args.mkString(" "))
+      logger.info(cmd.args.mkString(" "))
       Result.Success
     } else {
       val i = cmd.name.indexOf('=')

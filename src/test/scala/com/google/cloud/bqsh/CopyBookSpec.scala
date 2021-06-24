@@ -16,15 +16,14 @@
 
 package com.google.cloud.bqsh
 
-import com.google.cloud.gszutil.Decoding.{BytesDecoder, CopyBookField, Decimal64Decoder, LongDecoder, NullableStringDecoder, StringDecoder, UnsignedLongDecoder}
-import com.google.cloud.gszutil.Encoding.{BytesToBinaryEncoder, DateStringToBinaryEncoder, DecimalToBinaryEncoder, LongToBinaryEncoder, StringToBinaryEncoder}
+import com.google.cloud.gszutil.Decoding._
+import com.google.cloud.gszutil.Encoding._
 import com.google.cloud.gszutil.{CopyBook, Decoding, Encoding, Utf8}
 import com.google.cloud.imf.gzos.{Ebcdic, Util}
-import com.google.cloud.imf.util.{CloudLogging, Logging}
+import com.google.cloud.imf.util.Logging
 import org.scalatest.flatspec.AnyFlatSpec
 
 class CopyBookSpec extends AnyFlatSpec with Logging {
-  CloudLogging.configureLogging(debugOverride = false)
 
   val transcoder = Ebcdic
   val cbFields = Seq(

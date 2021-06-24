@@ -16,21 +16,19 @@
 
 package com.google.cloud.imf
 
-import java.io.ByteArrayInputStream
-
 import com.google.api.services.bigquery.BigqueryScopes
-import com.google.api.services.logging.v2.LoggingScopes
-import com.google.api.services.storage.{Storage => LowLevelStorageApi}
-import com.google.api.services.storage.StorageScopes
+import com.google.api.services.storage.{StorageScopes, Storage => LowLevelStorageApi}
 import com.google.auth.oauth2.GoogleCredentials
 import com.google.cloud.bigquery.BigQuery
 import com.google.cloud.bigquery.storage.v1.BigQueryReadClient
 import com.google.cloud.imf.grecv.GRecvConfigParser
 import com.google.cloud.imf.grecv.server.GRecvServer
 import com.google.cloud.imf.gzos.Util
-import com.google.cloud.imf.util.{CloudLogging, Logging, Services}
+import com.google.cloud.imf.util.{Logging, Services}
 import com.google.cloud.storage.Storage
 import com.google.protobuf.ByteString
+
+import java.io.ByteArrayInputStream
 
 /** The server side of the mainframe connector
   * Receives requests to transcode to ORC
@@ -40,17 +38,11 @@ object GRecv extends Logging {
   val PartitionBytes: Long = 128L * 1024 * 1024
 
   def main(args: Array[String]): Unit = {
-    val buildInfo = "Build Info:\n" + Util.readS("build.txt")
-    Console.out.println(buildInfo)
     GRecvConfigParser.parse(args) match {
       case Some(cfg) =>
         val zos = Util.zProvider
         zos.init()
-        val creds = GoogleCredentials.getApplicationDefault
-        CloudLogging.configureLogging(debugOverride = cfg.debug, sys.env,
-          errorLogs = Seq("org.apache.orc","io.grpc","io.netty","org.apache.http"),
-          credentials = creds.createScoped(LoggingScopes.LOGGING_WRITE))
-        logger.info(s"Starting GRecvServer\n$buildInfo")
+        logger.info(s"Starting GRecvServer")
         new GRecvServer(cfg, storage, bqStorageApi, storageApi, bq).start()
       case _ =>
         Console.err.println(s"Unabled to parse args '${args.mkString(" ")}'")

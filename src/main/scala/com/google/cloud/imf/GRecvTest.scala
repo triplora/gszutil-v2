@@ -7,12 +7,9 @@ import com.google.cloud.imf.gzos.Linux
 import com.google.cloud.imf.gzos.gen.DataGenUtil
 import com.google.cloud.imf.gzos.pb.GRecvProto.Record
 import com.google.cloud.imf.gzos.pb.GRecvProto.Record.Field
-import com.google.cloud.imf.util.CloudLogging
 
 object GRecvTest {
   def main(args: Array[String]): Unit = {
-    CloudLogging.configureLogging(debugOverride = true,
-      errorLogs = "org.apache.http"::"io.grpc"::"io.netty"::Nil)
 
     val mload1Schema: RecordSchema = {
       val b = Record.newBuilder

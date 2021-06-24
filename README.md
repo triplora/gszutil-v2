@@ -324,9 +324,9 @@ Usage: export [options]
 |Name|Default|Description|
 |---|:---:|---|
 |KEYFILE, GKEYFILE, GOOGLE_APPLICATION_CREDENTIALS | no|Path to json keyfile that provides authentication credentials to your application code.
-|BQSH_ROOT_LOGGER| INFO| Logg level of logger|
 |LOG_PROJECT|no|Cloud logging google project id|
 |LOG_ID|no|Cloud logging log id|
+|LOG_WRAP_SPOOL|true|Wrap log messages longer than 80 symbols|
 |BQ_CONNECT_TIMEOUT_MILLIS|30000| BigQuery API client timeout (msec) in making the initial connection, occurs only upon starting the TCP connection, this usually happens if the remote machine does not answer
 |BQ_READ_TIMEOUT_MILLIS|30000|BigQuery API client timeout (msec) on waiting to read data. If the server (or network) fails to deliver any data timeout seconds after the client makes a socket read call, a read timeout error will be raised.
 |BQ_MAX_ATTEMPTS_COUNT|5|BigQuery API client max request attemts before fail. Controls retry logic.
@@ -341,7 +341,7 @@ Usage: export [options]
 |JOBDATE|UNKNOWN|JCL job starting date
 |JOBTIME|UNKNOWN|JCL job starting time
 |_BPX_SHAREAS|no| Controls execution in shell. [More details here](https://www.ibm.com/docs/en/zos/2.2.0?topic=shell-setting-bpx-shareas-bpx-spawn-script)|
-_BPX_SPAWN_SCRIPT|no| Controls execution in shell. [More details here](https://www.ibm.com/docs/en/zos/2.2.0?topic=shell-setting-bpx-shareas-bpx-spawn-script)|
+|_BPX_SPAWN_SCRIPT|no| Controls execution in shell. [More details here](https://www.ibm.com/docs/en/zos/2.2.0?topic=shell-setting-bpx-shareas-bpx-spawn-script)|
 
 ## High level architecture
 
