@@ -16,8 +16,6 @@
 
 package com.google.cloud.bqsh.cmd
 
-import java.net.URI
-
 import com.google.cloud.bigquery.{BigQuery, BigQueryException}
 import com.google.cloud.bqsh._
 import com.google.cloud.gszutil.io.exports.{BqSelectResultExporter, MVSFileExport, StorageFileCompose}
@@ -26,6 +24,8 @@ import com.google.cloud.imf.grecv.client.GRecvClient
 import com.google.cloud.imf.gzos.{MVS, MVSStorage}
 import com.google.cloud.imf.util.{Logging, Services, StatsUtil}
 import com.google.cloud.storage.Storage
+
+import java.net.URI
 
 object Export extends Command[ExportConfig] with Logging {
   override val name: String = "bq export"
@@ -102,7 +102,11 @@ object Export extends Command[ExportConfig] with Logging {
     val dsn = zos.getDSN(cfg.outDD)
     val gcsUri = s"gs://${cfg.bucket}/EXPORT/$dsn"
     val r = GRecvClient.export(sql, copybook, gcsUri, cfg1, zos)
-    if(cfg.runMode.toLowerCase != "single") {
+    r match {
+      case Result(_, 1, _, msg) => throw new IllegalStateException(s"Remote export failed due to : $msg")
+      case _ =>
+    }
+    if (cfg.runMode.toLowerCase != "single") {
       val startTime = System.currentTimeMillis()
       new StorageFileCompose(gcs).composeAll(gcsUri, s"$gcsUri/${zos.getInfo.getJobid}/")
       deleteGcsFolder(gcs, gcsUri + "/")
