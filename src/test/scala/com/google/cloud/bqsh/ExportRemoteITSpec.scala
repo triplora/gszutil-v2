@@ -20,7 +20,7 @@ import java.util.concurrent.{Executors, TimeUnit}
 import scala.concurrent.ExecutionContext.Implicits.global
 import scala.concurrent.Future
 
-class ExportRemoteSpec extends AnyFlatSpec with BeforeAndAfterAll with BeforeAndAfterEach {
+class ExportRemoteITSpec extends AnyFlatSpec with BeforeAndAfterAll with BeforeAndAfterEach {
 
   /**
     * For this test required following ENV variables:

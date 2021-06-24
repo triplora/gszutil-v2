@@ -26,7 +26,7 @@ import java.io.InputStream
 import java.nio.charset.StandardCharsets
 import scala.util.Random
 
-class StorageSpec extends AnyFlatSpec {
+class StorageITSpec extends AnyFlatSpec {
 
   "gcs" should "serve gzip" in {
     val gcs = Services.storage()
