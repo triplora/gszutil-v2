@@ -6,6 +6,7 @@ import com.google.cloud.gszutil.Encoding.DecimalToBinaryEncoder
 object CopyBookDecoderAndEncoderOps {
 
   val charRegex = """PIC X\((\d{1,3})\)""".r
+  val charRegex2 = """PIC T\((\d{1,4})\)""".r
   val bytesRegex = """PIC X\((\d{4,})\)""".r
   val numStrRegex = """PIC 9\((\d{1,3})\)""".r
   val intRegex = """PIC S9\((\d{1,3})\) COMP""".r

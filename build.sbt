@@ -29,6 +29,7 @@ val exAvro = ExclusionRule(organization = "org.apache.avro")
 libraryDependencies ++= Seq(
   "com.google.cloud.imf" %% "mainframe-util" % "2.1.7",
   "com.github.scopt" %% "scopt" % "3.7.1",
+  "net.sf.jt400" % "jt400" % "10.6",
   "org.scalatest" %% "scalatest" % "3.1.1" % Test,
   "org.powermock" % "powermock-module-junit4" % "2.0.2" % Test,
   "org.powermock" % "powermock-api-mockito2" % "2.0.2" % Test

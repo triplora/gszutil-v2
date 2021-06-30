@@ -7,6 +7,7 @@ import com.google.cloud.imf.gzos.pb.GRecvProto.Record.Field
 import com.google.cloud.imf.gzos.pb.GRecvProto.Record.Field.FieldType
 import com.google.cloud.imf.gzos.{Binary, PackedDecimal}
 import com.google.cloud.imf.util.Logging
+import com.ibm.as400.access.{ConvTable, ConvTable1399}
 
 import java.time.LocalDate
 
@@ -33,6 +34,8 @@ object Encoding extends Logging {
     typ.stripSuffix(".") match {
       case charRegex(_) =>
         StringToBinaryEncoder(transcoder, decoderSize)
+      case charRegex2(_) =>
+        LocalizedStringToBinaryEncoder(decoderSize)
       case "PIC X" | numStrRegex(_) =>
         StringToBinaryEncoder(transcoder, decoderSize)
       case bytesRegex(s) =>
@@ -89,6 +92,38 @@ object Encoding extends Logging {
       val array = new Array[Byte](size)
       buf.get(array)
       array
+    }
+
+    override def encodeValue(value: FieldValue): Array[Byte] = {
+      value.getValue match {
+        case s: String =>
+          encode(s)
+        case x =>
+          if (x == null) encode(null)
+          else throw new UnsupportedOperationException(s"Unsupported field value ${x.getClass.getSimpleName}")
+      }
+    }
+  }
+
+  case class LocalizedStringToBinaryEncoder(size: Int) extends BinaryEncoder {
+    override type T = String
+    override val bqSupportedType: StandardSQLTypeName = StandardSQLTypeName.STRING
+
+    private def getConvTable: ConvTable = new ConvTable1399() //from env vars
+
+    private val SP = getConvTable.stringToByteArray(" ").head
+
+    override def encode(x: String): Array[Byte] = {
+      if (x == null)
+        return Array.fill(size)(0x00)
+      val convTable = getConvTable
+      val valueBytes = convTable.stringToByteArray(x)
+      if (valueBytes.length > size) {
+        throw new IllegalArgumentException(s"Encoded string does not fit to $size bytes. value='$x' encoding ='${convTable.getEncoding}'")
+      }
+      val result = Array.fill(size)(SP)
+      Array.copy(valueBytes, 0, result, 0, valueBytes.length)
+      result
     }
 
     override def encodeValue(value: FieldValue): Array[Byte] = {

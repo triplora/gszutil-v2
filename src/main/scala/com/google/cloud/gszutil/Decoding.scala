@@ -15,21 +15,24 @@
  */
 package com.google.cloud.gszutil
 
-import java.math.BigInteger
-import java.nio.ByteBuffer
-import java.time.{LocalDate, Month}
-
+import com.google.cloud.gszutil.CopyBookDecoderAndEncoderOps._
 import com.google.cloud.imf.gzos.pb.GRecvProto.Record.Field
 import com.google.cloud.imf.gzos.pb.GRecvProto.Record.Field.NullIf
 import com.google.cloud.imf.gzos.{Binary, PackedDecimal}
 import com.google.cloud.imf.util.Logging
 import com.google.protobuf.ByteString
-import org.apache.hadoop.hive.ql.exec.vector.{BytesColumnVector, ColumnVector, DateColumnVector, Decimal64ColumnVector, LongColumnVector, TimestampColumnVector}
+import com.ibm.as400.access.{ConvTable, ConvTable1399}
+import org.apache.hadoop.hive.ql.exec.vector._
 import org.apache.orc.TypeDescription
-import com.google.cloud.gszutil.CopyBookDecoderAndEncoderOps._
+
+import java.math.BigInteger
+import java.nio.ByteBuffer
+import java.nio.charset.StandardCharsets
+import java.time.{LocalDate, Month}
 
 
 object Decoding extends Logging {
+
   class NullableStringDecoder(transcoder: Transcoder,
                               override val size: Int,
                               override val nullIf: Array[Byte],
@@ -70,7 +73,79 @@ object Decoding extends Logging {
 
     override def columnVector(maxSize: Int): ColumnVector = {
       val cv = new BytesColumnVector(maxSize)
-      cv.initBuffer(size*2)
+      cv.initBuffer(size * 2)
+      cv
+    }
+
+    override def typeDescription: TypeDescription =
+      TypeDescription.createString()
+
+    override def toString: String = s"$size byte STRING"
+
+    override def toFieldBuilder: Field.Builder = {
+      val b = Field.newBuilder
+        .setSize(size)
+        .setFiller(filler)
+        .setTyp(Field.FieldType.STRING)
+
+      if (nullIf != null && nullIf.nonEmpty)
+        b.setNullif(NullIf.newBuilder
+          .setValue(ByteString.copyFrom(nullIf)).build)
+      b
+    }
+
+    override def equals(obj: Any): Boolean =
+      obj match {
+        case dec: NullableStringDecoder =>
+          dec.nullIf == nullIf && dec.filler == filler && dec.size == size
+        case _ => false
+      }
+  }
+
+  class LocalizedNullableStringDecoder(override val size: Int,
+                                       override val nullIf: Array[Byte],
+                                       override val filler: Boolean = false) extends NullableDecoder {
+
+    private def getConvTable: ConvTable = new ConvTable1399()
+
+
+    def isNull(buf: Array[Byte], off: Int, len: Int): Boolean =
+      allSpaces(buf, off, len) || allNull(buf, off, len)
+
+    override def get(buf: ByteBuffer, col: ColumnVector, i: Int): Unit = {
+      val bcv = col.asInstanceOf[BytesColumnVector]
+
+      if (isNull(buf.array(), buf.position(), size)) {
+        // null value due to all null bytes or spaces
+        val newPos = buf.position() + size
+        buf.position(newPos)
+        bcv.isNull(i) = true
+        bcv.noNulls = false
+        bcv.setValPreallocated(i, 0)
+      } else {
+        val value = getConvTable.byteArrayToString(buf.array(), buf.position(), size).replaceAll("\\s+$", "")
+        val valueBytes = value.getBytes(StandardCharsets.UTF_8)
+
+        bcv.ensureValPreallocated(valueBytes.length)
+        val destPos = bcv.getValPreallocatedStart
+        val dest = bcv.getValPreallocatedBytes
+        Array.copy(valueBytes, 0, dest, destPos, valueBytes.length)
+
+        // set output
+        if (isNull(dest, destPos, nullIf)) {
+          // null value due to nullIf byte comparison
+          bcv.isNull(i) = true
+          bcv.noNulls = false
+          bcv.setValPreallocated(i, 0)
+        } else {
+          bcv.setValPreallocated(i, valueBytes.length)
+        }
+      }
+    }
+
+    override def columnVector(maxSize: Int): ColumnVector = {
+      val cv = new BytesColumnVector(maxSize)
+      cv.initBuffer(size * 2)
       cv
     }
 
@@ -637,6 +712,12 @@ object Decoding extends Logging {
           if (isDate && size == 10) Array.fill(size)(EBCDIC0)
           else Array.emptyByteArray
         new NullableStringDecoder(transcoder, size, filler = filler, nullIf = nullIfBytes)
+      case charRegex2(s) =>
+        val size = s.toInt
+        val nullIfBytes =
+          if (isDate && size == 10) Array.fill(size)(EBCDIC0)
+          else Array.emptyByteArray
+        new LocalizedNullableStringDecoder(s.toInt, filler = filler, nullIf = nullIfBytes)
       case "PIC X" =>
         new NullableStringDecoder(transcoder, 1, filler = filler, nullIf = Array.emptyByteArray)
       case bytesRegex(s) =>
@@ -645,7 +726,7 @@ object Decoding extends Logging {
         new StringDecoder(transcoder, size.toInt, filler = filler)
       case decRegex(p) if p.toInt >= 1 =>
         Decimal64Decoder(p.toInt, 0, filler = filler)
-      case decRegex2(p,s) if p.toInt >= 1 =>
+      case decRegex2(p, s) if p.toInt >= 1 =>
         Decimal64Decoder(p.toInt, s.toInt, filler = filler)
       case decRegex3(p,s) if p.toInt >= 1 =>
         Decimal64Decoder(p.toInt, s.length, filler = filler)
