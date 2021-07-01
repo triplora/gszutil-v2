@@ -42,7 +42,7 @@ object Decoding extends Logging {
     override def get(buf: ByteBuffer, col: ColumnVector, i: Int): Unit = {
       val bcv = col.asInstanceOf[BytesColumnVector]
 
-      if (isNull(buf.array(), buf.position(), size)){
+      if (isNull(buf.array(), buf.position(), size)) {
         // null value due to all null bytes or spaces
         val newPos = buf.position() + size
         buf.position(newPos)
@@ -54,12 +54,12 @@ object Decoding extends Logging {
         bcv.ensureValPreallocated(size)
         val destPos = bcv.getValPreallocatedStart
         val dest = bcv.getValPreallocatedBytes
-        val spaces = transcoder.countTrailingSpaces(buf.array(),buf.position(),size)
+        val spaces = transcoder.countTrailingSpaces(buf.array(), buf.position(), size)
         val sizeWithoutSpaces = size - spaces
         transcoder.arraycopy(buf, dest, destPos, size)
 
         // set output
-        if (isNull(dest, destPos, nullIf)){
+        if (isNull(dest, destPos, nullIf)) {
           // null value due to nullIf byte comparison
           bcv.isNull(i) = true
           bcv.noNulls = false
@@ -105,8 +105,10 @@ object Decoding extends Logging {
                                        override val size: Int,
                                        override val nullIf: Array[Byte],
                                        override val filler: Boolean = false) extends NullableDecoder {
+    private val SP: Byte = c.encode(" ").get()
+
     def isNull(buf: Array[Byte], off: Int, len: Int): Boolean =
-      allSpaces(buf, off, len) || allNull(buf, off, len)
+      allSpaces(buf, off, len, SP) || allNull(buf, off, len)
 
     override def get(buf: ByteBuffer, col: ColumnVector, i: Int): Unit = {
       val bcv = col.asInstanceOf[BytesColumnVector]
@@ -122,14 +124,17 @@ object Decoding extends Logging {
         val data = ByteBuffer.wrap(buf.array())
         data.position(buf.position())
         data.limit(buf.position() + size)
+        //left trim 0x00 and spaces
+        while (data.limit() > data.position()
+          && (data.array()(data.limit() - 1) == 0x00 || data.array()(data.limit() - 1) == SP)) {
+          data.limit(data.limit() - 1)
+        }
 
-        val value = c.decode(data).toString.replaceAll("\\s+$", "")
-        val valueBytes = value.getBytes(StandardCharsets.UTF_8)
-
-        bcv.ensureValPreallocated(valueBytes.length)
+        val valueBytes = StandardCharsets.UTF_8.encode(c.decode(data))
+        bcv.ensureValPreallocated(valueBytes.limit())
         val destPos = bcv.getValPreallocatedStart
         val dest = bcv.getValPreallocatedBytes
-        Array.copy(valueBytes, 0, dest, destPos, valueBytes.length)
+        Array.copy(valueBytes.array(), valueBytes.position(), dest, destPos, valueBytes.limit())
 
         // set output
         if (isNull(dest, destPos, nullIf)) {
@@ -138,7 +143,7 @@ object Decoding extends Logging {
           bcv.noNulls = false
           bcv.setValPreallocated(i, 0)
         } else {
-          bcv.setValPreallocated(i, valueBytes.length)
+          bcv.setValPreallocated(i, valueBytes.limit())
         }
       }
     }
@@ -180,7 +185,7 @@ object Decoding extends Logging {
     override def get(buf: ByteBuffer, col: ColumnVector, i: Int): Unit = {
       val bcv = col.asInstanceOf[BytesColumnVector]
       bcv.ensureValPreallocated(size)
-      val spaces = transcoder.countTrailingSpaces(buf.array(),buf.position(),size)
+      val spaces = transcoder.countTrailingSpaces(buf.array(), buf.position(), size)
       val sizeWithoutSpaces = size - spaces
       transcoder.arraycopy(buf, bcv.getValPreallocatedBytes, bcv.getValPreallocatedStart, size)
       bcv.setValPreallocated(i, sizeWithoutSpaces)
@@ -188,7 +193,7 @@ object Decoding extends Logging {
 
     override def columnVector(maxSize: Int): ColumnVector = {
       val cv = new BytesColumnVector(maxSize)
-      cv.initBuffer(size*2)
+      cv.initBuffer(size * 2)
       cv
     }
 
@@ -208,7 +213,7 @@ object Decoding extends Logging {
                            override val size: Int,
                            override val filler: Boolean = false) extends Decoder {
     override def get(buf: ByteBuffer, col: ColumnVector, i: Int): Unit = {
-      val long = transcoder.getLong(buf,size)
+      val long = transcoder.getLong(buf, size)
       col.asInstanceOf[LongColumnVector].vector.update(i, long)
     }
 
@@ -278,11 +283,12 @@ object Decoding extends Logging {
                             override val filler: Boolean = false) extends DateDecoder {
 
     private val Zero: Byte = "0".getBytes(transcoder.charset).head
+
     // count zeros to detect null
     protected def isNull(buf: ByteBuffer): Boolean = {
       var zeros = 0
       var j = buf.position()
-      val j1 = math.min(j+size, buf.limit())
+      val j1 = math.min(j + size, buf.limit())
       val a = buf.array
       while (j < j1) {
         if (a(j) == Zero) zeros += 1
@@ -300,7 +306,7 @@ object Decoding extends Logging {
         dcv.isNull.update(i, true)
         dcv.noNulls = false
       } else {
-        val maybeDt = transcoder.getEpochDay(buf,size,fmt)
+        val maybeDt = transcoder.getEpochDay(buf, size, fmt)
         if (maybeDt.isDefined)
           dcv.vector.update(i, maybeDt.get)
         else {
@@ -330,25 +336,25 @@ object Decoding extends Logging {
                                  override val size: Int,
                                  override val filler: Boolean = false) extends Decoder {
     override def get(buf: ByteBuffer, col: ColumnVector, i: Int): Unit = {
-        val dcv = col.asInstanceOf[TimestampColumnVector]
-        val s = transcoder.getString(buf,size)
-        if (s == "0000-00-00 00:00:00.000000") {
-          val i1 = buf.position() + size
-          buf.position(i1)
-          dcv.isNull.update(i, true)
-          dcv.noNulls = false
-        } else {
-          val sb = new StringBuilder(s)
-          if(sb(10) == '-'){
-            sb(10) = ' '
-            sb(13) = ':'
-            sb(16) = ':'
-          }
-
-          val ts = java.sql.Timestamp.valueOf(sb.toString)
-          dcv.time.update(i, ts.getTime)
-          dcv.nanos.update(i, ts.getNanos)
+      val dcv = col.asInstanceOf[TimestampColumnVector]
+      val s = transcoder.getString(buf, size)
+      if (s == "0000-00-00 00:00:00.000000") {
+        val i1 = buf.position() + size
+        buf.position(i1)
+        dcv.isNull.update(i, true)
+        dcv.noNulls = false
+      } else {
+        val sb = new StringBuilder(s)
+        if (sb(10) == '-') {
+          sb(10) = ' '
+          sb(13) = ':'
+          sb(16) = ':'
         }
+
+        val ts = java.sql.Timestamp.valueOf(sb.toString)
+        dcv.time.update(i, ts.getTime)
+        dcv.nanos.update(i, ts.getNanos)
+      }
     }
 
     override def columnVector(maxSize: Int): ColumnVector =
@@ -371,7 +377,7 @@ object Decoding extends Logging {
                              override val filler: Boolean = false) extends DateDecoder {
 
     override def get(buf: ByteBuffer, col: ColumnVector, i: Int): Unit = {
-      val long = Binary.decode(buf,size)
+      val long = Binary.decode(buf, size)
       putValue(long, col, i)
     }
 
@@ -409,7 +415,7 @@ object Decoding extends Logging {
                                val scale: Int,
                                override val filler: Boolean = false) extends Decoder {
     override def get(buf: ByteBuffer, col: ColumnVector, i: Int): Unit = {
-      val long = transcoder.getLong(buf,size)
+      val long = transcoder.getLong(buf, size)
       col.asInstanceOf[Decimal64ColumnVector].vector.update(i, long)
     }
 
@@ -439,7 +445,7 @@ object Decoding extends Logging {
     override def get(buf: ByteBuffer, col: ColumnVector, i: Int): Unit = {
       val dcv = col.asInstanceOf[DateColumnVector]
       val long = Binary.decode(buf, size)
-      if (long == 0){
+      if (long == 0) {
         dcv.noNulls = false
         dcv.vector.update(i, -1)
         dcv.isNull.update(i, true)
@@ -447,9 +453,9 @@ object Decoding extends Logging {
         val dt = (long + 19000000).toInt
         val year = dt / 10000
         val y = year * 10000
-        val month = (dt - y)/100
-        val day = dt - (y + month*100)
-        val localDate = LocalDate.of(year,Month.of(month),day)
+        val month = (dt - y) / 100
+        val day = dt - (y + month * 100)
+        val localDate = LocalDate.of(year, Month.of(month), day)
         dcv.vector.update(i, localDate.toEpochDay)
       }
     }
@@ -466,14 +472,14 @@ object Decoding extends Logging {
   }
 
   case class NullableLongDecoder(override val size: Int,
-                         filler: Boolean = false) extends Decoder {
+                                 filler: Boolean = false) extends Decoder {
 
     def isNull(buf: Array[Byte], off: Int, len: Int): Boolean =
       allSpaces(buf, off, len)
 
     override def get(buf: ByteBuffer, col: ColumnVector, i: Int): Unit = {
       val lcv = col.asInstanceOf[LongColumnVector]
-      if (isNull(buf.array(), buf.position(), size)){
+      if (isNull(buf.array(), buf.position(), size)) {
         val newPos = buf.position() + size
         buf.position(newPos)
         lcv.noNulls = false
@@ -549,16 +555,16 @@ object Decoding extends Logging {
   }
 
   case class Decimal64Decoder(p: Int, s: Int, filler: Boolean = false) extends Decoder {
-    private val precision = p+s
+    private val precision = p + s
     require(precision <= 18 && precision > 0, s"precision $precision not in range [1,18]")
-    override val size: Int = PackedDecimal.sizeOf(p,s)
+    override val size: Int = PackedDecimal.sizeOf(p, s)
 
     def isNull(buf: Array[Byte], off: Int, len: Int): Boolean =
       allSpaces(buf, off, len) || allNull(buf, off, len)
 
     override def get(buf: ByteBuffer, col: ColumnVector, i: Int): Unit = {
       val dcv = col.asInstanceOf[Decimal64ColumnVector]
-      if (isNull(buf.array(), buf.position(), size)){
+      if (isNull(buf.array(), buf.position(), size)) {
         val newPos = buf.position() + size
         buf.position(newPos)
         dcv.noNulls = false
@@ -575,7 +581,7 @@ object Decoding extends Logging {
     override def typeDescription: TypeDescription =
       TypeDescription.createDecimal
         .withScale(s)
-        .withPrecision(p+s)
+        .withPrecision(p + s)
 
     override def toString: String = s"$size byte NUMERIC($p,$s)"
 
@@ -656,16 +662,16 @@ object Decoding extends Logging {
       }
     }
     else if (f.getTyp == INTEGER) {
-      if (f.getCast == DATE){
+      if (f.getCast == DATE) {
         new IntegerAsDateDecoder(f.getSize, filler = filler)
       } else if (f.getCast == STRING) {
-          LongAsStringDecoder(transcoder, f.getSize, f.getSize * 2, filler = filler)
+        LongAsStringDecoder(transcoder, f.getSize, f.getSize * 2, filler = filler)
       } else {
         new LongDecoder(f.getSize, filler)
       }
     } else if (f.getTyp == DECIMAL) {
       if (f.getCast == STRING)
-        DecimalAsStringDecoder(f.getPrecision - f.getScale, f.getScale, (f.getPrecision - f.getScale) * 2,  transcoder, filler = filler)
+        DecimalAsStringDecoder(f.getPrecision - f.getScale, f.getScale, (f.getPrecision - f.getScale) * 2, transcoder, filler = filler)
       else if (f.getCast == INTEGER && f.getScale == 0) {
         DecimalScale0AsLongDecoder(f.getPrecision)
       } else
@@ -684,11 +690,11 @@ object Decoding extends Logging {
   val EBCDICNUL: Byte = 0x00.toByte
   val EBCDICSP: Byte = 0x40.toByte
 
-  def allSpaces(buf: Array[Byte], off: Int, len: Int): Boolean = {
+  def allSpaces(buf: Array[Byte], off: Int, len: Int, sp: Byte = EBCDICSP): Boolean = {
     var i = off
     val limit = off + len
     while (i < limit) {
-      if (buf(i) != EBCDICSP) return false
+      if (buf(i) != sp) return false
       i += 1
     }
     true
@@ -728,7 +734,7 @@ object Decoding extends Logging {
         Decimal64Decoder(p.toInt, 0, filler = filler)
       case decRegex2(p, s) if p.toInt >= 1 =>
         Decimal64Decoder(p.toInt, s.toInt, filler = filler)
-      case decRegex3(p,s) if p.toInt >= 1 =>
+      case decRegex3(p, s) if p.toInt >= 1 =>
         Decimal64Decoder(p.toInt, s.length, filler = filler)
       case "PIC S9 COMP" =>
         new LongDecoder(2, filler = filler)
@@ -757,12 +763,15 @@ object Decoding extends Logging {
   }
 
   sealed trait CopyBookLine
+
   case class CopyBookTitle(name: String) extends CopyBookLine {
     override def toString: String = name
   }
+
   case class CopyBookField(name: String, decoder: Decoder, fieldType: String) extends CopyBookLine {
     override def toString: String = s"${decoder.size}\t$name\t$decoder\t$fieldType"
   }
+
   case class Occurs(n: Int) extends CopyBookLine
 
   private val titleRegex = """^\d{1,2}\s+([A-Z0-9-_]*)\.$""".r
@@ -782,7 +791,7 @@ object Decoding extends Logging {
         val isDate = name1.endsWith("DT") || name1.endsWith("DATE")
         val decoder = typeMap(typ1, transcoder, filler, isDate)
 
-        Option(CopyBookField(name.replace('-','_').trim, decoder, typ1))
+        Option(CopyBookField(name.replace('-', '_').trim, decoder, typ1))
       case titleRegex(name) =>
         Option(CopyBookTitle(name))
       case titleRegex2(name) =>

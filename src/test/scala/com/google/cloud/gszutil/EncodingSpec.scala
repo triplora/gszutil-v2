@@ -9,6 +9,7 @@ import org.apache.hadoop.hive.ql.exec.vector.{DateColumnVector, Decimal64ColumnV
 import org.scalatest.flatspec.AnyFlatSpec
 
 import java.nio.ByteBuffer
+import java.nio.charset.Charset
 import java.time.LocalDate
 
 class EncodingSpec extends AnyFlatSpec {
@@ -123,6 +124,36 @@ class EncodingSpec extends AnyFlatSpec {
     d.get(ByteBuffer.wrap(r), dv, 0)
 
     assert(12345 == dv.vector(0))
+  }
+
+  it should "encode Japanese characters to ebcdic939" in {
+    val encoder = LocalizedStringToBinaryEncoder(Charset.forName("x-ibm939"), 10)
+    val values = List(
+      "" -> asByteArray(0x40, 0x40, 0x40, 0x40, 0x40, 0x40, 0x40, 0x40, 0x40, 0x40),
+      " " -> asByteArray(0x40, 0x40, 0x40, 0x40, 0x40, 0x40, 0x40, 0x40, 0x40, 0x40),
+      null.asInstanceOf[String] -> asByteArray(0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00),
+      "aA1" -> asByteArray(0x81, 0xC1, 0xF1, 0x40, 0x40, 0x40, 0x40, 0x40, 0x40, 0x40),
+      "水" -> asByteArray(0x0E, 0x45, 0x9C, 0x0F, 0x40, 0x40, 0x40, 0x40, 0x40, 0x40),
+      "水Aア" -> asByteArray(0x0E, 0x45, 0x9C, 0x0F, 0xC1, 0x0E, 0x43, 0x81, 0x0F, 0x40),
+      "水です" -> asByteArray(0x0E, 0x45, 0x9C, 0x44, 0xCD, 0x44, 0x8E, 0x0F, 0x40, 0x40),
+    )
+    assertEncodedValues(encoder, values)
+    assertThrows[IllegalArgumentException](assertEncodedValues(encoder, List("水水水水水" -> Array[Byte]())))
+  }
+
+  it should "encode Japanese characters to utf-8" in {
+    val encoder = LocalizedStringToBinaryEncoder(Charset.forName("utf-8"), 10)
+    val values = List(
+      "" -> asByteArray(0x20, 0x20, 0x20, 0x20, 0x20, 0x20, 0x20, 0x20, 0x20, 0x20),
+      " " -> asByteArray(0x20, 0x20, 0x20, 0x20, 0x20, 0x20, 0x20, 0x20, 0x20, 0x20),
+      null.asInstanceOf[String] -> asByteArray(0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00),
+      "aA1" -> asByteArray(0x61, 0x41, 0x31, 0x20, 0x20, 0x20, 0x20, 0x20, 0x20, 0x20),
+      "水" -> asByteArray(0xE6, 0xB0, 0xB4, 0x20, 0x20, 0x20, 0x20, 0x20, 0x20, 0x20),
+      "水Aア" -> asByteArray(0xE6, 0xB0, 0xB4, 0x41, 0xE3, 0x82, 0xA2, 0x20, 0x20, 0x20),
+      "水です" -> asByteArray(0xE6, 0xB0, 0xB4, 0xE3, 0x81, 0xA7, 0xE3, 0x81, 0x99, 0x20),
+    )
+    assertEncodedValues(encoder, values)
+    assertThrows[IllegalArgumentException](assertEncodedValues(encoder, List("水水水水水" -> Array[Byte]())))
   }
 
   it should "encode decimal (odd size)" in {
@@ -385,8 +416,8 @@ class EncodingSpec extends AnyFlatSpec {
       case (fieldValue, expected) =>
         val actual = e.encodeValue(fieldValue)
         if (!expected.sameElements(actual)) {
-          val expectedMessage = expected.map("%02X" format _).mkString("Array(", ", ", ")")
-          val actualMessage = actual.map("%02X" format _).mkString("Array(", ", ", ")")
+          val expectedMessage = expected.map("0x%02X" format _).mkString("Array(", ", ", ")")
+          val actualMessage = actual.map("0x%02X" format _).mkString("Array(", ", ", ")")
           print(s"Expected $expectedMessage, actual $actualMessage")
         }
         assertResult(expected)(actual)

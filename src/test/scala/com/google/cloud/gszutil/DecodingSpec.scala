@@ -29,7 +29,7 @@ import org.apache.hadoop.hive.serde2.io.HiveDecimalWritable
 import org.scalatest.flatspec.AnyFlatSpec
 
 import java.nio.ByteBuffer
-import java.nio.charset.StandardCharsets
+import java.nio.charset.{Charset, StandardCharsets}
 import java.time.LocalDate
 import java.time.format.DateTimeFormatter
 
@@ -229,6 +229,74 @@ class DecodingSpec extends AnyFlatSpec {
     val buf = ByteBuffer.wrap(exampleData)
     assert(121 == PackedDecimal.unpack(buf, len))
     //assertThrows[IllegalArgumentException](PackedDecimal.unpack(buf, len))
+  }
+
+  it should "decode from ebcdic939 to Japanese string" in {
+    val decoder = new LocalizedNullableStringDecoder(Charset.forName("x-ibm939"), 10, "null".getBytes("utf-8"))
+
+    val values = List(
+      "" -> asByteArray(0x40, 0x40, 0x40, 0x40, 0x40, 0x40, 0x40, 0x40, 0x40, 0x40),
+      null.asInstanceOf[String] -> asByteArray(0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00),
+      null.asInstanceOf[String] -> asByteArray(0x95, 0xA4, 0x93, 0x93, 0x40, 0x40, 0x40, 0x40, 0x40, 0x40),
+      "aA1" -> asByteArray(0x81, 0xC1, 0xF1, 0x40, 0x40, 0x40, 0x40, 0x40, 0x40, 0x40),
+      "aA1" -> asByteArray(0x81, 0xC1, 0xF1, 0x40, 0x40, 0x40, 0x40, 0x00, 0x00, 0x00),
+      "水" -> asByteArray(0x0E, 0x45, 0x9C, 0x0F, 0x40, 0x40, 0x40, 0x40, 0x40, 0x40),
+      "水Aア" -> asByteArray(0x0E, 0x45, 0x9C, 0x0F, 0xC1, 0x0E, 0x43, 0x81, 0x0F, 0x40),
+      "水です" -> asByteArray(0x0E, 0x45, 0x9C, 0x44, 0xCD, 0x44, 0x8E, 0x0F, 0x40, 0x40),
+    )
+
+    values.foreach {
+      case (null | "", bytes) =>
+        val v = decoder.columnVector(1).asInstanceOf[BytesColumnVector]
+        decoder.get(ByteBuffer.wrap(bytes), v, 0)
+        val actual = v.vector(0).slice(v.start(0), v.start(0) + v.length(0))
+        assert(v.isNull(0))
+        assertResult(Array[Byte]())(actual)
+      case (str, bytes) =>
+        val v = decoder.columnVector(1).asInstanceOf[BytesColumnVector]
+        decoder.get(ByteBuffer.wrap(bytes), v, 0)
+        val actual = v.vector(0).slice(v.start(0), v.start(0) + v.length(0))
+        val expected = str.getBytes("utf-8")
+        if (!actual.sameElements(expected)) {
+          println("Bytes : " + bytes.map("%02X" format _).mkString("Array(", ", ", ")"))
+        }
+        assert(!v.isNull(0))
+        assertResult(expected)(actual)
+    }
+  }
+
+  it should "decode from utf-8 to Japanese string" in {
+    val decoder = new LocalizedNullableStringDecoder(Charset.forName("utf-8"), 10, "null".getBytes("utf-8"))
+
+    val values = List(
+      "" -> asByteArray(0x20, 0x20, 0x20, 0x20, 0x20, 0x20, 0x20, 0x20, 0x20, 0x20),
+      null.asInstanceOf[String] -> asByteArray(0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00),
+      null.asInstanceOf[String] -> asByteArray(0x6E, 0x75, 0x6C, 0x6C, 0x20, 0x20, 0x20, 0x20, 0x20, 0x20),
+      "aA1" -> asByteArray(0x61, 0x41, 0x31, 0x20, 0x20, 0x20, 0x20, 0x20, 0x20, 0x20),
+      "aA1" -> asByteArray(0x61, 0x41, 0x31, 0x20, 0x20, 0x20, 0x20, 0x00, 0x00, 0x00),
+      "水" -> asByteArray(0xE6, 0xB0, 0xB4, 0x20, 0x20, 0x20, 0x20, 0x20, 0x20, 0x20),
+      "水Aア" -> asByteArray(0xE6, 0xB0, 0xB4, 0x41, 0xE3, 0x82, 0xA2, 0x20, 0x20, 0x20),
+      "水です" -> asByteArray(0xE6, 0xB0, 0xB4, 0xE3, 0x81, 0xA7, 0xE3, 0x81, 0x99, 0x20),
+    )
+
+    values.foreach {
+      case (null | "", bytes) =>
+        val v = decoder.columnVector(1).asInstanceOf[BytesColumnVector]
+        decoder.get(ByteBuffer.wrap(bytes), v, 0)
+        val actual = v.vector(0).slice(v.start(0), v.start(0) + v.length(0))
+        assert(v.isNull(0))
+        assertResult(Array[Byte]())(actual)
+      case (str, bytes) =>
+        val v = decoder.columnVector(1).asInstanceOf[BytesColumnVector]
+        decoder.get(ByteBuffer.wrap(bytes), v, 0)
+        val actual = v.vector(0).slice(v.start(0), v.start(0) + v.length(0))
+        val expected = str.getBytes("utf-8")
+        if (!actual.sameElements(expected)) {
+          println("Bytes : " + bytes.map("%02X" format _).mkString("Array(", ", ", ")"))
+        }
+        assert(!v.isNull(0))
+        assertResult(expected)(actual)
+    }
   }
 
   it should "decode values" in {
