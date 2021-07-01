@@ -7,8 +7,8 @@ import com.google.cloud.imf.gzos.pb.GRecvProto.Record.Field
 import com.google.cloud.imf.gzos.pb.GRecvProto.Record.Field.FieldType
 import com.google.cloud.imf.gzos.{Binary, PackedDecimal}
 import com.google.cloud.imf.util.Logging
-import com.ibm.as400.access.{ConvTable, ConvTable1399}
 
+import java.nio.charset.Charset
 import java.time.LocalDate
 
 object Encoding extends Logging {
@@ -35,7 +35,7 @@ object Encoding extends Logging {
       case charRegex(_) =>
         StringToBinaryEncoder(transcoder, decoderSize)
       case charRegex2(_) =>
-        LocalizedStringToBinaryEncoder(decoderSize)
+        LocalizedStringToBinaryEncoder(getPicTCharset, decoderSize)
       case "PIC X" | numStrRegex(_) =>
         StringToBinaryEncoder(transcoder, decoderSize)
       case bytesRegex(s) =>
@@ -105,24 +105,22 @@ object Encoding extends Logging {
     }
   }
 
-  case class LocalizedStringToBinaryEncoder(size: Int) extends BinaryEncoder {
+  case class LocalizedStringToBinaryEncoder(c: Charset, size: Int) extends BinaryEncoder {
     override type T = String
     override val bqSupportedType: StandardSQLTypeName = StandardSQLTypeName.STRING
 
-    private def getConvTable: ConvTable = new ConvTable1399() //from env vars
-
-    private val SP = getConvTable.stringToByteArray(" ").head
+    private val SP = c.encode(" ").array().head
 
     override def encode(x: String): Array[Byte] = {
       if (x == null)
         return Array.fill(size)(0x00)
-      val convTable = getConvTable
-      val valueBytes = convTable.stringToByteArray(x)
-      if (valueBytes.length > size) {
-        throw new IllegalArgumentException(s"Encoded string does not fit to $size bytes. value='$x' encoding ='${convTable.getEncoding}'")
+
+      val valueBytes = c.encode(x)
+      if (valueBytes.limit() > size) {
+        throw new IllegalArgumentException(s"Encoded string does not fit to $size bytes. value='$x' encoding ='${c.name()}'")
       }
       val result = Array.fill(size)(SP)
-      Array.copy(valueBytes, 0, result, 0, valueBytes.length)
+      Array.copy(valueBytes.array(), 0, result, 0, valueBytes.limit())
       result
     }
 

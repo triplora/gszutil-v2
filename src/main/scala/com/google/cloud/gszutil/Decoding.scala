@@ -21,13 +21,12 @@ import com.google.cloud.imf.gzos.pb.GRecvProto.Record.Field.NullIf
 import com.google.cloud.imf.gzos.{Binary, PackedDecimal}
 import com.google.cloud.imf.util.Logging
 import com.google.protobuf.ByteString
-import com.ibm.as400.access.{ConvTable, ConvTable1399}
 import org.apache.hadoop.hive.ql.exec.vector._
 import org.apache.orc.TypeDescription
 
 import java.math.BigInteger
 import java.nio.ByteBuffer
-import java.nio.charset.StandardCharsets
+import java.nio.charset.{Charset, StandardCharsets}
 import java.time.{LocalDate, Month}
 
 
@@ -102,13 +101,10 @@ object Decoding extends Logging {
       }
   }
 
-  class LocalizedNullableStringDecoder(override val size: Int,
+  class LocalizedNullableStringDecoder(c: Charset,
+                                       override val size: Int,
                                        override val nullIf: Array[Byte],
                                        override val filler: Boolean = false) extends NullableDecoder {
-
-    private def getConvTable: ConvTable = new ConvTable1399()
-
-
     def isNull(buf: Array[Byte], off: Int, len: Int): Boolean =
       allSpaces(buf, off, len) || allNull(buf, off, len)
 
@@ -123,7 +119,11 @@ object Decoding extends Logging {
         bcv.noNulls = false
         bcv.setValPreallocated(i, 0)
       } else {
-        val value = getConvTable.byteArrayToString(buf.array(), buf.position(), size).replaceAll("\\s+$", "")
+        val data = ByteBuffer.wrap(buf.array())
+        data.position(buf.position())
+        data.limit(buf.position() + size)
+
+        val value = c.decode(data).toString.replaceAll("\\s+$", "")
         val valueBytes = value.getBytes(StandardCharsets.UTF_8)
 
         bcv.ensureValPreallocated(valueBytes.length)
@@ -717,7 +717,7 @@ object Decoding extends Logging {
         val nullIfBytes =
           if (isDate && size == 10) Array.fill(size)(EBCDIC0)
           else Array.emptyByteArray
-        new LocalizedNullableStringDecoder(s.toInt, filler = filler, nullIf = nullIfBytes)
+        new LocalizedNullableStringDecoder(getPicTCharset, s.toInt, filler = filler, nullIf = nullIfBytes)
       case "PIC X" =>
         new NullableStringDecoder(transcoder, 1, filler = filler, nullIf = Array.emptyByteArray)
       case bytesRegex(s) =>
