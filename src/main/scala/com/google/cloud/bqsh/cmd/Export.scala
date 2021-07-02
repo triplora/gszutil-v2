@@ -21,7 +21,7 @@ import com.google.cloud.bqsh._
 import com.google.cloud.gszutil.io.exports.{BqSelectResultExporter, MVSFileExport, StorageFileCompose}
 import com.google.cloud.gszutil.{CopyBook, SchemaProvider}
 import com.google.cloud.imf.grecv.client.GRecvClient
-import com.google.cloud.imf.gzos.{MVS, MVSStorage}
+import com.google.cloud.imf.gzos.{LocalizedTranscoder, MVS, MVSStorage}
 import com.google.cloud.imf.util.{Logging, Services, StatsUtil}
 import com.google.cloud.storage.Storage
 
@@ -57,13 +57,14 @@ object Export extends Command[ExportConfig] with Logging {
     }
 
     //copybook is required
+    val picTTranscoder = LocalizedTranscoder(cfg.picTCharset)
     val sp: CopyBook =
       if (cfg.cobDsn.nonEmpty) {
         logger.info(s"reading copybook from DSN=${cfg.cobDsn}")
-        CopyBook(zos.readDSNLines(MVSStorage.parseDSN(cfg.cobDsn)).mkString("\n"))
+        CopyBook(zos.readDSNLines(MVSStorage.parseDSN(cfg.cobDsn)).mkString("\n"), localizedTranscoder = picTTranscoder)
       } else {
         logger.info(s"reading copybook from DD:COPYBOOK")
-        zos.loadCopyBook("COPYBOOK")
+        zos.loadCopyBook("COPYBOOK",  picTTranscoder)
       }
 
     try {

@@ -19,12 +19,13 @@ package com.google.cloud.bqsh
 import com.google.cloud.gszutil.Decoding._
 import com.google.cloud.gszutil.Encoding._
 import com.google.cloud.gszutil.{CopyBook, Decoding, Encoding, Utf8}
-import com.google.cloud.imf.gzos.{Ebcdic, Util}
+import com.google.cloud.imf.gzos.{Ebcdic, LocalizedTranscoder, Util}
 import com.google.cloud.imf.util.Logging
 import org.scalatest.flatspec.AnyFlatSpec
 
 class CopyBookSpec extends AnyFlatSpec with Logging {
 
+  val localizedTranscoder = LocalizedTranscoder(Some("JPNEBCDIC1399_4IJ"))
   val transcoder = Ebcdic
   val cbFields = Seq(
     "PIC S9 COMP." -> (new LongDecoder(2), LongToBinaryEncoder(2)),
@@ -59,7 +60,8 @@ class CopyBookSpec extends AnyFlatSpec with Logging {
     "PIC S9(7)V99 COMP-3." -> (Decimal64Decoder(7,2), DecimalToBinaryEncoder(7,2)),
     "PIC S9(7)V999 COMP-3." -> (Decimal64Decoder(7,3), DecimalToBinaryEncoder(7,3)),
     "PIC S9(16)V9(2) COMP-3." -> (Decimal64Decoder(16,2), DecimalToBinaryEncoder(16,2)),
-    "PIC X(4064)" -> (new BytesDecoder(4064), BytesToBinaryEncoder(4064))
+    "PIC X(4064)" -> (new BytesDecoder(4064), BytesToBinaryEncoder(4064)),
+    "PIC T(100)" -> (new LocalizedNullableStringDecoder(localizedTranscoder, 100, Array.emptyByteArray), LocalizedStringToBinaryEncoder(localizedTranscoder, 100))
   )
 
   "CopyBook" should "parse" in {
@@ -130,7 +132,7 @@ class CopyBookSpec extends AnyFlatSpec with Logging {
     cbFields.foreach{x =>
       val picString = x._1
       val expectedDecoder = x._2._1
-      val decoder = Decoding.typeMap(picString, transcoder, filler = false, isDate = false)
+      val decoder = Decoding.typeMap(picString, transcoder, localizedTranscoder, filler = false, isDate = false)
       assert(decoder == expectedDecoder)
     }
   }
@@ -139,8 +141,8 @@ class CopyBookSpec extends AnyFlatSpec with Logging {
     cbFields.foreach{x =>
       val picString = x._1
       val expectedEncoder = x._2._2
-      val decoder = Decoding.typeMap(picString, transcoder, filler = false, isDate = true)
-      val encoder = Encoding.getEncoder(CopyBookField("", decoder, picString), transcoder)
+      val decoder = Decoding.typeMap(picString, transcoder, localizedTranscoder, filler = false, isDate = true)
+      val encoder = Encoding.getEncoder(CopyBookField("", decoder, picString), transcoder, localizedTranscoder)
       assert(encoder == expectedEncoder)
     }
   }
@@ -148,8 +150,8 @@ class CopyBookSpec extends AnyFlatSpec with Logging {
   it should "get date encoder PIC S9(9) COMP." in {
     val picString = "PIC S9(9) COMP."
     val expectedEncoder = DateStringToBinaryEncoder()
-    val decoder = Decoding.typeMap(picString, transcoder, filler = false, isDate = true)
-    val encoder = Encoding.getEncoder(CopyBookField("03  DATE", decoder, picString), transcoder)
+    val decoder = Decoding.typeMap(picString, transcoder, localizedTranscoder, filler = false, isDate = true)
+    val encoder = Encoding.getEncoder(CopyBookField("03  DATE", decoder, picString), transcoder, localizedTranscoder)
     assert(encoder == expectedEncoder)
   }
 

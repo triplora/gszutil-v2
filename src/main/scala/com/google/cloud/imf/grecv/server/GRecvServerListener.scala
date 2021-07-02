@@ -10,7 +10,7 @@ import com.google.cloud.gszutil.{CopyBook, RecordSchema, SchemaProvider}
 import com.google.cloud.imf.grecv.GRecvProtocol
 import com.google.cloud.imf.gzos.pb.GRecvProto
 import com.google.cloud.imf.gzos.pb.GRecvProto.{GRecvRequest, GRecvResponse}
-import com.google.cloud.imf.gzos.{CloudDataSet, Ebcdic, Util}
+import com.google.cloud.imf.gzos.{CloudDataSet, Ebcdic, LocalizedTranscoder, Util}
 import com.google.cloud.imf.util.Logging
 import com.google.cloud.storage.{Blob, BlobId, Storage}
 import com.google.common.hash.Hashing
@@ -167,7 +167,7 @@ object GRecvServerListener extends Logging {
              cfg: ExportConfig,
              responseObserver: StreamObserver[GRecvResponse]) : Unit = {
 
-    val sp = parseCopybook(request.getCopybook)
+    val sp = parseCopybook(request.getCopybook, cfg.picTCharset)
     val result = if(cfg.runMode.toLowerCase == "single") {
       logger.info(s"Export mode - single thread")
       new BqSelectResultExporter(cfg, bq, request.getJobinfo, sp, GcsFileExport(gcs, request.getOutputUri, sp.LRECL)).doExport(request.getSql)
@@ -191,8 +191,8 @@ object GRecvServerListener extends Logging {
     responseObserver.onCompleted()
   }
 
-  private def parseCopybook(copybook: String): SchemaProvider =
-    Try(CopyBook(copybook, Ebcdic)).toEither match {
+  private def parseCopybook(copybook: String, picTCharset: Option[String]): SchemaProvider =
+    Try(CopyBook(copybook, Ebcdic, localizedTranscoder =  LocalizedTranscoder(picTCharset))).toEither match {
       case Right(sp) => {
         logger.info(s"Loaded copybook with LRECL=${sp.LRECL}")
         sp

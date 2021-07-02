@@ -25,11 +25,14 @@ import com.google.cloud.imf.gzos.pb.GRecvProto.Record
 import scala.collection.mutable.ArrayBuffer
 
 
-case class CopyBook(raw: String, transcoder: Transcoder = Ebcdic, altFields: Option[Seq[CopyBookLine]] = None) extends SchemaProvider {
+case class CopyBook(raw: String,
+                    transcoder: Transcoder = Ebcdic,
+                    altFields: Option[Seq[CopyBookLine]] = None,
+                    localizedTranscoder: Transcoder = Ebcdic) extends SchemaProvider {
 
   final val Fields: Seq[CopyBookLine] = altFields match {
     case Some(fl) => fl
-    case None => raw.linesIterator.flatMap(Decoding.parseCopyBookLine(_, transcoder)).toSeq
+    case None => raw.linesIterator.flatMap(Decoding.parseCopyBookLine(_, transcoder, localizedTranscoder)).toSeq
   }
 
 
@@ -80,7 +83,7 @@ case class CopyBook(raw: String, transcoder: Transcoder = Ebcdic, altFields: Opt
       throw new RuntimeException("Vartext export not supported.")
     } else {
       Fields.flatMap {
-        case CopyBookField(name, decoder, typ) => Option(Encoding.getEncoder(CopyBookField(name, decoder, typ), transcoder))
+        case CopyBookField(name, decoder, typ) => Option(Encoding.getEncoder(CopyBookField(name, decoder, typ), transcoder, localizedTranscoder))
         case _ => None
       }
     }.toArray

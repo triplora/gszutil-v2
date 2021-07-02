@@ -90,6 +90,7 @@ case class GsUtilConfig(source: String = "INFILE",
 
                         // Custom
                         schemaProvider: Option[SchemaProvider] = None,
+                        picTCharset: Option[String] = None,
                         statsTable: String = "",
                         remote: Boolean = false,
                         remoteHost: String = "",
@@ -106,6 +107,7 @@ case class GsUtilConfig(source: String = "INFILE",
     m.put("gcsUri", Util.quote(gcsUri))
     m.put("replace",replace)
     m.put("maxErrorPct",maxErrorPct.toString)
+    m.put("picTCharset", picTCharset)
     schemaProvider.map(_.toString).foreach(m.put("schemaProvider",_))
     if (statsTable.nonEmpty)
       m.put("statsTable",Util.quote(statsTable))

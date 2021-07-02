@@ -26,7 +26,7 @@ import org.apache.orc.TypeDescription
 
 import java.math.BigInteger
 import java.nio.ByteBuffer
-import java.nio.charset.{Charset, StandardCharsets}
+import java.nio.charset.StandardCharsets
 import java.time.{LocalDate, Month}
 
 
@@ -101,14 +101,13 @@ object Decoding extends Logging {
       }
   }
 
-  class LocalizedNullableStringDecoder(c: Charset,
+  class LocalizedNullableStringDecoder(c: Transcoder,
                                        override val size: Int,
                                        override val nullIf: Array[Byte],
                                        override val filler: Boolean = false) extends NullableDecoder {
-    private val SP: Byte = c.encode(" ").get()
 
     def isNull(buf: Array[Byte], off: Int, len: Int): Boolean =
-      allSpaces(buf, off, len, SP) || allNull(buf, off, len)
+      allSpaces(buf, off, len, c.SP) || allNull(buf, off, len)
 
     override def get(buf: ByteBuffer, col: ColumnVector, i: Int): Unit = {
       val bcv = col.asInstanceOf[BytesColumnVector]
@@ -127,11 +126,11 @@ object Decoding extends Logging {
         buf.position(buf.position() + size)
         //left trim 0x00 and spaces
         while (data.limit() > data.position()
-          && (data.array()(data.limit() - 1) == 0x00 || data.array()(data.limit() - 1) == SP)) {
+          && (data.array()(data.limit() - 1) == 0x00 || data.array()(data.limit() - 1) == c.SP)) {
           data.limit(data.limit() - 1)
         }
 
-        val valueBytes = StandardCharsets.UTF_8.encode(c.decode(data))
+        val valueBytes = StandardCharsets.UTF_8.encode(c.charset.decode(data))
         bcv.ensureValPreallocated(valueBytes.limit())
         val destPos = bcv.getValPreallocatedStart
         val dest = bcv.getValPreallocatedBytes
@@ -174,7 +173,7 @@ object Decoding extends Logging {
 
     override def equals(obj: Any): Boolean =
       obj match {
-        case dec: NullableStringDecoder =>
+        case dec: LocalizedNullableStringDecoder =>
           dec.nullIf == nullIf && dec.filler == filler && dec.size == size
         case _ => false
       }
@@ -711,7 +710,7 @@ object Decoding extends Logging {
     true
   }
 
-  def typeMap(typ: String, transcoder: Transcoder, filler: Boolean, isDate: Boolean): Decoder = {
+  def typeMap(typ: String, transcoder: Transcoder, localizedTranscoder: Transcoder, filler: Boolean, isDate: Boolean): Decoder = {
     typ.stripSuffix(".") match {
       case charRegex(s) =>
         val size = s.toInt
@@ -724,7 +723,7 @@ object Decoding extends Logging {
         val nullIfBytes =
           if (isDate && size == 10) Array.fill(size)(EBCDIC0)
           else Array.emptyByteArray
-        new LocalizedNullableStringDecoder(getPicTCharset, s.toInt, filler = filler, nullIf = nullIfBytes)
+        new LocalizedNullableStringDecoder(localizedTranscoder, s.toInt, filler = filler, nullIf = nullIfBytes)
       case "PIC X" =>
         new NullableStringDecoder(transcoder, 1, filler = filler, nullIf = Array.emptyByteArray)
       case bytesRegex(s) =>
@@ -780,7 +779,7 @@ object Decoding extends Logging {
   private val fieldRegex = """^\d{1,2}\s+([A-Z0-9-_]*)\s*(PIC.*)$""".r
   private val occursRegex = """^OCCURS (\d{1,2}) TIMES.$""".r
 
-  def parseCopyBookLine(s: String, transcoder: Transcoder): Option[CopyBookLine] = {
+  def parseCopyBookLine(s: String, transcoder: Transcoder, localizedTranscoder: Transcoder): Option[CopyBookLine] = {
     val f = s.takeWhile(_ != '*').trim
     f match {
       case fieldRegex(name, typ) =>
@@ -790,7 +789,7 @@ object Decoding extends Logging {
         val name1 = name.toUpperCase
         val filler = name1.startsWith("FILLER")
         val isDate = name1.endsWith("DT") || name1.endsWith("DATE")
-        val decoder = typeMap(typ1, transcoder, filler, isDate)
+        val decoder = typeMap(typ1, transcoder, localizedTranscoder, filler, isDate)
 
         Option(CopyBookField(name.replace('-', '_').trim, decoder, typ1))
       case titleRegex(name) =>

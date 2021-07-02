@@ -59,6 +59,11 @@ with ArgParser[GsZUtilConfig]{
     .text("port of GRecv transcoding service (default: 51770 or SRVPORT environment variable)")
     .action((x,c) => c.copy(remoteHost = x))
 
+  opt[String]("pic_t_charset")
+    .optional()
+    .text("(optional) charset used for encoding and decoding international strings, used with PIC T copybook type, default is EBCDIC")
+    .action((x,c) => c.copy(picTCharset = Option(x)))
+
   opt[Int]("timeOutMinutes")
     .optional()
     .action{(x,c) => c.copy(timeOutMinutes = Option(x))}

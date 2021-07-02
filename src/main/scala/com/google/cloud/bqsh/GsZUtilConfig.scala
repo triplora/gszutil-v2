@@ -23,5 +23,6 @@ case class GsZUtilConfig(
                           transformDsn: String = "",
                           remoteHost: String = "",
                           remotePort: Int = 51770,
+                          picTCharset: Option[String] = None,
                           timeOutMinutes: Option[Int] = None,
                           keepAliveTimeInSeconds: Option[Int] = None)

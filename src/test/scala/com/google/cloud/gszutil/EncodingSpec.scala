@@ -4,7 +4,7 @@ import com.google.cloud.bigquery.FieldValue
 import com.google.cloud.bigquery.FieldValue.Attribute
 import com.google.cloud.gszutil.Decoding.{Decimal64Decoder, IntAsDateDecoder, LongDecoder}
 import com.google.cloud.gszutil.Encoding._
-import com.google.cloud.imf.gzos.{Ebcdic, PackedDecimal}
+import com.google.cloud.imf.gzos.{Ebcdic, LocalizedTranscoder, PackedDecimal}
 import org.apache.hadoop.hive.ql.exec.vector.{DateColumnVector, Decimal64ColumnVector, LongColumnVector}
 import org.scalatest.flatspec.AnyFlatSpec
 
@@ -127,7 +127,8 @@ class EncodingSpec extends AnyFlatSpec {
   }
 
   it should "encode Japanese characters to ebcdic939" in {
-    val encoder = LocalizedStringToBinaryEncoder(Charset.forName("x-ibm939"), 10)
+    val localizedTranscoder = LocalizedTranscoder(Some("x-ibm939"))
+    val encoder = LocalizedStringToBinaryEncoder(localizedTranscoder, 10)
     val values = List(
       "" -> asByteArray(0x40, 0x40, 0x40, 0x40, 0x40, 0x40, 0x40, 0x40, 0x40, 0x40),
       " " -> asByteArray(0x40, 0x40, 0x40, 0x40, 0x40, 0x40, 0x40, 0x40, 0x40, 0x40),
@@ -142,7 +143,8 @@ class EncodingSpec extends AnyFlatSpec {
   }
 
   it should "encode Japanese characters to utf-8" in {
-    val encoder = LocalizedStringToBinaryEncoder(Charset.forName("utf-8"), 10)
+    val localizedTranscoder = LocalizedTranscoder(Some("utf-8"))
+    val encoder = LocalizedStringToBinaryEncoder(localizedTranscoder, 10)
     val values = List(
       "" -> asByteArray(0x20, 0x20, 0x20, 0x20, 0x20, 0x20, 0x20, 0x20, 0x20, 0x20),
       " " -> asByteArray(0x20, 0x20, 0x20, 0x20, 0x20, 0x20, 0x20, 0x20, 0x20, 0x20),

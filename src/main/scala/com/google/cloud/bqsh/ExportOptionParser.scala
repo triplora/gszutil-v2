@@ -55,6 +55,11 @@ object ExportOptionParser
     .text("When specified, write pipe-delimited string output.")
     .action((x,c) => c.copy(vartext = true))
 
+  opt[String]("pic_t_charset")
+    .optional()
+    .text("(optional) charset used for encoding and decoding international strings, used with PIC T copybook type, default is EBCDIC")
+    .action((x,c) => c.copy(picTCharset = Option(x)))
+
   opt[String]("bucket")
     .optional()
     .text("(optional) GCS bucket where to write")

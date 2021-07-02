@@ -28,14 +28,14 @@ object Encoding extends Logging {
       UnknownTypeEncoder
   }
 
-  def getEncoder(cbf: CopyBookField, transcoder: Transcoder): BinaryEncoder = {
+  def getEncoder(cbf: CopyBookField, transcoder: Transcoder, localizedTranscoder: Transcoder): BinaryEncoder = {
     val decoderSize = cbf.decoder.size
     val typ = cbf.fieldType
     typ.stripSuffix(".") match {
       case charRegex(_) =>
         StringToBinaryEncoder(transcoder, decoderSize)
       case charRegex2(_) =>
-        LocalizedStringToBinaryEncoder(getPicTCharset, decoderSize)
+        LocalizedStringToBinaryEncoder(localizedTranscoder, decoderSize)
       case "PIC X" | numStrRegex(_) =>
         StringToBinaryEncoder(transcoder, decoderSize)
       case bytesRegex(s) =>
@@ -105,21 +105,19 @@ object Encoding extends Logging {
     }
   }
 
-  case class LocalizedStringToBinaryEncoder(c: Charset, size: Int) extends BinaryEncoder {
+  case class LocalizedStringToBinaryEncoder(c: Transcoder, size: Int) extends BinaryEncoder {
     override type T = String
     override val bqSupportedType: StandardSQLTypeName = StandardSQLTypeName.STRING
-
-    private val SP = c.encode(" ").array().head
 
     override def encode(x: String): Array[Byte] = {
       if (x == null)
         return Array.fill(size)(0x00)
 
-      val valueBytes = c.encode(x)
+      val valueBytes = c.charset.encode(x)
       if (valueBytes.limit() > size) {
-        throw new IllegalArgumentException(s"Encoded string does not fit to $size bytes. value='$x' encoding ='${c.name()}'")
+        throw new IllegalArgumentException(s"Encoded string does not fit to $size bytes. value='$x' encoding ='${c.charset.name()}'")
       }
-      val result = Array.fill(size)(SP)
+      val result = Array.fill(size)(c.SP)
       Array.copy(valueBytes.array(), 0, result, 0, valueBytes.limit())
       result
     }

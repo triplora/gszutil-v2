@@ -19,7 +19,6 @@ import java.net.URI
 import java.nio.channels.Channels
 import java.nio.charset.StandardCharsets
 import java.nio.file.Paths
-
 import com.google.cloud.bqsh.{ArgParser, BQ, Command, GsUtilConfig, GsUtilOptionParser}
 import com.google.cloud.gszutil.Decoding.{CopyBookField, CopyBookLine, CopyBookTitle}
 import com.google.cloud.gszutil.io.ZRecordReaderT
@@ -27,7 +26,7 @@ import com.google.cloud.gszutil.orc.WriteORCFile
 import com.google.cloud.gszutil.{CopyBook, Decoding, RecordSchema, SchemaProvider}
 import com.google.cloud.imf.grecv.client.GRecvClient
 import com.google.cloud.imf.gzos.pb.GRecvProto.Record
-import com.google.cloud.imf.gzos.{CloudDataSet, MVS, MVSStorage}
+import com.google.cloud.imf.gzos.{CloudDataSet, LocalizedTranscoder, MVS, MVSStorage}
 import com.google.cloud.imf.util.{Logging, Services, StatsUtil}
 import com.google.cloud.storage.{BlobId, BucketInfo, Storage}
 import com.google.protobuf.util.JsonFormat
@@ -51,12 +50,12 @@ object Cp extends Command[GsUtilConfig] with Logging {
       return cpDsn(c.gcsUri, c.destDSN, gcs, zos)
     }
 
-
+    val localizedTranscoder = LocalizedTranscoder(c.picTCharset)
     val schemaProvider: SchemaProvider = parseRecord(getTransformationsAsString(c, gcs, zos)) match {
       case Some(x) => {
         logger.info("Merging copybook with provided transformations ...")
 
-        val sch = c.schemaProvider.getOrElse(zos.loadCopyBook(c.copyBook))
+        val sch = c.schemaProvider.getOrElse(zos.loadCopyBook(c.copyBook, localizedTranscoder))
         logger.info(s"Current Schema: ${sch.toString}")
 
         val newSchema = merge(sch, x)
@@ -65,7 +64,7 @@ object Cp extends Command[GsUtilConfig] with Logging {
       }
       case None => {
         logger.info("Use original copybook")
-        c.schemaProvider.getOrElse(zos.loadCopyBook(c.copyBook))
+        c.schemaProvider.getOrElse(zos.loadCopyBook(c.copyBook, localizedTranscoder))
       }
     }
     val in: ZRecordReaderT = c.testInput.getOrElse(zos.readCloudDD(c.source))
@@ -247,7 +246,7 @@ object Cp extends Command[GsUtilConfig] with Logging {
           case x =>
             x
         }
-        CopyBook(x.raw, x.transcoder, Option(newFileds))
+        CopyBook(x.raw, x.transcoder, Option(newFileds), x.localizedTranscoder)
 
       case y: RecordSchema => {
         logger.info("Merging RecordSchema")

@@ -19,7 +19,7 @@ package com.google.cloud.bqsh.cmd
 import com.google.cloud.bqsh.{ArgParser, Command, GsUtilConfig, GsZUtilConfig, GsZUtilOptionParser}
 import com.google.cloud.gszutil.{CopyBook, SchemaProvider}
 import com.google.cloud.imf.grecv.client.GRecvClient
-import com.google.cloud.imf.gzos.{CloudDataSet, DataSetInfo, MVS, MVSStorage}
+import com.google.cloud.imf.gzos.{CloudDataSet, DataSetInfo, LocalizedTranscoder, MVS, MVSStorage}
 import com.google.cloud.imf.util.{Logging, Services}
 
 /** Command-Line utility used to request remote transcoding of
@@ -39,16 +39,19 @@ object GsZUtil extends Command[GsZUtilConfig] with Logging {
          |--transformDsn=${c.transformDsn},
          |--remoteHost=${c.remoteHost},
          |--remotePort=${c.remotePort},
+         |--picTCharset=${c.picTCharset},
          |--timeOutMinutes=${c.timeOutMinutes},
          |--keepAliveTimeInSeconds=${c.keepAliveTimeInSeconds}
          |""".stripMargin)
+
+    val picTTranscoder = LocalizedTranscoder(c.picTCharset)
     val sp: SchemaProvider =
       if (c.cobDsn.nonEmpty) {
         logger.info(s"reading copybook from DSN=${c.cobDsn}")
-        CopyBook(zos.readDSNLines(MVSStorage.parseDSN(c.cobDsn)).mkString("\n"))
+        CopyBook(zos.readDSNLines(MVSStorage.parseDSN(c.cobDsn)).mkString("\n"), localizedTranscoder = picTTranscoder)
       } else {
         logger.info(s"reading copybook from DD:COPYBOOK")
-        zos.loadCopyBook("COPYBOOK")
+        zos.loadCopyBook("COPYBOOK", picTTranscoder)
       }
     //TODO read FLDINFO DD and merge field info
 

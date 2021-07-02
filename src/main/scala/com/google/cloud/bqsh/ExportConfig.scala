@@ -27,6 +27,7 @@ case class ExportConfig(
                          timeoutMinutes: Int = 90,
                          vartext: Boolean = false,
                          runMode: String = "parallel",
+                         picTCharset: Option[String] = None,
 
                          bucket: String = "",
                          remoteHost: String = "",
@@ -82,6 +83,7 @@ case class ExportConfig(
       |cobDsn=$cobDsn,
       |timeoutMinutes=$timeoutMinutes,
       |vartext=$vartext,
+      |picTCharset=${picTCharset.getOrElse("")},
       |bucket=$bucket,
       |remoteHost=$remoteHost,
       |remotePort=$remotePort,
@@ -108,6 +110,7 @@ object ExportConfig {
       cobDsn = configs.getOrElse("cobDsn", ""),
       timeoutMinutes = configs.getOrElse("timeoutMinutes", "").toInt,
       vartext = configs.getOrElse("vartext", "").toBoolean,
+      picTCharset = configs.get("picTCharset"),
       bucket = configs.getOrElse("bucket", ""),
       remoteHost = configs.getOrElse("remoteHost", ""),
       remotePort = configs.getOrElse("remotePort", "").toInt,

@@ -19,10 +19,9 @@ package com.google.cloud.imf.gzos
 import java.nio.channels.FileChannel
 import java.nio.file.{Files, Paths, StandardOpenOption}
 import java.util.Date
-
 import com.google.cloud.gszutil
 import com.google.cloud.gszutil.io.{ChannelRecordReader, ChannelRecordWriter, ZRecordReaderT, ZRecordWriterT}
-import com.google.cloud.gszutil.{CopyBook, Utf8}
+import com.google.cloud.gszutil.{CopyBook, Transcoder, Utf8}
 import com.google.cloud.imf.gzos.MVSStorage.DSN
 import com.google.cloud.imf.gzos.Util.DefaultCredentialProvider
 import com.google.cloud.imf.gzos.pb.GRecvProto.ZOSJobInfo
@@ -95,12 +94,12 @@ object Linux extends MVS with Logging {
 
   override def readKeyfile(): Array[Byte] = Array.empty
 
-  override def loadCopyBook(dd: String): CopyBook = {
+  override def loadCopyBook(dd: String, localizedTranscoder: Transcoder = Utf8): CopyBook = {
     val ddValue = System.getenv(dd)
     require(ddValue != null, s"$dd environment variable not defined")
     val ddPath = Paths.get(ddValue)
     require(ddPath.toFile.exists(), s"$ddPath doesn't exist")
-    CopyBook(new String(Files.readAllBytes(ddPath), Charsets.UTF_8), transcoder)
+    CopyBook(new String(Files.readAllBytes(ddPath), Charsets.UTF_8), transcoder, localizedTranscoder = transcoder)
   }
 
   /** On Linux DD is an environment variable pointing to a file

@@ -21,7 +21,7 @@ import com.google.cloud.gszutil.Encoding.DecimalToBinaryEncoder
 import com.google.cloud.gszutil.io.ZReader
 import com.google.cloud.imf.gzos.pb.GRecvProto.Record.Field
 import com.google.cloud.imf.gzos.pb.GRecvProto.Record.Field.FieldType
-import com.google.cloud.imf.gzos.{Binary, Ebcdic, PackedDecimal, Util}
+import com.google.cloud.imf.gzos.{Binary, Ebcdic, LocalizedTranscoder, PackedDecimal, Util}
 import com.google.common.base.Charsets
 import com.ibm.jzos.fields.daa
 import org.apache.hadoop.hive.ql.exec.vector.{BytesColumnVector, DateColumnVector, Decimal64ColumnVector, LongColumnVector}
@@ -29,7 +29,7 @@ import org.apache.hadoop.hive.serde2.io.HiveDecimalWritable
 import org.scalatest.flatspec.AnyFlatSpec
 
 import java.nio.ByteBuffer
-import java.nio.charset.{Charset, StandardCharsets}
+import java.nio.charset.StandardCharsets
 import java.time.LocalDate
 import java.time.format.DateTimeFormatter
 
@@ -232,7 +232,8 @@ class DecodingSpec extends AnyFlatSpec {
   }
 
   it should "decode from ebcdic939 to Japanese string" in {
-    val decoder = new LocalizedNullableStringDecoder(Charset.forName("x-ibm939"), 10, "null".getBytes("utf-8"))
+    val localizedTranscoder = LocalizedTranscoder(Some("x-ibm939"))
+    val decoder = new LocalizedNullableStringDecoder(localizedTranscoder, 10, "null".getBytes("utf-8"))
 
     val values = List(
       "" -> asByteArray(0x40, 0x40, 0x40, 0x40, 0x40, 0x40, 0x40, 0x40, 0x40, 0x40),
@@ -266,7 +267,8 @@ class DecodingSpec extends AnyFlatSpec {
   }
 
   it should "decode from utf-8 to Japanese string" in {
-    val decoder = new LocalizedNullableStringDecoder(Charset.forName("utf-8"), 10, "null".getBytes("utf-8"))
+    val localizedTranscoder = LocalizedTranscoder(Some("utf-8"))
+    val decoder = new LocalizedNullableStringDecoder(localizedTranscoder, 10, "null".getBytes("utf-8"))
 
     val values = List(
       "" -> asByteArray(0x20, 0x20, 0x20, 0x20, 0x20, 0x20, 0x20, 0x20, 0x20, 0x20),

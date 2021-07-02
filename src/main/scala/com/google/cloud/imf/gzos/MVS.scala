@@ -16,7 +16,7 @@
 
 package com.google.cloud.imf.gzos
 
-import com.google.cloud.gszutil.CopyBook
+import com.google.cloud.gszutil.{CopyBook, Transcoder}
 import com.google.cloud.gszutil.io.{ZRecordReaderT, ZRecordWriterT}
 import com.google.cloud.imf.gzos.MVSStorage.DSN
 import com.google.cloud.imf.gzos.pb.GRecvProto.ZOSJobInfo
@@ -40,7 +40,7 @@ trait MVS {
   def getCredentialProvider(): CredentialProvider
   def readKeyfile(): Array[Byte]
   def listPDS(dsn: DSN): Iterator[PDSMemberInfo]
-  def loadCopyBook(dd: String): CopyBook
+  def loadCopyBook(dd: String, localizedTranscoder: Transcoder = Ebcdic): CopyBook
   def jobName: String
   def jobDate: String
   def jobTime: String
