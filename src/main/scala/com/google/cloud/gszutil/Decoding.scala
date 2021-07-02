@@ -124,6 +124,7 @@ object Decoding extends Logging {
         val data = ByteBuffer.wrap(buf.array())
         data.position(buf.position())
         data.limit(buf.position() + size)
+        buf.position(buf.position() + size)
         //left trim 0x00 and spaces
         while (data.limit() > data.position()
           && (data.array()(data.limit() - 1) == 0x00 || data.array()(data.limit() - 1) == SP)) {
