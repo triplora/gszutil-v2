@@ -16,9 +16,6 @@
 
 package com.google.cloud.imf.gzos
 
-import java.nio.channels.FileChannel
-import java.nio.file.{Files, Paths, StandardOpenOption}
-import java.util.Date
 import com.google.cloud.gszutil
 import com.google.cloud.gszutil.io.{ChannelRecordReader, ChannelRecordWriter, ZRecordReaderT, ZRecordWriterT}
 import com.google.cloud.gszutil.{CopyBook, Transcoder, Utf8}
@@ -29,15 +26,20 @@ import com.google.cloud.imf.util.{Logging, Services, StatsUtil}
 import com.google.common.base.Charsets
 import com.google.common.io.ByteStreams
 
+import java.nio.channels.FileChannel
+import java.nio.file.{Files, Paths, StandardOpenOption}
+import java.util.Date
+
 object Linux extends MVS with Logging {
   override def isIBM: Boolean = false
+
   override def init(): Unit = {
-    System.setProperty("java.net.preferIPv4Stack" , "true")
+    System.setProperty("java.net.preferIPv4Stack", "true")
     Console.out.println("Build Info:\n" + Util.readS("build.txt"))
   }
 
   override def ddExists(dd: String): Boolean = {
-    sys.env.contains(dd) && sys.env.contains(dd+"_LRECL") && sys.env.contains(dd+"_BLKSIZE")
+    sys.env.contains(dd) && sys.env.contains(dd + "_LRECL") && sys.env.contains(dd + "_BLKSIZE")
   }
 
   override def getDSN(dd: String): String = dd
@@ -99,7 +101,7 @@ object Linux extends MVS with Logging {
     require(ddValue != null, s"$dd environment variable not defined")
     val ddPath = Paths.get(ddValue)
     require(ddPath.toFile.exists(), s"$ddPath doesn't exist")
-    CopyBook(new String(Files.readAllBytes(ddPath), Charsets.UTF_8), transcoder, localizedTranscoder = transcoder)
+    CopyBook(new String(Files.readAllBytes(ddPath), Charsets.UTF_8), transcoder, localizedTranscoder = localizedTranscoder)
   }
 
   /** On Linux DD is an environment variable pointing to a file
@@ -156,7 +158,7 @@ object Linux extends MVS with Logging {
     logger.info(s"Opening DD:$ddName from path:$ddPath")
     if (Files.isDirectory(ddPath))
       throw new IllegalStateException(s"Unable to write DD:$ddName because $ddPath is a directory")
-    import StandardOpenOption.{CREATE,WRITE}
+    import StandardOpenOption.{CREATE, WRITE}
     ChannelRecordWriter(channel = FileChannel.open(ddPath, CREATE, WRITE),
       lrecl = sys.env(lreclVarName).toInt,
       blksize = sys.env(blkSizeVarName).toInt)
