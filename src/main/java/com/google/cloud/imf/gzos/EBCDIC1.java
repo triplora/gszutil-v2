@@ -8,11 +8,7 @@ import java.nio.BufferOverflowException;
 import java.nio.BufferUnderflowException;
 import java.nio.ByteBuffer;
 import java.nio.CharBuffer;
-import java.nio.charset.Charset;
-import java.nio.charset.CharsetDecoder;
-import java.nio.charset.CharsetEncoder;
-import java.nio.charset.CoderResult;
-import java.nio.charset.StandardCharsets;
+import java.nio.charset.*;
 
 /** IBM1047 / CP1047 with 0xBA,0xBB '\u009A','\u009B' replaced with '[',']' (91,93) */
 public class EBCDIC1 extends Charset {
@@ -61,7 +57,11 @@ public class EBCDIC1 extends Charset {
         protected CoderResult encodeLoop(CharBuffer in, ByteBuffer out) {
             try {
                 while (true) {
-                    out.put(c2b[(int)in.get()]);
+                    int i = in.get();
+                    if (i >= c2b.length) {
+                        throw new IllegalStateException("Could not encode character '" + (char) i + "' with encoding " + this.charset().aliases() + " !!!");
+                    }
+                    out.put(c2b[i]);
                 }
             } catch (BufferUnderflowException e) {
                 return CoderResult.UNDERFLOW;
@@ -81,7 +81,7 @@ public class EBCDIC1 extends Charset {
             System.arraycopy(chars, 0, b2c, 0, 256);
 
             for (int i = 0; i < 256; i++){
-                c2b[(int)chars[i]] = bytes[i];
+                c2b[chars[i]] = bytes[i];
             }
         } catch (IOException e){
             throw new RuntimeException(e);
