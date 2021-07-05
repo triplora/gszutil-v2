@@ -78,6 +78,9 @@ Upload Binary MVS Dataset to GCS
                            number of concurrent writers (default: 6)
   --timeOutMinutes <value>
                            timeout in minutes (default: 60)
+  --pic_t_charset <value>  Set encoding for PIC T copybook type. 
+                           Supported encodings are: UTF-8, x-IBM939 (JPNEBCDIC1399_4IJ),
+                           x-IBM935 (SCHEBCDIC935_6IJ alias name)                          
 Command: rm [options]
 Delete objects in GCS
   -r, --recursive          delete directory
@@ -281,6 +284,9 @@ Usage: rm [options] tablespec
   --synchronous_mode <value>
                            If set to true, wait for the command to complete before returning, and use the job completion status as the error code. If set to false, the job is created, and successful completion status is used for the error code. The default value is true.
   --sync <value>           If set to true, wait for the command to complete before returning, and use the job completion status as the error code. If set to false, the job is created, and successful completion status is used for the error code. The default value is true.
+  --pic_t_charset <value>  Set encoding for PIC T copybook type. 
+                           Supported encodings are: UTF-8, x-IBM939 (JPNEBCDIC1399_4IJ),
+                           x-IBM935 (SCHEBCDIC935_6IJ alias name)
 ```
 
 #### bq export
