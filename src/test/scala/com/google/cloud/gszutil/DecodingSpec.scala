@@ -301,6 +301,40 @@ class DecodingSpec extends AnyFlatSpec {
     }
   }
 
+  it should "decode from ebcdic935 to Chinese string" in {
+    val localizedTranscoder = LocalizedTranscoder(Some("SCHEBCDIC935_6IJ"))
+    val decoder = new LocalizedNullableStringDecoder(localizedTranscoder, 10, "null".getBytes("utf-8"))
+
+    val values = List(
+      "" -> asByteArray(0x40, 0x40, 0x40, 0x40, 0x40, 0x40, 0x40, 0x40, 0x40, 0x40),
+      null.asInstanceOf[String] -> asByteArray(0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00),
+      null.asInstanceOf[String] -> asByteArray(0x95, 0xA4, 0x93, 0x93, 0x40, 0x40, 0x40, 0x40, 0x40, 0x40),
+      "aA1" -> asByteArray(0xFFFFFF81, 0xFFFFFFC1, 0xFFFFFF1, 0x40, 0x40, 0x40, 0x40, 0x40, 0x40, 0x40),
+      "国" -> asByteArray(0x0E, 0x4D, 0xffffff9b, 0x0F, 0x40, 0x40, 0x40, 0x40, 0x40, 0x40),
+      "国A果" -> asByteArray(0x0E, 0x4D, 0xFFFFFF9B, 0x0F, 0xFFFFFFC1, 0x0E, 0x4D, 0xFFFFFF9C, 0x0F, 0x40),
+      "苹果国" -> asByteArray(0x0E, 0x53, 0xFFFFFFBA, 0x4D, 0xFFFFFF9C, 0x4D, 0xFFFFFF9B, 0x0F, 0x40, 0x40),
+    )
+
+    values.foreach {
+      case (null | "", bytes) =>
+        val v = decoder.columnVector(1).asInstanceOf[BytesColumnVector]
+        decoder.get(ByteBuffer.wrap(bytes), v, 0)
+        val actual = v.vector(0).slice(v.start(0), v.start(0) + v.length(0))
+        assert(v.isNull(0))
+        assertResult(Array[Byte]())(actual)
+      case (str, bytes) =>
+        val v = decoder.columnVector(1).asInstanceOf[BytesColumnVector]
+        decoder.get(ByteBuffer.wrap(bytes), v, 0)
+        val actual = v.vector(0).slice(v.start(0), v.start(0) + v.length(0))
+        val expected = str.getBytes("utf-8")
+        if (!actual.sameElements(expected)) {
+          println("Bytes : " + bytes.map("%02X" format _).mkString("Array(", ", ", ")"))
+        }
+        assert(!v.isNull(0))
+        assertResult(expected)(actual)
+    }
+  }
+
   it should "decode values" in {
     val decoder = Decimal64Decoder(5, 2)
     val values = List(
