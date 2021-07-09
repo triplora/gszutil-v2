@@ -192,7 +192,7 @@ object GRecvServerListener extends Logging {
   }
 
   private def parseCopybook(copybook: String, picTCharset: Option[String]): SchemaProvider =
-    Try(CopyBook(copybook, Ebcdic, localizedTranscoder =  LocalizedTranscoder(picTCharset))).toEither match {
+    Try(CopyBook(copybook, Ebcdic, picTCharset = picTCharset)).toEither match {
       case Right(sp) => {
         logger.info(s"Loaded copybook with LRECL=${sp.LRECL}")
         sp

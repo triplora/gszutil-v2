@@ -96,12 +96,12 @@ object Linux extends MVS with Logging {
 
   override def readKeyfile(): Array[Byte] = Array.empty
 
-  override def loadCopyBook(dd: String, localizedTranscoder: Transcoder = Utf8): CopyBook = {
+  override def loadCopyBook(dd: String, picTCharset: Option[String] = Some("UTF-8")): CopyBook = {
     val ddValue = System.getenv(dd)
     require(ddValue != null, s"$dd environment variable not defined")
     val ddPath = Paths.get(ddValue)
     require(ddPath.toFile.exists(), s"$ddPath doesn't exist")
-    CopyBook(new String(Files.readAllBytes(ddPath), Charsets.UTF_8), transcoder, localizedTranscoder = localizedTranscoder)
+    CopyBook(new String(Files.readAllBytes(ddPath), Charsets.UTF_8), transcoder, picTCharset = picTCharset)
   }
 
   /** On Linux DD is an environment variable pointing to a file

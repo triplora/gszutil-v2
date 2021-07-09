@@ -57,14 +57,13 @@ object Export extends Command[ExportConfig] with Logging {
     }
 
     //copybook is required
-    val picTTranscoder = LocalizedTranscoder(cfg.picTCharset)
     val sp: CopyBook =
       if (cfg.cobDsn.nonEmpty) {
         logger.info(s"reading copybook from DSN=${cfg.cobDsn}")
-        CopyBook(zos.readDSNLines(MVSStorage.parseDSN(cfg.cobDsn)).mkString("\n"), localizedTranscoder = picTTranscoder)
+        CopyBook(zos.readDSNLines(MVSStorage.parseDSN(cfg.cobDsn)).mkString("\n"), picTCharset = cfg.picTCharset)
       } else {
         logger.info(s"reading copybook from DD:COPYBOOK")
-        zos.loadCopyBook("COPYBOOK",  picTTranscoder)
+        zos.loadCopyBook("COPYBOOK",  cfg.picTCharset)
       }
 
     try {

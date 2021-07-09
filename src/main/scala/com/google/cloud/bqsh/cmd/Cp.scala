@@ -50,12 +50,11 @@ object Cp extends Command[GsUtilConfig] with Logging {
       return cpDsn(c.gcsUri, c.destDSN, gcs, zos)
     }
 
-    val localizedTranscoder = LocalizedTranscoder(c.picTCharset)
     val schemaProvider: SchemaProvider = parseRecord(getTransformationsAsString(c, gcs, zos)) match {
       case Some(x) => {
         logger.info("Merging copybook with provided transformations ...")
 
-        val sch = c.schemaProvider.getOrElse(zos.loadCopyBook(c.copyBook, localizedTranscoder))
+        val sch = c.schemaProvider.getOrElse(zos.loadCopyBook(c.copyBook, c.picTCharset))
         logger.info(s"Current Schema: ${sch.toString}")
 
         val newSchema = merge(sch, x)
@@ -64,7 +63,7 @@ object Cp extends Command[GsUtilConfig] with Logging {
       }
       case None => {
         logger.info("Use original copybook")
-        c.schemaProvider.getOrElse(zos.loadCopyBook(c.copyBook, localizedTranscoder))
+        c.schemaProvider.getOrElse(zos.loadCopyBook(c.copyBook, c.picTCharset))
       }
     }
     val in: ZRecordReaderT = c.testInput.getOrElse(zos.readCloudDD(c.source))
@@ -246,7 +245,7 @@ object Cp extends Command[GsUtilConfig] with Logging {
           case x =>
             x
         }
-        CopyBook(x.raw, x.transcoder, Option(newFileds), x.localizedTranscoder)
+        CopyBook(x.raw, x.transcoder, Option(newFileds), x.picTCharset)
 
       case y: RecordSchema => {
         logger.info("Merging RecordSchema")

@@ -5,10 +5,13 @@ import com.google.cloud.gszutil.Transcoder
 import java.nio.charset.Charset
 
 case class LocalizedTranscoder(localizedCharset: Option[String]) extends Transcoder {
-  override final val charset: Charset = localizedCharset
+  require(localizedCharset.isDefined, "Charset for international type is mandatory.")
+
+  override val charset: Charset = localizedCharset
     .map(aliasToCharset)
     .map(c => Charset.forName(c))
-    .getOrElse(new EBCDIC1)
+    .get
+
   override val SP: Byte = charset.encode(" ").array().head
 
   private def aliasToCharset(alias: String): String = {

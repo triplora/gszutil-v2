@@ -18,7 +18,7 @@ package com.google.cloud.gszutil
 import com.google.cloud.gszutil.CopyBookDecoderAndEncoderOps._
 import com.google.cloud.imf.gzos.pb.GRecvProto.Record.Field
 import com.google.cloud.imf.gzos.pb.GRecvProto.Record.Field.NullIf
-import com.google.cloud.imf.gzos.{Binary, PackedDecimal}
+import com.google.cloud.imf.gzos.{Binary, LocalizedTranscoder, PackedDecimal}
 import com.google.cloud.imf.util.Logging
 import com.google.protobuf.ByteString
 import org.apache.hadoop.hive.ql.exec.vector._
@@ -710,7 +710,7 @@ object Decoding extends Logging {
     true
   }
 
-  def typeMap(typ: String, transcoder: Transcoder, localizedTranscoder: Transcoder, filler: Boolean, isDate: Boolean): Decoder = {
+  def typeMap(typ: String, transcoder: Transcoder, picTCharset: Option[String], filler: Boolean, isDate: Boolean): Decoder = {
     typ.stripSuffix(".") match {
       case charRegex(s) =>
         val size = s.toInt
@@ -723,7 +723,7 @@ object Decoding extends Logging {
         val nullIfBytes =
           if (isDate && size == 10) Array.fill(size)(EBCDIC0)
           else Array.emptyByteArray
-        new LocalizedNullableStringDecoder(localizedTranscoder, s.toInt, filler = filler, nullIf = nullIfBytes)
+        new LocalizedNullableStringDecoder(LocalizedTranscoder(picTCharset), s.toInt, filler = filler, nullIf = nullIfBytes)
       case "PIC X" =>
         new NullableStringDecoder(transcoder, 1, filler = filler, nullIf = Array.emptyByteArray)
       case bytesRegex(s) =>
@@ -779,7 +779,7 @@ object Decoding extends Logging {
   private val fieldRegex = """^\d{1,2}\s+([A-Z0-9-_]*)\s*(PIC.*)$""".r
   private val occursRegex = """^OCCURS (\d{1,2}) TIMES.$""".r
 
-  def parseCopyBookLine(s: String, transcoder: Transcoder, localizedTranscoder: Transcoder): Option[CopyBookLine] = {
+  def parseCopyBookLine(s: String, transcoder: Transcoder, picTCharset: Option[String]): Option[CopyBookLine] = {
     val f = s.takeWhile(_ != '*').trim
     f match {
       case fieldRegex(name, typ) =>
@@ -789,7 +789,7 @@ object Decoding extends Logging {
         val name1 = name.toUpperCase
         val filler = name1.startsWith("FILLER")
         val isDate = name1.endsWith("DT") || name1.endsWith("DATE")
-        val decoder = typeMap(typ1, transcoder, localizedTranscoder, filler, isDate)
+        val decoder = typeMap(typ1, transcoder, picTCharset, filler, isDate)
 
         Option(CopyBookField(name.replace('-', '_').trim, decoder, typ1))
       case titleRegex(name) =>

@@ -25,7 +25,8 @@ import org.scalatest.flatspec.AnyFlatSpec
 
 class CopyBookSpec extends AnyFlatSpec with Logging {
 
-  val localizedTranscoder = LocalizedTranscoder(Some("JPNEBCDIC1399_4IJ"))
+  val picTCharset = Some("JPNEBCDIC1399_4IJ")
+  val localizedTranscoder = LocalizedTranscoder(picTCharset)
   val transcoder = Ebcdic
   val cbFields = Seq(
     "PIC S9 COMP." -> (new LongDecoder(2), LongToBinaryEncoder(2)),
@@ -132,7 +133,7 @@ class CopyBookSpec extends AnyFlatSpec with Logging {
     cbFields.foreach{x =>
       val picString = x._1
       val expectedDecoder = x._2._1
-      val decoder = Decoding.typeMap(picString, transcoder, localizedTranscoder, filler = false, isDate = false)
+      val decoder = Decoding.typeMap(picString, transcoder, picTCharset, filler = false, isDate = false)
       assert(decoder == expectedDecoder)
     }
   }
@@ -141,8 +142,8 @@ class CopyBookSpec extends AnyFlatSpec with Logging {
     cbFields.foreach{x =>
       val picString = x._1
       val expectedEncoder = x._2._2
-      val decoder = Decoding.typeMap(picString, transcoder, localizedTranscoder, filler = false, isDate = true)
-      val encoder = Encoding.getEncoder(CopyBookField("", decoder, picString), transcoder, localizedTranscoder)
+      val decoder = Decoding.typeMap(picString, transcoder, picTCharset, filler = false, isDate = true)
+      val encoder = Encoding.getEncoder(CopyBookField("", decoder, picString), transcoder, picTCharset)
       assert(encoder == expectedEncoder)
     }
   }
@@ -150,8 +151,8 @@ class CopyBookSpec extends AnyFlatSpec with Logging {
   it should "get date encoder PIC S9(9) COMP." in {
     val picString = "PIC S9(9) COMP."
     val expectedEncoder = DateStringToBinaryEncoder()
-    val decoder = Decoding.typeMap(picString, transcoder, localizedTranscoder, filler = false, isDate = true)
-    val encoder = Encoding.getEncoder(CopyBookField("03  DATE", decoder, picString), transcoder, localizedTranscoder)
+    val decoder = Decoding.typeMap(picString, transcoder, picTCharset, filler = false, isDate = true)
+    val encoder = Encoding.getEncoder(CopyBookField("03  DATE", decoder, picString), transcoder, picTCharset)
     assert(encoder == expectedEncoder)
   }
 

@@ -5,7 +5,7 @@ import com.google.cloud.gszutil.CopyBookDecoderAndEncoderOps._
 import com.google.cloud.gszutil.Decoding.{CopyBookField, Decimal64Decoder}
 import com.google.cloud.imf.gzos.pb.GRecvProto.Record.Field
 import com.google.cloud.imf.gzos.pb.GRecvProto.Record.Field.FieldType
-import com.google.cloud.imf.gzos.{Binary, PackedDecimal}
+import com.google.cloud.imf.gzos.{Binary, LocalizedTranscoder, PackedDecimal}
 import com.google.cloud.imf.util.Logging
 
 import java.nio.charset.Charset
@@ -28,14 +28,14 @@ object Encoding extends Logging {
       UnknownTypeEncoder
   }
 
-  def getEncoder(cbf: CopyBookField, transcoder: Transcoder, localizedTranscoder: Transcoder): BinaryEncoder = {
+  def getEncoder(cbf: CopyBookField, transcoder: Transcoder, picTCharset: Option[String]): BinaryEncoder = {
     val decoderSize = cbf.decoder.size
     val typ = cbf.fieldType
     typ.stripSuffix(".") match {
       case charRegex(_) =>
         StringToBinaryEncoder(transcoder, decoderSize)
       case charRegex2(_) =>
-        LocalizedStringToBinaryEncoder(localizedTranscoder, decoderSize)
+        LocalizedStringToBinaryEncoder(LocalizedTranscoder(picTCharset), decoderSize)
       case "PIC X" | numStrRegex(_) =>
         StringToBinaryEncoder(transcoder, decoderSize)
       case bytesRegex(s) =>

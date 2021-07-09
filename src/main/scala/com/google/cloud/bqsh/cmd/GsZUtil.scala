@@ -44,14 +44,14 @@ object GsZUtil extends Command[GsZUtilConfig] with Logging {
          |--keepAliveTimeInSeconds=${c.keepAliveTimeInSeconds}
          |""".stripMargin)
 
-    val picTTranscoder = LocalizedTranscoder(c.picTCharset)
+
     val sp: SchemaProvider =
       if (c.cobDsn.nonEmpty) {
         logger.info(s"reading copybook from DSN=${c.cobDsn}")
-        CopyBook(zos.readDSNLines(MVSStorage.parseDSN(c.cobDsn)).mkString("\n"), localizedTranscoder = picTTranscoder)
+        CopyBook(zos.readDSNLines(MVSStorage.parseDSN(c.cobDsn)).mkString("\n"), picTCharset = c.picTCharset)
       } else {
         logger.info(s"reading copybook from DD:COPYBOOK")
-        zos.loadCopyBook("COPYBOOK", picTTranscoder)
+        zos.loadCopyBook("COPYBOOK", c.picTCharset)
       }
     //TODO read FLDINFO DD and merge field info
 
