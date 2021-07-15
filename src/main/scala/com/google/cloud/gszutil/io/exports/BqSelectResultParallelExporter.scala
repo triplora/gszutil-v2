@@ -8,6 +8,7 @@ import com.google.cloud.gszutil.SchemaProvider
 import com.google.cloud.imf.gzos.pb.GRecvProto
 import com.google.cloud.imf.util.ServiceLogger
 import com.google.common.collect.Iterators
+import com.google.cloud.imf.util.RetryHelper._
 
 import java.util.concurrent.atomic.AtomicLong
 import java.util.concurrent.{Executors, TimeUnit}
@@ -101,5 +102,9 @@ class BqSelectResultParallelExporter(cfg: ExportConfig,
     Page(result.getValues, Iterators.size(result.getValues.iterator()))
   }
 
-  override def close(): Unit = exporters.foreach(_.endIfOpen())
+  override def close(): Unit = {
+    val errors = exporters.map(e => retryable(e.endIfOpen())).filter(_.isLeft)
+    if(errors.nonEmpty)
+      throw new IllegalStateException(s"Not all resources were closed properly! ${errors.size} resources were not closed.", errors.head.left.get)
+  }
 }
