@@ -1,12 +1,9 @@
 package com.google.cloud.imf.grecv.server
 
-import java.time.ZoneId
-import java.time.format.DateTimeFormatter
-
 import com.google.api.services.storage.{Storage => LowLevelStorageApi}
-import com.google.cloud.bqsh.ExportConfig
 import com.google.cloud.bigquery.BigQuery
 import com.google.cloud.bigquery.storage.v1.BigQueryReadClient
+import com.google.cloud.bqsh.ExportConfig
 import com.google.cloud.imf.gzos.pb.GRecvGrpc.GRecvImplBase
 import com.google.cloud.imf.gzos.pb.GRecvProto
 import com.google.cloud.imf.gzos.pb.GRecvProto.{GRecvRequest, GRecvResponse, HealthCheckRequest, HealthCheckResponse}
@@ -16,6 +13,8 @@ import com.google.protobuf.ByteString
 import com.google.protobuf.util.JsonFormat
 import io.grpc.stub.StreamObserver
 
+import java.time.ZoneId
+import java.time.format.DateTimeFormatter
 import scala.util.Random
 
 class GRecvService(storageFunc: ByteString => Storage,
@@ -63,8 +62,13 @@ class GRecvService(storageFunc: ByteString => Storage,
     try {
       val gcs = storageFunc(request.getKeyfile)
       val bq: BigQuery = bqFunc(cfg.projectId, cfg.location, request.getKeyfile)
-      val storageApi : BigQueryReadClient = bqStorageFunc(request.getKeyfile)
-      GRecvServerListener.`export`(request, bq, storageApi, gcs, cfg, responseObserver)
+      val storageApi: BigQueryReadClient = bqStorageFunc(request.getKeyfile)
+      try {
+        GRecvServerListener.`export`(request, bq, storageApi, gcs, cfg, responseObserver)
+      } finally {
+        storageApi.close()
+      }
+
     } catch {
       case t: Throwable =>
         logger.error(t.getMessage, t)
