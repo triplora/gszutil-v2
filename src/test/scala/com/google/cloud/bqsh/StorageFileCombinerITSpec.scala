@@ -28,20 +28,56 @@ class StorageFileCombinerITSpec extends AnyFlatSpec with BeforeAndAfterEach {
     gcs.delete(BlobId.of(targetUri.getAuthority, targetUri.getPath.stripPrefix("/")))
   }
 
+  "GCS file combiner" should "not fail if source folder is empty" in {
+    val combined = service.composeAll(TargetUrl, SourceUrl)
+    assert(combined.isEmpty)
+  }
+
   "GCS file combiner" should "merge all files in folder" in {
-    val sources = prepareData()
+    val sources = Seq(createBlob(blobId(1), "Hello "), createBlob(blobId(2), "World"))
     val combined = service.composeAll(TargetUrl, SourceUrl)
 
-    assert(combined.exists())
-    assert(new String(combined.getContent()) == "Hello World")
+    assert(combined.isDefined)
+    assert(new String(combined.get.getContent()) == "Hello World")
     sources.map(s => assert(s.exists()))
   }
 
-  private def prepareData(): Seq[Blob] = {
-    val b1 = BlobId.of(sourceUri.getAuthority, sourceUri.getPath.stripPrefix("/").concat("/1"))
-    val b2 = BlobId.of(sourceUri.getAuthority, sourceUri.getPath.stripPrefix("/").concat("/2"))
-    Seq(createBlob(b1, "Hello "), createBlob(b2, "World"))
+  "GCS file combiner" should "merge all files in one partition" in {
+    val sources = (0 until 32).map(i => createBlob(blobId(i), s"$i"))
+    val combined = service.composeAll(TargetUrl, SourceUrl)
+
+    assert(combined.isDefined)
+    val expected = (0 until 32).mkString
+    val content = new String(combined.get.getContent())
+    assert(content.toSeq.sorted == expected.toSeq.sorted)
+    sources.map(s => assert(s.exists()))
   }
+
+  "GCS file combiner" should "merge all files in two partitions" in {
+    val sources = (0 until 33).map(i => createBlob(blobId(i), s"$i"))
+    val combined = service.composeAll(TargetUrl, SourceUrl)
+
+    assert(combined.isDefined)
+    val expected = (0 until 33).mkString
+    val content = new String(combined.get.getContent())
+    assert(content.toSeq.sorted == expected.toSeq.sorted)
+    sources.map(s => assert(s.exists()))
+  }
+
+  //slow test, needs to make sure that combiner works if partitions more then 32
+  "GCS file combiner" should "merge all files in 33 partitions" in {
+    val files = 32 * 32 + 1
+    val sources = (0 until files).map(i => createBlob(blobId(i), s"$i"))
+    val combined = service.composeAll(TargetUrl, SourceUrl)
+
+    assert(combined.isDefined)
+    val expected = (0 until files).mkString
+    val content = new String(combined.get.getContent())
+    assert(content.toSeq.sorted == expected.toSeq.sorted)
+  }
+
+  private def blobId(i: Int): BlobId =
+    BlobId.of(sourceUri.getAuthority, sourceUri.getPath.stripPrefix("/").concat(s"/$i"))
 
   private def createBlob(blobId: BlobId, content: String) = {
     val blobInfo = BlobInfo.newBuilder(blobId).setContentType("text/plain").build()
