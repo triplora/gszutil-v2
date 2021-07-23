@@ -103,8 +103,10 @@ class BqSelectResultParallelExporter(cfg: ExportConfig,
   }
 
   override def close(): Unit = {
-    val errors = exporters.map(e => retryable(e.endIfOpen())).filter(_.isLeft)
+    val errors = exporters
+      .map(e => (e, retryable(e.endIfOpen(), s"$jobInfo. Resource closing for $e. ")))
+      .filter(r => r._2.isLeft)
     if(errors.nonEmpty)
-      throw new IllegalStateException(s"Not all resources were closed properly! ${errors.size} resources were not closed.", errors.head.left.get)
+      throw new IllegalStateException(s"$jobInfo. Resources [${errors.map(_._1)}] were not closed properly!", errors.head._2.left.get)
   }
 }

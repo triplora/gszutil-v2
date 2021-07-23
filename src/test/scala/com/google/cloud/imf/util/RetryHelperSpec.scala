@@ -20,7 +20,7 @@ class RetryHelperSpec extends AnyFlatSpec {
   }
 
   "retryable" should "return right after 5 attempts" in {
-    val res = retryable(errorFunc(), 5)
+    val res = retryable(errorFunc(), attempts = 5)
     assert(calls == 5)
     assert(res.isRight)
   }

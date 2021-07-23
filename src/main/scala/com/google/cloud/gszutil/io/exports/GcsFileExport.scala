@@ -32,4 +32,6 @@ case class GcsFileExport(gcs: Storage, gcsOutUri: String, lrecl: Int)(implicit l
     log.info(s"Closing GcsFileExport for uri:$gcsOutUri  after writing ${rowsWritten * lrecl} bytes and $rowsWritten rows.")
     writer.close()
   }
+
+  override def toString: String = s"GcsFileExport with uri: $gcsOutUri"
 }
