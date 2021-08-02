@@ -22,49 +22,38 @@ class BqSelectResultParallelExporter(cfg: ExportConfig,
   private implicit val ec: ExecutionContextExecutor = ExecutionContext.fromExecutor(Executors.newWorkStealingPool(cfg.exporterThreadCount))
   private var exporters: Seq[SimpleFileExporter] = List()
 
+  val _10MB = 10 * 1024 * 1024
+
   override def exportData(job: Job): Result = {
     val jobName = s"Job[id=${job.getJobId.getJob}]"
-    if (!job.isDone)
-      throw new IllegalArgumentException(s"$jobName still running")
-    if (job.getConfiguration == null || !job.getConfiguration.isInstanceOf[QueryJobConfiguration])
-      throw new IllegalArgumentException(s"$jobName should have configuration of type QueryJobConfiguration")
 
     logger.info(s"$jobName Multithreading export started")
     val tableWithResults = bq.getTable(job.getConfiguration.asInstanceOf[QueryJobConfiguration].getDestinationTable)
     val tableSchema = tableWithResults.getDefinition[TableDefinition].getSchema.getFields
     val totalRowsToExport = tableWithResults.getNumRows.intValue()
-    val minPartitionSize = 10 * 1024 * 1024 / sp.LRECL //about 10 mb or records
-    val partitionSizePerThread = math.max(minPartitionSize, totalRowsToExport / cfg.exporterThreadCount + 1)
-    //page size in rows for paginate in scope of one partition,
-    //will be automatically limited to 10mb in case set value is to big.
-    //https://cloud.google.com/bigquery/docs/paging-results
-    val partitionPageSize = ((10 * 1024 * 1024) / sp.LRECL * 1.2).toLong // + 20% to be sure that page size bigger then 10 MB
-    val partitions = for (leftBound <- 0 to totalRowsToExport by partitionSizePerThread) yield leftBound
+
+    val pageSize = _10MB / sp.LRECL
+    val partitionSize = math.max(pageSize, totalRowsToExport / cfg.exporterThreadCount + 1)
+    val partitions = for (leftBound <- 0 to totalRowsToExport by partitionSize) yield leftBound
+
     logger.info(
       s"""$jobName Multithreading settings(
+         |  totalRowsToExport=$totalRowsToExport,
          |  threadsCount=${cfg.exporterThreadCount},
          |  partitionCount=${partitions.size},
-         |  partitionSize=$partitionSizePerThread,
-         |  partitionPageSize=$partitionPageSize)""".stripMargin)
+         |  partitionSize=$partitionSize)
+         |  BQDestinationTable=${tableWithResults.getTableId}""".stripMargin)
 
-    val pageFetcher = (startIndex: Long, pageSize: Long) => {
-      val result = bq.listTableData(
-        tableWithResults.getTableId,
-        TableDataListOption.startIndex(startIndex),
-        TableDataListOption.pageSize(pageSize)
-      )
-      Page(result.getValues, Iterators.size(result.getValues.iterator()))
-    }
     val iterators = partitions.map(leftBound =>
       new PartialPageIterator[java.lang.Iterable[FieldValueList]](
         startIndex = leftBound,
-        endIndex = Math.min(leftBound + partitionSizePerThread, totalRowsToExport),
-        pageSize = partitionPageSize,
-        pageFetcher = pageFetcher(_, _))
+        endIndex = Math.min(leftBound + partitionSize, totalRowsToExport),
+        pageSize = pageSize,
+        pageFetcher = fetchPage(tableWithResults, _, _))
     )
 
     exporters = partitions.map(leftBound => {
-      exporterFactory((leftBound / partitionSizePerThread).toString, cfg)
+      exporterFactory((leftBound / partitionSize).toString, cfg)
     })
 
     exporters.headOption.foreach(_.validateData(tableSchema, sp.encoders))
@@ -102,6 +91,15 @@ class BqSelectResultParallelExporter(cfg: ExportConfig,
     require(totalRowsToExport == rowsProcessed, s"$jobName BigQuery API sent $totalRowsToExport rows but " +
       s"writer wrote $rowsProcessed")
     Result(activityCount = rowsProcessed)
+  }
+
+  def fetchPage(table: Table, startIndex: Long, pageSize: Long): Page[java.lang.Iterable[FieldValueList]] = {
+    val result = bq.listTableData(
+      table.getTableId,
+      TableDataListOption.startIndex(startIndex),
+      TableDataListOption.pageSize(pageSize)
+    )
+    Page(result.getValues, Iterators.size(result.getValues.iterator()))
   }
 
   override def close(): Unit = exporters.foreach(_.endIfOpen())
