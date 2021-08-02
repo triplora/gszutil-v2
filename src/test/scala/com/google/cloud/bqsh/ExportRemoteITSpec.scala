@@ -175,15 +175,18 @@ class ExportRemoteITSpec extends AnyFlatSpec with BeforeAndAfterAll with BeforeA
       location = Location,
       bucket = TestBucket,
       remoteHost = serverCfg.host,
-      remotePort = serverCfg.port,
-      runMode = "parallel"
+      remotePort = serverCfg.port
     )
 
     val gcsUri = s"gs://$TestBucket/EXPORT/$outFile"
     val sp = CopyBook(TestCopybook, Ebcdic)
 
+    def exporterFactory(fileSuffix: String): FileExport = {
+      GcsFileExport(gcs, s"${gcsUri}/${zos.getInfo.getJobid}/tmp_$fileSuffix" , sp.LRECL)
+    }
     val startT = System.currentTimeMillis()
-    val res = new BqStorageApiExporter(cfg, storageApi, bq, GcsFileExport(gcs, gcsUri, sp.LRECL), zos.getInfo, sp).doExport(sql)
+    val res = new BqStorageApiExporter(cfg, storageApi, bq, exporterFactory, zos.getInfo, sp).doExport(sql)
+    new StorageFileCompose(gcs).composeAll(gcsUri, s"$gcsUri/${zos.getInfo.getJobid}/")
     println(s"StorageApi took : ${System.currentTimeMillis() - startT} millis.")
 
     assert(res.exitCode == 0)
