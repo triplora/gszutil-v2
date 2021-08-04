@@ -22,7 +22,7 @@ class BqSelectResultParallelExporter(cfg: ExportConfig,
   private implicit val ec: ExecutionContextExecutor = ExecutionContext.fromExecutor(Executors.newWorkStealingPool(cfg.exporterThreadCount))
   private var exporters: Seq[SimpleFileExporter] = List()
 
-  val _10MB = 10 * 1024 * 1024
+  private val _2MB: Int = 2 * 1024 * 1024
 
   override def exportData(job: Job): Result = {
     val jobName = s"Job[id=${job.getJobId.getJob}]"
@@ -32,7 +32,7 @@ class BqSelectResultParallelExporter(cfg: ExportConfig,
     val tableSchema = tableWithResults.getDefinition[TableDefinition].getSchema.getFields
     val totalRowsToExport = tableWithResults.getNumRows.intValue()
 
-    val pageSize = _10MB / sp.LRECL
+    val pageSize = _2MB / sp.LRECL
     val partitionSize = math.max(pageSize, totalRowsToExport / cfg.exporterThreadCount + 1)
     val partitions = for (leftBound <- 0 to totalRowsToExport by partitionSize) yield leftBound
 
