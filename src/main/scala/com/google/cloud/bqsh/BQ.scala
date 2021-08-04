@@ -21,7 +21,7 @@ import com.google.api.services.bigquery.{Bigquery, model}
 import com.google.auth.Credentials
 import com.google.auth.http.HttpCredentialsAdapter
 import com.google.cloud.bigquery.InsertAllRequest.RowToInsert
-import com.google.cloud.bigquery._
+import com.google.cloud.bigquery.{BigQuery, BigQueryError, BigQueryException, CopyJobConfiguration, DatasetId, ExtractJobConfiguration, Field, FieldList, InsertAllRequest, InsertAllResponse, Job, JobConfiguration, JobId, JobInfo, JobStatus, LoadJobConfiguration, QueryJobConfiguration, Schema, StandardSQLTypeName, StandardTableDefinition, TableDefinition, TableId}
 import com.google.cloud.imf.gzos.pb.GRecvProto
 import com.google.cloud.imf.gzos.{MVS, Util}
 import com.google.cloud.imf.util.{CCATransportFactory, Logging, StatsUtil}
