@@ -11,7 +11,7 @@ import com.google.cloud.imf.grecv.GRecvProtocol
 import com.google.cloud.imf.gzos.pb.GRecvProto
 import com.google.cloud.imf.gzos.pb.GRecvProto.{GRecvRequest, GRecvResponse}
 import com.google.cloud.imf.gzos.{CloudDataSet, Ebcdic, Util}
-import com.google.cloud.imf.util.{ServiceLogger, Logging}
+import com.google.cloud.imf.util.{Logging, ServiceLogger}
 import com.google.cloud.storage.{Blob, BlobId, Storage}
 import com.google.common.hash.Hashing
 import com.google.protobuf.util.JsonFormat
@@ -33,11 +33,11 @@ object GRecvServerListener extends Logging {
             lowLevelStorageApi: LowLevelStorageApi,
             id: String,
             responseObserver: StreamObserver[GRecvResponse],
-            compress: Boolean): Unit = {
+            compress: Boolean)(implicit log: ServiceLogger): Unit = {
     val jobInfo: java.util.Map[String, Any] = Util.toMap(req.getJobinfo)
     val msg1 = s"Received request for ${req.getSrcUri} compress=$compress" +
       s"${JsonFormat.printer.omittingInsignificantWhitespace().print(req.getJobinfo)}"
-    logger.info(msg1)
+    log.info(msg1)
 
     if (req.getSchema.getFieldCount == 0) {
       responseObserver.onError(Status.FAILED_PRECONDITION
@@ -56,7 +56,7 @@ object GRecvServerListener extends Logging {
         val b = gcs.get(blobId)
         if (b == null) {
           val msg = s"${req.getSrcUri} not found"
-          logger.error(msg)
+          log.error(msg)
           val t = Status.NOT_FOUND.withDescription(msg).asRuntimeException()
           responseObserver.onError(t)
           return
@@ -74,6 +74,7 @@ object GRecvServerListener extends Logging {
         val lrecl = blob.getMetadata.get(CloudDataSet.LreclMeta)
         if (lrecl == null) {
           val msg = s"lrecl not set for ${req.getSrcUri}"
+          log.error(msg)
           val t = Status.FAILED_PRECONDITION.withDescription(msg).asRuntimeException()
           responseObserver.onError(t)
           return
@@ -83,6 +84,7 @@ object GRecvServerListener extends Logging {
           } catch {
             case _: NumberFormatException =>
               val msg = s"invalid lrecl '$lrecl' for ${req.getSrcUri}"
+              log.error(msg)
               val t = Status.FAILED_PRECONDITION.withDescription(msg).asRuntimeException()
               responseObserver.onError(t)
               return
@@ -104,7 +106,7 @@ object GRecvServerListener extends Logging {
         if (blob != null) open(gcs, lowLevelStorageApi, blob, compress)
         else {
           val msg = s"${req.getSrcUri} not found"
-          logger.error(msg)
+          log.error(msg)
           val t = Status.NOT_FOUND.withDescription(msg).asRuntimeException()
           responseObserver.onError(t)
           return
@@ -121,7 +123,7 @@ object GRecvServerListener extends Logging {
       var bytesRead: Long = 0
       var status: Int = GRecvProtocol.OK
 
-      logger.debug(s"starting to write")
+      log.info("starting to write")
       var n = 0
       while (n > -1) {
         buf.clear()
@@ -143,11 +145,12 @@ object GRecvServerListener extends Logging {
 
         val errPct = errCount.doubleValue() / math.max(1,rowCount)
         if (errPct > req.getMaxErrPct) {
-          logger.debug(s"errPct $errPct")
+          log.info(s"errPct $errPct")
           status = GRecvProtocol.ERR
         }
       }
-      logger.info(s"Finished reading $bytesRead bytes from ${req.getSrcUri}; wrote $rowCount rows")
+
+      log.info(s"Finished reading $bytesRead bytes from ${req.getSrcUri}; wrote $rowCount rows")
       val response = GRecvResponse.newBuilder
         .setStatus(status)
         .setHash(hasher.hash().toString)
@@ -155,12 +158,12 @@ object GRecvServerListener extends Logging {
         .setRowCount(rowCount)
         .build
       val json = JsonFormat.printer().omittingInsignificantWhitespace().print(response)
-      logger.info(s"request completed for ${req.getSrcUri} sending response: $json")
+      log.info(s"request completed for ${req.getSrcUri} sending response: $json")
       responseObserver.onNext(response)
       responseObserver.onCompleted()
     } finally {
-      retryable(orc.close(), s"${req.getJobinfo}. Closing resources for orc writer ${req.getBasepath}.")
-      retryable(input.close(), s"${req.getJobinfo}. Closing resources for inputStream ${req.getSrcUri}.")
+      retryable(orc.close(), s"Closing resources for orc writer ${req.getBasepath}.")
+      retryable(input.close(), s"Closing resources for inputStream ${req.getSrcUri}.")
     }
   }
 
@@ -212,9 +215,9 @@ object GRecvServerListener extends Logging {
            lowLevelStorageApi: LowLevelStorageApi,
            blob: Blob,
            isGzip: Boolean = true,
-           bufSz: Int = 2 * 1024 * 1024): InputStream = {
+           bufSz: Int = 2 * 1024 * 1024)(implicit log: ServiceLogger): InputStream = {
     val contentEncoding = Option(blob.getContentEncoding).map(_.toLowerCase)
-    logger.info(s"Requesting input stream, contentEncoding=${contentEncoding.getOrElse("")} blobId=${blob.getBlobId} blobSIze=${blob.getSize}")
+    log.info(s"Requesting input stream, contentEncoding=${contentEncoding.getOrElse("")} blobId=${blob.getBlobId} blobSIze=${blob.getSize}")
     val is0: InputStream = contentEncoding match {
       case Some("gzip") => lowLevelStorageApi.objects().get(blob.getBlobId.getBucket, blob.getBlobId.getName).executeMediaAsInputStream()
       case _ => Channels.newInputStream(gcs.reader(blob.getBlobId))

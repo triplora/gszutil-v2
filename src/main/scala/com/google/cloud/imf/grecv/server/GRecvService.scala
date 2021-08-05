@@ -25,6 +25,7 @@ class GRecvService(storageFunc: ByteString => Storage,
   private val rng = new Random()
 
   override def write(request: GRecvRequest, responseObserver: StreamObserver[GRecvResponse]): Unit = {
+    implicit val log = GrecvLog(request.getJobinfo)
     val partId = fmt.format(java.time.LocalDateTime.now(ZoneId.of("UTC"))) + "-" +
       rng.alphanumeric.take(6).mkString("")
     val keyfile = request.getKeyfile
@@ -32,14 +33,14 @@ class GRecvService(storageFunc: ByteString => Storage,
     val requestJson = JsonFormat.printer()
       .omittingInsignificantWhitespace()
       .print(request.toBuilder.setKeyfile(ByteString.copyFromUtf8("")).build())
-    logger.debug(s"Received GRecvRequest\n```\n$requestJson\n```")
+    log.info(s"Received GRecvRequest\n```\n$requestJson\n```")
     try {
       val gcs = storageFunc(keyfile)
       val lowLevelStorageApi = storageApiFunc(keyfile)
       GRecvServerListener.write(request, gcs, lowLevelStorageApi, partId, responseObserver, compress = true)
     } catch {
       case t: Throwable =>
-        logger.error(t.getMessage, t)
+        log.error(t.getMessage, t)
         val t1 = io.grpc.Status.INTERNAL
           .withDescription(t.getMessage)
           .withCause(t)

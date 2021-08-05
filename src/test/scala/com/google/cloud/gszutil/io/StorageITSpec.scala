@@ -18,7 +18,7 @@ package com.google.cloud.gszutil.io
 
 import com.google.cloud.bqsh.cmd.Scp
 import com.google.cloud.imf.grecv.server.GRecvServerListener
-import com.google.cloud.imf.util.Services
+import com.google.cloud.imf.util.{DefaultLog, Services}
 import com.google.cloud.storage.BlobId
 import org.scalatest.flatspec.AnyFlatSpec
 
@@ -27,6 +27,8 @@ import java.nio.charset.StandardCharsets
 import scala.util.Random
 
 class StorageITSpec extends AnyFlatSpec {
+
+  implicit val log = DefaultLog
 
   "gcs" should "serve gzip" in {
     val gcs = Services.storage()
