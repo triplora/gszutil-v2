@@ -2,6 +2,7 @@ package com.google.cloud.gszutil.io.exports
 
 import com.google.cloud.bigquery._
 import com.google.cloud.bqsh.cmd.Result
+import com.google.cloud.imf.util.DefaultLog
 import org.scalatest.flatspec.AnyFlatSpec
 
 import java.util
@@ -19,6 +20,8 @@ class LocalFileExporterSpec extends AnyFlatSpec {
       consumer(buf)
     }
   }
+
+  implicit val log = DefaultLog
 
   it should "Run pipe delimited export without NPE" in {
     val lRecl = 15

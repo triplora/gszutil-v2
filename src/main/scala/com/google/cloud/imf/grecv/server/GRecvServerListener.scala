@@ -11,7 +11,7 @@ import com.google.cloud.imf.grecv.GRecvProtocol
 import com.google.cloud.imf.gzos.pb.GRecvProto
 import com.google.cloud.imf.gzos.pb.GRecvProto.{GRecvRequest, GRecvResponse}
 import com.google.cloud.imf.gzos.{CloudDataSet, Ebcdic, Util}
-import com.google.cloud.imf.util.Logging
+import com.google.cloud.imf.util.{ServiceLogger, Logging}
 import com.google.cloud.storage.{Blob, BlobId, Storage}
 import com.google.common.hash.Hashing
 import com.google.protobuf.util.JsonFormat
@@ -165,20 +165,20 @@ object GRecvServerListener extends Logging {
              storageApi: BigQueryReadClient,
              gcs: Storage,
              cfg: ExportConfig,
-             responseObserver: StreamObserver[GRecvResponse]) : Unit = {
+             responseObserver: StreamObserver[GRecvResponse])(implicit log: ServiceLogger) : Unit = {
 
     val sp = parseCopybook(request.getCopybook)
     val gcsFunc = (x: String) => GcsFileExport(gcs, s"${request.getOutputUri.stripSuffix("/")}/${request.getJobinfo.getJobid}/tmp_$x", sp.LRECL)
     val result = if(cfg.runMode.toLowerCase == "single") {
-      logger.info(s"Export mode - single thread")
+      log.info(s"Export mode - single thread")
       new BqSelectResultExporter(cfg, bq, request.getJobinfo, sp, GcsFileExport(gcs, request.getOutputUri, sp.LRECL)).doExport(request.getSql)
     } else if("storage_api" == cfg.runMode.toLowerCase) {
-      logger.info(s"Export mode - storage API")
+      log.info(s"Export mode - storage API")
 
       new BqStorageApiExporter(cfg.copy(exporterThreadCount = Runtime.getRuntime.availableProcessors()), storageApi, bq, gcsFunc, request.getJobinfo, sp)
         .doExport(request.getSql)
     } else {
-      logger.info(s"Export mode - multiple threads")
+      log.info(s"Export mode - multiple threads")
 
       def exporterFactory(fileSuffix: String, cfg: ExportConfig): SimpleFileExporter = {
         val result = new LocalFileExporter
@@ -195,10 +195,10 @@ object GRecvServerListener extends Logging {
     responseObserver.onCompleted()
   }
 
-  private def parseCopybook(copybook: String): SchemaProvider =
+  private def parseCopybook(copybook: String)(implicit log: ServiceLogger): SchemaProvider =
     Try(CopyBook(copybook, Ebcdic)).toEither match {
       case Right(sp) => {
-        logger.info(s"Loaded copybook with LRECL=${sp.LRECL}")
+        log.info(s"Loaded copybook with LRECL=${sp.LRECL}")
         sp
       }
       case Left(e) => throw new RuntimeException("Failed to parse copybook", e)

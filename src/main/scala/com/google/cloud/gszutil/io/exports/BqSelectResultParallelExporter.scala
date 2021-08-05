@@ -6,6 +6,7 @@ import com.google.cloud.bqsh.ExportConfig
 import com.google.cloud.bqsh.cmd.Result
 import com.google.cloud.gszutil.SchemaProvider
 import com.google.cloud.imf.gzos.pb.GRecvProto
+import com.google.cloud.imf.util.ServiceLogger
 import com.google.common.collect.Iterators
 
 import java.util.concurrent.atomic.AtomicLong
@@ -17,7 +18,7 @@ class BqSelectResultParallelExporter(cfg: ExportConfig,
                                      bq: BigQuery,
                                      jobInfo: GRecvProto.ZOSJobInfo,
                                      sp: SchemaProvider,
-                                     exporterFactory: (String, ExportConfig) => SimpleFileExporter) extends NativeExporter(bq, cfg, jobInfo) {
+                                     exporterFactory: (String, ExportConfig) => SimpleFileExporter)(implicit log: ServiceLogger) extends NativeExporter(bq, cfg, jobInfo) {
 
   private implicit val ec: ExecutionContextExecutor = ExecutionContext.fromExecutor(Executors.newWorkStealingPool(cfg.exporterThreadCount))
   private var exporters: Seq[SimpleFileExporter] = List()
@@ -25,9 +26,7 @@ class BqSelectResultParallelExporter(cfg: ExportConfig,
   private val _2MB: Int = 2 * 1024 * 1024
 
   override def exportData(job: Job): Result = {
-    val jobName = s"Job[id=${job.getJobId.getJob}]"
-
-    logger.info(s"$jobName Multithreading export started")
+    log.info("Multithreading export started")
     val tableWithResults = bq.getTable(job.getConfiguration.asInstanceOf[QueryJobConfiguration].getDestinationTable)
     val tableSchema = tableWithResults.getDefinition[TableDefinition].getSchema.getFields
     val totalRowsToExport = tableWithResults.getNumRows.intValue()
@@ -36,13 +35,13 @@ class BqSelectResultParallelExporter(cfg: ExportConfig,
     val partitionSize = math.max(pageSize, totalRowsToExport / cfg.exporterThreadCount + 1)
     val partitions = for (leftBound <- 0 to totalRowsToExport by partitionSize) yield leftBound
 
-    logger.info(
-      s"""$jobName Multithreading settings(
-         |  totalRowsToExport=$totalRowsToExport,
-         |  threadsCount=${cfg.exporterThreadCount},
-         |  partitionCount=${partitions.size},
-         |  partitionSize=$partitionSize)
-         |  BQDestinationTable=${tableWithResults.getTableId}""".stripMargin)
+    log.info(s"""Multithreading settings(
+                 |  BqJobId=${job.getJobId.getJob},
+                 |  totalRowsToExport=$totalRowsToExport,
+                 |  threadsCount=${cfg.exporterThreadCount},
+                 |  partitionCount=${partitions.size},
+                 |  partitionSize=$partitionSize)
+                 |  BQDestinationTable=${tableWithResults.getTableId}""".stripMargin)
 
     val iterators = partitions.map(leftBound =>
       new PartialPageIterator[java.lang.Iterable[FieldValueList]](
@@ -63,7 +62,7 @@ class BqSelectResultParallelExporter(cfg: ExportConfig,
       case (iterator, exporter) =>
         Future {
           try {
-            val partitionName = s"$jobName Batch[${iterator.startIndex}:${iterator.endIndex}]"
+            val partitionName = s"Batch[${iterator.startIndex}:${iterator.endIndex}]"
 
             var rowsProcessed: Long = 0
             val totalPartitionRows = iterator.endIndex - iterator.startIndex
@@ -72,7 +71,7 @@ class BqSelectResultParallelExporter(cfg: ExportConfig,
               exporter.exportData(iterator.next(), tableSchema, sp.encoders) match {
                 case Result(_, 0, rowsWritten, _) =>
                   rowsProcessed = rowsProcessed + rowsWritten
-                  logger.info(s"$partitionName, exported by thread=[${Thread.currentThread().getName}]: [$rowsProcessed / $totalPartitionRows], " +
+                  log.info(s"$partitionName, exported by thread=[${Thread.currentThread().getName}]: [$rowsProcessed / $totalPartitionRows], " +
                     s"total exported: [${exportedRows.addAndGet(rowsWritten)} / $totalRowsToExport]")
                   if (rowsProcessed > totalPartitionRows)
                     throw new IllegalStateException(s"$partitionName Internal issue, to many rows exported!!!")
@@ -87,8 +86,8 @@ class BqSelectResultParallelExporter(cfg: ExportConfig,
     }.map(Await.result(_, Duration.create(cfg.timeoutMinutes, TimeUnit.MINUTES)))
 
     val rowsProcessed = results.map(_.activityCount).sum
-    logger.info(s"$jobName Received $totalRowsToExport rows from BigQuery API, written $rowsProcessed rows.")
-    require(totalRowsToExport == rowsProcessed, s"$jobName BigQuery API sent $totalRowsToExport rows but " +
+    log.info(s"Received $totalRowsToExport rows from BigQuery API, written $rowsProcessed rows.")
+    require(totalRowsToExport == rowsProcessed, s"${job.getJobId.getJob} BigQuery API sent $totalRowsToExport rows but " +
       s"writer wrote $rowsProcessed")
     Result(activityCount = rowsProcessed)
   }

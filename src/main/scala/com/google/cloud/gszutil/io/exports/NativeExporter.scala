@@ -5,11 +5,11 @@ import com.google.cloud.bqsh.BQ.resolveDataset
 import com.google.cloud.bqsh.cmd.Result
 import com.google.cloud.bqsh.{BQ, ExportConfig}
 import com.google.cloud.imf.gzos.pb.GRecvProto
-import com.google.cloud.imf.util.Logging
+import com.google.cloud.imf.util.{Logging, ServiceLogger}
 
 abstract class NativeExporter(bq: BigQuery,
                               cfg: ExportConfig,
-                              jobInfo: GRecvProto.ZOSJobInfo) extends Logging {
+                              jobInfo: GRecvProto.ZOSJobInfo)(implicit log: ServiceLogger) extends Logging {
 
   def close(): Unit
   def exportData(job: Job): Result
@@ -50,23 +50,23 @@ abstract class NativeExporter(bq: BigQuery,
 
   def submitExportJob(bq: BigQuery, jobConfiguration: QueryJobConfiguration, jobId: JobId, cfg: ExportConfig): Job = {
     try {
-      logger.info(s"Submitting QueryJob.\njobId=${BQ.toStr(jobId)}")
+      log.info(s"Submitting QueryJob.\njobId=${BQ.toStr(jobId)}")
       val job = BQ.runJob(bq, jobConfiguration, jobId, cfg.timeoutMinutes * 60, sync = true)
-      logger.info(s"QueryJob finished.")
+      log.info("QueryJob finished.")
 
       // check for errors
       BQ.getStatus(job) match {
         case Some(status) =>
           if (status.hasError) {
             val msg = s"Error:\n${status.error}\nExecutionErrors: ${status.executionErrors.mkString("\n")}"
-            logger.error(msg)
+            log.error(msg)
           }
-          logger.info(s"Job Status = ${status.state}")
+          log.info(s"Job Status = ${status.state}")
           BQ.throwOnError(job, status)
           job
         case _ =>
           val msg = s"Job ${BQ.toStr(jobId)} not found"
-          logger.error(msg)
+          log.error(msg)
           throw new RuntimeException(msg)
       }
     }

@@ -4,7 +4,7 @@ import com.google.cloud.bigquery.{JobId, QueryJobConfiguration}
 import com.google.cloud.bqsh.{BQ, ExportConfig}
 import com.google.cloud.gszutil.{CopyBook, SchemaProvider}
 import com.google.cloud.imf.gzos.Linux
-import com.google.cloud.imf.util.Services
+import com.google.cloud.imf.util.{DefaultLog, Services}
 import com.google.cloud.storage.Storage.ComposeRequest
 import com.google.cloud.storage.{BlobId, BlobInfo, Storage}
 import org.scalatest.flatspec.AnyFlatSpec
@@ -16,6 +16,9 @@ import scala.jdk.CollectionConverters.IterableHasAsJava
 class BqSelectResultParallelExporterRealBQSpec extends AnyFlatSpec {
   // test was done for debugging of real BQ api with BqSelectResultParallelExporter
   // for performance reasons it is ignored
+
+  implicit val log = DefaultLog
+
   ignore should "read in parallel data from BigQuery local export" in {
     //some env variables is required
     assert(sys.env.contains("GCP_PROJECT_ID")) // = boxwood-sector-246122
