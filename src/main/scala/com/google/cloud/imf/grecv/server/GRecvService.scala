@@ -7,7 +7,7 @@ import com.google.cloud.bqsh.ExportConfig
 import com.google.cloud.imf.gzos.pb.GRecvGrpc.GRecvImplBase
 import com.google.cloud.imf.gzos.pb.GRecvProto
 import com.google.cloud.imf.gzos.pb.GRecvProto.{GRecvRequest, GRecvResponse, HealthCheckRequest, HealthCheckResponse}
-import com.google.cloud.imf.util.{GrecvLog, Logging}
+import com.google.cloud.imf.util.Logging
 import com.google.cloud.storage.Storage
 import com.google.protobuf.ByteString
 import com.google.protobuf.util.JsonFormat
@@ -51,8 +51,7 @@ class GRecvService(storageFunc: ByteString => Storage,
   override def `export`(request: GRecvProto.GRecvExportRequest, responseObserver: StreamObserver[GRecvResponse]): Unit = {
     import scala.jdk.CollectionConverters._
     val cfg = ExportConfig.apply(request.getExportConfigsMap.asScala.toMap)
-    implicit val log = GrecvLog(request.getJobinfo)
-    log.info(
+    logger.debug(
       s"""
          |Received export request with:
          |-sql=${request.getSql}
@@ -69,9 +68,10 @@ class GRecvService(storageFunc: ByteString => Storage,
       } finally {
         storageApi.close()
       }
+
     } catch {
       case t: Throwable =>
-        log.error(t.getMessage, t)
+        logger.error(t.getMessage, t)
         val t1 = io.grpc.Status.INTERNAL
           .withDescription(t.getMessage)
           .withCause(t)

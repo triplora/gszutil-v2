@@ -3,12 +3,12 @@ package com.google.cloud.gszutil.io.exports
 
 import com.google.cloud.WriteChannel
 import com.google.cloud.bqsh.cmd.Scp.blobId
-import com.google.cloud.imf.util.{Logging, ServiceLogger}
+import com.google.cloud.imf.util.Logging
 import com.google.cloud.storage.{BlobInfo, Storage}
 
 import java.nio.ByteBuffer
 
-case class GcsFileExport(gcs: Storage, gcsOutUri: String, lrecl: Int)(implicit log: ServiceLogger) extends FileExport with Logging {
+case class GcsFileExport(gcs: Storage, gcsOutUri: String, lrecl: Int) extends FileExport with Logging {
   val recfm: String = "FB"
   val lRecl: Int = lrecl
   private lazy val writer: WriteChannel = {
@@ -29,7 +29,7 @@ case class GcsFileExport(gcs: Storage, gcsOutUri: String, lrecl: Int)(implicit l
   }
 
   override def close(): Unit = {
-    log.info(s"Closing GcsFileExport for uri:$gcsOutUri  after writing ${rowsWritten * lrecl} bytes and $rowsWritten rows.")
+    logger.info(s"Closing GcsFileExport for uri:$gcsOutUri  after writing ${rowsWritten * lrecl} bytes and $rowsWritten rows.")
     writer.close()
   }
 

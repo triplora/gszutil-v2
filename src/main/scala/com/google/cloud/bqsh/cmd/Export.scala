@@ -22,7 +22,7 @@ import com.google.cloud.gszutil.io.exports.{BqSelectResultExporter, MVSFileExpor
 import com.google.cloud.gszutil.{CopyBook, SchemaProvider}
 import com.google.cloud.imf.grecv.client.GRecvClient
 import com.google.cloud.imf.gzos.{MVS, MVSStorage}
-import com.google.cloud.imf.util.{DefaultLog, Logging, Services, StatsUtil}
+import com.google.cloud.imf.util.{Logging, Services, StatsUtil}
 import com.google.cloud.storage.Storage
 
 import java.net.URI
@@ -117,7 +117,7 @@ object Export extends Command[ExportConfig] with Logging {
 
   private def localExport(sql: String, bq: BigQuery, cfg: ExportConfig, zos: MVS, sp: SchemaProvider): Result = {
     logger.debug(s"Using local export")
-    new BqSelectResultExporter(cfg, bq, zos.getInfo, sp, MVSFileExport(cfg.outDD, zos))(DefaultLog).doExport(sql)
+    new BqSelectResultExporter(cfg, bq, zos.getInfo, sp, MVSFileExport(cfg.outDD, zos)).doExport(sql)
   }
 
   private def deleteGcsFolder(gcs: Storage, dirToRemove: String): Unit = {

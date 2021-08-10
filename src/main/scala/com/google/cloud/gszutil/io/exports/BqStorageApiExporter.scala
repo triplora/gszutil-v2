@@ -9,7 +9,6 @@ import com.google.cloud.gszutil.SchemaProvider
 import com.google.cloud.gszutil.io.{BQBinaryExporter, BQExporter, Exporter}
 import com.google.cloud.imf.gzos.Ebcdic
 import com.google.cloud.imf.gzos.pb.GRecvProto
-import com.google.cloud.imf.util.ServiceLogger
 import org.apache.avro.Schema
 
 import java.util.concurrent.atomic.AtomicLong
@@ -22,7 +21,7 @@ class BqStorageApiExporter(cfg: ExportConfig,
                            bq: BigQuery,
                            fileExportFunc: String => FileExport,
                            jobInfo: GRecvProto.ZOSJobInfo,
-                           sp: SchemaProvider)(implicit log: ServiceLogger) extends NativeExporter(bq, cfg, jobInfo) {
+                           sp: SchemaProvider) extends NativeExporter(bq, cfg, jobInfo) {
 
   private implicit val ec: ExecutionContextExecutor = ExecutionContext.fromExecutor(Executors.newWorkStealingPool(cfg.exporterThreadCount))
 
@@ -30,7 +29,7 @@ class BqStorageApiExporter(cfg: ExportConfig,
   private val exporters = collection.mutable.ListBuffer.empty[Exporter]
 
   override def exportData(job: Job): Result = {
-    log.info(s"Using BqStorageApiExporter, workersCount=${cfg.exporterThreadCount}")
+    logger.info(s"Using BqStorageApiExporter, workersCount=${cfg.exporterThreadCount}")
     val conf = job.getConfiguration[QueryJobConfiguration]
     val jobId = BQ.genJobId(cfg.projectId, cfg.location, jobInfo, "query")
 
@@ -41,7 +40,7 @@ class BqStorageApiExporter(cfg: ExportConfig,
         val msg = s"Destination table ${conf.getDestinationTable.getProject}." +
           s"${conf.getDestinationTable.getDataset}." +
           s"${conf.getDestinationTable.getTable} not found for export job ${BQ.toStr(jobId)}"
-        log.error(msg)
+        logger.error(msg)
         throw new RuntimeException(msg)
     }
 
@@ -60,7 +59,7 @@ class BqStorageApiExporter(cfg: ExportConfig,
           .build)
         .build)
 
-    log.info(s"ReadSession created. RowsInTable=$rowsInDestTable, maxStreamsCount=$MaxStreams, " +
+    logger.info(s"ReadSession created. RowsInTable=$rowsInDestTable, maxStreamsCount=$MaxStreams, " +
       s"streamsCount=${session.getStreamsCount}, tablePath=$tablePath")
     val schema = new Schema.Parser().parse(session.getAvroSchema.getSchema)
 
@@ -88,7 +87,7 @@ class BqStorageApiExporter(cfg: ExportConfig,
     }.foreach(Await.result(_, Duration.create(cfg.timeoutMinutes, TimeUnit.MINUTES)))
 
     val rowsWritten = exporters.map(_.rowsWritten).sum
-    log.info(s"Finished writing $rowsWritten rows from BigQuery Storage API ReadStream")
+    logger.info(s"Finished writing $rowsWritten rows from BigQuery Storage API ReadStream")
     require(rowsProcessed.get() == rowsWritten, s"Internal error, rowsWritten doesn't match rowsProcessed.")
     require(rowsInDestTable == rowsWritten, s"Table contains $rowsInDestTable rows but writer wrote $rowsWritten")
 

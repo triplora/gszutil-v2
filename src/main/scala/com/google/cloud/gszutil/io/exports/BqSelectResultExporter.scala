@@ -5,29 +5,28 @@ import com.google.cloud.bqsh.ExportConfig
 import com.google.cloud.bqsh.cmd.Result
 import com.google.cloud.gszutil.SchemaProvider
 import com.google.cloud.imf.gzos.pb.GRecvProto
-import com.google.cloud.imf.util.ServiceLogger
 
 class BqSelectResultExporter(cfg: ExportConfig,
                              bq: BigQuery,
                              jobInfo: GRecvProto.ZOSJobInfo,
                              sp: SchemaProvider,
-                             fileExportFunc: => FileExport)(implicit log: ServiceLogger) extends NativeExporter(bq, cfg, jobInfo) {
+                             fileExportFunc: => FileExport) extends NativeExporter(bq, cfg, jobInfo) {
 
   val exporter = new LocalFileExporter
 
   override def exportData(job: Job): Result = {
-    log.info("Using BqSelectResultExporter.")
+    logger.info("Using BqSelectResultExporter.")
     exporter.newExport(fileExportFunc)
     val bqResults = job.getQueryResults()
     val totalRowsToExport = bqResults.getTotalRows
     var rowsProcessed: Long = 0
 
     if (cfg.vartext) {
-      log.info(s"Using pipe-delimited string for export, totalRows=$totalRowsToExport")
+      logger.info(s"Using pipe-delimited string for export, totalRows=$totalRowsToExport")
       val res = exporter.exportPipeDelimitedRows(bqResults.iterateAll(), totalRowsToExport)
       rowsProcessed = res.activityCount
     } else {
-      log.info(s"Using TD schema for export, totalRows=$totalRowsToExport")
+      logger.info(s"Using TD schema for export, totalRows=$totalRowsToExport")
       // bqResults.iterateAll() fails with big amount of data
       // the reason why 'manual' approach is used
       //exporter.exportBQSelectResult(bqResults.iterateAll(), bqResults.getSchema.getFields, sp.encoders)
@@ -37,7 +36,7 @@ class BqSelectResultExporter(cfg: ExportConfig,
       // first page should always be present
       var hasNext = true
       while (hasNext) {
-        log.info("Encoding page of data")
+        logger.info("Encoding page of data")
         exporter.exportBQSelectResult(currentPage.getValues,
           bqResults.getSchema.getFields, sp.encoders) match {
           // success exitCode = 0
@@ -61,7 +60,7 @@ class BqSelectResultExporter(cfg: ExportConfig,
       }
     }
 
-    log.info(s"Received $totalRowsToExport rows from BigQuery API, written $rowsProcessed rows.")
+    logger.info(s"Received $totalRowsToExport rows from BigQuery API, written $rowsProcessed rows.")
     require(totalRowsToExport == rowsProcessed, s"BigQuery API sent $totalRowsToExport rows but " +
       s"writer wrote $rowsProcessed")
     Result(activityCount = rowsProcessed)

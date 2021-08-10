@@ -9,10 +9,9 @@ import com.google.cloud.gszutil.io.exports._
 import com.google.cloud.imf.grecv.GRecvConfig
 import com.google.cloud.imf.grecv.server.GRecvServer
 import com.google.cloud.imf.gzos.{Ebcdic, Linux}
-import com.google.cloud.imf.util.{DefaultLog, Services}
+import com.google.cloud.imf.util.Services
 import com.google.cloud.storage.BlobId
 import com.google.protobuf.ByteString
-import net.bytebuddy.asm.Advice.ExceptionHandler.Default
 import org.scalatest.flatspec.AnyFlatSpec
 import org.scalatest.{BeforeAndAfterAll, BeforeAndAfterEach}
 import org.threeten.bp.Duration
@@ -69,8 +68,6 @@ class ExportRemoteITSpec extends AnyFlatSpec with BeforeAndAfterAll with BeforeA
 
   val tableId = TableId.of("dataset", tableName)
 
-  implicit val log = DefaultLog
-
   override def beforeAll(): Unit = grecvServer = server(serverCfg)
 
   override def afterAll(): Unit = grecvServer.foreach(_.shutdown())
@@ -107,7 +104,8 @@ class ExportRemoteITSpec extends AnyFlatSpec with BeforeAndAfterAll with BeforeA
       location = Location,
       bucket = TestBucket,
       remoteHost = serverCfg.host,
-      remotePort = serverCfg.port
+      remotePort = serverCfg.port,
+      runMode = "parallel"
     )
     val res = Export.run(cfg, zos, Map.empty)
 
