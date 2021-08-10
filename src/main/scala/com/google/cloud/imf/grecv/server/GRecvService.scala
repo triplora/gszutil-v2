@@ -12,6 +12,7 @@ import com.google.cloud.storage.Storage
 import com.google.protobuf.ByteString
 import com.google.protobuf.util.JsonFormat
 import io.grpc.stub.StreamObserver
+import org.apache.log4j.MDC
 
 import java.time.ZoneId
 import java.time.format.DateTimeFormatter
@@ -24,6 +25,8 @@ class GRecvService(storageFunc: ByteString => Storage,
   private val fmt = DateTimeFormatter.ofPattern("yyyyMMddhhMMss")
   private val rng = new Random()
 
+  val LogTag = "job.tag"
+
   override def write(request: GRecvRequest, responseObserver: StreamObserver[GRecvResponse]): Unit = {
     val partId = fmt.format(java.time.LocalDateTime.now(ZoneId.of("UTC"))) + "-" +
       rng.alphanumeric.take(6).mkString("")
@@ -32,6 +35,7 @@ class GRecvService(storageFunc: ByteString => Storage,
     val requestJson = JsonFormat.printer()
       .omittingInsignificantWhitespace()
       .print(request.toBuilder.setKeyfile(ByteString.copyFromUtf8("")).build())
+    MDC.put(LogTag, s"ImportJob[${request.getJobinfo.getJobname}:${request.getJobinfo.getJobid}:${request.getJobinfo.getStepName}]")
     logger.debug(s"Received GRecvRequest\n```\n$requestJson\n```")
     try {
       val gcs = storageFunc(keyfile)
@@ -45,12 +49,15 @@ class GRecvService(storageFunc: ByteString => Storage,
           .withCause(t)
           .asRuntimeException()
         responseObserver.onError(t1)
+    } finally {
+      MDC.clear()
     }
   }
 
   override def `export`(request: GRecvProto.GRecvExportRequest, responseObserver: StreamObserver[GRecvResponse]): Unit = {
     import scala.jdk.CollectionConverters._
     val cfg = ExportConfig.apply(request.getExportConfigsMap.asScala.toMap)
+    MDC.put(LogTag, s"ExportJob[${request.getJobinfo.getJobname}:${request.getJobinfo.getJobid}:${request.getJobinfo.getStepName}]")
     logger.debug(
       s"""
          |Received export request with:
@@ -77,6 +84,8 @@ class GRecvService(storageFunc: ByteString => Storage,
           .withCause(t)
           .asRuntimeException()
         responseObserver.onError(t1)
+    } finally {
+      MDC.clear()
     }
   }
 

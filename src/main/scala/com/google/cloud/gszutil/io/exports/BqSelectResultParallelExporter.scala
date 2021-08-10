@@ -26,9 +26,7 @@ class BqSelectResultParallelExporter(cfg: ExportConfig,
   private val _2MB: Int = 2 * 1024 * 1024
 
   override def exportData(job: Job): Result = {
-    val jobName = s"Job[id=${job.getJobId.getJob}]"
-
-    logger.info(s"$jobName Multithreading export started")
+    logger.info("Multithreading export started")
     val tableWithResults = bq.getTable(job.getConfiguration.asInstanceOf[QueryJobConfiguration].getDestinationTable)
     val tableSchema = tableWithResults.getDefinition[TableDefinition].getSchema.getFields
     val totalRowsToExport = tableWithResults.getNumRows.intValue()
@@ -38,7 +36,8 @@ class BqSelectResultParallelExporter(cfg: ExportConfig,
     val partitions = for (leftBound <- 0 to totalRowsToExport by partitionSize) yield leftBound
 
     logger.info(
-      s"""$jobName Multithreading settings(
+      s"""Multithreading settings(
+         |  bqJobId=${job.getJobId.getJob},
          |  totalRowsToExport=$totalRowsToExport,
          |  threadsCount=${cfg.exporterThreadCount},
          |  partitionCount=${partitions.size},
@@ -64,7 +63,7 @@ class BqSelectResultParallelExporter(cfg: ExportConfig,
       case (iterator, exporter) =>
         Future {
           try {
-            val partitionName = s"$jobName Batch[${iterator.startIndex}:${iterator.endIndex}]"
+            val partitionName = s"Batch[${iterator.startIndex}:${iterator.endIndex}]"
 
             var rowsProcessed: Long = 0
             val totalPartitionRows = iterator.endIndex - iterator.startIndex
@@ -88,8 +87,8 @@ class BqSelectResultParallelExporter(cfg: ExportConfig,
     }.map(Await.result(_, Duration.create(cfg.timeoutMinutes, TimeUnit.MINUTES)))
 
     val rowsProcessed = results.map(_.activityCount).sum
-    logger.info(s"$jobName Received $totalRowsToExport rows from BigQuery API, written $rowsProcessed rows.")
-    require(totalRowsToExport == rowsProcessed, s"$jobName BigQuery API sent $totalRowsToExport rows but " +
+    logger.info(s"Received $totalRowsToExport rows from BigQuery API, written $rowsProcessed rows.")
+    require(totalRowsToExport == rowsProcessed, s"BigQuery API sent $totalRowsToExport rows but " +
       s"writer wrote $rowsProcessed")
     Result(activityCount = rowsProcessed)
   }
@@ -105,9 +104,9 @@ class BqSelectResultParallelExporter(cfg: ExportConfig,
 
   override def close(): Unit = {
     val errors = exporters
-      .map(e => (e, retryable(e.endIfOpen(), s"$jobInfo. Resource closing for $e. ")))
+      .map(e => (e, retryable(e.endIfOpen(), s"Resource closing for $e. ")))
       .filter(r => r._2.isLeft)
     if(errors.nonEmpty)
-      throw new IllegalStateException(s"$jobInfo. Resources [${errors.map(_._1)}] were not closed properly!", errors.head._2.left.get)
+      throw new IllegalStateException(s"Resources [${errors.map(_._1)}] were not closed properly!", errors.head._2.left.get)
   }
 }
