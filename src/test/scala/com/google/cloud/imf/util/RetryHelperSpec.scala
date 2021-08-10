@@ -5,8 +5,6 @@ import com.google.cloud.imf.util.RetryHelper._
 
 class RetryHelperSpec extends AnyFlatSpec {
 
-  implicit val log = DefaultLog
-
   var calls = 0
   def errorFunc(): Unit = {
     calls += 1

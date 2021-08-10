@@ -107,6 +107,6 @@ class BqSelectResultParallelExporter(cfg: ExportConfig,
       .map(e => (e, retryable(e.endIfOpen(), s"$jobInfo. Resource closing for $e. ")))
       .filter(r => r._2.isLeft)
     if(errors.nonEmpty)
-      throw new IllegalStateException(s"Resources [${errors.map(_._1)}] were not closed properly!", errors.head._2.left.get)
+      throw new IllegalStateException(s"$jobInfo. Resources [${errors.map(_._1)}] were not closed properly!", errors.head._2.left.get)
   }
 }
