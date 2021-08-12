@@ -16,14 +16,17 @@
 
 package com.google.cloud.gszutil.io
 
+import com.google.cloud.bigquery.{Field, FieldList, FieldValue, LegacySQLTypeName, StandardSQLTypeName}
+import com.google.cloud.gszutil.Transcoder
+import com.google.cloud.imf.gzos.pb.GRecvProto.Record
+import com.google.common.io.BaseEncoding
+import org.apache.avro.Schema
+import org.apache.avro.generic.GenericRecord
+
 import java.nio.{ByteBuffer, CharBuffer}
 import java.time.format.DateTimeFormatter
 import java.time.{LocalDate, ZoneId}
-
-import com.google.cloud.gszutil.Transcoder
-import com.google.cloud.imf.gzos.pb.GRecvProto.Record
-import org.apache.avro.Schema
-import org.apache.avro.generic.GenericRecord
+import scala.jdk.CollectionConverters.{CollectionHasAsScala, IterableHasAsJava}
 
 object AvroUtil {
   private val formatter = DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss z")
@@ -38,14 +41,14 @@ object AvroUtil {
   def getScale(schema: Schema): Int = schema.getJsonProp("scale").getIntValue
 
   def readDecimal(buf: ByteBuffer, bytes: Array[Byte], scale: Int): java.math.BigDecimal = {
-    System.arraycopy(buf.array(),buf.position(),bytes,0,16)
+    System.arraycopy(buf.array(), buf.position(), bytes, 0, 16)
     new java.math.BigDecimal(new java.math.BigInteger(bytes), scale)
   }
 
   def appendQuotedString(delimiter: Char, s: String, sb: CharBuffer): Unit = {
     if (s.contains(delimiter) || s.contains('\n')) {
       sb.put("\"")
-      sb.put(s.replaceAllLiterally("\"","\\\"").replaceAllLiterally("\n","\\n"))
+      sb.put(s.replaceAllLiterally("\"", "\\\"").replaceAllLiterally("\n", "\\n"))
       sb.put("\"")
     } else sb.put(s)
   }
@@ -55,6 +58,7 @@ object AvroUtil {
                               size: Int) extends AvroTranscoder {
     private val encoder = transcoder.charset.newEncoder()
     private val cb = CharBuffer.allocate(size)
+
     override def read(row: GenericRecord, buf: ByteBuffer): Unit = {
       val v = row.get(field.pos)
       val s: String = v.asInstanceOf[org.apache.avro.util.Utf8].toString
@@ -78,6 +82,7 @@ object AvroUtil {
   case class DecimalTranscoder(field: AvroField, out: Record.Field) extends AvroTranscoder {
     val scale: Int = field.typeSchema.getJsonProp("scale").getIntValue
     @transient private val decimalBuf = new Array[Byte](16)
+
     override def read(row: GenericRecord, buf: ByteBuffer): Unit = {
       val v = row.get(field.pos)
       val x0: BigDecimal = readDecimal(v.asInstanceOf[ByteBuffer], decimalBuf, scale)
@@ -92,6 +97,7 @@ object AvroUtil {
   case class BooleanTranscoder(field: AvroField, transcoder: Transcoder) extends AvroTranscoder {
     private val encoder = transcoder.charset.newEncoder()
     private val cb = CharBuffer.allocate(1)
+
     override def read(row: GenericRecord, buf: ByteBuffer): Unit = {
       val v = row.get(field.pos)
       val x: Boolean = v.asInstanceOf[Boolean]
@@ -105,6 +111,7 @@ object AvroUtil {
   case class DateTranscoder(field: AvroField, transcoder: Transcoder) extends AvroTranscoder {
     private val encoder = transcoder.charset.newEncoder()
     private val cb = CharBuffer.allocate(10)
+
     override def read(row: GenericRecord, buf: ByteBuffer): Unit = {
       val v = row.get(field.pos)
       val x = LocalDate.ofEpochDay(v.asInstanceOf[Int])
@@ -119,6 +126,7 @@ object AvroUtil {
   case class TimestampTranscoder(field: AvroField, transcoder: Transcoder) extends AvroTranscoder {
     private val encoder = transcoder.charset.newEncoder()
     private val cb = CharBuffer.allocate(10)
+
     override def read(row: GenericRecord, buf: ByteBuffer): Unit = {
       val v = row.get(field.pos)
       val x = new java.sql.Timestamp(v.asInstanceOf[Long] / 1000L)
@@ -176,4 +184,19 @@ object AvroUtil {
       throw new RuntimeException(s"Unhandled avro type ${f.typeSchema}")
     }
   }
+
+  def toFieldValue(field: AvroField, value: Any): FieldValue = {
+    value match {
+      case null => FieldValue.of(FieldValue.Attribute.PRIMITIVE, null)
+      case s: org.apache.avro.util.Utf8 if field.isString => FieldValue.of(FieldValue.Attribute.PRIMITIVE, s.toString)
+      case s: Long if field.isLong => FieldValue.of(FieldValue.Attribute.PRIMITIVE, s.toInt)
+      case s: ByteBuffer if field.isDecimal => FieldValue.of(FieldValue.Attribute.PRIMITIVE, handleDecimal(s, field.scale))
+      case s: ByteBuffer if field.isBytes => FieldValue.of(FieldValue.Attribute.PRIMITIVE, BaseEncoding.base64.encode(s.array(), s.position(), s.limit()))
+      case s: Integer if field.isDate => FieldValue.of(FieldValue.Attribute.PRIMITIVE, dateFormatter.format(LocalDate.ofEpochDay(s.longValue())))
+      case _ => throw new IllegalStateException(s"Type '$field' with value '$value' is not supported!!!")
+    }
+  }
+
+  private def handleDecimal(s: ByteBuffer, scale: Int): String =
+    new java.math.BigDecimal(new java.math.BigInteger(s.array()), scale).floatValue().toString
 }

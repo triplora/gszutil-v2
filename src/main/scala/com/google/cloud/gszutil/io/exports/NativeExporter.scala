@@ -16,7 +16,7 @@ abstract class NativeExporter(bq: BigQuery,
 
   def doExport(query: String): Result = {
     val configuration = configureExportQueryJob(query, cfg)
-    val jobId = getJobId(jobInfo, cfg)
+    val jobId = getJobId()
     val job = submitExportJob(bq, configuration, jobId, cfg)
     try {
       exportData(job)
@@ -45,7 +45,7 @@ abstract class NativeExporter(bq: BigQuery,
     b.build()
   }
 
-  def getJobId(jobInfo: GRecvProto.ZOSJobInfo, cfg: ExportConfig): JobId =
+  def getJobId(): JobId =
     BQ.genJobId(cfg.projectId, cfg.location, jobInfo, "query")
 
   def submitExportJob(bq: BigQuery, jobConfiguration: QueryJobConfiguration, jobId: JobId, cfg: ExportConfig): Job = {

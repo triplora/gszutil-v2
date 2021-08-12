@@ -2,12 +2,10 @@ package com.google.cloud.gszutil.io.exports
 
 import com.google.cloud.bigquery.storage.v1.ReadSession.TableReadOptions
 import com.google.cloud.bigquery.storage.v1._
-import com.google.cloud.bigquery.{BigQuery, Job, QueryJobConfiguration}
+import com.google.cloud.bigquery.{BigQuery, Job, QueryJobConfiguration, TableDefinition}
 import com.google.cloud.bqsh.cmd.Result
 import com.google.cloud.bqsh.{BQ, ExportConfig}
 import com.google.cloud.gszutil.SchemaProvider
-import com.google.cloud.gszutil.io.{BQBinaryExporter, BQExporter, Exporter}
-import com.google.cloud.imf.gzos.Ebcdic
 import com.google.cloud.imf.gzos.pb.GRecvProto
 import com.google.cloud.imf.util.RetryHelper.retryable
 import org.apache.avro.Schema
@@ -20,27 +18,25 @@ import scala.concurrent.{Await, ExecutionContext, ExecutionContextExecutor, Futu
 class BqStorageApiExporter(cfg: ExportConfig,
                            bqStorage: BigQueryReadClient,
                            bq: BigQuery,
-                           fileExportFunc: String => FileExport,
+                           exporterFactory: (String, ExportConfig) => SimpleFileExporter,
                            jobInfo: GRecvProto.ZOSJobInfo,
                            sp: SchemaProvider) extends NativeExporter(bq, cfg, jobInfo) {
 
   private implicit val ec: ExecutionContextExecutor = ExecutionContext.fromExecutor(Executors.newWorkStealingPool(cfg.exporterThreadCount))
 
   private val MaxStreams = math.max(1, cfg.exporterThreadCount / 3)
-  private val exporters = collection.mutable.ListBuffer.empty[Exporter]
+  private val exporters = collection.mutable.ListBuffer.empty[BqAvroExporter]
 
   override def exportData(job: Job): Result = {
     logger.info(s"Using BqStorageApiExporter, workersCount=${cfg.exporterThreadCount}")
     val conf = job.getConfiguration[QueryJobConfiguration]
-    val jobId = BQ.genJobId(cfg.projectId, cfg.location, jobInfo, "query")
-
     val destTable = Option(bq.getTable(conf.getDestinationTable)) match {
       case Some(t) =>
         t
       case None =>
         val msg = s"Destination table ${conf.getDestinationTable.getProject}." +
           s"${conf.getDestinationTable.getDataset}." +
-          s"${conf.getDestinationTable.getTable} not found for export job ${BQ.toStr(jobId)}"
+          s"${conf.getDestinationTable.getTable} not found for export job ${BQ.toStr(getJobId())}"
         logger.error(msg)
         throw new RuntimeException(msg)
     }
@@ -62,25 +58,22 @@ class BqStorageApiExporter(cfg: ExportConfig,
 
     logger.info(s"ReadSession created. RowsInTable=$rowsInDestTable, maxStreamsCount=$MaxStreams, " +
       s"streamsCount=${session.getStreamsCount}, tablePath=$tablePath")
-    val schema = new Schema.Parser().parse(session.getAvroSchema.getSchema)
+    val bqTableSchema = destTable.getDefinition[TableDefinition].getSchema.getFields
+    val avroSchema = new Schema.Parser().parse(session.getAvroSchema.getSchema)
 
     import scala.jdk.CollectionConverters._
     val rowsProcessed = new AtomicLong(0)
-    session.getStreamsList.asScala.zipWithIndex.map{streamToIndex =>
+    session.getStreamsList.asScala.zipWithIndex.map{ streamToIndex =>
       val request =  ReadRowsRequest.newBuilder.setReadStream(streamToIndex._1.getName).build
-      val writer = fileExportFunc(streamToIndex._2.toString)
-      val exporter = if (cfg.vartext)
-        new BQExporter(schema, streamToIndex._2, writer, Ebcdic)
-      else {
-        BQBinaryExporter(schema, sp, streamToIndex._2, writer, Ebcdic)
-      }
+      val fileExporter = exporterFactory(streamToIndex._2.toString, cfg)
+      val exporter = new BqAvroExporter(fileExporter, avroSchema, bqTableSchema, sp, streamToIndex._2.toString)
       exporters.append(exporter)
 
       Future {
         bqStorage.readRowsCallable.call(request).forEach { res =>
           if (res.hasAvroRows) {
-            val written = exporter.processRows(res.getAvroRows)
-            rowsProcessed.addAndGet(written)
+            val r = exporter.processRows(res.getAvroRows)
+            exporter.logIfNeeded(rowsProcessed.addAndGet(r), rowsInDestTable)
           }
         }
         exporter.close()

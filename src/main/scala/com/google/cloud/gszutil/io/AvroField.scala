@@ -21,8 +21,12 @@ import java.time.LocalDate
 
 import org.apache.avro.Schema
 import org.apache.avro.generic.GenericRecord
+import scala.jdk.CollectionConverters.{CollectionHasAsScala}
+
 
 case class AvroField(field: Schema.Field) {
+
+  // See for avro documentation https://cloud.google.com/bigquery/docs/reference/storage#avro_schema_details
   val isRequired: Boolean = field.schema().getType != Schema.Type.UNION
 
   val typeSchema: Schema =
@@ -79,47 +83,33 @@ case class AvroField(field: Schema.Field) {
     }
   }
 
-  val isDecimal: Boolean = {
-    val logicalType = typeSchema.getJsonProp("logicalType")
-    if (logicalType != null){
-      "decimal" == logicalType.getTextValue &&
-        typeSchema.getType == Schema.Type.BYTES
-    } else false
-  }
+  val isDecimal: Boolean = typeSchema.getType == Schema.Type.BYTES && hasLogicalType(field, "decimal")
 
-  val isTimestamp: Boolean = {
-    val logicalType = typeSchema.getJsonProp("logicalType")
-    if (logicalType != null){
-      "timestamp-micros" == logicalType.getTextValue &&
-        typeSchema.getType == Schema.Type.LONG
-    } else false
-  }
+  val isBytes: Boolean = typeSchema.getType == Schema.Type.BYTES && isLogicalTypeBlank(field)
 
-  val isDate: Boolean = {
-    val logicalType = typeSchema.getJsonProp("logicalType")
-    if (logicalType != null){
-      "date" == logicalType.getTextValue &&
-        typeSchema.getType == Schema.Type.INT
-    } else false
-  }
+  val isTimestamp: Boolean = typeSchema.getType == Schema.Type.LONG && hasLogicalType(field, "timestamp-micros")
 
-  val isString: Boolean = typeSchema.getType == Schema.Type.STRING
+  val isDate: Boolean = typeSchema.getType == Schema.Type.INT && hasLogicalType(field, "date")
 
-  val isLong: Boolean =
-    typeSchema.getType == Schema.Type.LONG &&
-      null == typeSchema.getJsonProp("logicalType")
+  val isString: Boolean = typeSchema.getType == Schema.Type.STRING && isLogicalTypeBlank(field)
 
-  val isFloat: Boolean =
-    typeSchema.getType == Schema.Type.FLOAT &&
-      null == typeSchema.getJsonProp("logicalType")
+  val isLong: Boolean = typeSchema.getType == Schema.Type.LONG && isLogicalTypeBlank(field)
 
-  val isDouble: Boolean =
-    typeSchema.getType == Schema.Type.DOUBLE &&
-      null == typeSchema.getJsonProp("logicalType")
+  val isFloat: Boolean = typeSchema.getType == Schema.Type.FLOAT && isLogicalTypeBlank(field)
 
-  val isBoolean: Boolean =
-    typeSchema.getType == Schema.Type.BOOLEAN &&
-      null == typeSchema.getJsonProp("logicalType")
+  val isDouble: Boolean = typeSchema.getType == Schema.Type.DOUBLE && isLogicalTypeBlank(field)
+
+  val isBoolean: Boolean = typeSchema.getType == Schema.Type.BOOLEAN && isLogicalTypeBlank(field)
 
   val scale: Int = if (isDecimal) typeSchema.getJsonProp("scale").getIntValue else -1
+
+  private def getLogicalType(schema: Schema): String = {
+    val schemas = if (schema.getType == Schema.Type.UNION) schema.getTypes.asScala else schema :: Nil
+    schemas.flatMap(s => Option(s.getJsonProp("logicalType")).orElse(Option(s.getJsonProp("sqlType"))))
+      .map(_.asText()).headOption.getOrElse("")
+  }
+
+  private def hasLogicalType(f: Schema.Field, t: String): Boolean = getLogicalType(f.schema()).equalsIgnoreCase(t)
+
+  private def isLogicalTypeBlank(f: Schema.Field): Boolean = getLogicalType(f.schema()).isEmpty
 }

@@ -148,6 +148,7 @@ class ExportRemoteITSpec extends AnyFlatSpec with BeforeAndAfterAll with BeforeA
 
     val gcsUri = s"gs://$TestBucket/EXPORT/$outFile"
     val sp = CopyBook(TestCopybook, Ebcdic)
+
     def exporterFactory(fileSuffix: String, cfg: ExportConfig): SimpleFileExporter = {
       val result = new LocalFileExporter
       result.newExport(GcsFileExport(gcs, s"${gcsUri}/${zos.getInfo.getJobid}/tmp_$fileSuffix" , sp.LRECL))
@@ -164,10 +165,6 @@ class ExportRemoteITSpec extends AnyFlatSpec with BeforeAndAfterAll with BeforeA
     assert(gcs.get(BlobId.of(TestBucket, s"EXPORT/$outFile")).exists())
   }
 
-  /**
-   * TODO: fix bug with decimal encoding, to run this test, or just for test purpose remove decimal field from sql and copybook
-   *
-   */
   "Export storage api" should "in multiple threads" in {
     val cfg = ExportConfig(
       projectId = TestProject,
@@ -181,9 +178,12 @@ class ExportRemoteITSpec extends AnyFlatSpec with BeforeAndAfterAll with BeforeA
     val gcsUri = s"gs://$TestBucket/EXPORT/$outFile"
     val sp = CopyBook(TestCopybook, Ebcdic)
 
-    def exporterFactory(fileSuffix: String): FileExport = {
-      GcsFileExport(gcs, s"${gcsUri}/${zos.getInfo.getJobid}/tmp_$fileSuffix" , sp.LRECL)
+    def exporterFactory(fileSuffix: String, cfg: ExportConfig): SimpleFileExporter = {
+      val result = new LocalFileExporter
+      result.newExport(GcsFileExport(gcs, s"${gcsUri}/${zos.getInfo.getJobid}/tmp_$fileSuffix" , sp.LRECL))
+      new SimpleFileExporterAdapter(result, cfg)
     }
+
     val startT = System.currentTimeMillis()
     val res = new BqStorageApiExporter(cfg, storageApi, bq, exporterFactory, zos.getInfo, sp).doExport(sql)
     new StorageFileCompose(gcs).composeAll(gcsUri, s"$gcsUri/${zos.getInfo.getJobid}/")
