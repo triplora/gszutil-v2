@@ -1,3 +1,4 @@
+
 /*
  * Copyright 2019 Google LLC All Rights Reserved.
  *
@@ -27,7 +28,7 @@ val exGrpc = ExclusionRule(organization = "io.grpc")
 val exAvro = ExclusionRule(organization = "org.apache.avro")
 
 libraryDependencies ++= Seq(
-  "com.google.cloud.imf" %% "mainframe-util" % "2.1.7",
+  "com.google.cloud.imf" %% "mainframe-util" % "2.1.8",
   "com.github.scopt" %% "scopt" % "3.7.1",
   "org.scalatest" %% "scalatest" % "3.1.1" % Test,
   "org.powermock" % "powermock-module-junit4" % "2.0.2" % Test,
