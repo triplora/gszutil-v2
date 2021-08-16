@@ -189,7 +189,7 @@ object AvroUtil {
     value match {
       case null => FieldValue.of(FieldValue.Attribute.PRIMITIVE, null)
       case s: org.apache.avro.util.Utf8 if field.isString => FieldValue.of(FieldValue.Attribute.PRIMITIVE, s.toString)
-      case s: Long if field.isLong => FieldValue.of(FieldValue.Attribute.PRIMITIVE, s.toInt)
+      case s: Long if field.isLong => FieldValue.of(FieldValue.Attribute.PRIMITIVE, s.toString)
       case s: ByteBuffer if field.isDecimal => FieldValue.of(FieldValue.Attribute.PRIMITIVE, handleDecimal(s, field.scale))
       case s: ByteBuffer if field.isBytes => FieldValue.of(FieldValue.Attribute.PRIMITIVE, BaseEncoding.base64.encode(s.array(), s.position(), s.limit()))
       case s: Integer if field.isDate => FieldValue.of(FieldValue.Attribute.PRIMITIVE, dateFormatter.format(LocalDate.ofEpochDay(s.longValue())))

@@ -42,8 +42,8 @@ class AvroUtilSpec extends AnyFlatSpec {
 
     assert(!value.isNull)
     assert(value.getAttribute == FieldValue.Attribute.PRIMITIVE)
-    assert(value.getValue.isInstanceOf[Int])
-    assert(value.getValue.asInstanceOf[Int] == 123)
+    assert(value.getValue.isInstanceOf[String])
+    assert(value.getValue.asInstanceOf[String] == "123")
     //nulls
     val nullValue = AvroUtil.toFieldValue(AvroField(fieldSchema), null)
     assert(nullValue.isNull)

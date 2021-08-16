@@ -45,7 +45,11 @@ class ExportRemoteITSpec extends AnyFlatSpec with BeforeAndAfterAll with BeforeA
 
   val tableName = "exportTest"
   val sql =
-    s"""select *
+    s"""select a,b,c,
+       |CASE
+       |   WHEN A > 1000 THEN 1
+       |   WHEN A <= 1000 THEN 0
+       |   END AS D
        |from $TestProject.dataset.$tableName
        |""".stripMargin
 
@@ -55,6 +59,7 @@ class ExportRemoteITSpec extends AnyFlatSpec with BeforeAndAfterAll with BeforeA
       |        03  A                    PIC S9(4) COMP.
       |        03  B                    PIC X(8).
       |        03  C                    PIC S9(9)V99 COMP-3.
+      |        03  D                    PIC 9(01)
       |""".stripMargin
 
   val outFile = "TEST.DUMMY"
