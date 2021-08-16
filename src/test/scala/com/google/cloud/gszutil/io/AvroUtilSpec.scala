@@ -3,6 +3,7 @@ package com.google.cloud.gszutil.io
 import com.google.cloud.bigquery.FieldValue
 import com.google.common.io.BaseEncoding
 import org.apache.avro.Schema
+import org.codehaus.jackson.node.IntNode
 import org.scalatest.flatspec.AnyFlatSpec
 
 import java.nio.ByteBuffer
@@ -112,14 +113,28 @@ class AvroUtilSpec extends AnyFlatSpec {
   }
 
   it should "create FieldValue of type 'decimal'" in {
-    val fieldSchema = new Schema.Field("a", Schema.create(Schema.Type.BYTES), "", null)
-    fieldSchema.addProp("logicalType", "decimal")
-    val value = AvroUtil.toFieldValue(AvroField(fieldSchema), ByteBuffer.wrap("123.123".getBytes("utf-8")))
+    val inputToExpected = List(
+      ("0.100000000", "0.1"),
+      ("999.999000000", "999.999"),
+      ("1.000100000", "1.0001"),
+      ("99999.999999000", "99999.999999")
+    )
 
-    assert(!value.isNull)
-    assert(value.getAttribute == FieldValue.Attribute.PRIMITIVE)
-    assert(value.getValue.isInstanceOf[String])
-    assert("123.123" == new String(BaseEncoding.base64.decode(value.getStringValue), "utf-8"))
+    val schema = Schema.create(Schema.Type.BYTES)
+    schema.addProp("logicalType", "decimal")
+    schema.addProp("scale", new IntNode(9))
+    val fieldSchema = new Schema.Field("a", schema, "", null)
+
+    inputToExpected.foreach {e =>
+      val decBytes = new java.math.BigDecimal(e._1).unscaledValue.toByteArray
+      val value = AvroUtil.toFieldValue(AvroField(fieldSchema), ByteBuffer.wrap(decBytes))
+
+      assert(!value.isNull)
+      assert(value.getAttribute == FieldValue.Attribute.PRIMITIVE)
+      assert(value.getValue.isInstanceOf[String])
+      assert(e._2 == value.getStringValue)
+    }
+
     //nulls
     val nullValue = AvroUtil.toFieldValue(AvroField(fieldSchema), null)
     assert(nullValue.isNull)

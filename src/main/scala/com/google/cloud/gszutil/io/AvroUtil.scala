@@ -193,10 +193,10 @@ object AvroUtil {
       case s: ByteBuffer if field.isDecimal => FieldValue.of(FieldValue.Attribute.PRIMITIVE, handleDecimal(s, field.scale))
       case s: ByteBuffer if field.isBytes => FieldValue.of(FieldValue.Attribute.PRIMITIVE, BaseEncoding.base64.encode(s.array(), s.position(), s.limit()))
       case s: Integer if field.isDate => FieldValue.of(FieldValue.Attribute.PRIMITIVE, dateFormatter.format(LocalDate.ofEpochDay(s.longValue())))
-      case _ => throw new IllegalStateException(s"Type '$field' with value '$value' is not supported!!!")
+      case _ => throw new IllegalStateException(s"Type [${field.field}] with type [${field.typeSchema.getType}] with value '$value' is not supported!!!")
     }
   }
 
   private def handleDecimal(s: ByteBuffer, scale: Int): String =
-    new java.math.BigDecimal(new java.math.BigInteger(s.array()), scale).floatValue().toString
+    new java.math.BigDecimal(new java.math.BigInteger(s.array()), scale).doubleValue().toString
 }
