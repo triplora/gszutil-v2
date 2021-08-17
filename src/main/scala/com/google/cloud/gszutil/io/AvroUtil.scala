@@ -197,6 +197,6 @@ object AvroUtil {
     }
   }
 
-  private def handleDecimal(s: ByteBuffer, scale: Int): String =
-    new java.math.BigDecimal(new java.math.BigInteger(s.array()), scale).doubleValue().toString
+  private def handleDecimal(s: ByteBuffer, scale: Int): BigDecimal =
+    new java.math.BigDecimal(new java.math.BigInteger(s.array()), scale)
 }

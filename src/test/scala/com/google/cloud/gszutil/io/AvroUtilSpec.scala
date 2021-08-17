@@ -131,8 +131,8 @@ class AvroUtilSpec extends AnyFlatSpec {
 
       assert(!value.isNull)
       assert(value.getAttribute == FieldValue.Attribute.PRIMITIVE)
-      assert(value.getValue.isInstanceOf[String])
-      assert(e._2 == value.getStringValue)
+      assert(value.getValue.isInstanceOf[BigDecimal])
+      assert(BigDecimal(e._2) == value.getValue.asInstanceOf[BigDecimal])
     }
 
     //nulls

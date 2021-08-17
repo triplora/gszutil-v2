@@ -141,20 +141,24 @@ object Encoding extends Logging {
     }
 
     override def encodeValue(value: FieldValue): Array[Byte] = {
+      def encodeDecimal(d: BigDecimal): Array[Byte] = {
+        var v1 = d
+        if (maxValue.toLong < v1.toLong) {
+          throw new IllegalArgumentException(s"Decimal overflow '$d' is larger than $maxValue")
+        }
+        var scale = 0
+        while (scale < s) {
+          v1 *= 10d
+          scale += 1
+        }
+        encode(v1.toLong)
+      }
+
       if (value.isNull) Array.fill(size)(0x00)
       else {
         value.getValue match {
-          case s0: String =>
-            var v1 = BigDecimal(s0)
-            if (maxValue.toLong < v1.toLong) {
-              throw new IllegalArgumentException(s"Decimal overflow '$s0' is larger than $maxValue")
-            }
-            var scale = 0
-            while (scale < s) {
-              v1 *= 10d
-              scale += 1
-            }
-            encode(v1.toLong)
+          case s0: String => encodeDecimal(BigDecimal(s0))
+          case d0: BigDecimal => encodeDecimal(d0)
           case x =>
             throw new RuntimeException(s"Invalid decimal: $x")
         }

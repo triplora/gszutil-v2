@@ -29,22 +29,11 @@ class BqStorageApiExporter(cfg: ExportConfig,
 
   override def exportData(job: Job): Result = {
     logger.info(s"Using BqStorageApiExporter, workersCount=${cfg.exporterThreadCount}")
-    val conf = job.getConfiguration[QueryJobConfiguration]
-    val destTable = Option(bq.getTable(conf.getDestinationTable)) match {
-      case Some(t) =>
-        t
-      case None =>
-        val msg = s"Destination table ${conf.getDestinationTable.getProject}." +
-          s"${conf.getDestinationTable.getDataset}." +
-          s"${conf.getDestinationTable.getTable} not found for export job ${BQ.toStr(getJobId())}"
-        logger.error(msg)
-        throw new RuntimeException(msg)
-    }
-
-    val rowsInDestTable = destTable.getNumRows.longValueExact
+    val tableWithResults = bq.getTable(job.getConfiguration.asInstanceOf[QueryJobConfiguration].getDestinationTable)
+    val rowsInDestTable = tableWithResults.getNumRows.longValueExact
     val projectPath = s"projects/${cfg.projectId}"
-    val tablePath = s"projects/${cfg.projectId}/datasets/" +
-      s"${conf.getDestinationTable.getDataset}/tables/${conf.getDestinationTable.getTable}"
+    val tablePath = tableWithResults.getTableId.getIAMResourceName
+
     val session: ReadSession = bqStorage.createReadSession(
       CreateReadSessionRequest.newBuilder
         .setParent(projectPath)
@@ -58,7 +47,7 @@ class BqStorageApiExporter(cfg: ExportConfig,
 
     logger.info(s"ReadSession created. RowsInTable=$rowsInDestTable, maxStreamsCount=$MaxStreams, " +
       s"streamsCount=${session.getStreamsCount}, tablePath=$tablePath")
-    val bqTableSchema = destTable.getDefinition[TableDefinition].getSchema.getFields
+    val bqTableSchema = tableWithResults.getDefinition[TableDefinition].getSchema.getFields
     val avroSchema = new Schema.Parser().parse(session.getAvroSchema.getSchema)
 
     import scala.jdk.CollectionConverters._
@@ -67,6 +56,9 @@ class BqStorageApiExporter(cfg: ExportConfig,
       val request =  ReadRowsRequest.newBuilder.setReadStream(streamToIndex._1.getName).build
       val fileExporter = exporterFactory(streamToIndex._2.toString, cfg)
       val exporter = new BqAvroExporter(fileExporter, avroSchema, bqTableSchema, sp, streamToIndex._2.toString)
+      if(exporters.isEmpty) {
+        fileExporter.validateData(bqTableSchema, sp.encoders)
+      }
       exporters.append(exporter)
 
       Future {
