@@ -67,8 +67,8 @@ class AvroUtilSpec extends AnyFlatSpec {
 
     assert(!value.isNull)
     assert(value.getAttribute == FieldValue.Attribute.PRIMITIVE)
-    assert(value.getValue.isInstanceOf[String])
-    assert("abcd" == new String(BaseEncoding.base64.decode(value.getStringValue), "utf-8"))
+    assert(value.getValue.isInstanceOf[ByteBuffer])
+    assert("abcd" == new String(value.getValue.asInstanceOf[ByteBuffer].array(), "utf-8"))
     //nulls
     val nullValue = AvroUtil.toFieldValue(AvroField(fieldSchema), null)
     assert(nullValue.isNull)
@@ -94,8 +94,8 @@ class AvroUtilSpec extends AnyFlatSpec {
 
     assert(!value.isNull)
     assert(value.getAttribute == FieldValue.Attribute.PRIMITIVE)
-    assert(value.getValue.isInstanceOf[String])
-    assert(DateTimeFormatter.ofPattern("yyyy-MM-dd").format(nowDate) == value.getStringValue)
+    assert(value.getValue.isInstanceOf[LocalDate])
+    assert(nowDate == value.getValue.asInstanceOf[LocalDate])
     //nulls
     val nullValue = AvroUtil.toFieldValue(AvroField(fieldSchema), null)
     assert(nullValue.isNull)

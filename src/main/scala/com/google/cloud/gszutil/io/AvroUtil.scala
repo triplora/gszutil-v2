@@ -16,17 +16,15 @@
 
 package com.google.cloud.gszutil.io
 
-import com.google.cloud.bigquery.{Field, FieldList, FieldValue, LegacySQLTypeName, StandardSQLTypeName}
+import com.google.cloud.bigquery.FieldValue
 import com.google.cloud.gszutil.Transcoder
 import com.google.cloud.imf.gzos.pb.GRecvProto.Record
-import com.google.common.io.BaseEncoding
 import org.apache.avro.Schema
 import org.apache.avro.generic.GenericRecord
 
 import java.nio.{ByteBuffer, CharBuffer}
 import java.time.format.DateTimeFormatter
 import java.time.{LocalDate, ZoneId}
-import scala.jdk.CollectionConverters.{CollectionHasAsScala, IterableHasAsJava}
 
 object AvroUtil {
   private val formatter = DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss z")
@@ -191,8 +189,8 @@ object AvroUtil {
       case s: org.apache.avro.util.Utf8 if field.isString => FieldValue.of(FieldValue.Attribute.PRIMITIVE, s.toString)
       case s: Long if field.isLong => FieldValue.of(FieldValue.Attribute.PRIMITIVE, s.toString)
       case s: ByteBuffer if field.isDecimal => FieldValue.of(FieldValue.Attribute.PRIMITIVE, handleDecimal(s, field.scale))
-      case s: ByteBuffer if field.isBytes => FieldValue.of(FieldValue.Attribute.PRIMITIVE, BaseEncoding.base64.encode(s.array(), s.position(), s.limit()))
-      case s: Integer if field.isDate => FieldValue.of(FieldValue.Attribute.PRIMITIVE, dateFormatter.format(LocalDate.ofEpochDay(s.longValue())))
+      case s: ByteBuffer if field.isBytes => FieldValue.of(FieldValue.Attribute.PRIMITIVE, s)
+      case s: Integer if field.isDate => FieldValue.of(FieldValue.Attribute.PRIMITIVE, LocalDate.ofEpochDay(s.longValue()))
       case _ => throw new IllegalStateException(s"Type [${field.field}] with type [${field.typeSchema.getType}] with value '$value' is not supported!!!")
     }
   }

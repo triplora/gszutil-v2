@@ -8,6 +8,7 @@ import com.google.cloud.imf.gzos.pb.GRecvProto.Record.Field.FieldType
 import com.google.cloud.imf.gzos.{Binary, PackedDecimal}
 import com.google.cloud.imf.util.Logging
 
+import java.nio.ByteBuffer
 import java.time.LocalDate
 
 object Encoding extends Logging {
@@ -181,11 +182,7 @@ object Encoding extends Logging {
       if (x == null)
         Array.fill(size)(0x00)
       else {
-        val date = LocalDate.parse(x)
-        val int = ((((date.getYear - 1900) * 100) +
-          date.getMonthValue) * 100) +
-          date.getDayOfMonth
-        Binary.encode(int, size)
+        encodeDate(LocalDate.parse(x))
       }
     }
 
@@ -193,8 +190,16 @@ object Encoding extends Logging {
       if (value.isNull) Array.fill(size)(0x00)
       else value.getValue match {
         case s: String => encode(s)
+        case d: LocalDate => encodeDate(d)
         case _ => throw new UnsupportedOperationException()
       }
+
+    def encodeDate(date: LocalDate): Array[Byte] = {
+      val int = ((((date.getYear - 1900) * 100) +
+        date.getMonthValue) * 100) +
+        date.getDayOfMonth
+      Binary.encode(int, size)
+    }
   }
 
   case class BytesToBinaryEncoder(size: Int) extends BinaryEncoder {
@@ -213,7 +218,10 @@ object Encoding extends Logging {
 
     override def encodeValue(value: FieldValue): Array[Byte] =
       if (value.isNull) encode(null)
-      else encode(value.getBytesValue)
+      else value.getValue match {
+        case bf: ByteBuffer => encode(bf.array())
+        case _ => encode(value.getBytesValue)
+      }
   }
 
   case object UnknownTypeEncoder extends BinaryEncoder {
@@ -229,5 +237,4 @@ object Encoding extends Logging {
     override def encodeValue(value: FieldValue): Array[Byte] =
       throw new UnsupportedOperationException()
   }
-
 }
