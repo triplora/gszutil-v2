@@ -144,7 +144,7 @@ object Encoding extends Logging {
     override def encodeValue(value: FieldValue): Array[Byte] = {
       def encodeDecimal(d: BigDecimal): Array[Byte] = {
         var v1 = d
-        if (maxValue.toLong < v1.toLong) {
+        if (maxValue.toBigInt < v1.toBigInt) {
           throw new IllegalArgumentException(s"Decimal overflow '$d' is larger than $maxValue")
         }
         var scale = 0
