@@ -186,7 +186,14 @@ object AvroUtil {
   def toFieldValue(field: AvroField, value: Any): FieldValue = {
     value match {
       case null => FieldValue.of(FieldValue.Attribute.PRIMITIVE, null)
-      case s: org.apache.avro.util.Utf8 if field.isString => FieldValue.of(FieldValue.Attribute.PRIMITIVE, s.toString)
+      case s: org.apache.avro.util.Utf8 if field.isString =>
+        //Following issue may be a bug on bigquery side.
+        //For query that contain filtering like this 'TRIM(regexp_replace(T1.PRIMARY_DESC, "[^\X1F-\X7F]+", " "))'
+        //Instead of regular space (0x20), ASCII non-breaking space will be used (0xA0)
+        //For UTF-8 non-breaking space has 2 bytes 0xC2 0xA0.
+        //So during decoding of bytes to UTF-8 string, single byte 0xA0 will not be decoded,
+        //and will be replaced with unknown symbol � (0xEF,0xBF,0xBD)
+        FieldValue.of(FieldValue.Attribute.PRIMITIVE, s.toString.replace("�", " "))
       case s: Long if field.isLong => FieldValue.of(FieldValue.Attribute.PRIMITIVE, s.toString)
       case s: ByteBuffer if field.isDecimal => FieldValue.of(FieldValue.Attribute.PRIMITIVE, handleDecimal(s, field.scale))
       case s: ByteBuffer if field.isBytes => FieldValue.of(FieldValue.Attribute.PRIMITIVE, s)

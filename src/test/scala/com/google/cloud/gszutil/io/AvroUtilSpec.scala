@@ -150,4 +150,19 @@ class AvroUtilSpec extends AnyFlatSpec {
       AvroUtil.toFieldValue(AvroField(fieldSchema), ByteBuffer.wrap("1".getBytes("utf-8")))
     }
   }
+
+  it should "replace '�' with ' ' when UTF-8 bytes corrupted" in {
+    val fieldSchema = new Schema.Field("a", Schema.create(Schema.Type.STRING), "", null)
+    val fieldValue = new org.apache.avro.util.Utf8()
+    fieldValue.setByteLength(3)
+    fieldValue.getBytes.update(0, 0x41)
+    fieldValue.getBytes.update(1, 0xA0.toByte)
+    fieldValue.getBytes.update(2, 0x42)
+
+    val value = AvroUtil.toFieldValue(AvroField(fieldSchema), fieldValue)
+    assert(!value.isNull)
+    assert(value.getAttribute == FieldValue.Attribute.PRIMITIVE)
+    assert(value.getValue.isInstanceOf[String])
+    assert(value.getStringValue == "A B")
+  }
 }
