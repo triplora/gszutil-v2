@@ -21,4 +21,5 @@ import com.google.cloud.bigquery.storage.v1.AvroRows
 trait Exporter {
   def processRows(rows: AvroRows): Long
   def close(): Unit
+  def rowsWritten: Long
 }

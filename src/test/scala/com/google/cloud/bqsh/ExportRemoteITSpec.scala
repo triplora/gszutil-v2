@@ -45,7 +45,11 @@ class ExportRemoteITSpec extends AnyFlatSpec with BeforeAndAfterAll with BeforeA
 
   val tableName = "exportTest"
   val sql =
-    s"""select *
+    s"""select a,b,c,
+       |CASE
+       |   WHEN A > 1000 THEN 1
+       |   WHEN A <= 1000 THEN 0
+       |   END AS D
        |from $TestProject.dataset.$tableName
        |""".stripMargin
 
@@ -55,6 +59,7 @@ class ExportRemoteITSpec extends AnyFlatSpec with BeforeAndAfterAll with BeforeA
       |        03  A                    PIC S9(4) COMP.
       |        03  B                    PIC X(8).
       |        03  C                    PIC S9(9)V99 COMP-3.
+      |        03  D                    PIC 9(01)
       |""".stripMargin
 
   val outFile = "TEST.DUMMY"
@@ -148,6 +153,7 @@ class ExportRemoteITSpec extends AnyFlatSpec with BeforeAndAfterAll with BeforeA
 
     val gcsUri = s"gs://$TestBucket/EXPORT/$outFile"
     val sp = CopyBook(TestCopybook, Ebcdic)
+
     def exporterFactory(fileSuffix: String, cfg: ExportConfig): SimpleFileExporter = {
       val result = new LocalFileExporter
       result.newExport(GcsFileExport(gcs, s"${gcsUri}/${zos.getInfo.getJobid}/tmp_$fileSuffix" , sp.LRECL))
@@ -164,10 +170,6 @@ class ExportRemoteITSpec extends AnyFlatSpec with BeforeAndAfterAll with BeforeA
     assert(gcs.get(BlobId.of(TestBucket, s"EXPORT/$outFile")).exists())
   }
 
-  /**
-   * TODO: fix bug with decimal encoding, to run this test, or just for test purpose remove decimal field from sql and copybook
-   *
-   */
   "Export storage api" should "in multiple threads" in {
     val cfg = ExportConfig(
       projectId = TestProject,
@@ -175,15 +177,21 @@ class ExportRemoteITSpec extends AnyFlatSpec with BeforeAndAfterAll with BeforeA
       location = Location,
       bucket = TestBucket,
       remoteHost = serverCfg.host,
-      remotePort = serverCfg.port,
-      runMode = "parallel"
+      remotePort = serverCfg.port
     )
 
     val gcsUri = s"gs://$TestBucket/EXPORT/$outFile"
     val sp = CopyBook(TestCopybook, Ebcdic)
 
+    def exporterFactory(fileSuffix: String, cfg: ExportConfig): SimpleFileExporter = {
+      val result = new LocalFileExporter
+      result.newExport(GcsFileExport(gcs, s"${gcsUri}/${zos.getInfo.getJobid}/tmp_$fileSuffix" , sp.LRECL))
+      new SimpleFileExporterAdapter(result, cfg)
+    }
+
     val startT = System.currentTimeMillis()
-    val res = new BqStorageApiExporter(cfg, storageApi, bq, GcsFileExport(gcs, gcsUri, sp.LRECL), zos.getInfo, sp).doExport(sql)
+    val res = new BqStorageApiExporter(cfg, storageApi, bq, exporterFactory, zos.getInfo, sp).doExport(sql)
+    new StorageFileCompose(gcs).composeAll(gcsUri, s"$gcsUri/${zos.getInfo.getJobid}/")
     println(s"StorageApi took : ${System.currentTimeMillis() - startT} millis.")
 
     assert(res.exitCode == 0)

@@ -8,7 +8,7 @@ import com.google.cloud.imf.gzos.pb.GRecvProto.Record.Field.FieldType
 import com.google.cloud.imf.gzos.{Binary, LocalizedTranscoder, PackedDecimal}
 import com.google.cloud.imf.util.Logging
 
-import java.nio.charset.Charset
+import java.nio.ByteBuffer
 import java.time.LocalDate
 
 object Encoding extends Logging {
@@ -96,8 +96,8 @@ object Encoding extends Logging {
 
     override def encodeValue(value: FieldValue): Array[Byte] = {
       value.getValue match {
-        case s: String =>
-          encode(s)
+        case s: String => encode(s)
+        case s: LocalDate => encode(s.toString)
         case x =>
           if (x == null) encode(null)
           else throw new UnsupportedOperationException(s"Unsupported field value ${x.getClass.getSimpleName}")
@@ -172,20 +172,24 @@ object Encoding extends Logging {
     }
 
     override def encodeValue(value: FieldValue): Array[Byte] = {
+      def encodeDecimal(d: BigDecimal): Array[Byte] = {
+        var v1 = d
+        if (maxValue.toBigInt < v1.toBigInt) {
+          throw new IllegalArgumentException(s"Decimal overflow '$d' is larger than $maxValue")
+        }
+        var scale = 0
+        while (scale < s) {
+          v1 *= 10d
+          scale += 1
+        }
+        encode(v1.toLong)
+      }
+
       if (value.isNull) Array.fill(size)(0x00)
       else {
         value.getValue match {
-          case s0: String =>
-            var v1 = BigDecimal(s0)
-            if (maxValue.toLong < v1.toLong) {
-              throw new IllegalArgumentException(s"Decimal overflow '$s0' is larger than $maxValue")
-            }
-            var scale = 0
-            while (scale < s) {
-              v1 *= 10d
-              scale += 1
-            }
-            encode(v1.toLong)
+          case s0: String => encodeDecimal(BigDecimal(s0))
+          case d0: BigDecimal => encodeDecimal(d0)
           case x =>
             throw new RuntimeException(s"Invalid decimal: $x")
         }
@@ -208,11 +212,7 @@ object Encoding extends Logging {
       if (x == null)
         Array.fill(size)(0x00)
       else {
-        val date = LocalDate.parse(x)
-        val int = ((((date.getYear - 1900) * 100) +
-          date.getMonthValue) * 100) +
-          date.getDayOfMonth
-        Binary.encode(int, size)
+        encodeDate(LocalDate.parse(x))
       }
     }
 
@@ -220,8 +220,16 @@ object Encoding extends Logging {
       if (value.isNull) Array.fill(size)(0x00)
       else value.getValue match {
         case s: String => encode(s)
+        case d: LocalDate => encodeDate(d)
         case _ => throw new UnsupportedOperationException()
       }
+
+    def encodeDate(date: LocalDate): Array[Byte] = {
+      val int = ((((date.getYear - 1900) * 100) +
+        date.getMonthValue) * 100) +
+        date.getDayOfMonth
+      Binary.encode(int, size)
+    }
   }
 
   case class BytesToBinaryEncoder(size: Int) extends BinaryEncoder {
@@ -240,7 +248,10 @@ object Encoding extends Logging {
 
     override def encodeValue(value: FieldValue): Array[Byte] =
       if (value.isNull) encode(null)
-      else encode(value.getBytesValue)
+      else value.getValue match {
+        case bf: ByteBuffer => encode(bf.array())
+        case _ => encode(value.getBytesValue)
+      }
   }
 
   case object UnknownTypeEncoder extends BinaryEncoder {
@@ -256,5 +267,4 @@ object Encoding extends Logging {
     override def encodeValue(value: FieldValue): Array[Byte] =
       throw new UnsupportedOperationException()
   }
-
 }

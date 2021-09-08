@@ -7,6 +7,7 @@ import com.google.cloud.bqsh.cmd.Result
 import com.google.cloud.gszutil.SchemaProvider
 import com.google.cloud.imf.gzos.pb.GRecvProto
 import com.google.common.collect.Iterators
+import com.google.cloud.imf.util.RetryHelper._
 
 import java.util.concurrent.atomic.AtomicLong
 import java.util.concurrent.{Executors, TimeUnit}
@@ -18,56 +19,41 @@ class BqSelectResultParallelExporter(cfg: ExportConfig,
                                      jobInfo: GRecvProto.ZOSJobInfo,
                                      sp: SchemaProvider,
                                      exporterFactory: (String, ExportConfig) => SimpleFileExporter) extends NativeExporter(bq, cfg, jobInfo) {
-  //currently there is a limit how much files could be joined by GCS Api, which is 32
-  //See https://cloud.google.com/storage/docs/composite-objects
-  //also it is more memory efficient to have a lot of small partitions due to releasing of memory on .close()
-  private val partitionCount = 32
+
   private implicit val ec: ExecutionContextExecutor = ExecutionContext.fromExecutor(Executors.newWorkStealingPool(cfg.exporterThreadCount))
   private var exporters: Seq[SimpleFileExporter] = List()
 
-  override def exportData(job: Job): Result = {
-    val jobName = s"Job[id=${job.getJobId.getJob}]"
-    if (!job.isDone)
-      throw new IllegalArgumentException(s"$jobName still running")
-    if (job.getConfiguration == null || !job.getConfiguration.isInstanceOf[QueryJobConfiguration])
-      throw new IllegalArgumentException(s"$jobName should have configuration of type QueryJobConfiguration")
+  private val _2MB: Int = 2 * 1024 * 1024
 
-    logger.info(s"$jobName Multithreading export started")
+  override def exportData(job: Job): Result = {
+    logger.info("Multithreading export started")
     val tableWithResults = bq.getTable(job.getConfiguration.asInstanceOf[QueryJobConfiguration].getDestinationTable)
     val tableSchema = tableWithResults.getDefinition[TableDefinition].getSchema.getFields
     val totalRowsToExport = tableWithResults.getNumRows.intValue()
-    val minPartitionSize = 10 * 1024 * 1024 / sp.LRECL //about 10 mb or records
-    val partitionSizePerThread = math.max(minPartitionSize, totalRowsToExport / partitionCount + 1)
-    //page size in rows for paginate in scope of one partition,
-    //will be automatically limited to 10mb in case set value is to big.
-    //https://cloud.google.com/bigquery/docs/paging-results
-    val partitionPageSize = ((10 * 1024 * 1024) / sp.LRECL * 1.2).toLong // + 20% to be sure that page size bigger then 10 MB
-    val partitions = for (leftBound <- 0 to totalRowsToExport by partitionSizePerThread) yield leftBound
+
+    val pageSize = _2MB / sp.LRECL
+    val partitionSize = math.max(pageSize, totalRowsToExport / cfg.exporterThreadCount + 1)
+    val partitions = for (leftBound <- 0 to totalRowsToExport by partitionSize) yield leftBound
+
     logger.info(
-      s"""$jobName Multithreading settings(
+      s"""Multithreading settings(
+         |  bqJobId=${job.getJobId.getJob},
+         |  totalRowsToExport=$totalRowsToExport,
          |  threadsCount=${cfg.exporterThreadCount},
          |  partitionCount=${partitions.size},
-         |  partitionSize=$partitionSizePerThread,
-         |  partitionPageSize=$partitionPageSize)""".stripMargin)
+         |  partitionSize=$partitionSize)
+         |  BQDestinationTable=${tableWithResults.getTableId}""".stripMargin)
 
-    val pageFetcher = (startIndex: Long, pageSize: Long) => {
-      val result = bq.listTableData(
-        tableWithResults.getTableId,
-        TableDataListOption.startIndex(startIndex),
-        TableDataListOption.pageSize(pageSize)
-      )
-      Page(result.getValues, Iterators.size(result.getValues.iterator()))
-    }
     val iterators = partitions.map(leftBound =>
       new PartialPageIterator[java.lang.Iterable[FieldValueList]](
         startIndex = leftBound,
-        endIndex = Math.min(leftBound + partitionSizePerThread, totalRowsToExport),
-        pageSize = partitionPageSize,
-        pageFetcher = pageFetcher(_, _))
+        endIndex = Math.min(leftBound + partitionSize, totalRowsToExport),
+        pageSize = pageSize,
+        pageFetcher = fetchPage(tableWithResults, _, _))
     )
 
     exporters = partitions.map(leftBound => {
-      exporterFactory((leftBound / partitionSizePerThread).toString, cfg)
+      exporterFactory((leftBound / partitionSize).toString, cfg)
     })
 
     exporters.headOption.foreach(_.validateData(tableSchema, sp.encoders))
@@ -77,7 +63,7 @@ class BqSelectResultParallelExporter(cfg: ExportConfig,
       case (iterator, exporter) =>
         Future {
           try {
-            val partitionName = s"$jobName Batch[${iterator.startIndex}:${iterator.endIndex}]"
+            val partitionName = s"Batch[${iterator.startIndex}:${iterator.endIndex}]"
 
             var rowsProcessed: Long = 0
             val totalPartitionRows = iterator.endIndex - iterator.startIndex
@@ -101,11 +87,26 @@ class BqSelectResultParallelExporter(cfg: ExportConfig,
     }.map(Await.result(_, Duration.create(cfg.timeoutMinutes, TimeUnit.MINUTES)))
 
     val rowsProcessed = results.map(_.activityCount).sum
-    logger.info(s"$jobName Received $totalRowsToExport rows from BigQuery API, written $rowsProcessed rows.")
-    require(totalRowsToExport == rowsProcessed, s"$jobName BigQuery API sent $totalRowsToExport rows but " +
+    logger.info(s"Received $totalRowsToExport rows from BigQuery API, written $rowsProcessed rows.")
+    require(totalRowsToExport == rowsProcessed, s"BigQuery API sent $totalRowsToExport rows but " +
       s"writer wrote $rowsProcessed")
     Result(activityCount = rowsProcessed)
   }
 
-  override def close(): Unit = exporters.foreach(_.endIfOpen())
+  def fetchPage(table: Table, startIndex: Long, pageSize: Long): Page[java.lang.Iterable[FieldValueList]] = {
+    val result = bq.listTableData(
+      table.getTableId,
+      TableDataListOption.startIndex(startIndex),
+      TableDataListOption.pageSize(pageSize)
+    )
+    Page(result.getValues, Iterators.size(result.getValues.iterator()))
+  }
+
+  override def close(): Unit = {
+    val errors = exporters
+      .map(e => (e, retryable(e.endIfOpen(), s"Resource closing for $e. ")))
+      .filter(r => r._2.isLeft)
+    if(errors.nonEmpty)
+      throw new IllegalStateException(s"Resources [${errors.map(_._1)}] were not closed properly!", errors.head._2.left.get)
+  }
 }

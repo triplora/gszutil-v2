@@ -48,6 +48,9 @@ case class BQBinaryExporter(schema: Schema,
   private var nextLog: Long = logFrequency
   private val buf = ByteBuffer.allocate(writer.lRecl)
 
+
+  override def rowsWritten: Long = writer.rowsWritten()
+
   override def processRows(rows: AvroRows): Long = {
     decoder = DecoderFactory.get.binaryDecoder(rows.getSerializedBinaryRows.toByteArray, decoder)
     if (rowCount >= nextLog) {

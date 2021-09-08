@@ -46,6 +46,9 @@ class BQExporter(schema: Schema, id: Int, writer: FileExport, transcoder: Transc
   private val buf = ByteBuffer.allocate(writer.lRecl)
   private val enc = transcoder.charset.newEncoder()
 
+
+  override def rowsWritten: Long = writer.rowsWritten()
+
   def close(): Unit = {
     writer.close()
     logger.info(s"Stream $id closed after writing $rowCount rows")

@@ -125,9 +125,11 @@ object Export extends Command[ExportConfig] with Logging {
     val sourceUri = new URI(dirToRemove)
     val sourceFiles = gcs.list(sourceUri.getAuthority, Storage.BlobListOption.prefix(sourceUri.getPath.stripPrefix("/")))
       .iterateAll.asScala.toSeq
-    val batch = gcs.batch()
-    sourceFiles.foreach(file => batch.delete(file.getBlobId))
-    batch.submit()
-    logger.info(s"GCS $dirToRemove folder with ${sourceFiles.size} files have been removed.")
+    if(sourceFiles.nonEmpty) {
+      val batch = gcs.batch()
+      sourceFiles.foreach(file => batch.delete(file.getBlobId))
+      batch.submit()
+      logger.info(s"GCS $dirToRemove folder with ${sourceFiles.size} files have been removed.")
+    }
   }
 }

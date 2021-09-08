@@ -18,6 +18,7 @@ import com.google.protobuf.util.JsonFormat
 import io.grpc.Status
 import io.grpc.stub.StreamObserver
 import org.apache.hadoop.fs.Path
+import com.google.cloud.imf.util.RetryHelper._
 
 import java.io.{BufferedInputStream, ByteArrayInputStream, InputStream}
 import java.net.URI
@@ -89,6 +90,12 @@ object GRecvServerListener extends Logging {
         }
       }
 
+    val orc: WriterCore = new WriterCore(schemaProvider = RecordSchema(req.getSchema),
+      basePath = new Path(req.getBasepath),
+      gcs = gcs,
+      name = s"$id",
+      lrecl = lrecl)
+
     val input: InputStream = {
       if (req.getNoData){
         // write an empty ORC file which can be registered as an external table
@@ -105,59 +112,56 @@ object GRecvServerListener extends Logging {
       }
     }
 
-    val hasher = Hashing.murmur3_128().newHasher()
-    val buf: ByteBuffer = ByteBuffer.allocate(lrecl*1024)
+    try {
+      val hasher = Hashing.murmur3_128().newHasher()
+      val buf: ByteBuffer = ByteBuffer.allocate(lrecl*1024)
 
-    val orc: WriterCore = new WriterCore(schemaProvider = RecordSchema(req.getSchema),
-      basePath = new Path(req.getBasepath),
-      gcs = gcs,
-      name = s"$id",
-      lrecl = lrecl)
-    var errCount: Long = 0
-    var rowCount: Long = 0
-    var bytesRead: Long = 0
-    var status: Int = GRecvProtocol.OK
+      var errCount: Long = 0
+      var rowCount: Long = 0
+      var bytesRead: Long = 0
+      var status: Int = GRecvProtocol.OK
 
-    logger.debug(s"starting to write")
-    var n = 0
-    while (n > -1) {
-      buf.clear()
-      while (n > -1 && buf.hasRemaining){
-        n = input.read(buf.array(), buf.position(), buf.remaining())
-        if (n > 0){
-          val pos = buf.position()
-          buf.position(pos + n)
-          bytesRead += n
+      logger.debug(s"starting to write")
+      var n = 0
+      while (n > -1) {
+        buf.clear()
+        while (n > -1 && buf.hasRemaining){
+          n = input.read(buf.array(), buf.position(), buf.remaining())
+          if (n > 0){
+            val pos = buf.position()
+            buf.position(pos + n)
+            bytesRead += n
+          }
+        }
+
+        buf.flip()
+        hasher.putBytes(buf)
+        buf.position(0)
+        val result = orc.write(buf)
+        errCount += result.errCount
+        rowCount += result.rowCount
+
+        val errPct = errCount.doubleValue() / math.max(1,rowCount)
+        if (errPct > req.getMaxErrPct) {
+          logger.debug(s"errPct $errPct")
+          status = GRecvProtocol.ERR
         }
       }
-
-      buf.flip()
-      hasher.putBytes(buf)
-      buf.position(0)
-      val result = orc.write(buf)
-      errCount += result.errCount
-      rowCount += result.rowCount
-
-      val errPct = errCount.doubleValue() / math.max(1,rowCount)
-      if (errPct > req.getMaxErrPct) {
-        logger.debug(s"errPct $errPct")
-        status = GRecvProtocol.ERR
-      }
+      logger.info(s"Finished reading $bytesRead bytes from ${req.getSrcUri}; wrote $rowCount rows")
+      val response = GRecvResponse.newBuilder
+        .setStatus(status)
+        .setHash(hasher.hash().toString)
+        .setErrCount(errCount)
+        .setRowCount(rowCount)
+        .build
+      val json = JsonFormat.printer().omittingInsignificantWhitespace().print(response)
+      logger.info(s"request completed for ${req.getSrcUri} sending response: $json")
+      responseObserver.onNext(response)
+      responseObserver.onCompleted()
+    } finally {
+      retryable(orc.close(), s"${req.getJobinfo}. Closing resources for orc writer ${req.getBasepath}.")
+      retryable(input.close(), s"${req.getJobinfo}. Closing resources for inputStream ${req.getSrcUri}.")
     }
-    logger.info(s"Finished reading $bytesRead bytes from ${req.getSrcUri}; wrote $rowCount rows")
-    input.close()
-
-    val response = GRecvResponse.newBuilder
-      .setStatus(status)
-      .setHash(hasher.hash().toString)
-      .setErrCount(errCount)
-      .setRowCount(rowCount)
-      .build
-    val json = JsonFormat.printer().omittingInsignificantWhitespace().print(response)
-    logger.info(s"request completed for ${req.getSrcUri} sending response: $json")
-    orc.close()
-    responseObserver.onNext(response)
-    responseObserver.onCompleted()
   }
 
   def export(request: GRecvProto.GRecvExportRequest,
@@ -168,22 +172,21 @@ object GRecvServerListener extends Logging {
              responseObserver: StreamObserver[GRecvResponse]) : Unit = {
 
     val sp = parseCopybook(request.getCopybook, cfg.picTCharset)
+    def exporterFactory(fileSuffix: String, cfg: ExportConfig): SimpleFileExporter = {
+      val result = new LocalFileExporter
+      result.newExport(GcsFileExport(gcs, s"${request.getOutputUri.stripSuffix("/")}/${request.getJobinfo.getJobid}/tmp_$fileSuffix", sp.LRECL))
+      new SimpleFileExporterAdapter(result, cfg)
+    }
     val result = if(cfg.runMode.toLowerCase == "single") {
       logger.info(s"Export mode - single thread")
       new BqSelectResultExporter(cfg, bq, request.getJobinfo, sp, GcsFileExport(gcs, request.getOutputUri, sp.LRECL)).doExport(request.getSql)
-    } else if("storage_api" == cfg.runMode.toLowerCase) {
+    } else if ("storage_api" == cfg.runMode.toLowerCase) {
       logger.info(s"Export mode - storage API")
-      new BqStorageApiExporter(cfg, storageApi, bq, GcsFileExport(gcs, request.getOutputUri, sp.LRECL), request.getJobinfo, sp).doExport(request.getSql)
+      new BqStorageApiExporter(cfg.copy(exporterThreadCount = Runtime.getRuntime.availableProcessors()), storageApi, bq, exporterFactory, request.getJobinfo, sp).doExport(request.getSql)
     } else {
       logger.info(s"Export mode - multiple threads")
-
-      def exporterFactory(fileSuffix: String, cfg: ExportConfig): SimpleFileExporter = {
-        val result = new LocalFileExporter
-        result.newExport(GcsFileExport(gcs, s"${request.getOutputUri.stripSuffix("/")}/${request.getJobinfo.getJobid}/tmp_$fileSuffix", sp.LRECL))
-        new SimpleFileExporterAdapter(result, cfg)
-      }
-
-      new BqSelectResultParallelExporter(cfg.copy(exporterThreadCount = Runtime.getRuntime.availableProcessors), bq, request.getJobinfo, sp, exporterFactory).doExport(request.getSql)
+      new BqSelectResultParallelExporter(cfg.copy(exporterThreadCount = Runtime.getRuntime.availableProcessors()), bq, request.getJobinfo, sp, exporterFactory)
+        .doExport(request.getSql)
     }
 
     val resp = GRecvResponse.newBuilder.setStatus(GRecvProtocol.OK).setRowCount(result.activityCount).build

@@ -16,11 +16,8 @@
 
 package com.google.cloud.bqsh
 
-import java.time.LocalDateTime
-
 import com.google.api.client.json.jackson2.JacksonFactory
-import com.google.api.services.bigquery.Bigquery
-import com.google.api.services.bigquery.model
+import com.google.api.services.bigquery.{Bigquery, model}
 import com.google.auth.Credentials
 import com.google.auth.http.HttpCredentialsAdapter
 import com.google.cloud.bigquery.InsertAllRequest.RowToInsert
@@ -30,6 +27,7 @@ import com.google.cloud.imf.gzos.{MVS, Util}
 import com.google.cloud.imf.util.{CCATransportFactory, Logging, StatsUtil}
 import com.google.common.collect.ImmutableList
 
+import java.time.LocalDateTime
 import scala.annotation.tailrec
 import scala.collection.mutable.ListBuffer
 import scala.jdk.CollectionConverters.IterableHasAsScala
@@ -132,6 +130,7 @@ object BQ extends Logging {
           logger.warn(s"Job already exists, waiting for completion.\njobid=${BQ.toStr(jobId)}")
           waitForJob(bq, jobId, timeoutMillis = timeoutSeconds * 1000L)
         } else {
+          logger.error(s"BQ API call failed for:$jobId\n$cfg\n$e")
           throw new RuntimeException(e)
         }
     }

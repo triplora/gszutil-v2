@@ -37,4 +37,6 @@ case class GcsFileExport(gcs: Storage, gcsOutUri: String, lrecl: Int) extends Fi
     logger.info(s"opening Cloud Storage Writer:\n$blobInfo")
     new BufferedOutputStream(Channels.newOutputStream(gcs.writer(blobInfo)), 1 * 1024 * 1024)
   }
+
+  override def toString: String = s"GcsFileExport with uri: $gcsOutUri"
 }
