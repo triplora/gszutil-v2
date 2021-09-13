@@ -70,7 +70,12 @@ case class ExportConfig(
   def toMap: Map[String, String] = {
     def getConfigParams(cc: Product): Map[String, String] = {
       val values = cc.productIterator
-      cc.getClass.getDeclaredFields.map( _.getName -> values.next.toString ).toMap
+      cc.getClass.getDeclaredFields.map( _.getName -> {
+        values.next match {
+          case x: Option[String]  => x.getOrElse("")
+          case x => x.toString
+        }
+      }).toMap
     }
     getConfigParams(this)
   }
@@ -110,7 +115,7 @@ object ExportConfig {
       cobDsn = configs.getOrElse("cobDsn", ""),
       timeoutMinutes = configs.getOrElse("timeoutMinutes", "").toInt,
       vartext = configs.getOrElse("vartext", "").toBoolean,
-      picTCharset = configs.get("picTCharset"),
+      picTCharset = configs.get("picTCharset").collect { case x if x.trim.nonEmpty => x },
       bucket = configs.getOrElse("bucket", ""),
       remoteHost = configs.getOrElse("remoteHost", ""),
       remotePort = configs.getOrElse("remotePort", "").toInt,

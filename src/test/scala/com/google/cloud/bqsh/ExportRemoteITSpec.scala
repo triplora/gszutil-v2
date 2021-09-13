@@ -2,7 +2,7 @@ package com.google.cloud.bqsh
 
 import com.google.cloud.RetryOption
 import com.google.cloud.bigquery.InsertAllRequest.RowToInsert
-import com.google.cloud.bigquery.{InsertAllRequest, JobId, QueryJobConfiguration, TableId}
+import com.google.cloud.bigquery.{InsertAllRequest, JobId, QueryJobConfiguration, Table, TableId}
 import com.google.cloud.bqsh.cmd.Export
 import com.google.cloud.gszutil.CopyBook
 import com.google.cloud.gszutil.io.exports._
@@ -53,6 +53,27 @@ class ExportRemoteITSpec extends AnyFlatSpec with BeforeAndAfterAll with BeforeA
        |from $TestProject.dataset.$tableName
        |""".stripMargin
 
+  val sqlWithColE =
+    s"""select a,b,c,
+       |CASE
+       |   WHEN A > 1000 THEN 1
+       |   WHEN A <= 1000 THEN 0
+       |   END AS D,
+       |   'a' as e
+       |from $TestProject.dataset.$tableName
+       |""".stripMargin
+
+  val sqlUtf8Char =
+    s"""select a,b,c,
+       |CASE
+       |   WHEN A > 1000 THEN 1
+       |   WHEN A <= 1000 THEN 0
+       |   END AS D,
+       |   e
+       |from $TestProject.dataset.$tableName
+       |where e = 'āō'
+       |""".stripMargin
+
   val TestCopybook =
     """
       |01  TEST-LAYOUT-FIVE.
@@ -85,7 +106,8 @@ class ExportRemoteITSpec extends AnyFlatSpec with BeforeAndAfterAll with BeforeA
            |SELECT
            | 1 as a,
            | 'a' as b,
-           | NUMERIC '-3.14'as c
+           | NUMERIC '-3.14'as c,
+           | 'āō' as e
            |""".stripMargin
       val id1 = JobId.newBuilder().setProject(TestProject).setLocation(Location).setRandomJob().build()
       bq.query(QueryJobConfiguration.newBuilder(sql1)
@@ -103,14 +125,34 @@ class ExportRemoteITSpec extends AnyFlatSpec with BeforeAndAfterAll with BeforeA
    */
   "Full flow remote export" should "export data to binary file to GCS" in {
     val cfg = ExportConfig(
-      sql = sql,
+      sql = sqlWithColE + " LIMIT 1",
       projectId = TestProject,
+      picTCharset = Some("UTF-8"),
       outDD = outFile,
       location = Location,
       bucket = TestBucket,
       remoteHost = serverCfg.host,
       remotePort = serverCfg.port,
       runMode = "parallel"
+    )
+    val res = Export.run(cfg, zos, Map.empty)
+
+    assert(res.exitCode == 0)
+    assert(res.activityCount == 1)
+    assert(gcs.get(BlobId.of(TestBucket, s"EXPORT/$outFile")).exists())
+  }
+
+  "Full flow remote export" should "export data to binary file to GCS with using utf-8 charset for encoding" in {
+    val cfg = ExportConfig(
+      sql = sqlUtf8Char + " LIMIT 1",
+      projectId = TestProject,
+      picTCharset = Some("UTF-8"),
+      outDD = outFile,
+      location = Location,
+      bucket = TestBucket,
+      remoteHost = serverCfg.host,
+      remotePort = serverCfg.port,
+      runMode = "storage_api"
     )
     val res = Export.run(cfg, zos, Map.empty)
 
