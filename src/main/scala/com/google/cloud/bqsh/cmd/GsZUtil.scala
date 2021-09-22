@@ -60,6 +60,7 @@ object GsZUtil extends Command[GsZUtilConfig] with Logging {
 
     val cpConfig = GsUtilConfig(
       schemaProvider = Option(sp),
+      picTCharset = c.picTCharset,
       remote = true,
       replace = true,
       remoteHost = c.remoteHost,

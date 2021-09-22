@@ -32,6 +32,7 @@ message Record {
       UNSIGNED_INTEGER = 9;
       BYTES = 10;
       LATIN_STRING = 11;
+      LOCALIZED_STRING = 12;
     }
     string name = 1;
     FieldType typ = 2;
@@ -46,6 +47,7 @@ message Record {
     NullIf nullif = 7;
     FieldType cast = 8;
     string format = 9;
+    string localized_charset = 10;
   }
   enum Source {
     UNKNOWN = 0;

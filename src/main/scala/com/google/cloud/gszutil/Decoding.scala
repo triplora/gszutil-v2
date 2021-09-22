@@ -164,6 +164,8 @@ object Decoding extends Logging {
         .setSize(size)
         .setFiller(filler)
         .setTyp(Field.FieldType.STRING)
+        .setCast(Field.FieldType.LOCALIZED_STRING)
+        .setLocalizedCharset(c.charset.toString)
 
       if (nullIf != null && nullIf.nonEmpty)
         b.setNullif(NullIf.newBuilder
@@ -651,6 +653,12 @@ object Decoding extends Logging {
           .map(_.getValue.toByteArray)
           .getOrElse(Array.empty)
         new NullableStringDecoder(LatinTranscoder, f.getSize, nullIf, filler = filler)
+      } else if(f.getCast == LOCALIZED_STRING) {
+        val localizedCharset = Option(f.getLocalizedCharset).map(_.trim).filter(_.nonEmpty)
+        val nullIf = Option(f.getNullif)
+          .map(_.getValue.toByteArray)
+          .getOrElse(Array.empty)
+        new LocalizedNullableStringDecoder(LocalizedTranscoder(localizedCharset), f.getSize, nullIf, filler = filler)
       } else {
         val nullIf = Option(f.getNullif)
           .map(_.getValue.toByteArray)
