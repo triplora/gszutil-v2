@@ -40,7 +40,7 @@ class GRecvService(storageFunc: ByteString => Storage,
     try {
       val gcs = storageFunc(keyfile)
       val lowLevelStorageApi = storageApiFunc(keyfile)
-      GRecvServerListener.write(request, gcs, lowLevelStorageApi, partId, responseObserver, compress = true)
+      GRecvServerListener.write(request, gcs, lowLevelStorageApi, partId, responseObserver, request.getCompress)
     } catch {
       case t: Throwable =>
         logger.error(t.getMessage, t)

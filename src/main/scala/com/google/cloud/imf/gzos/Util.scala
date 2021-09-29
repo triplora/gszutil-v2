@@ -180,8 +180,7 @@ object Util extends Logging {
     System.exit(0)
   }
 
-
-
+  def generateHashString: String = Random.alphanumeric.take(8).mkString.toUpperCase
 
   def quote(s1: String): String = {
     if(s1.startsWith("\"") && s1.endsWith("\"")) {

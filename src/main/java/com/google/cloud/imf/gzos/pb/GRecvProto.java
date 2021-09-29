@@ -5317,6 +5317,12 @@ public final class GRecvProto {
      * @return The keyfile.
      */
     com.google.protobuf.ByteString getKeyfile();
+
+    /**
+     * <code>bool compress = 14;</code>
+     * @return The compress.
+     */
+    boolean getCompress();
   }
   /**
    * Protobuf type {@code com.google.cloud.imf.gzos.GRecvRequest}
@@ -5451,6 +5457,11 @@ public final class GRecvProto {
             case 106: {
 
               keyfile_ = input.readBytes();
+              break;
+            }
+            case 112: {
+
+              compress_ = input.readBool();
               break;
             }
             default: {
@@ -5739,6 +5750,17 @@ public final class GRecvProto {
       return keyfile_;
     }
 
+    public static final int COMPRESS_FIELD_NUMBER = 14;
+    private boolean compress_;
+    /**
+     * <code>bool compress = 14;</code>
+     * @return The compress.
+     */
+    @java.lang.Override
+    public boolean getCompress() {
+      return compress_;
+    }
+
     private byte memoizedIsInitialized = -1;
     @java.lang.Override
     public final boolean isInitialized() {
@@ -5791,6 +5813,9 @@ public final class GRecvProto {
       }
       if (!keyfile_.isEmpty()) {
         output.writeBytes(13, keyfile_);
+      }
+      if (compress_ != false) {
+        output.writeBool(14, compress_);
       }
       unknownFields.writeTo(output);
     }
@@ -5850,6 +5875,10 @@ public final class GRecvProto {
         size += com.google.protobuf.CodedOutputStream
           .computeBytesSize(13, keyfile_);
       }
+      if (compress_ != false) {
+        size += com.google.protobuf.CodedOutputStream
+          .computeBoolSize(14, compress_);
+      }
       size += unknownFields.getSerializedSize();
       memoizedSize = size;
       return size;
@@ -5898,6 +5927,8 @@ public final class GRecvProto {
           != other.getNoData()) return false;
       if (!getKeyfile()
           .equals(other.getKeyfile())) return false;
+      if (getCompress()
+          != other.getCompress()) return false;
       if (!unknownFields.equals(other.unknownFields)) return false;
       return true;
     }
@@ -5942,6 +5973,9 @@ public final class GRecvProto {
           getNoData());
       hash = (37 * hash) + KEYFILE_FIELD_NUMBER;
       hash = (53 * hash) + getKeyfile().hashCode();
+      hash = (37 * hash) + COMPRESS_FIELD_NUMBER;
+      hash = (53 * hash) + com.google.protobuf.Internal.hashBoolean(
+          getCompress());
       hash = (29 * hash) + unknownFields.hashCode();
       memoizedHashCode = hash;
       return hash;
@@ -6109,6 +6143,8 @@ public final class GRecvProto {
 
         keyfile_ = com.google.protobuf.ByteString.EMPTY;
 
+        compress_ = false;
+
         return this;
       }
 
@@ -6156,6 +6192,7 @@ public final class GRecvProto {
         result.srcUri_ = srcUri_;
         result.noData_ = noData_;
         result.keyfile_ = keyfile_;
+        result.compress_ = compress_;
         onBuilt();
         return result;
       }
@@ -6245,6 +6282,9 @@ public final class GRecvProto {
         }
         if (other.getKeyfile() != com.google.protobuf.ByteString.EMPTY) {
           setKeyfile(other.getKeyfile());
+        }
+        if (other.getCompress() != false) {
+          setCompress(other.getCompress());
         }
         this.mergeUnknownFields(other.unknownFields);
         onChanged();
@@ -6994,6 +7034,37 @@ public final class GRecvProto {
       public Builder clearKeyfile() {
         
         keyfile_ = getDefaultInstance().getKeyfile();
+        onChanged();
+        return this;
+      }
+
+      private boolean compress_ ;
+      /**
+       * <code>bool compress = 14;</code>
+       * @return The compress.
+       */
+      @java.lang.Override
+      public boolean getCompress() {
+        return compress_;
+      }
+      /**
+       * <code>bool compress = 14;</code>
+       * @param value The compress to set.
+       * @return This builder for chaining.
+       */
+      public Builder setCompress(boolean value) {
+        
+        compress_ = value;
+        onChanged();
+        return this;
+      }
+      /**
+       * <code>bool compress = 14;</code>
+       * @return This builder for chaining.
+       */
+      public Builder clearCompress() {
+        
+        compress_ = false;
         onChanged();
         return this;
       }
@@ -10666,7 +10737,7 @@ public final class GRecvProto {
       "\207\001\n\nZOSJobInfo\022\r\n\005jobid\030\001 \001(\t\022\017\n\007jobname" +
       "\030\002 \001(\t\022\017\n\007jobdate\030\003 \001(\t\022\017\n\007jobtime\030\004 \001(\t" +
       "\022\021\n\tstep_name\030\005 \001(\t\022\026\n\016proc_step_name\030\006 " +
-      "\001(\t\022\014\n\004user\030\007 \001(\t\"\276\002\n\014GRecvRequest\0221\n\006sc" +
+      "\001(\t\022\014\n\004user\030\007 \001(\t\"\320\002\n\014GRecvRequest\0221\n\006sc" +
       "hema\030\001 \001(\0132!.com.google.cloud.imf.gzos.R" +
       "ecord\022\r\n\005lrecl\030\002 \001(\005\022\r\n\005blksz\030\003 \001(\005\022\020\n\010b" +
       "asepath\030\004 \001(\t\022\023\n\013max_err_pct\030\005 \001(\001\022\022\n\npu" +
@@ -10674,31 +10745,31 @@ public final class GRecvProto {
       "ncipal\030\010 \001(\t\0226\n\007jobinfo\030\t \001(\0132%.com.goog" +
       "le.cloud.imf.gzos.ZOSJobInfo\022\021\n\ttimestam" +
       "p\030\n \001(\003\022\017\n\007src_uri\030\013 \001(\t\022\017\n\007no_data\030\014 \001(" +
-      "\010\022\017\n\007keyfile\030\r \001(\014\"\240\002\n\022GRecvExportReques" +
-      "t\022\013\n\003sql\030\001 \001(\t\022\020\n\010copybook\030\002 \001(\t\022\022\n\noutp" +
-      "ut_uri\030\003 \001(\t\022X\n\016export_configs\030\004 \003(\0132@.c" +
-      "om.google.cloud.imf.gzos.GRecvExportRequ" +
-      "est.ExportConfigsEntry\0226\n\007jobinfo\030\005 \001(\0132" +
-      "%.com.google.cloud.imf.gzos.ZOSJobInfo\022\017" +
-      "\n\007keyfile\030\006 \001(\014\0324\n\022ExportConfigsEntry\022\013\n" +
-      "\003key\030\001 \001(\t\022\r\n\005value\030\002 \001(\t:\0028\001\"c\n\rGRecvRe" +
-      "sponse\022\016\n\006status\030\001 \001(\005\022\020\n\010rowCount\030\002 \001(\003" +
-      "\022\020\n\010msgCount\030\003 \001(\003\022\020\n\010errCount\030\004 \001(\003\022\014\n\004" +
-      "hash\030\005 \001(\t\"%\n\022HealthCheckRequest\022\017\n\007serv" +
-      "ice\030\001 \001(\t\"\237\001\n\023HealthCheckResponse\022L\n\006sta" +
-      "tus\030\001 \001(\0162<.com.google.cloud.imf.gzos.He" +
-      "althCheckResponse.ServingStatus\":\n\rServi" +
-      "ngStatus\022\013\n\007UNKNOWN\020\000\022\013\n\007SERVING\020\001\022\017\n\013NO" +
-      "T_SERVING\020\0022\256\002\n\005GRecv\022Z\n\005Write\022\'.com.goo" +
-      "gle.cloud.imf.gzos.GRecvRequest\032(.com.go" +
-      "ogle.cloud.imf.gzos.GRecvResponse\022a\n\006Exp" +
-      "ort\022-.com.google.cloud.imf.gzos.GRecvExp" +
-      "ortRequest\032(.com.google.cloud.imf.gzos.G" +
-      "RecvResponse\022f\n\005Check\022-.com.google.cloud" +
-      ".imf.gzos.HealthCheckRequest\032..com.googl" +
-      "e.cloud.imf.gzos.HealthCheckResponseB,\n\034" +
-      "com.google.cloud.imf.gzos.pbB\nGRecvProto" +
-      "P\000b\006proto3"
+      "\010\022\017\n\007keyfile\030\r \001(\014\022\020\n\010compress\030\016 \001(\010\"\240\002\n" +
+      "\022GRecvExportRequest\022\013\n\003sql\030\001 \001(\t\022\020\n\010copy" +
+      "book\030\002 \001(\t\022\022\n\noutput_uri\030\003 \001(\t\022X\n\016export" +
+      "_configs\030\004 \003(\0132@.com.google.cloud.imf.gz" +
+      "os.GRecvExportRequest.ExportConfigsEntry" +
+      "\0226\n\007jobinfo\030\005 \001(\0132%.com.google.cloud.imf" +
+      ".gzos.ZOSJobInfo\022\017\n\007keyfile\030\006 \001(\014\0324\n\022Exp" +
+      "ortConfigsEntry\022\013\n\003key\030\001 \001(\t\022\r\n\005value\030\002 " +
+      "\001(\t:\0028\001\"c\n\rGRecvResponse\022\016\n\006status\030\001 \001(\005" +
+      "\022\020\n\010rowCount\030\002 \001(\003\022\020\n\010msgCount\030\003 \001(\003\022\020\n\010" +
+      "errCount\030\004 \001(\003\022\014\n\004hash\030\005 \001(\t\"%\n\022HealthCh" +
+      "eckRequest\022\017\n\007service\030\001 \001(\t\"\237\001\n\023HealthCh" +
+      "eckResponse\022L\n\006status\030\001 \001(\0162<.com.google" +
+      ".cloud.imf.gzos.HealthCheckResponse.Serv" +
+      "ingStatus\":\n\rServingStatus\022\013\n\007UNKNOWN\020\000\022" +
+      "\013\n\007SERVING\020\001\022\017\n\013NOT_SERVING\020\0022\256\002\n\005GRecv\022" +
+      "Z\n\005Write\022\'.com.google.cloud.imf.gzos.GRe" +
+      "cvRequest\032(.com.google.cloud.imf.gzos.GR" +
+      "ecvResponse\022a\n\006Export\022-.com.google.cloud" +
+      ".imf.gzos.GRecvExportRequest\032(.com.googl" +
+      "e.cloud.imf.gzos.GRecvResponse\022f\n\005Check\022" +
+      "-.com.google.cloud.imf.gzos.HealthCheckR" +
+      "equest\032..com.google.cloud.imf.gzos.Healt" +
+      "hCheckResponseB,\n\034com.google.cloud.imf.g" +
+      "zos.pbB\nGRecvProtoP\000b\006proto3"
     };
     descriptor = com.google.protobuf.Descriptors.FileDescriptor
       .internalBuildGeneratedFileFrom(descriptorData,
@@ -10733,7 +10804,7 @@ public final class GRecvProto {
     internal_static_com_google_cloud_imf_gzos_GRecvRequest_fieldAccessorTable = new
       com.google.protobuf.GeneratedMessageV3.FieldAccessorTable(
         internal_static_com_google_cloud_imf_gzos_GRecvRequest_descriptor,
-        new java.lang.String[] { "Schema", "Lrecl", "Blksz", "Basepath", "MaxErrPct", "PublicKey", "Signature", "Principal", "Jobinfo", "Timestamp", "SrcUri", "NoData", "Keyfile", });
+        new java.lang.String[] { "Schema", "Lrecl", "Blksz", "Basepath", "MaxErrPct", "PublicKey", "Signature", "Principal", "Jobinfo", "Timestamp", "SrcUri", "NoData", "Keyfile", "Compress", });
     internal_static_com_google_cloud_imf_gzos_GRecvExportRequest_descriptor =
       getDescriptor().getMessageTypes().get(3);
     internal_static_com_google_cloud_imf_gzos_GRecvExportRequest_fieldAccessorTable = new

@@ -84,6 +84,7 @@ message GRecvRequest {
   string src_uri = 11;
   bool no_data = 12;
   bytes keyfile = 13;
+  bool compress = 14;
 }
 
 message GRecvExportRequest {
