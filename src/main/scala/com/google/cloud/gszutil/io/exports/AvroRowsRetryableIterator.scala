@@ -19,7 +19,7 @@ class AvroRowsRetryableIterator(callable: ServerStreamingCallable[ReadRowsReques
     case Success(value) => value
     case Failure(ex) if counter < 0 => throw ex
     case Failure(ex) =>
-      logger.warn(s"Retrying hasNext(), offset=${request.getOffset}, retry_from_offset=$offset, exception=$ex")
+      logger.info(s"Retrying hasNext(), offset=${request.getOffset}, retry_from_offset=$offset, exception=$ex")
       resetIteratorWithDelay()
       hasNext
   }
@@ -29,7 +29,7 @@ class AvroRowsRetryableIterator(callable: ServerStreamingCallable[ReadRowsReques
     case Success(value) => value
     case Failure(ex) if counter < 0 => throw ex
     case Failure(ex) =>
-      logger.warn(s"Retrying next(), offset=${request.getOffset}, retry_from_offset=$offset, exception=$ex")
+      logger.info(s"Retrying next(), offset=${request.getOffset}, retry_from_offset=$offset, exception=$ex")
       resetIteratorWithDelay()
       next
   }
