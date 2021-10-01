@@ -62,10 +62,12 @@ class BqStorageApiExporter(cfg: ExportConfig,
       exporters.append(exporter)
 
       Future {
-        bqStorage.readRowsCallable.call(request).forEach { res =>
+        val avroRowsIterator = new AvroRowsRetryableIterator(bqStorage.readRowsCallable, request)
+        avroRowsIterator.foreach { res =>
           if (res.hasAvroRows) {
             val r = exporter.processRows(res.getAvroRows)
             exporter.logIfNeeded(rowsProcessed.addAndGet(r), rowsInDestTable)
+            avroRowsIterator.consumed(r)
           }
         }
         exporter.close()
