@@ -13,7 +13,7 @@ class AvroRowsRetryableIterator(callable: ServerStreamingCallable[ReadRowsReques
   private var internalStream: ServerStream[ReadRowsResponse] = callable.call(request)
   private var internalIterator: java.util.Iterator[ReadRowsResponse] = internalStream.iterator()
   private var offset: Long = request.getOffset
-  private var counter = retryCount
+  private var counter = retryCount - 1
 
   @tailrec
   override final def hasNext: Boolean = Try(internalIterator.hasNext) match {
