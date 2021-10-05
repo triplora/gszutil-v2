@@ -337,6 +337,8 @@ Usage: export [options]
 |STORAGE_READ_TIMEOUT_MILLIS|20000|Google Storage API client timeout (msec) on waiting to read data. If the server (or network) fails to deliver any data timeout seconds after the client makes a socket read call, a read timeout error will be raised.|
 |STORAGE_MAX_ATTEMPTS_COUNT|3|Google Storage API client max request attemts before fail. Controls retry logic.|
 |HTTP_CLIENT_MAX_CONNECTIONS_COUNT|max(cpu_count,&nbsp;32) | Http client is shared between BqClient, BqStorage, GCStorage clients. There are workloads, like Parallel Export, that use thread pools to parallelize read/write data. For such workloads one http connection per thread at thread pool is required.<br/>Formula for pool size:<br/>maxConnectionTotal = JOB_THREAD_POOL_SIZE * JOBS_IN_PARALLEL_COUNT<br/>JOB_THREAD_POOL_SIZE - by default it is a vCPU count<br/>JOBS_IN_PARALLEL_COUNT - by default it is 5, need load tests to detect proper number.|
+|RST_STREAM_RETRY_COUNT|5|Retry count on 'Rst Stream' error and BQ Storage API stream related errors|
+|RST_STREAM_MIN_TIMEOUT_SEC|5|Timeout in seconds before retry of ```Rst Stream``` error and BQ Storage API stream related errors. Max timeout is calculated as min_timeout + 15 seconds. Actual timeout will be random number between min and max, to avoid ```hot spots``` on retry. |
 |GCSDSNURI|no|Default destination Google Cloud Storage Bucket for scp(Simple file copy) command. (Format: gs://bucket/prefix)|
 |GCSGDGURI|no|Default destination Google Cloud Storage Bucket for scp(Simple file copy) command when source is versioned dataset (GDG - Generation Data Groups) (Example: gs://bucket-with-versioning/prefix)|
 |SRVHOSTNAME|no|BMLU GRPC server DNS hostname or IP|

@@ -9,7 +9,11 @@ import scala.util.{Failure, Random, Success, Try}
 
 class AvroRowsRetryableIterator(callable: ServerStreamingCallable[ReadRowsRequest, ReadRowsResponse],
                                 request: ReadRowsRequest,
-                                retryCount: Int = 5) extends Iterator[ReadRowsResponse] with Logging {
+                                retryCount: Int = 5,
+                                minRetryTimeoutSec: Int = 1,
+                                maxRetryTimeoutSec: Int = 5) extends Iterator[ReadRowsResponse] with Logging {
+  require(retryCount >= 0, s"retryCount='$retryCount' should be non negative number!")
+  require(minRetryTimeoutSec <= maxRetryTimeoutSec && minRetryTimeoutSec > 0, s"minTimeout=$minRetryTimeoutSec, maxTimeout=$maxRetryTimeoutSec. Min or max timeout is less than 1 sec or min timeout is larger than max!")
   private var internalStream: ServerStream[ReadRowsResponse] = callable.call(request)
   private var internalIterator: java.util.Iterator[ReadRowsResponse] = internalStream.iterator()
   private var offset: Long = request.getOffset
@@ -40,7 +44,7 @@ class AvroRowsRetryableIterator(callable: ServerStreamingCallable[ReadRowsReques
   }
 
   private def resetIteratorWithDelay(): Unit = {
-    Try(Thread.sleep(Random.between(1, 5) * 1000))
+    Try(Thread.sleep(Random.between(minRetryTimeoutSec, maxRetryTimeoutSec) * 1000))
     Try(internalStream.cancel()) match {
       case Failure(exception) => logger.error(s"Could not close read stream ${request.getReadStream}, error $exception")
       case _ => //do nothing

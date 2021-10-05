@@ -77,4 +77,13 @@ class AvroRowsRetryableIteratorSpec extends AnyFlatSpec {
     Mockito.verify(serverStreaming, Mockito.times(1)).call(expectedArgWithOffset)
   }
 
+  it should "fail on param validation" in {
+    val serverStreaming = Mockito.mock(classOf[ServerStreamingCallable[ReadRowsRequest, ReadRowsResponse]])
+    val request = ReadRowsRequest.newBuilder().setOffset(0).setReadStream("dummy_stream").build()
+
+    assertThrows[IllegalArgumentException](new AvroRowsRetryableIterator(serverStreaming, request, -15))
+    assertThrows[IllegalArgumentException](new AvroRowsRetryableIterator(serverStreaming, request, 0, 0, 5))
+    assertThrows[IllegalArgumentException](new AvroRowsRetryableIterator(serverStreaming, request, 0, 5, 2))
+  }
+
 }
