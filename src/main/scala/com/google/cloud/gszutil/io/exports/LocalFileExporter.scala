@@ -19,6 +19,8 @@ class LocalFileExporter extends FileExporter with Logging {
 
   override def endIfOpen(): Unit = if (isOpen) export.close()
 
+  override def toString: String = `export`.toString
+
   override def exportBQSelectResult(rows: java.lang.Iterable[FieldValueList],
                                     bqSchema: FieldList,
                                     mvsEncoders: Array[BinaryEncoder]): Result = {

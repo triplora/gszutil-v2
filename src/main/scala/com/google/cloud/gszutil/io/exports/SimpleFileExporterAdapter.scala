@@ -32,4 +32,5 @@ class SimpleFileExporterAdapter(fe: FileExporter, cfg: ExportConfig) extends Sim
 
   def endIfOpen(): Unit = fe.endIfOpen()
 
+  override def toString: String = fe.toString
 }
