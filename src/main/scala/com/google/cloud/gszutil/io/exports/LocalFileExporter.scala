@@ -13,11 +13,16 @@ import scala.util.{Failure, Success, Try}
 
 class LocalFileExporter extends FileExporter with Logging {
   protected var export: FileExport = _
+
   override def isOpen: Boolean = export != null
+
   override def currentExport: FileExport = export
+
   override def newExport(e: FileExport): Unit = export = e
 
   override def endIfOpen(): Unit = if (isOpen) export.close()
+
+  override def toString: String = `export`.toString
 
   override def exportBQSelectResult(rows: java.lang.Iterable[FieldValueList],
                                     bqSchema: FieldList,

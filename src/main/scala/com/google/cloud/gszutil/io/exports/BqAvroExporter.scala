@@ -52,4 +52,6 @@ class BqAvroExporter(exporter: SimpleFileExporter,
     }
     result
   }
+
+  override def toString: String = exporter.toString
 }

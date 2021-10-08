@@ -125,8 +125,9 @@ object Encoding extends Logging {
 
     override def encodeValue(value: FieldValue): Array[Byte] = {
       value.getValue match {
-        case s: String =>
-          encode(s)
+        case s: String => encode(s)
+        case s: LocalDate => encode(s.toString)
+        case s: BigDecimal => encode(s.bigDecimal.stripTrailingZeros().toPlainString)
         case x =>
           if (x == null) encode(null)
           else throw new UnsupportedOperationException(s"Unsupported field value ${x.getClass.getSimpleName}")

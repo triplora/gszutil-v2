@@ -154,6 +154,9 @@ object GRecvServerListener extends Logging {
         .setErrCount(errCount)
         .setRowCount(rowCount)
         .build
+
+      orc.close()
+      input.close()
       val json = JsonFormat.printer().omittingInsignificantWhitespace().print(response)
       logger.info(s"request completed for ${req.getSrcUri} sending response: $json")
       responseObserver.onNext(response)

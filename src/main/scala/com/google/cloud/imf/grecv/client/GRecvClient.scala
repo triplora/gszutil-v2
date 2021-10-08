@@ -25,7 +25,8 @@ object GRecvClient extends Uploader with Logging {
             zos: MVS,
             in: ZRecordReaderT,
             schemaProvider: SchemaProvider,
-            receiver: Uploader): Result = {
+            receiver: Uploader,
+            compress: Boolean = true): Result = {
     logger.info(s"GRecvClient (Write) Starting Dataset Upload to ${cfg.gcsUri}")
 
     try {
@@ -38,6 +39,7 @@ object GRecvClient extends Uploader with Logging {
         .setJobinfo(zos.getInfo)
         .setPrincipal(zos.getPrincipal())
         .setKeyfile(ByteString.copyFrom(zos.readKeyfile()))
+        .setCompress(compress)
         .setTimestamp(System.currentTimeMillis())
 
       receiver.upload(req.build, cfg.remoteHost, cfg.remotePort, cfg.nConnections, zos, in, cfg.timeOutMinutes, cfg.keepAliveTimeInSeconds)
