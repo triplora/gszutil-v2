@@ -89,6 +89,10 @@ case class AvroField(field: Schema.Field) {
 
   val isTimestamp: Boolean = typeSchema.getType == Schema.Type.LONG && hasLogicalType(field, "timestamp-micros")
 
+  val isTime: Boolean = typeSchema.getType == Schema.Type.LONG && hasLogicalType(field, "time-micros")
+
+  val isDateTime: Boolean = typeSchema.getType == Schema.Type.STRING && hasLogicalType(field, "datetime")
+
   val isDate: Boolean = typeSchema.getType == Schema.Type.INT && hasLogicalType(field, "date")
 
   val isString: Boolean = typeSchema.getType == Schema.Type.STRING && isLogicalTypeBlank(field)

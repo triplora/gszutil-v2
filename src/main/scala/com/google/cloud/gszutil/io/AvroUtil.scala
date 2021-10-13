@@ -186,6 +186,7 @@ object AvroUtil {
   def toFieldValue(field: AvroField, value: Any): FieldValue = {
     value match {
       case null => FieldValue.of(FieldValue.Attribute.PRIMITIVE, null)
+      case s: org.apache.avro.util.Utf8 if field.isDateTime => FieldValue.of(FieldValue.Attribute.PRIMITIVE, s.toString)
       case s: org.apache.avro.util.Utf8 if field.isString =>
         //Following issue may be a bug on bigquery side.
         //For query that contain filtering like this 'TRIM(regexp_replace(T1.PRIMARY_DESC, "[^\X1F-\X7F]+", " "))'
@@ -195,6 +196,7 @@ object AvroUtil {
         //and will be replaced with unknown symbol � (0xEF,0xBF,0xBD)
         FieldValue.of(FieldValue.Attribute.PRIMITIVE, s.toString.replace("�", " "))
       case s: Long if field.isLong => FieldValue.of(FieldValue.Attribute.PRIMITIVE, s.toString)
+      case s: Long if field.isTime => FieldValue.of(FieldValue.Attribute.PRIMITIVE, toTimeString(s))
       case s: ByteBuffer if field.isDecimal => FieldValue.of(FieldValue.Attribute.PRIMITIVE, handleDecimal(s, field.scale))
       case s: ByteBuffer if field.isBytes => FieldValue.of(FieldValue.Attribute.PRIMITIVE, s)
       case s: Integer if field.isDate => FieldValue.of(FieldValue.Attribute.PRIMITIVE, LocalDate.ofEpochDay(s.longValue()))
@@ -204,4 +206,11 @@ object AvroUtil {
 
   private def handleDecimal(s: ByteBuffer, scale: Int): BigDecimal =
     new java.math.BigDecimal(new java.math.BigInteger(s.array()), scale)
+
+  private def toTimeString(microseconds: Long): String = {
+    val second = (microseconds / 1000_000) % 60
+    val minute = (microseconds / 60_000_000) % 60
+    val hour = (microseconds / 3_600_000_000L) % 24
+    s"$hour:$minute:$second"
+  }
 }
