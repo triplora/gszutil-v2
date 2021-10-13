@@ -81,4 +81,9 @@ object GrecvLoadTestConfigParser extends OptionParser[GRecvLoadTestConfig]("load
   opt[Boolean]("use_ssl")
     .text("default false")
     .action((x, c) => c.copy(useSsl = x))
+
+  opt[String]("bq_schema_path")
+    .optional()
+    .text("path to bq schema used for load test case")
+    .action((x, c) => c.copy(bqSchemaPath = x))
 }

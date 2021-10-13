@@ -14,5 +14,6 @@ case class GRecvLoadTestConfig(targetHost: String = "0.0.0.0",
                                timeoutMinutes: Int = 30,
                                numberThreads: Int = 4,
                                testCase: String = "export",
-                               useSsl: Boolean = false)
+                               useSsl: Boolean = false,
+                               bqSchemaPath: String = "")
 

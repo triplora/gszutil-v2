@@ -61,11 +61,11 @@ abstract class GrecvLoadTestService(cfg: GRecvLoadTestConfig) extends Logging {
   def handleResponse(out: JobResponse, alias: String = ""): Unit = {
     out._2 match {
       case Result(_, 1, _, _) => logger.error(s"Failed $alias! Job ${out._1.index} ${out._1.name}.")
-      case Result(_, 0, rows, _) => logger.info(s"Passed $alias! Job ${out._1.index} ${out._1.name} $rows rows written.")
+      case Result(_, 0, _, _) => logger.info(s"Passed $alias! Job ${out._1.index} ${out._1.name}.")
     }
   }
 
-  private def readByPath(path: String): List[String] = {
+  protected def readByPath(path: String): List[String] = {
     val source = Source.fromFile(path, "UTF-8")
     try source.getLines().toList finally source.close()
   }

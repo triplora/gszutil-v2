@@ -12,6 +12,7 @@ object GrecvLoadTest extends Logging {
           case "export" => new ExportLoadTest(cfg)
           case "export_and_import" => new ExportAndImportLoadTest(cfg)
           case "import" => new ImportLoadTest(cfg)
+          case "export_and_import_with_load" => new ExportAndImportWithBqLoadTest(cfg)
           case _ => throw new Error("wrong test case")
         }
         service.run

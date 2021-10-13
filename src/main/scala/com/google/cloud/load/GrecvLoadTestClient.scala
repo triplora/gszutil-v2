@@ -106,7 +106,7 @@ object GrecvLoadTestClient extends Logging {
     b
   }
 
-  private def jobInfo(metadata: JobMetadata): ZOSJobInfo = {
+  def jobInfo(metadata: JobMetadata): ZOSJobInfo = {
     ZOSJobInfo.newBuilder
       .setJobid(metadata.jobId)
       .setJobdate(zos.jobDate)
