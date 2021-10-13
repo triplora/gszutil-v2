@@ -119,23 +119,27 @@ object QueryOptionParser extends OptionParser[QueryConfig]("query") with ArgPars
 
   opt[Long]("time_partitioning_expiration")
     .text("An integer that specifies (in seconds) when a time-based partition should be deleted. The expiration time evaluates to the partition's UTC date plus the integer value. A negative number indicates no expiration.")
-    .action((x,c) => c.copy(timePartitioningExpiration = x))
+    .action((x, c) => c.copy(timePartitioningExpiration = x))
 
   opt[String]("time_partitioning_field")
     .text("The field used to determine how to create a time-based partition. If time-based partitioning is enabled without this value, the table is partitioned based on the load time.")
-    .action((x,c) => c.copy(timePartitioningField = x))
+    .action((x, c) => c.copy(timePartitioningField = x))
 
   opt[String]("time_partitioning_type")
     .text("Enables time-based partitioning on a table and sets the partition type. Currently, the only possible value is DAY which generates one partition per day.")
-    .action((x,c) => c.copy(timePartitioningType = x))
+    .action((x, c) => c.copy(timePartitioningType = x))
+
+  opt[Int]("timeOutMinutes")
+    .text("An integer that sets how long client waits BigQuery job response from BigQuery API in minutes.")
+    .action((x, c) => c.copy(timeoutMinutes = math.abs(x)))
 
   opt[Boolean]("use_cache")
     .text("When specified, caches the query results. The default value is true.")
-    .action((x,c) => c.copy(useCache = x))
+    .action((x, c) => c.copy(useCache = x))
 
   opt[Unit]("use_legacy_sql")
     .text("When set to false, runs a standard SQL query. The default value is false (uses Standard SQL).")
-    .action((x,c) => c.copy(useLegacySql = true))
+    .action((x, c) => c.copy(useLegacySql = true))
 
   // Global options
   opt[String]("dataset_id")

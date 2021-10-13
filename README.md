@@ -253,6 +253,8 @@ new fields to be added
                            The field used to determine how to create a time-based partition. If time-based partitioning is enabled without this value, the table is partitioned based on the load time.
   --time_partitioning_type <value>
                            Enables time-based partitioning on a table and sets the partition type. Currently, the only possible value is DAY which generates one partition per day.
+  --timeOutMinutes <value>
+                           An integer that sets how long client waits BigQuery job response from BigQuery API in minutes.
   --use_cache <value>      When specified, caches the query results. The default value is true.
   --use_legacy_sql         When set to false, runs a standard SQL query. The default value is false (uses Standard SQL).
   --dataset_id <value>     The default dataset to use for requests. This flag is ignored when not applicable. You can set the value to [PROJECT_ID]:[DATASET] or [DATASET]. If [PROJECT_ID] is missing, the default project is used. You can override this setting by specifying the --project_id flag. The default value is ''.

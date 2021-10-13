@@ -39,20 +39,20 @@ object QueryConfig {
 }
 
 case class QueryConfig(
-  // Custom Options
-  sql: String = "",
-  queryDSN: String = "",
-  timeoutMinutes: Int = 60,
-  parametersFromFile: Seq[String] = Seq.empty,
-  createIfNeeded: Boolean = false,
-  allowMultipleQueries: Boolean = false,
+                        // Custom Options
+                        sql: String = "",
+                        queryDSN: String = "",
+                        timeoutMinutes: Int = 240,
+                        parametersFromFile: Seq[String] = Seq.empty,
+                        createIfNeeded: Boolean = false,
+                        allowMultipleQueries: Boolean = false,
 
-  // Standard Options
-  allowLargeResults: Boolean = false,
-  appendTable: Boolean = false,
-  batch: Boolean = false,
-  clusteringFields: Seq[String] = Seq.empty,
-  destinationKmsKey: String = "",
+                        // Standard Options
+                        allowLargeResults: Boolean = false,
+                        appendTable: Boolean = false,
+                        batch: Boolean = false,
+                        clusteringFields: Seq[String] = Seq.empty,
+                        destinationKmsKey: String = "",
   destinationSchema: String = "",
   destinationTable: String = "",
   dryRun: Boolean = false,
