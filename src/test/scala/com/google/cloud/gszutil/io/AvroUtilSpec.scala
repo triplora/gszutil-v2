@@ -1,14 +1,12 @@
 package com.google.cloud.gszutil.io
 
 import com.google.cloud.bigquery.FieldValue
-import com.google.common.io.BaseEncoding
 import org.apache.avro.Schema
 import org.codehaus.jackson.node.IntNode
 import org.scalatest.flatspec.AnyFlatSpec
 
 import java.nio.ByteBuffer
 import java.time.LocalDate
-import java.time.format.DateTimeFormatter
 
 class AvroUtilSpec extends AnyFlatSpec {
 
@@ -29,9 +27,9 @@ class AvroUtilSpec extends AnyFlatSpec {
 
   it should "fail to create FieldValue of type 'string'" in {
     val schema = Schema.create(Schema.Type.STRING)
-    schema.addProp("sqlType", "DATETIME")
+    schema.addProp("sqlType", "GEOGRAPHY")
     val fieldSchema = new Schema.Field("a", schema, "", null)
-    val fieldValue = new org.apache.avro.util.Utf8("2021-08-11")
+    val fieldValue = new org.apache.avro.util.Utf8("POINT(15 15)")
     assertThrows[IllegalStateException] {
       AvroUtil.toFieldValue(AvroField(fieldSchema), fieldValue)
     }
@@ -96,6 +94,46 @@ class AvroUtilSpec extends AnyFlatSpec {
     assert(value.getAttribute == FieldValue.Attribute.PRIMITIVE)
     assert(value.getValue.isInstanceOf[LocalDate])
     assert(nowDate == value.getValue.asInstanceOf[LocalDate])
+    //nulls
+    val nullValue = AvroUtil.toFieldValue(AvroField(fieldSchema), null)
+    assert(nullValue.isNull)
+    assert(nullValue.getAttribute == FieldValue.Attribute.PRIMITIVE)
+    assert(nullValue.getValue == null)
+  }
+
+  it should "create FieldValue of type 'time'" in {
+    val schema = Schema.create(Schema.Type.LONG)
+    schema.addProp("logicalType", "time-micros")
+    val fieldSchema = new Schema.Field("a", schema, "", null)
+    //12:59:58
+    val hoursInSecs = 12 * 60 * 60
+    val minutesInSecs = 59 * 60
+    val seconds = 58
+    val timeInMicros = (hoursInSecs + minutesInSecs + seconds) * 1000000L
+
+    val value = AvroUtil.toFieldValue(AvroField(fieldSchema), timeInMicros)
+    assert(!value.isNull)
+    assert(value.getAttribute == FieldValue.Attribute.PRIMITIVE)
+    assert(value.getValue.isInstanceOf[String])
+    assert("12:59:58" == value.getValue.asInstanceOf[String])
+    //nulls
+    val nullValue = AvroUtil.toFieldValue(AvroField(fieldSchema), null)
+    assert(nullValue.isNull)
+    assert(nullValue.getAttribute == FieldValue.Attribute.PRIMITIVE)
+    assert(nullValue.getValue == null)
+  }
+
+  it should "create FieldValue of type 'datetime'" in {
+    val schema = Schema.create(Schema.Type.STRING)
+    schema.addProp("sqlType", "DATETIME")
+    val fieldSchema = new Schema.Field("a", schema, "", null)
+    val dateTime = "2021-10-13T08:02:40.527769"
+    val value = AvroUtil.toFieldValue(AvroField(fieldSchema), new org.apache.avro.util.Utf8(dateTime))
+
+    assert(!value.isNull)
+    assert(value.getAttribute == FieldValue.Attribute.PRIMITIVE)
+    assert(value.getValue.isInstanceOf[String])
+    assert(dateTime == value.getValue.asInstanceOf[String])
     //nulls
     val nullValue = AvroUtil.toFieldValue(AvroField(fieldSchema), null)
     assert(nullValue.isNull)
