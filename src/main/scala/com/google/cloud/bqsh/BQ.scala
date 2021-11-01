@@ -467,7 +467,7 @@ object BQ extends Logging with GoogleApiL2Retrier {
   }
 
   def apiClient(credentials: Credentials): Bigquery =
-    new Bigquery(CCATransportFactory.getTransportInstance,
+    new Bigquery(CCATransportFactory.create,
       JacksonFactory.getDefaultInstance, new HttpCredentialsAdapter(credentials))
 
   def apiGetJob(bq: Bigquery, jobId: JobId): model.Job = {
