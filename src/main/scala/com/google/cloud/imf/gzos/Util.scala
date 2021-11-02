@@ -19,7 +19,6 @@ import java.io.{ByteArrayInputStream, ByteArrayOutputStream}
 import java.nio.ByteBuffer
 import java.nio.channels.{Channels, ReadableByteChannel, WritableByteChannel}
 import java.nio.charset.Charset
-
 import com.google.auth.oauth2.{GoogleCredentials, ServiceAccountCredentials}
 import com.google.cloud.gszutil.io.{ZDataSet, ZRecordReaderT}
 import com.google.cloud.imf.gzos.pb.GRecvProto.ZOSJobInfo
@@ -29,7 +28,9 @@ import com.google.common.base.Charsets
 import com.google.common.collect.ImmutableSet
 import com.google.common.io.{BaseEncoding, Resources}
 
-import scala.util.{Random, Try}
+import scala.concurrent.{Await, Future}
+import scala.concurrent.duration.{Duration, TimeUnit}
+import scala.util.{Failure, Random, Success, Try}
 
 object Util extends Logging {
   final val isIbm = System.getProperty("java.vm.vendor").contains("IBM")
@@ -178,6 +179,13 @@ object Util extends Logging {
   def exit: Unit = {
     Try(Console.out.println(readS("logo.txt")))
     System.exit(0)
+  }
+
+  def await[T](f: Future[T], timeout: Int, unit: TimeUnit): T = {
+    Try(Await.result(f, Duration.create(timeout, unit))) match {
+      case Success(value) => value
+      case Failure(exception) => throw new RuntimeException(s"Timeout reached after $timeout $unit.", exception)
+    }
   }
 
   def generateHashString: String = Random.alphanumeric.take(8).mkString.toUpperCase

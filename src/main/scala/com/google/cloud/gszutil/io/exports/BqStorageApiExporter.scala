@@ -4,16 +4,16 @@ import com.google.cloud.bigquery.storage.v1.ReadSession.TableReadOptions
 import com.google.cloud.bigquery.storage.v1._
 import com.google.cloud.bigquery.{BigQuery, Job, QueryJobConfiguration, TableDefinition}
 import com.google.cloud.bqsh.cmd.Result
-import com.google.cloud.bqsh.{BQ, ExportConfig}
+import com.google.cloud.bqsh.ExportConfig
 import com.google.cloud.gszutil.SchemaProvider
+import com.google.cloud.imf.gzos.Util
 import com.google.cloud.imf.gzos.pb.GRecvProto
 import com.google.cloud.imf.util.RetryHelper.retryable
 import org.apache.avro.Schema
 
 import java.util.concurrent.atomic.AtomicLong
 import java.util.concurrent.{Executors, TimeUnit}
-import scala.concurrent.duration.Duration
-import scala.concurrent.{Await, ExecutionContext, ExecutionContextExecutor, Future}
+import scala.concurrent.{ExecutionContext, ExecutionContextExecutor, Future}
 
 class BqStorageApiExporter(cfg: ExportConfig,
                            bqStorage: BigQueryReadClient,
@@ -77,7 +77,7 @@ class BqStorageApiExporter(cfg: ExportConfig,
         }
         exporter.close()
       }
-    }.foreach(Await.result(_, Duration.create(cfg.timeoutMinutes, TimeUnit.MINUTES)))
+    }.foreach(Util.await(_, cfg.timeoutMinutes, TimeUnit.MINUTES))
 
     val rowsWritten = exporters.map(_.rowsWritten).sum
     logger.info(s"Finished writing $rowsWritten rows from BigQuery Storage API ReadStream")

@@ -5,14 +5,14 @@ import com.google.cloud.bigquery._
 import com.google.cloud.bqsh.ExportConfig
 import com.google.cloud.bqsh.cmd.Result
 import com.google.cloud.gszutil.SchemaProvider
+import com.google.cloud.imf.gzos.Util
 import com.google.cloud.imf.gzos.pb.GRecvProto
 import com.google.common.collect.Iterators
 import com.google.cloud.imf.util.RetryHelper._
 
 import java.util.concurrent.atomic.AtomicLong
 import java.util.concurrent.{Executors, TimeUnit}
-import scala.concurrent.duration.Duration
-import scala.concurrent.{Await, ExecutionContext, ExecutionContextExecutor, Future}
+import scala.concurrent.{ExecutionContext, ExecutionContextExecutor, Future}
 
 class BqSelectResultParallelExporter(cfg: ExportConfig,
                                      bq: BigQuery,
@@ -84,7 +84,7 @@ class BqSelectResultParallelExporter(cfg: ExportConfig,
             exporter.endIfOpen()
           }
         }
-    }.map(Await.result(_, Duration.create(cfg.timeoutMinutes, TimeUnit.MINUTES)))
+    }.map(Util.await(_, cfg.timeoutMinutes, TimeUnit.MINUTES))
 
     val rowsProcessed = results.map(_.activityCount).sum
     logger.info(s"Received $totalRowsToExport rows from BigQuery API, written $rowsProcessed rows.")
