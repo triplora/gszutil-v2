@@ -197,6 +197,7 @@ object AvroUtil {
         FieldValue.of(FieldValue.Attribute.PRIMITIVE, s.toString.replace("�", " "))
       case s: Long if field.isLong => FieldValue.of(FieldValue.Attribute.PRIMITIVE, s.toString)
       case s: Long if field.isTime => FieldValue.of(FieldValue.Attribute.PRIMITIVE, toTimeString(s))
+      case s: Long if field.isTimestamp => FieldValue.of(FieldValue.Attribute.PRIMITIVE, toTimestampString(s))
       case s: ByteBuffer if field.isDecimal => FieldValue.of(FieldValue.Attribute.PRIMITIVE, handleDecimal(s, field.scale))
       case s: ByteBuffer if field.isBytes => FieldValue.of(FieldValue.Attribute.PRIMITIVE, s)
       case s: Integer if field.isDate => FieldValue.of(FieldValue.Attribute.PRIMITIVE, LocalDate.ofEpochDay(s.longValue()))
@@ -213,4 +214,6 @@ object AvroUtil {
     val hour = (microseconds / 3_600_000_000L) % 24
     s"$hour:$minute:$second"
   }
+
+  def toTimestampString(microseconds: Long): String = f"${microseconds / 1000000.0}%.6f"
 }

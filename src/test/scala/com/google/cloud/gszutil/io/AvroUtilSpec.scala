@@ -52,7 +52,7 @@ class AvroUtilSpec extends AnyFlatSpec {
 
   it should "fail to create FieldValue of type 'int64'" in {
     val schema = Schema.create(Schema.Type.LONG)
-    schema.addProp("logicalType", "timestamp-micros")
+    schema.addProp("logicalType", "something-new")
     val fieldSchema = new Schema.Field("a", schema, "", null)
     assertThrows[IllegalStateException] {
       AvroUtil.toFieldValue(AvroField(fieldSchema), 123456789L)
@@ -141,6 +141,37 @@ class AvroUtilSpec extends AnyFlatSpec {
     assert(nullValue.getValue == null)
   }
 
+  it should "create FieldValue of type 'timestamp'" in {
+    val schema = Schema.create(Schema.Type.LONG)
+    schema.addProp("logicalType", "timestamp-micros")
+    val fieldSchema = new Schema.Field("a", schema, "", null)
+    val value = AvroUtil.toFieldValue(AvroField(fieldSchema), 1635494421123400L)
+
+    assert(!value.isNull)
+    assert(value.getAttribute == FieldValue.Attribute.PRIMITIVE)
+    assert(value.getValue.isInstanceOf[String])
+    assert("1635494421.123400" == value.getValue)
+
+    val value2 = AvroUtil.toFieldValue(AvroField(fieldSchema), 1635494421000000L)
+    assert(!value2.isNull)
+    assert(value2.getAttribute == FieldValue.Attribute.PRIMITIVE)
+    assert(value2.getValue.isInstanceOf[String])
+    assert("1635494421.000000" == value2.getValue)
+
+    val value3 = AvroUtil.toFieldValue(AvroField(fieldSchema), 1635494421123456L)
+    assert(!value3.isNull)
+    assert(value3.getAttribute == FieldValue.Attribute.PRIMITIVE)
+    assert(value3.getValue.isInstanceOf[String])
+    assert("1635494421.123456" == value3.getValue)
+
+    //nulls
+    val nullValue = AvroUtil.toFieldValue(AvroField(fieldSchema), null)
+    assert(nullValue.isNull)
+    assert(nullValue.getAttribute == FieldValue.Attribute.PRIMITIVE)
+    assert(nullValue.getValue == null)
+  }
+
+
   it should "fail to create FieldValue of type 'date'" in {
     val schema = Schema.create(Schema.Type.INT)
     schema.addProp("logicalType", "some-dummy-type")
@@ -163,7 +194,7 @@ class AvroUtilSpec extends AnyFlatSpec {
     schema.addProp("scale", new IntNode(9))
     val fieldSchema = new Schema.Field("a", schema, "", null)
 
-    inputToExpected.foreach {e =>
+    inputToExpected.foreach { e =>
       val decBytes = new java.math.BigDecimal(e._1).unscaledValue.toByteArray
       val value = AvroUtil.toFieldValue(AvroField(fieldSchema), ByteBuffer.wrap(decBytes))
 
