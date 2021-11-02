@@ -6,13 +6,14 @@ import org.apache.log4j.varia.NullAppender
 import org.apache.log4j.{Appender, Layout}
 
 import scala.sys.env
+import scala.util.Try
 
 class CloudLoggingOptionalAppender extends Appender {
   private val maybeCloudAppender: Option[CloudLoggingAppender] = for {
     projectId <- env.get("LOG_PROJECT").filter(_.nonEmpty)
     logId <- env.get("LOG_ID").filter(_.nonEmpty)
+    cred <- Try(Util.zProvider.getCredentialProvider().getCredentials).toOption
   } yield {
-    val cred = Util.zProvider.getCredentialProvider().getCredentials
     System.out.println(s"Cloud Logging starts for projectId=$projectId and logId=$logId")
     new CloudLoggingAppender(projectId, logId, cred)
   }

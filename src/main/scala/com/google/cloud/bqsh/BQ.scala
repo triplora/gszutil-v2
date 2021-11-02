@@ -24,7 +24,7 @@ import com.google.cloud.bigquery.InsertAllRequest.RowToInsert
 import com.google.cloud.bigquery.{BigQuery, BigQueryError, BigQueryException, CopyJobConfiguration, DatasetId, ExtractJobConfiguration, Field, FieldList, InsertAllRequest, InsertAllResponse, Job, JobConfiguration, JobId, JobInfo, JobStatus, LoadJobConfiguration, QueryJobConfiguration, Schema, StandardSQLTypeName, StandardTableDefinition, TableDefinition, TableId}
 import com.google.cloud.imf.gzos.pb.GRecvProto
 import com.google.cloud.imf.gzos.{MVS, Util}
-import com.google.cloud.imf.util.{CCATransportFactory, Logging, StatsUtil}
+import com.google.cloud.imf.util.{CCATransportFactory, GoogleApiL2Retrier, Logging, Services, StatsUtil}
 import com.google.common.collect.ImmutableList
 
 import java.time.LocalDateTime
@@ -33,12 +33,15 @@ import scala.collection.mutable.ListBuffer
 import scala.jdk.CollectionConverters.IterableHasAsScala
 import scala.util.{Failure, Success, Try}
 
-object BQ extends Logging {
+object BQ extends Logging with GoogleApiL2Retrier {
+  override val retriesCount: Int = Services.l2RetriesCount
+  override val retriesTimeoutMillis: Int = Services.l2RetriesTimeoutMillis
+
   def genJobId(projectId: String, location: String, zos: MVS, jobType: String): JobId = {
     val t = LocalDateTime.now
     val job = zos.getInfo
     val jobId = Seq(
-      job.getJobname,job.getStepName,job.getJobid,jobType,s"${t.getHour}${t.getMinute}${t.getSecond}"
+      job.getJobname, job.getStepName, job.getJobid, jobType, s"${t.getHour}${t.getMinute}${t.getSecond}"
     ).mkString("_")
     JobId.newBuilder.setProject(projectId).setLocation(location).setJob(jobId).build
   }
@@ -470,7 +473,7 @@ object BQ extends Logging {
   def apiGetJob(bq: Bigquery, jobId: JobId): model.Job = {
     val req = bq.jobs().get(jobId.getProject, jobId.getJob)
     req.setLocation(jobId.getLocation)
-    req.execute()
+    runWithRetry(req.execute(), "Bigquery.Jobs.Get.execute()")
   }
 
   def readsFrom(step: model.ExplainQueryStep, t: TableId): Boolean =

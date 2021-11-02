@@ -22,8 +22,9 @@ case class GcsFileExport(gcs: Storage, gcsOutUri: String, lrecl: Int) extends Fi
   }
 
   override def close(): Unit = {
-    logger.info(s"Closing GcsFileExport for uri:$gcsOutUri  after writing ${os.getCount} bytes and $rowsWritten rows.")
+    logger.info(s"Trying to close GcsFileExport for uri:$gcsOutUri")
     os.close()
+    logger.info(s"Closed GcsFileExport for uri:$gcsOutUri after writing ${os.getCount} bytes and $rowsWritten rows.")
   }
 
   def openGcsUri(gcs: Storage, uri: String): OutputStream = {
