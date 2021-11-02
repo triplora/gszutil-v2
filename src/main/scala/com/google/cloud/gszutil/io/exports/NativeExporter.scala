@@ -28,8 +28,9 @@ abstract class NativeExporter(bq: BigQuery,
   def configureExportQueryJob(query: String, cfg: ExportConfig): QueryJobConfiguration = {
     val b = QueryJobConfiguration.newBuilder(query)
       .setDryRun(cfg.dryRun)
-      .setUseLegacySql(false)
+      .setUseLegacySql(cfg.useLegacySql)
       .setUseQueryCache(cfg.useCache)
+      .setAllowLargeResults(cfg.allowLargeResults)
 
     if (cfg.datasetId.nonEmpty)
       b.setDefaultDataset(resolveDataset(cfg.datasetId, cfg.projectId))
@@ -39,6 +40,15 @@ abstract class NativeExporter(bq: BigQuery,
 
     if (cfg.batch)
       b.setPriority(QueryJobConfiguration.Priority.BATCH)
+
+    if (cfg.allowLargeResults && cfg.destinationTable.nonEmpty && cfg.datasetId.nonEmpty) {
+        val destinationTable = BQ.resolveTableSpec(cfg.destinationTable, cfg.projectId, cfg.datasetId)
+        b.setDestinationTable(destinationTable)
+        b.setCreateDisposition(JobInfo.CreateDisposition.CREATE_IF_NEEDED)
+      } else {
+      logger.warn(s"AllowLargeResults flag is provided, but cannot get dataset or destination table. " +
+        s"destTable=${cfg.destinationTable}, dataset=${cfg.datasetId}. AllowLargeResults ignored!")
+    }
 
     b.setWriteDisposition(JobInfo.WriteDisposition.WRITE_TRUNCATE)
 

@@ -29,11 +29,11 @@ class BqSelectResultParallelExporter(cfg: ExportConfig,
     logger.info("Multithreading export started")
     val tableWithResults = bq.getTable(job.getConfiguration.asInstanceOf[QueryJobConfiguration].getDestinationTable)
     val tableSchema = tableWithResults.getDefinition[TableDefinition].getSchema.getFields
-    val totalRowsToExport = tableWithResults.getNumRows.intValue()
+    val totalRowsToExport = tableWithResults.getNumRows.longValue()
 
     val pageSize = _2MB / sp.LRECL
     val partitionSize = math.max(pageSize, totalRowsToExport / cfg.exporterThreadCount + 1)
-    val partitions = for (leftBound <- 0 to totalRowsToExport by partitionSize) yield leftBound
+    val partitions = for (leftBound <- 0L to totalRowsToExport by partitionSize) yield leftBound
 
     logger.info(
       s"""Multithreading settings(

@@ -186,15 +186,13 @@ object Query extends Command[QueryConfig] with Logging {
       .setDryRun(cfg.dryRun)
       .setUseLegacySql(cfg.useLegacySql)
       .setUseQueryCache(cfg.useCache)
+      .setAllowLargeResults(cfg.allowLargeResults)
 
     if (cfg.datasetId.nonEmpty)
       b.setDefaultDataset(BQ.resolveDataset(cfg.datasetId, cfg.projectId))
 
     if (cfg.createIfNeeded)
       b.setCreateDisposition(JobInfo.CreateDisposition.CREATE_IF_NEEDED)
-
-    if (cfg.useLegacySql)
-      b.setAllowLargeResults(cfg.allowLargeResults)
 
     if (cfg.clusteringFields.nonEmpty){
       val clustering = Clustering.newBuilder

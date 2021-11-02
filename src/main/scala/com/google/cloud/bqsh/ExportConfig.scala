@@ -36,6 +36,8 @@ case class ExportConfig(
 
                          // Standard Options
                          allowLargeResults: Boolean = false,
+                         useLegacySql: Boolean = false,
+                         destinationTable: String = "",
                          batch: Boolean = false,
                          dryRun: Boolean = false,
                          maximumBytesBilled: Long = -1,
@@ -101,7 +103,10 @@ case class ExportConfig(
       |location=$location,
       |projectId=$projectId,
       |statsTable=$statsTable,
-      |runMode=$runMode
+      |runMode=$runMode,
+      |allowLargeResults=$allowLargeResults,
+      |useLegacySql=$useLegacySql,
+      |destinationTable=$destinationTable
       |""".stripMargin
 }
 
@@ -127,7 +132,10 @@ object ExportConfig {
       datasetId = configs.getOrElse("datasetId", ""),
       location = configs.getOrElse("location", ""),
       projectId = configs.getOrElse("projectId", ""),
-      statsTable = configs.getOrElse("statsTable", "")
+      statsTable = configs.getOrElse("statsTable", ""),
+      allowLargeResults = configs.getOrElse("allowLargeResults", "").toBoolean,
+      useLegacySql = configs.getOrElse("useLegacySql", "").toBoolean,
+      destinationTable = configs.getOrElse("destinationTable", "")
     )
   }
 }

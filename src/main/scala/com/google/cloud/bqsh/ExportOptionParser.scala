@@ -90,12 +90,23 @@ object ExportOptionParser
     .text("(optional) Switches between export implementations, currently supported: parallel, single thread exports. Possible values single, parallel, default is parallel")
     .action((x,c) => c.copy(runMode = x))
 
-
   // Standard Options
 
   opt[Unit]("allow_large_results")
     .text("When specified, enables large destination table sizes for legacy SQL queries.")
     .action((x,c) => c.copy(allowLargeResults = true))
+
+  opt[Unit]("use_legacy_sql")
+    .text("When set to false, runs a standard SQL query. The default value is false (uses Standard SQL).")
+    .action((x,c) => c.copy(useLegacySql = true))
+
+  opt[String]("destination_table")
+    .text("The name of the destination table for writing query results. The default value is ''")
+    .action((x,c) => c.copy(destinationTable = x))
+
+  opt[Boolean]("use_cache")
+    .text("When specified, caches the query results. The default value is true.")
+    .action((x,c) => c.copy(useCache = x))
 
   opt[Unit]("batch")
     .text("When specified, run the query in batch mode. The default value is false.")
