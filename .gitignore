@@ -17,4 +17,5 @@ target
 *.cpy
 tmp
 **/*.pem
+*.outfile
 src/main/resources/build.txt
