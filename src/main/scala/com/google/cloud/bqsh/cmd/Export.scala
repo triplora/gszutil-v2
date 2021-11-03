@@ -78,7 +78,7 @@ object Export extends Command[ExportConfig] with Logging {
         val jobId = BQ.genJobId(cfg.projectId, cfg.location, zos, "query")
         val tblspec = s"${statsTable.getProject}:${statsTable.getDataset}.${statsTable.getTable}"
         logger.debug(s"Writing stats to $tblspec, with jobId ${jobId}")
-        StatsUtil.insertJobStats(zos, jobId, bq, statsTable, jobType = "export", recordsOut = result.activityCount)
+        StatsUtil.retryableInsertJobStats(zos, jobId, bq, statsTable, jobType = "export", recordsOut = result.activityCount)
       }
 
       logger.info(s"Export completed, exported=${result.activityCount} rows, " +

@@ -80,7 +80,7 @@ object Query extends Command[QueryConfig] with Logging {
         if (cfg.sync && cfg.statsTable.nonEmpty) {
           val statsTable = BQ.resolveTableSpec(cfg.statsTable, cfg.projectId, cfg.datasetId)
           logger.info(s"Writing stats to ${BQ.tableSpec(statsTable)}")
-          StatsUtil.insertJobStats(zos, jobId, bq, statsTable, jobType = "query")
+          StatsUtil.retryableInsertJobStats(zos, jobId, bq, statsTable, jobType = "query")
         } else {
           val j = BQ.apiGetJob(Services.bigQueryApi(creds), jobId)
           val sb = new StringBuilder

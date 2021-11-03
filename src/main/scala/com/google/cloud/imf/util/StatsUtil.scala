@@ -24,12 +24,15 @@ import com.google.cloud.bigquery.{BigQuery, BigQueryError, InsertAllRequest, Job
 import com.google.cloud.bqsh.BQ
 import com.google.cloud.bqsh.BQ.SchemaRowBuilder
 import com.google.cloud.imf.gzos.MVS
-import com.google.cloud.imf.util.StatsUtil.{l2l, mv}
 import com.google.cloud.imf.util.stats.{JobStats, LoadStats, LogTable, MergeStats, QueryStats, SelectStats}
 
 import scala.collection.mutable.ListBuffer
 
-object StatsUtil extends Logging {
+object StatsUtil extends GoogleApiL2Retrier with Logging {
+
+  override val retriesCount: Int = Services.l2RetriesCount
+  override val retriesTimeoutMillis: Int = Services.l2RetriesTimeoutMillis
+
   private def sdf(f: String): SimpleDateFormat = {
     val simpleDateFormat = new SimpleDateFormat(f)
     simpleDateFormat.setTimeZone(TimeZone.getTimeZone("UTC"))
@@ -45,6 +48,13 @@ object StatsUtil extends Logging {
   def epochMillis2Timestamp(t: Long): String = TimestampFormat.format(new Date(t))
   private def jobDate2Date(jobDate: String): String = DateFormat.format(JobDateFormat.parse(jobDate))
   private def jobTime2Time(jobTime: String): String = TimeFormat.format(JobTimeFormat.parse(jobTime))
+
+
+  def retryableInsertJobStats(zos: MVS, jobId: JobId,
+                              bq: BigQuery, tableId: TableId, jobType: String = "", source: String = "",
+                              dest: String = "", recordsIn: Long = -1, recordsOut: Long = -1): Unit = {
+    runWithRetry(insertJobStats(zos, jobId, bq, tableId, jobType, source, dest, recordsIn, recordsOut), "Insert statistic retry")
+  }
 
   def insertJobStats(zos: MVS, jobId: JobId,
                      bq: BigQuery, tableId: TableId, jobType: String = "", source: String = "",

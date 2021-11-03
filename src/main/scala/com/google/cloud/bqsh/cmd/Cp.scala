@@ -128,7 +128,7 @@ object Cp extends Command[GsUtilConfig] with Logging {
       logger.debug(s"writing stats to ${BQ.tableSpec(statsTable)}")
       val jobId = BQ.genJobId(c.projectId, c.location, zos, "cp")
       val bqProj = if (c.projectId.nonEmpty) c.projectId else statsTable.getProject
-      StatsUtil.insertJobStats(
+      StatsUtil.retryableInsertJobStats(
         zos = zos,
         jobId = jobId,
         bq = Services.bigQuery(bqProj, c.location, creds),
