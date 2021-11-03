@@ -16,16 +16,20 @@
 
 package com.google.cloud.bqsh.cmd
 
-import com.google.cloud.bigquery.{BigQueryException, Clustering, JobInfo, JobStatistics, QueryJobConfiguration, QueryParameterValue, StandardSQLTypeName, TimePartitioning}
+import com.google.cloud.bigquery.{BigQueryException, Clustering, Job, JobId, JobInfo, JobStatistics, QueryJobConfiguration, QueryParameterValue, StandardSQLTypeName, TimePartitioning}
 import com.google.cloud.bqsh.{ArgParser, BQ, Bqsh, Command, QueryConfig, QueryOptionParser}
 import com.google.cloud.imf.gzos.MVS
 import com.google.cloud.imf.util.stats.{JobStats, LoadStats, MergeStats, QueryStats, SelectStats}
-import com.google.cloud.imf.util.{Logging, Services, StatsUtil}
+import com.google.cloud.imf.util.{GoogleApiL2Retrier, Logging, Services, StatsUtil}
 
-
-object Query extends Command[QueryConfig] with Logging {
+object Query extends Command[QueryConfig] with GoogleApiL2Retrier with Logging {
   override val name: String = "bq query"
   override val parser: ArgParser[QueryConfig] = QueryOptionParser
+
+  override val retriesCount: Int = sys.env.get(s"BQ_QUERY_CONCURRENT_UPDATE_RETRY_COUNT").flatMap(_.toIntOption).getOrElse(5)
+  override val retriesTimeoutMillis: Int = sys.env.get(s"BQ_QUERY_CONCURRENT_UPDATE_RETRY_TIMEOUT_SECONDS").flatMap(_.toIntOption).getOrElse(2) * 1000
+  val canRetryBqJob = (j: Job) =>
+    BQ.getStatus(j).flatMap(_.error).flatMap(_.message).exists(m => m.trim.startsWith("Could not serialize access to table"))
 
   override def run(cfg: QueryConfig, zos: MVS, env: Map[String,String]): Result = {
     val creds = zos.getCredentialProvider().getCredentials
@@ -55,11 +59,16 @@ object Query extends Command[QueryConfig] with Logging {
     var result: Result = null
     for (query <- queries) {
       val jobConfiguration = configureQueryJob(query, cfg)
-      val jobId = BQ.genJobId(cfg.projectId, cfg.location, zos, "query")
-      logger.info(s"Submitting Query Job\njobid=${BQ.toStr(jobId)}")
 
       try {
-        val job = BQ.runJob(bq, jobConfiguration, jobId, cfg.timeoutMinutes * 60, cfg.sync)
+        var jobId: JobId = null
+        def submitJob(): Job = {
+          jobId = BQ.genJobId(cfg.projectId, cfg.location, zos, "query")
+          logger.info(s"Submitting Query Job\njobid=${BQ.toStr(jobId)}")
+          BQ.runJob(bq, jobConfiguration, jobId, cfg.timeoutMinutes * 60, cfg.sync)
+        }
+        val job = runWithRetries(submitJob(),"BQ Query fails due to concurrent table update", canRetryBqJob)
+
         val status = BQ.getStatus(job)
         if (cfg.sync){
           if (status.isDefined) {

@@ -10,7 +10,7 @@ import com.google.cloud.gszutil.{CopyBook, RecordSchema, SchemaProvider}
 import com.google.cloud.imf.grecv.GRecvProtocol
 import com.google.cloud.imf.gzos.pb.GRecvProto
 import com.google.cloud.imf.gzos.pb.GRecvProto.{GRecvRequest, GRecvResponse}
-import com.google.cloud.imf.gzos.{CloudDataSet, Ebcdic, LocalizedTranscoder, Util}
+import com.google.cloud.imf.gzos.{CloudDataSet, Ebcdic, Util}
 import com.google.cloud.imf.util.Logging
 import com.google.cloud.storage.{Blob, BlobId, Storage}
 import com.google.common.hash.Hashing
@@ -162,8 +162,8 @@ object GRecvServerListener extends Logging {
       responseObserver.onNext(response)
       responseObserver.onCompleted()
     } finally {
-      retryable(orc.close(), s"${req.getJobinfo}. Closing resources for orc writer ${req.getBasepath}.")
-      retryable(input.close(), s"${req.getJobinfo}. Closing resources for inputStream ${req.getSrcUri}.")
+      retryableOnError(orc.close(), s"${req.getJobinfo}. Closing resources for orc writer ${req.getBasepath}.")
+      retryableOnError(input.close(), s"${req.getJobinfo}. Closing resources for inputStream ${req.getSrcUri}.")
     }
   }
 

@@ -103,9 +103,10 @@ class BqSelectResultParallelExporter(cfg: ExportConfig,
   }
 
   override def close(): Unit = {
-    val errors = exporters
-      .map(e => (e, retryable(e.endIfOpen(), s"Resource closing for $e. ")))
+    val errors: Seq[(SimpleFileExporter, Either[Throwable, Unit])] = exporters
+      .map(e => (e, retryableOnError(e.endIfOpen(), s"Resource closing for $e. ")))
       .filter(r => r._2.isLeft)
+
     if(errors.nonEmpty)
       throw new IllegalStateException(s"Resources [${errors.map(_._1)}] were not closed properly!", errors.head._2.left.get)
   }

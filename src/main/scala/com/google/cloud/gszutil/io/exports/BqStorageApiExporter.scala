@@ -8,7 +8,7 @@ import com.google.cloud.bqsh.ExportConfig
 import com.google.cloud.gszutil.SchemaProvider
 import com.google.cloud.imf.gzos.Util
 import com.google.cloud.imf.gzos.pb.GRecvProto
-import com.google.cloud.imf.util.RetryHelper.retryable
+import com.google.cloud.imf.util.RetryHelper._
 import org.apache.avro.Schema
 
 import java.util.concurrent.atomic.AtomicLong
@@ -89,8 +89,9 @@ class BqStorageApiExporter(cfg: ExportConfig,
 
   override def close(): Unit = {
     val errors = exporters
-      .map(e => (e, retryable(e.close(), s"Resource closing for $e. ")))
+      .map(e => (e, retryableOnError(e.close(), s"Resource closing for $e. ")))
       .filter(r => r._2.isLeft)
+
     if (errors.nonEmpty)
       throw new IllegalStateException(s"Resources [${errors.map(_._1).toSeq}] were not closed properly!", errors.head._2.left.get)
   }
