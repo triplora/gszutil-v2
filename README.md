@@ -380,6 +380,24 @@ Usage: export [options]
 |'jclutil'| [JCLUtil](./src/main/scala/com/google/cloud/bqsh/cmd/JCLUtil.scala)
 |'sdsfutil'| [SdsfUtil](./src/main/scala/com/google/cloud/bqsh/cmd/SdsfUtil.scala)
 
+### RPC calls to Grecv
+
+To decrease MIPS consumption at mainframe side some CPU/IO intense commands can delegate execution
+to [Grecv](./src/main/scala/com/google/cloud/imf/GRecv.scala) server (via RPC call).
+
+|Command|Type|
+|---|:---:|
+|'bq export'| [Export](./src/main/scala/com/google/cloud/bqsh/cmd/Export.scala)
+|'gsutil| [Cp](./src/main/scala/com/google/cloud/bqsh/cmd/Cp.scala)
+
+Commands are using a GRPC protocol to delegate execution to remote server. TLS/SSL encryption is provided by separate
+tools, ```AT-TLS``` from mainframe side and ```stunnel``` at Grecv server side.
+
+Here is highlevel diagram how RPC call is performed
+for [Export](./src/main/scala/com/google/cloud/bqsh/cmd/Export.scala) command.
+For [Cp](./src/main/scala/com/google/cloud/bqsh/cmd/Cp.scala) command it works in the same way.
+![bq_export_rpc_call](./img/bq_export_rpc_call.png)
+
 ## Pre-Requisites
 
 * [IBM SDK for z/OS, Java Technology Edition, Version 8](https://developer.ibm.com/javasdk/support/zos/)
