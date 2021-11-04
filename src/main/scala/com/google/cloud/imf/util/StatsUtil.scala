@@ -53,7 +53,7 @@ object StatsUtil extends GoogleApiL2Retrier with Logging {
   def retryableInsertJobStats(zos: MVS, jobId: JobId,
                               bq: BigQuery, tableId: TableId, jobType: String = "", source: String = "",
                               dest: String = "", recordsIn: Long = -1, recordsOut: Long = -1): Unit = {
-    runWithRetry(insertJobStats(zos, jobId, bq, tableId, jobType, source, dest, recordsIn, recordsOut), "Insert statistic retry")
+    runWithRetry(insertJobStats(zos, jobId, bq, tableId, jobType, source, dest, recordsIn, recordsOut), "Insert job statistic")
   }
 
   def insertJobStats(zos: MVS, jobId: JobId,
@@ -111,6 +111,12 @@ object StatsUtil extends GoogleApiL2Retrier with Logging {
       m.forEach { (k, v) => buf.append(v) }
       buf.toList
     }
+  }
+
+  def retryableInsertRow(content: java.util.Map[String,Any],
+                         bq: BigQuery,
+                         tableId: TableId): Unit = {
+    runWithRetry(insertRow(content, bq, tableId), "Insert statistic row")
   }
 
   def insertRow(content: java.util.Map[String,Any],
