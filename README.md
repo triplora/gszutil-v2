@@ -330,6 +330,66 @@ Usage: export [options]
   --stats_table<value>            tablespec of table to insert stats
 ```
 
+## Custom copybook types:
+
+### 1. PIC T(N)
+
+`N` - column length in bytes; `N` length WILL vary based on data and used encoding
+
+`N = (max number of characters in column) * (bytes used per single character)`
+
+`PIC T(N)` works in pair with parameter `--pic_t_charset` that present for following commands:
+
+|Command|Type|
+|---|:---:|
+|'bq export'| [Export](./src/main/scala/com/google/cloud/bqsh/cmd/Export.scala)
+|'gsutil cp'| [Cp](./src/main/scala/com/google/cloud/bqsh/cmd/Cp.scala)
+
+Supported and tested encodings:
+
+| --pic_t_charset|Max bytes per char|Details|
+|---|:---:|---|
+|JPNEBCDIC1399_4IJ (x-IBM939)|4| https://www.ibm.com/docs/en/zos/2.3.0?topic=locale-using-charmap-file|
+|SCHEBCDIC935_6IJ (x-IBM935)|4| https://www.ibm.com/docs/en/zos/2.3.0?topic=locale-using-charmap-file|
+|IBM037|1| https://en.wikipedia.org/wiki/Code_page_37 , https://www.compart.com/en/unicode/charsets/IBM037|
+|UTF-8|4| https://en.wikipedia.org/wiki/UTF-8|
+
+There are more encoding that could be used, but they were not tested.
+https://docs.oracle.com/javase/8/docs/technotes/guides/intl/encoding.doc.html
+
+### `PIC T(N)` usage recommendations
+
+1. In case both export and import is done by BMLU app:
+
+- Copybooks for import and export job should be the same.
+- Use 4 bytes per char on calculation of column size, it should be enough for almost any encoding that can be used.
+
+2. If upstream/export is 3rd party system (i.e. DB2) and downstream/import is BMLU:
+
+- Copybooks should be crafted based on binary file layout.
+- It is essential to know what encoding was used by upstream system to encode characters. You should find that encoding
+  in [list](https://docs.oracle.com/javase/8/docs/technotes/guides/intl/encoding.doc.html) and add as a parameter for
+  BMLU app, i.e. `--pic_t_charset=IBM037`
+- You should know what columns are string columns and used PIC T for those columns in copybook.
+- Size of PIC T should be taken directly from binary file (by inspection in HEX viewer), it is impossible to know how
+  many bytes upstream system used to encode column.
+- Upstream system may encode some metadata after string column data, this metadata should be ignored in copybook by
+  adding column `FILLER PIC X(byte length of metadata)` after string column
+
+3. If upstream/export is BMLU and downstream/import is 3rd party system (i.e. DB2):
+
+- Copybooks should be crafted based on binary file layout that can be consumed by 3rd party system.
+- It is essential to know what encoding will be used by downstream system to decode characters. You should find that
+  encoding in [list](https://docs.oracle.com/javase/8/docs/technotes/guides/intl/encoding.doc.html) and add as a
+  parameter for BMLU app, i.e. `--pic_t_charset=IBM037`
+- You should know what columns are string columns and used PIC T for those columns in copybook.
+- Size of `PIC T` should be set based on 3rd party system expectation to particular string column.
+- Downstream/export system may expect some metadata after string column data, this metadata should be mentioned in
+  copybook by adding column `FILLER PIC X(byte length of metadata)` after string column. This may lead to data mismatch
+  so data validation is required (checking how NULL are decoded, etc).
+
+When upstream or downstream system is not BMLU some reverse engineering is required to align binary files format.
+
 ## Environment variables
 
 |Name|Default|Description|
@@ -379,6 +439,24 @@ Usage: export [options]
 |'scp'| [Scp](./src/main/scala/com/google/cloud/bqsh/cmd/Scp.scala)
 |'jclutil'| [JCLUtil](./src/main/scala/com/google/cloud/bqsh/cmd/JCLUtil.scala)
 |'sdsfutil'| [SdsfUtil](./src/main/scala/com/google/cloud/bqsh/cmd/SdsfUtil.scala)
+
+### RPC calls to Grecv
+
+To decrease MIPS consumption at mainframe side some CPU/IO intense commands can delegate execution
+to [Grecv](./src/main/scala/com/google/cloud/imf/GRecv.scala) server (via RPC call).
+
+|Command|Type|
+|---|:---:|
+|'bq export'| [Export](./src/main/scala/com/google/cloud/bqsh/cmd/Export.scala)
+|'gsutil| [Cp](./src/main/scala/com/google/cloud/bqsh/cmd/Cp.scala)
+
+Commands are using a GRPC protocol to delegate execution to remote server. TLS/SSL encryption is provided by separate
+tools, ```AT-TLS``` from mainframe side and ```stunnel``` at Grecv server side.
+
+Here is highlevel diagram how RPC call is performed
+for [Export](./src/main/scala/com/google/cloud/bqsh/cmd/Export.scala) command.
+For [Cp](./src/main/scala/com/google/cloud/bqsh/cmd/Cp.scala) command it works in the same way.
+![bq_export_rpc_call](./img/bq_export_rpc_call.png)
 
 ## Pre-Requisites
 
