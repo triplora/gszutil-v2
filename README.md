@@ -321,6 +321,8 @@ Usage: export [options]
   --require_cache                 If specified, run the query only if results can be retrieved from the cache.
   --require_partition_filter      If specified, a partition filter is required for queries over the supplied table. This flag can only be used with a partitioned table.
   --use_cache                     When specified, caches the query results. The default value is true.
+  --use_legacy_sql                When set to false, runs a standard SQL query. The default value is false (uses Standard SQL).
+  --destination_table             <value>
   --dataset_id<value>             The default dataset to use for requests.
   --debug_mode<value>             Set logging level to debug. The default value is false.
   --job_id<value>                 The unique job ID to use for the request. If not specified in a job creation request, a job ID is generated. This flag applies only to commands that create jobs: cp, extract, load, export, and query.
@@ -409,6 +411,8 @@ When upstream or downstream system is not BMLU some reverse engineering is requi
 |RST_STREAM_MIN_TIMEOUT_SEC|5|Timeout in seconds before retry of ```Rst Stream``` error and BQ Storage API stream related errors. Max timeout is calculated as min_timeout + 15 seconds. Actual timeout will be random number between min and max, to avoid ```hot spots``` on retry. |
 |GOOGLE_API_L2_RETRY_COUNT|3| Max retries before fail for Google API clients. This environment variable controls level 2 retry logic for google API http clients. It will work when level 1 retry logic controlled by STORAGE_MAX_ATTEMPTS_COUNT and BQ_MAX_ATTEMPTS_COUNT will be skipped. It may happen for some type of networking errors (broken pipe, socket timeout, handshake fail).|
 |GOOGLE_API_L2_RETRY_TIMEOUT_SECONDS|5| Delay in seconds between retries for Google API clients level 2 retry logic. See GOOGLE_API_L2_RETRY_COUNT for details.|
+|BQ_QUERY_CONCURRENT_UPDATE_RETRY_COUNT|5|Max retries on error "Could not serialize access to <table_name> due to concurrent update" on bq query command.
+|BQ_QUERY_CONCURRENT_UPDATE_RETRY_TIMEOUT_SECONDS|2|Initial delay for "Could not serialize access to <table_name> due to concurrent update" error on bq query command.
 |GCSDSNURI|no|Default destination Google Cloud Storage Bucket for scp(Simple file copy) command. (Format: gs://bucket/prefix)|
 |GCSGDGURI|no|Default destination Google Cloud Storage Bucket for scp(Simple file copy) command when source is versioned dataset (GDG - Generation Data Groups) (Example: gs://bucket-with-versioning/prefix)|
 |SRVHOSTNAME|no|BMLU GRPC server DNS hostname or IP|
