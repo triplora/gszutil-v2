@@ -28,6 +28,7 @@ import com.google.common.base.Charsets
 import com.google.common.collect.ImmutableSet
 import com.google.common.io.{BaseEncoding, Resources}
 
+import java.util.concurrent.TimeoutException
 import scala.concurrent.{Await, Future}
 import scala.concurrent.duration.{Duration, TimeUnit}
 import scala.util.{Failure, Random, Success, Try}
@@ -184,7 +185,8 @@ object Util extends Logging {
   def await[T](f: Future[T], timeout: Int, unit: TimeUnit): T = {
     Try(Await.result(f, Duration.create(timeout, unit))) match {
       case Success(value) => value
-      case Failure(exception) => throw new RuntimeException(s"Timeout reached after $timeout $unit.", exception)
+      case Failure(e) if e.isInstanceOf[TimeoutException] => throw new Error(s"Timeout reached after $timeout $unit.", e)
+      case Failure(e) => throw e
     }
   }
 
