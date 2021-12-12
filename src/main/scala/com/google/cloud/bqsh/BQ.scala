@@ -37,14 +37,17 @@ object BQ extends Logging with GoogleApiL2Retrier {
   override val retriesCount: Int = Services.l2RetriesCount
   override val retriesTimeoutMillis: Int = Services.l2RetriesTimeoutMillis
 
-  def genJobId(projectId: String, location: String, zos: MVS, jobType: String): JobId = {
+  def genJobId(projectId: String, location: String, zos: MVS, jobType: String, suffix: String): JobId = {
     val t = LocalDateTime.now
     val job = zos.getInfo
     val jobId = Seq(
-      job.getJobname, job.getStepName, job.getJobid, jobType, s"${t.getHour}${t.getMinute}${t.getSecond}"
-    ).mkString("_")
+      job.getJobname, job.getStepName, job.getJobid, jobType, s"${t.getHour}${t.getMinute}${t.getSecond}", suffix
+    ).filter(_.nonEmpty).mkString("_")
     JobId.newBuilder.setProject(projectId).setLocation(location).setJob(jobId).build
   }
+
+  def genJobId(projectId: String, location: String, zos: MVS, jobType: String): JobId =
+    genJobId(projectId, location, zos, jobType, "")
 
   def genJobId(projectId: String, location: String, jobInfo: GRecvProto.ZOSJobInfo, jobType: String): JobId = {
     val t = LocalDateTime.now

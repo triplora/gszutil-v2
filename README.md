@@ -413,6 +413,7 @@ When upstream or downstream system is not BMLU some reverse engineering is requi
 |GOOGLE_API_L2_RETRY_TIMEOUT_SECONDS|5| Delay in seconds between retries for Google API clients level 2 retry logic. See GOOGLE_API_L2_RETRY_COUNT for details.|
 |BQ_QUERY_CONCURRENT_UPDATE_RETRY_COUNT|5|Max retries on error "Could not serialize access to <table_name> due to concurrent update" on bq query command.
 |BQ_QUERY_CONCURRENT_UPDATE_RETRY_TIMEOUT_SECONDS|2|Initial delay for "Could not serialize access to <table_name> due to concurrent update" error on bq query command.
+|BQ_QUERY_CONCURRENT_UPDATE_WHITE_LIST|TABLE_STATUS|Comma separated list of tables names for which allowed retry on error "Could not serialize access to <table_name> due to concurrent update".
 |GCSDSNURI|no|Default destination Google Cloud Storage Bucket for scp(Simple file copy) command. (Format: gs://bucket/prefix)|
 |GCSGDGURI|no|Default destination Google Cloud Storage Bucket for scp(Simple file copy) command when source is versioned dataset (GDG - Generation Data Groups) (Example: gs://bucket-with-versioning/prefix)|
 |SRVHOSTNAME|no|BMLU GRPC server DNS hostname or IP|

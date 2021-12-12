@@ -354,7 +354,8 @@ object Bqsh extends Logging {
     var commentBlock = false
     var singleQuoted = false
     var doubleQuoted = false
-    val chars = s.toCharArray.toSeq
+    val normalizedStr = s.trim.concat(if(s.trim.lastOption.contains(';')) "" else ";")
+    val chars = normalizedStr.toCharArray.toSeq
     var i = 0
     val l = new ListBuffer[String]()
     val sb = new StringBuilder(1024)
