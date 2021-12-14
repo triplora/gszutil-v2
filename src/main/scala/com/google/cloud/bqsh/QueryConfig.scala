@@ -46,6 +46,7 @@ case class QueryConfig(
                         parametersFromFile: Seq[String] = Seq.empty,
                         createIfNeeded: Boolean = false,
                         allowMultipleQueries: Boolean = false,
+                        splitSql: Boolean = false,
 
                         // Standard Options
                         allowLargeResults: Boolean = false,

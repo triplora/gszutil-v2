@@ -42,8 +42,12 @@ object QueryOptionParser extends OptionParser[QueryConfig]("query") with ArgPars
     .action((x,c) => c.copy(createIfNeeded = true))
 
   opt[Unit]('m', "allow_multiple_queries")
-    .text("When specified, allow multiple queries. The default value is false.")
-    .action((x,c) => c.copy(allowMultipleQueries = true))
+    .text("Deprecated, use split_sql instead.")
+    .action((x,c) => c.copy(splitSql = true))
+
+  opt[Unit]('s', "split_sql")
+    .text("When specified, splits input sql script on single queries. The default value is false.")
+    .action((x,c) => c.copy(splitSql = true))
 
   // Standard Options
 

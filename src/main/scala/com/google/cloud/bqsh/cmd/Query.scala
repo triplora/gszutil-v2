@@ -48,7 +48,7 @@ object Query extends Command[QueryConfig] with Logging {
     require(queryString.nonEmpty, "query must not be empty")
 
     val queries =
-      if (cfg.allowMultipleQueries) Bqsh.splitSQL(queryString)
+      if (cfg.splitSql) Bqsh.splitSQL(queryString)
       else Seq(queryString)
 
     var result: Result = null
