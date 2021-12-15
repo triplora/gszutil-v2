@@ -7,6 +7,8 @@ import com.google.cloud.imf.gzos.Util._
 import com.google.cloud.imf.util.Logging
 import com.google.cloud.imf.util.RetryHelper._
 
+import scala.annotation.tailrec
+
 class BqQueryJobExecutor(bq: BigQuery, cfg: QueryConfig, zos: MVS) extends Logging {
 
   private lazy val retriesCount: Int =
@@ -14,12 +16,13 @@ class BqQueryJobExecutor(bq: BigQuery, cfg: QueryConfig, zos: MVS) extends Loggi
   private lazy val retriesTimeoutMillis: Int =
     sys.env.get("BQ_QUERY_CONCURRENT_UPDATE_RETRY_TIMEOUT_SECONDS").flatMap(_.toIntOption).getOrElse(2) * 1000
   private lazy val retryWhiteList: Seq[String] =
-    sys.env.get("BQ_QUERY_CONCURRENT_UPDATE_WHITE_LIST").fold(Seq("TABLE_STATUS"))(_.split(","))
+    sys.env.get("BQ_QUERY_CONCURRENT_UPDATE_WHITE_LIST").fold(Seq("TABLE_STATUS", "BATCH_PROCESS_DATE"))(_.split(","))
 
   def execute(script: String, queryConfigurer: (String, QueryConfig) => QueryJobConfiguration): (JobId, Job) = {
     var attempts = 0
     lazy val retryQuery = queryForRetry(script)
 
+    @tailrec
     def run(query: String): (JobId, Job) = {
       val jobId = BQ.genJobId(cfg.projectId, cfg.location, zos, "query", generateHashString)
       logger.info(s"Submitting Query Job\njobid=${BQ.toStr(jobId)}")
