@@ -45,9 +45,9 @@ object QueryOptionParser extends OptionParser[QueryConfig]("query") with ArgPars
     .text("Deprecated, use split_sql instead.")
     .action((x,c) => c.copy(splitSql = true))
 
-  opt[Unit]('s', "split_sql")
+  opt[Boolean]("split_sql")
     .text("When specified, splits input sql script on single queries. The default value is false.")
-    .action((x,c) => c.copy(splitSql = true))
+    .action((x,c) => c.copy(splitSql = x))
 
   // Standard Options
 
