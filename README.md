@@ -10,6 +10,69 @@ The utility is deployed as a cataloged procedure called by
 the [JCL EXEC statement](https://www.ibm.com/support/knowledgecenter/en/SSLTBW_2.3.0/com.ibm.zos.v2r3.ieab100/execst.htm)
 .
 
+
+## Pre-Requisites
+
+* [IBM SDK for z/OS, Java Technology Edition, Version 8](https://developer.ibm.com/javasdk/support/zos/)
+* [SBT](https://www.scala-sbt.org/download.html)
+* [pax](https://www.ibm.com/support/knowledgecenter/en/ssw_aix_72/com.ibm.aix.cmds4/pax.htm) (install
+  with `sudo apt install -y pax` on debian)
+
+## Development Environment Setup
+
+1. Extract IBM JDK using gunzip and pax
+
+```sh
+gunzip -c SDK8_64bit_SR5_FP30.PAX.Z | pax -r
+```
+
+2. Copy `ibmjzos.jar`, `ibmjcecca.jar` and `dataaccess.jar` to `lib/` at the repository root if those files are not in it.
+
+## Building
+
+
+Go to mainframe-util folder.
+
+```sh
+cd ~/mainframe-util
+```
+
+Copy library mainframe-util to local cache folder.
+
+```sh
+sbt publishLocal
+```
+
+Create fat jar
+
+```sh
+sbt assembly
+```
+
+
+Build application jar
+
+```sh
+sbt package
+```
+
+Build dependencies jar
+
+```sh
+sbt assemblyPackageDependency
+```
+
+## Installation
+
+1. Deploy `<userid>.TCPIP.DATA` to configure DNS resolution
+2. Deploy `<userid>.HOSTS.LOCAL` or `<userid>.ETC.IPNODES` if you need to send API requests to
+   the `restricted.googleapis.com` VPC-SC endpoint.
+3. Deploy `gszutil.dep.jar` and `gszutil.jar` to `/opt/google/lib` unix filesystem directory (or directory chosen by
+   your z/OS administrator)
+4. Deploy [proclib/BQSH](proclib/BQSH) to a PROCLIB MVS dataset on the mainframe. If you deployed the jar files to a
+   path other than `/opt/google/lib`, you will need to modify `BQSH` to reflect the correct path.
+
+
 ## Usage
 
 Users can make multiple calls in a single step by entering commands on separate lines or delimited by a semicolon (`;`).
@@ -462,47 +525,6 @@ Here is highlevel diagram how RPC call is performed
 for [Export](./src/main/scala/com/google/cloud/bqsh/cmd/Export.scala) command.
 For [Cp](./src/main/scala/com/google/cloud/bqsh/cmd/Cp.scala) command it works in the same way.
 ![bq_export_rpc_call](./img/bq_export_rpc_call.png)
-
-## Pre-Requisites
-
-* [IBM SDK for z/OS, Java Technology Edition, Version 8](https://developer.ibm.com/javasdk/support/zos/)
-* [SBT](https://www.scala-sbt.org/download.html)
-* [pax](https://www.ibm.com/support/knowledgecenter/en/ssw_aix_72/com.ibm.aix.cmds4/pax.htm) (install
-  with `sudo apt install -y pax` on debian)
-
-## Development Environment Setup
-
-1. Extract IBM JDK using gunzip and pax
-
-```sh
-gunzip -c SDK8_64bit_SR5_FP30.PAX.Z | pax -r
-```
-
-2. Copy `ibmjzos.jar`, `ibmjcecca.jar` and `dataaccess.jar` to `lib/` at the repository root.
-
-## Building
-
-Build application jar
-
-```sh
-sbt package
-```
-
-Build dependencies jar
-
-```sh
-sbt assemblyPackageDependency
-```
-
-## Installation
-
-1. Deploy `<userid>.TCPIP.DATA` to configure DNS resolution
-2. Deploy `<userid>.HOSTS.LOCAL` or `<userid>.ETC.IPNODES` if you need to send API requests to
-   the `restricted.googleapis.com` VPC-SC endpoint.
-3. Deploy `gszutil.dep.jar` and `gszutil.jar` to `/opt/google/lib` unix filesystem directory (or directory chosen by
-   your z/OS administrator)
-4. Deploy [proclib/BQSH](proclib/BQSH) to a PROCLIB MVS dataset on the mainframe. If you deployed the jar files to a
-   path other than `/opt/google/lib`, you will need to modify `BQSH` to reflect the correct path.
 
 ## Limitations
 
