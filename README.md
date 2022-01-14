@@ -43,6 +43,12 @@ Copy library mainframe-util to local cache folder.
 sbt publishLocal
 ```
 
+Go to gszutil conector
+
+```sh
+cd ~/gszutil-v2
+```
+
 Create fat jar
 
 ```sh
