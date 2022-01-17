@@ -56,18 +56,6 @@ sbt assembly
 ```
 
 
-Build application jar
-
-```sh
-sbt package
-```
-
-Build dependencies jar
-
-```sh
-sbt assemblyPackageDependency
-```
-
 ## Installation
 
 1. Deploy `<userid>.TCPIP.DATA` to configure DNS resolution
